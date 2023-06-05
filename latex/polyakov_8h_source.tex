@@ -1,0 +1,44 @@
+\doxysection{polyakov.\+h}
+\hypertarget{polyakov_8h_source}{}\label{polyakov_8h_source}\index{polyakov.h@{polyakov.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ POLYAKOV\_H\_}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ POLYAKOV\_H\_}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00011}00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00012}00012\ \mbox{\hyperlink{classComplex}{Complex<double>}}\ measure\_polyakov(\textcolor{keyword}{const}\ GaugeField<T>\ \&U,\ Direction\ dir\ =\ Direction(NDIM\ -\/\ 1))\ \{}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00014}00014\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ polyakov\ =\ U[dir];}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00016}00016\ \ \ \ \ \textcolor{comment}{//\ mult\ links\ so\ that\ polyakov[X.dir\ ==\ 0]\ contains\ the\ polyakov\ loop}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00017}00017\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ plane\ =\ lattice.size(dir)\ -\/\ 2;\ plane\ >=\ 0;\ plane-\/-\/)\ \{}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00019}00019\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ safe\_access(polyakov)\ pragma\ allows\ the\ expression\ below,\ otherwise}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00020}00020\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ hilapp\ would\ reject\ it\ because\ X\ and\ X+dir\ can\ refer\ to\ the\ same}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00021}00021\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ site\ on\ different\ "{}iterations"{}\ of\ the\ loop.\ \ However,\ here\ this}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00022}00022\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ is\ restricted\ on\ single\ dir-\/plane\ so\ it\ works\ but\ we\ must\ tell\ it\ to\ hilapp.}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00023}00023\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00024}00024\ \textcolor{preprocessor}{\#pragma\ hila\ safe\_access(polyakov)}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00025}00025\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00026}00026\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (X.coordinate(dir)\ ==\ plane)\ \{}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00027}00027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ polyakov[X]\ =\ U[dir][X]\ *\ polyakov[X\ +\ dir];}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00028}00028\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00029}00029\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00030}00030\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00031}00031\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00032}00032\ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<double>}}\ ploop\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00034}00034\ \ \ \ \ onsites(ALL)\ \textcolor{keywordflow}{if}\ (X.coordinate(dir)\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00035}00035\ \ \ \ \ \ \ \ \ ploop\ +=\ trace(polyakov[X]);}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00036}00036\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00038}00038\ \ \ \ \ \textcolor{comment}{//\ return\ average\ polyakov}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00039}00039\ \ \ \ \ \textcolor{keywordflow}{return}\ ploop\ /\ (lattice.volume()\ /\ lattice.size(dir));}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00040}00040\ \}}
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{polyakov_8h_source_l00042}00042\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

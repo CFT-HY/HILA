@@ -1,0 +1,73 @@
+\doxysection{logger.\+h}
+\hypertarget{logger_8h_source}{}\label{logger_8h_source}\index{logger.h@{logger.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ LOGGER\_H\_}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ LOGGER\_H\_}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ <fstream>}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00008}\mbox{\hyperlink{classlogger__class}{00008}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classlogger__class}{logger\_class}}\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00010}00010\ \ \ \ \ std::ostream\ output;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00012}00012\ \ \ \ \ std::ofstream\ output\_file;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00014}00014\ \ \ \ \ \textcolor{keywordtype}{int}\ logging\_level\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00016}00016\ \ \ \ \ \textcolor{keywordtype}{int}\ current\_level\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00018}00018\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00020}\mbox{\hyperlink{classlogger__class_ab24616ee8f270083e40916d425a44e42}{00020}}\ \ \ \ \ \mbox{\hyperlink{classlogger__class_ab24616ee8f270083e40916d425a44e42}{logger\_class}}()\ :\ output(NULL)\ \{\ output.rdbuf(std::cout.rdbuf());\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00023}\mbox{\hyperlink{classlogger__class_a39ae32c4855a01e60da923d6758dffec}{00023}}\ \ \ \ \ \mbox{\hyperlink{classlogger__class_a39ae32c4855a01e60da923d6758dffec}{logger\_class}}(std::string\ filename)\ :\ output(NULL)\ \{\ \mbox{\hyperlink{classlogger__class_a6d11903b85e47b6b82bcdbdf1b738abe}{set\_output}}(filename);\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00026}\mbox{\hyperlink{classlogger__class_a8dda856ab85cf81961f25bb0be7019c4}{00026}}\ \ \ \ \ \mbox{\hyperlink{classlogger__class_a8dda856ab85cf81961f25bb0be7019c4}{logger\_class}}(std::ostream\ stream)\ :\ output(NULL)\ \{\ output.rdbuf(stream.rdbuf());\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00029}\mbox{\hyperlink{classlogger__class_af77d77c3bbd6c215564c5e2e52d85dcf}{00029}}\ \ \ \ \ \mbox{\hyperlink{classlogger__class_af77d77c3bbd6c215564c5e2e52d85dcf}{\string~logger\_class}}()\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00030}00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (output\_file.is\_open())\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00031}00031\ \ \ \ \ \ \ \ \ \ \ \ \ output\_file.close();}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00032}00032\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00033}00033\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00036}\mbox{\hyperlink{classlogger__class_ad3f567b657adec3cd5055f3e39742a53}{00036}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classlogger__class_ad3f567b657adec3cd5055f3e39742a53}{set\_verbosity}}(\textcolor{keywordtype}{int}\ level)\ \{\ logging\_level\ =\ level;\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00040}\mbox{\hyperlink{classlogger__class_ad87b86eab9c9069954601ebdd22fa471}{00040}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classlogger__class_ad87b86eab9c9069954601ebdd22fa471}{increase\_level}}()\ \{\ current\_level\ +=\ 1;\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00044}\mbox{\hyperlink{classlogger__class_a246060678fe6f27294ff6d968fee0b39}{00044}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classlogger__class_a246060678fe6f27294ff6d968fee0b39}{decrease\_level}}()\ \{\ current\_level\ -\/=\ 1;\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00047}\mbox{\hyperlink{classlogger__class_a6d11903b85e47b6b82bcdbdf1b738abe}{00047}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classlogger__class_a6d11903b85e47b6b82bcdbdf1b738abe}{set\_output}}(std::ostream\ stream)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ output.rdbuf(stream.rdbuf());}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00049}00049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (output\_file.is\_open())\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00050}00050\ \ \ \ \ \ \ \ \ \ \ \ \ output\_file.close();}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00052}00052\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00053}00053\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00055}\mbox{\hyperlink{classlogger__class_a6836bf53db18463331532fb289c80825}{00055}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classlogger__class_a6836bf53db18463331532fb289c80825}{set\_output}}(std::string\ filename)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (output\_file.is\_open())\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ output\_file.close();}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ output\_file.open(filename,\ std::ios::out);}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00060}00060\ \ \ \ \ \ \ \ \ output.rdbuf(output\_file.rdbuf());}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00061}00061\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00062}00062\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00064}\mbox{\hyperlink{classlogger__class_a71bbb43695e3ee218ec7a59345552d0a}{00064}}\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classlogger__class_a71bbb43695e3ee218ec7a59345552d0a}{log}}(T\ text)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00065}00065\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00066}00066\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (current\_level\ <\ logging\_level)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00067}00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ output\ <<\ text;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00068}00068\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00069}00069\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00070}00070\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00072}00072\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ \textcolor{keyword}{friend}\ \mbox{\hyperlink{classlogger__class}{logger\_class}}\ \&\mbox{\hyperlink{classlogger__class_a88ffd44a24c759a3ad1c6a3d8aa5b04e}{operator<<}}(\mbox{\hyperlink{classlogger__class}{logger\_class}}\ \&logger,\ T\ rhs);}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00073}00073\ \};}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00077}\mbox{\hyperlink{classlogger__class_a88ffd44a24c759a3ad1c6a3d8aa5b04e}{00077}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ \mbox{\hyperlink{classlogger__class}{logger\_class}}\ \&operator<<(\mbox{\hyperlink{classlogger__class}{logger\_class}}\ \&logger,\ T\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00078}00078\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00079}00079\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (logger.current\_level\ <\ logger.logging\_level)\ \{}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ logger.output\ <<\ rhs;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00082}00082\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00083}00083\ \ \ \ \ \textcolor{keywordflow}{return}\ logger;}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00084}00084\ \}}
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00085}00085\ }
+\DoxyCodeLine{\Hypertarget{logger_8h_source_l00086}00086\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

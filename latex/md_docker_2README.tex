@@ -1,0 +1,16 @@
+\chapter{Docker image for HILA}
+\hypertarget{md_docker_2README}{}\label{md_docker_2README}\index{Docker image for HILA@{Docker image for HILA}}
+\label{md_docker_2README_autotoc_md28}%
+\Hypertarget{md_docker_2README_autotoc_md28}%
+ Create docker image\+: \begin{DoxyVerb}docker build -t hila -f Dockerfile .
+\end{DoxyVerb}
+ Launch image interactively with docker compose \begin{DoxyVerb}docker compose run --rm hila-applications
+\end{DoxyVerb}
+ \hypertarget{md_docker_2README_autotoc_md29}{}\doxysection{\texorpdfstring{Developing with docker}{Developing with docker}}\label{md_docker_2README_autotoc_md29}
+The applications folder is automatically mounted from the local host to the docker image when launching the service hila-\/applications \begin{DoxyVerb}../applications:/HILA/applications
+\end{DoxyVerb}
+ This allows one to develop HILA applications directly from source and launch them in the docker image with ease.
+
+When developing hila libraries and hilapp one can also launch the service hila-\/source which mounts the HILA/libraries and HILA/hilapp/src folders to the container \begin{DoxyVerb}docker compose run --rm hila-source
+\end{DoxyVerb}
+ 

@@ -1,0 +1,71 @@
+\doxysection{hmc.\+h}
+\hypertarget{hmc_8h_source}{}\label{hmc_8h_source}\index{hmc.h@{hmc.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ HMC\_H}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ HMC\_H}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ <sys/time.h>}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ <ctime>}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}integrator.h"{}}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00007}00007\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00009}00009\ \textcolor{comment}{//\ Consists\ of\ an\ integration\ step\ following\ equations\ of}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00010}00010\ \textcolor{comment}{//\ motion\ implemented\ in\ the\ integrator\ class\ gt}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00011}00011\ \textcolor{comment}{//\ and\ an\ accept-\/reject\ step\ using\ the\ action}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00012}00012\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00013}00013\ \textcolor{comment}{//\ The\ integrator\ class\ must\ implement\ at\ least\ two\ functions,}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00014}00014\ \textcolor{comment}{//\ action()\ an\ integrator\_step(double\ eps)}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00015}00015\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ \textcolor{keywordtype}{int}egrator\_type>}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00016}00016\ \textcolor{keywordtype}{void}\ update\_hmc(integrator\_type\ \&integrator,\ \textcolor{keywordtype}{int}\ steps,\ \textcolor{keywordtype}{double}\ traj\_length)\ \{}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00018}00018\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ accepted\ =\ 0,\ trajectory\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00019}00019\ \ \ \ \ \textcolor{keyword}{struct\ }timeval\ start,\ end;}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00020}00020\ \ \ \ \ \textcolor{keywordtype}{double}\ timing;}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00022}00022\ \ \ \ \ \textcolor{comment}{//\ Draw\ the\ momentum}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00023}00023\ \ \ \ \ integrator.draw\_gaussian\_fields();}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00025}00025\ \ \ \ \ \textcolor{comment}{//\ Make\ a\ copy\ of\ the\ gauge\ field\ in\ case\ the\ update\ is\ rejected}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00026}00026\ \ \ \ \ integrator.backup\_fields();}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00028}00028\ \ \ \ \ gettimeofday(\&start,\ NULL);}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00030}00030\ \ \ \ \ \textcolor{comment}{//\ Calculate\ the\ starting\ action\ and\ print}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00031}00031\ \ \ \ \ \textcolor{keywordtype}{double}\ start\_action\ =\ integrator.action();}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00032}00032\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Begin\ HMC\ Trajectory\ "{}}\ <<\ trajectory\ <<\ \textcolor{stringliteral}{"{}:\ Action\ "{}}\ <<\ start\_action}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00033}00033\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00035}00035\ \ \ \ \ \textcolor{comment}{//\ Run\ the\ integrator}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00036}00036\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ step\ =\ 0;\ step\ <\ steps;\ step++)\ \{}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00037}00037\ \ \ \ \ \ \ \ \ integrator.step(traj\_length\ /\ steps);}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00038}00038\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00039}00039\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00040}00040\ \ \ \ \ \textcolor{comment}{//\ Recalculate\ the\ action}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00041}00041\ \ \ \ \ \textcolor{keywordtype}{double}\ end\_action\ =\ integrator.action();}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00042}00042\ \ \ \ \ \textcolor{keywordtype}{double}\ edS\ =\ exp(-\/(end\_action\ -\/\ start\_action));}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00044}00044\ \ \ \ \ \textcolor{comment}{//\ Accept\ or\ reject}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00045}00045\ \ \ \ \ \textcolor{keywordtype}{bool}\ accept\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ <\ edS;}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00046}00046\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(accept);}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00047}00047\ \ \ \ \ \textcolor{keywordflow}{if}\ (accept)\ \{}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Accepted!\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00049}00049\ \ \ \ \ \ \ \ \ accepted++;}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00050}00050\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Rejected!\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ integrator.restore\_backup();}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00053}00053\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00055}00055\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}End\ HMC:\ Action\ "{}}\ <<\ end\_action\ <<\ \textcolor{stringliteral}{"{}\ "{}}\ <<\ end\_action\ -\/\ start\_action}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ exp(-\/dS)\ "{}}\ <<\ edS\ <<\ \textcolor{stringliteral}{"{}.\ Acceptance\ "{}}\ <<\ accepted\ <<\ \textcolor{stringliteral}{"{}/"{}}\ <<\ trajectory}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ "{}}\ <<\ (double)accepted\ /\ (\textcolor{keywordtype}{double})trajectory\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00058}00058\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00059}00059\ \ \ \ \ gettimeofday(\&end,\ NULL);}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00060}00060\ \ \ \ \ timing\ =\ (double)(end.tv\_sec\ -\/\ start.tv\_sec)\ +\ 1e-\/6\ *\ (end.tv\_usec\ -\/\ start.tv\_usec);}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00061}00061\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00062}00062\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}HMC\ done\ in\ "{}}\ <<\ timing\ <<\ \textcolor{stringliteral}{"{}\ seconds\ \(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00063}00063\ \ \ \ \ trajectory++;}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00064}00064\ \}}
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{hmc_8h_source_l00066}00066\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

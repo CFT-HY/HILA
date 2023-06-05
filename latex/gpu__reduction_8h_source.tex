@@ -1,0 +1,1041 @@
+\doxysection{gpu\+\_\+reduction.\+h}
+\hypertarget{gpu__reduction_8h_source}{}\label{gpu__reduction_8h_source}\index{gpu\_reduction.h@{gpu\_reduction.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ GPU\_REDUCTION\_H\_}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ GPU\_REDUCTION\_H\_}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00004}00004\ \textcolor{comment}{//\ Slightly\ modified\ from\ the\ NVIDIA\ reduction\ code}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00005}00005\ \textcolor{comment}{//\ \ \ -\/\ Make\ kernel\ number\ to\ be\ a\ fixed\ constant}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00006}00006\ \textcolor{comment}{//\ \ \ -\/\ Make\ number\ of\ threads\ to\ be\ a\ template\ parameter}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00007}00007\ \textcolor{comment}{//\ \ \ -\/\ change\ the\ main\ interface}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00009}00009\ \textcolor{comment}{/*\ Copyright\ (c)\ 2021,\ NVIDIA\ CORPORATION.\ All\ rights\ reserved.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00010}00010\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00011}00011\ \textcolor{comment}{\ *\ Redistribution\ and\ use\ in\ source\ and\ binary\ forms,\ with\ or\ without}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00012}00012\ \textcolor{comment}{\ *\ modification,\ are\ permitted\ provided\ that\ the\ following\ conditions}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00013}00013\ \textcolor{comment}{\ *\ are\ met:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00014}00014\ \textcolor{comment}{\ *\ \ *\ Redistributions\ of\ source\ code\ must\ retain\ the\ above\ copyright}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00015}00015\ \textcolor{comment}{\ *\ \ \ \ notice,\ this\ list\ of\ conditions\ and\ the\ following\ disclaimer.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00016}00016\ \textcolor{comment}{\ *\ \ *\ Redistributions\ in\ binary\ form\ must\ reproduce\ the\ above\ copyright}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00017}00017\ \textcolor{comment}{\ *\ \ \ \ notice,\ this\ list\ of\ conditions\ and\ the\ following\ disclaimer\ in\ the}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00018}00018\ \textcolor{comment}{\ *\ \ \ \ documentation\ and/or\ other\ materials\ provided\ with\ the\ distribution.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00019}00019\ \textcolor{comment}{\ *\ \ *\ Neither\ the\ name\ of\ NVIDIA\ CORPORATION\ nor\ the\ names\ of\ its}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00020}00020\ \textcolor{comment}{\ *\ \ \ \ contributors\ may\ be\ used\ to\ endorse\ or\ promote\ products\ derived}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00021}00021\ \textcolor{comment}{\ *\ \ \ \ from\ this\ software\ without\ specific\ prior\ written\ permission.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00022}00022\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00023}00023\ \textcolor{comment}{\ *\ THIS\ SOFTWARE\ IS\ PROVIDED\ BY\ THE\ COPYRIGHT\ HOLDERS\ \`{}\`{}AS\ IS''\ AND\ ANY}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00024}00024\ \textcolor{comment}{\ *\ EXPRESS\ OR\ IMPLIED\ WARRANTIES,\ INCLUDING,\ BUT\ NOT\ LIMITED\ TO,\ THE}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00025}00025\ \textcolor{comment}{\ *\ IMPLIED\ WARRANTIES\ OF\ MERCHANTABILITY\ AND\ FITNESS\ FOR\ A\ PARTICULAR}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00026}00026\ \textcolor{comment}{\ *\ PURPOSE\ ARE\ DISCLAIMED.\ \ IN\ NO\ EVENT\ SHALL\ THE\ COPYRIGHT\ OWNER\ OR}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00027}00027\ \textcolor{comment}{\ *\ CONTRIBUTORS\ BE\ LIABLE\ FOR\ ANY\ DIRECT,\ INDIRECT,\ INCIDENTAL,\ SPECIAL,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00028}00028\ \textcolor{comment}{\ *\ EXEMPLARY,\ OR\ CONSEQUENTIAL\ DAMAGES\ (INCLUDING,\ BUT\ NOT\ LIMITED\ TO,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00029}00029\ \textcolor{comment}{\ *\ PROCUREMENT\ OF\ SUBSTITUTE\ GOODS\ OR\ SERVICES;\ LOSS\ OF\ USE,\ DATA,\ OR}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00030}00030\ \textcolor{comment}{\ *\ PROFITS;\ OR\ BUSINESS\ INTERRUPTION)\ HOWEVER\ CAUSED\ AND\ ON\ ANY\ THEORY}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00031}00031\ \textcolor{comment}{\ *\ OF\ LIABILITY,\ WHETHER\ IN\ CONTRACT,\ STRICT\ LIABILITY,\ OR\ TORT}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00032}00032\ \textcolor{comment}{\ *\ (INCLUDING\ NEGLIGENCE\ OR\ OTHERWISE)\ ARISING\ IN\ ANY\ WAY\ OUT\ OF\ THE\ USE}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00033}00033\ \textcolor{comment}{\ *\ OF\ THIS\ SOFTWARE,\ EVEN\ IF\ ADVISED\ OF\ THE\ POSSIBILITY\ OF\ SUCH\ DAMAGE.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00034}00034\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00036}00036\ \textcolor{comment}{/*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00037}00037\ \textcolor{comment}{\ \ \ \ Parallel\ reduction\ kernels}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00038}00038\ \textcolor{comment}{*/}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00039}00039\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00040}00040\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00042}00042\ \textcolor{preprocessor}{\#if\ !defined(HILAPP)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00044}00044\ \textcolor{comment}{//\ static\ constexpr\ int\ whichKernel\ =\ GPU\_REDUCE\_KERNEL;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00045}00045\ \textcolor{comment}{//\ static\ constexpr\ int\ numThreads\ =\ N\_GPU\_REDUCE\_THREADS;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00047}00047\ \textcolor{comment}{//\ Define\ what\ reduction\ kernel\ to\ use\ -\/\ a\ local\ variable}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00048}00048\ \textcolor{comment}{//\ Number\ from\ 0\ to\ 9,\ can\ benchmark\ ...}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00049}00049\ \textcolor{comment}{//\ TODO:\ make\ this\ makefile-\/define!}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00051}00051\ \textcolor{comment}{//\ Utility\ class\ used\ to\ avoid\ linker\ errors\ with\ extern}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00052}00052\ \textcolor{comment}{//\ unsized\ shared\ memory\ arrays\ with\ templated\ type}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00053}00053\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00054}00054\ \textcolor{comment}{//\ struct\ SharedMemory\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00055}00055\ \textcolor{comment}{//\ \ \ \ \ \_\_device\_\_\ inline\ operator\ T\ *()\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00056}00056\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ extern\ \_\_shared\_\_\ int\ \_\_smem[];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00057}00057\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ (T\ *)\_\_smem;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00058}00058\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00059}00059\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00060}00060\ \textcolor{comment}{//\ \ \ \ \ \_\_device\_\_\ inline\ operator\ const\ T\ *()\ const\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00061}00061\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ extern\ \_\_shared\_\_\ int\ \_\_smem[];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00062}00062\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ (T\ *)\_\_smem;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00063}00063\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00064}00064\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00066}00066\ \textcolor{comment}{//\ specialize\ for\ double\ to\ avoid\ unaligned\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00067}00067\ \textcolor{comment}{//\ access\ compile\ errors}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00068}00068\ \textcolor{comment}{//\ template\ <>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00069}00069\ \textcolor{comment}{//\ struct\ SharedMemory<double>\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00070}00070\ \textcolor{comment}{//\ \ \ \ \ \_\_device\_\_\ inline\ operator\ double\ *()\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00071}00071\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ extern\ \_\_shared\_\_\ double\ \_\_smem\_d[];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00072}00072\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ (double\ *)\_\_smem\_d;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00073}00073\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00075}00075\ \textcolor{comment}{//\ \ \ \ \ \_\_device\_\_\ inline\ operator\ const\ double\ *()\ const\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00076}00076\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ extern\ \_\_shared\_\_\ double\ \_\_smem\_d[];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00077}00077\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ return\ (double\ *)\_\_smem\_d;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00078}00078\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00079}00079\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00081}00081\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00082}00082\ \textcolor{comment}{//\ \_\_device\_\_\ \_\_forceinline\_\_\ T\ warpReduceSum(unsigned\ int\ mask,\ T\ mySum)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00083}00083\ \textcolor{comment}{//\ \ \ \ \ for\ (int\ offset\ =\ warpSize\ /\ 2;\ offset\ >\ 0;\ offset\ /=\ 2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00084}00084\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ mySum\ +=\ \_\_shfl\_down\_sync(mask,\ mySum,\ offset);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00085}00085\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00086}00086\ \textcolor{comment}{//\ \ \ \ \ return\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00087}00087\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00089}00089\ \textcolor{comment}{//\ \#if\ \_\_CUDA\_ARCH\_\_\ >=\ 800}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00090}00090\ \textcolor{comment}{//\ //\ Specialize\ warpReduceFunc\ for\ int\ inputs\ to\ use\ \_\_reduce\_add\_sync\ intrinsic}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00091}00091\ \textcolor{comment}{//\ //\ when\ on\ SM\ 8.0\ or\ higher}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00092}00092\ \textcolor{comment}{//\ template\ <>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00093}00093\ \textcolor{comment}{//\ \_\_device\_\_\ \_\_forceinline\_\_\ int\ warpReduceSum<int>(unsigned\ int\ mask,\ int\ mySum)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00094}00094\ \textcolor{comment}{//\ \ \ \ \ mySum\ =\ \_\_reduce\_add\_sync(mask,\ mySum);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00095}00095\ \textcolor{comment}{//\ \ \ \ \ return\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00096}00096\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00097}00097\ \textcolor{comment}{//\ \#endif}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00098}00098\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00099}00099\ \textcolor{comment}{/*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00100}00100\ \textcolor{comment}{\ \ \ \ Parallel\ sum\ reduction\ using\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00101}00101\ \textcolor{comment}{\ \ \ \ -\/\ takes\ log(n)\ steps\ for\ n\ input\ elements}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00102}00102\ \textcolor{comment}{\ \ \ \ -\/\ uses\ n\ threads}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00103}00103\ \textcolor{comment}{\ \ \ \ -\/\ only\ works\ for\ power-\/of-\/2\ arrays}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00104}00104\ \textcolor{comment}{*/}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00105}00105\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00106}00106\ \textcolor{comment}{/*\ This\ reduction\ interleaves\ which\ threads\ are\ active\ by\ using\ the\ modulo}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00107}00107\ \textcolor{comment}{\ \ \ operator.\ \ This\ operator\ is\ very\ expensive\ on\ GPUs,\ and\ the\ interleaved}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00108}00108\ \textcolor{comment}{\ \ \ inactivity\ means\ that\ no\ whole\ warps\ are\ active,\ which\ is\ also\ very}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00109}00109\ \textcolor{comment}{\ \ \ inefficient\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00110}00110\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00111}00111\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce0(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00112}00112\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00113}00113\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00114}00114\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00115}00115\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00116}00116\ \textcolor{comment}{//\ \ \ \ \ //\ load\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00117}00117\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00118}00118\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockDim.x\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00119}00119\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00120}00120\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ (i\ <\ n)\ ?\ g\_idata[i]\ :\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00121}00121\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00122}00122\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00123}00123\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00124}00124\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00125}00125\ \textcolor{comment}{//\ \ \ \ \ for\ (unsigned\ int\ s\ =\ 1;\ s\ <\ blockDim.x;\ s\ *=\ 2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00126}00126\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ modulo\ arithmetic\ is\ slow!}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00127}00127\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ ((tid\ \%\ (2\ *\ s))\ ==\ 0)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00128}00128\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ sdata[tid]\ +=\ sdata[tid\ +\ s];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00129}00129\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00131}00131\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00132}00132\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00133}00133\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00134}00134\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00135}00135\ \textcolor{comment}{//\ \ \ \ \ if\ (tid\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00136}00136\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ sdata[0];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00137}00137\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00138}00138\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00139}00139\ \textcolor{comment}{//\ /*\ This\ version\ uses\ contiguous\ threads,\ but\ its\ interleaved}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00140}00140\ \textcolor{comment}{//\ \ \ \ addressing\ results\ in\ many\ shared\ memory\ bank\ conflicts.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00141}00141\ \textcolor{comment}{//\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00142}00142\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00143}00143\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce1(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00144}00144\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00145}00145\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00146}00146\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00147}00147\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00148}00148\ \textcolor{comment}{//\ \ \ \ \ //\ load\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00149}00149\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00150}00150\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockDim.x\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00152}00152\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ (i\ <\ n)\ ?\ g\_idata[i]\ :\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00153}00153\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00154}00154\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00155}00155\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00156}00156\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00157}00157\ \textcolor{comment}{//\ \ \ \ \ for\ (unsigned\ int\ s\ =\ 1;\ s\ <\ blockDim.x;\ s\ *=\ 2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00158}00158\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ int\ index\ =\ 2\ *\ s\ *\ tid;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00159}00159\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00160}00160\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (index\ <\ blockDim.x)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00161}00161\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ sdata[index]\ +=\ sdata[index\ +\ s];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00162}00162\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00163}00163\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00164}00164\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00165}00165\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00167}00167\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00168}00168\ \textcolor{comment}{//\ \ \ \ \ if\ (tid\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00169}00169\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ sdata[0];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00170}00170\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00171}00171\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00172}00172\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00173}00173\ \textcolor{comment}{//\ \ \ \ \ This\ version\ uses\ sequential\ addressing\ -\/-\/\ no\ divergence\ or\ bank\ conflicts.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00174}00174\ \textcolor{comment}{//\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00175}00175\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00176}00176\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce2(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00177}00177\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00178}00178\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00179}00179\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00180}00180\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00181}00181\ \textcolor{comment}{//\ \ \ \ \ //\ load\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00182}00182\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00183}00183\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockDim.x\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00184}00184\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00185}00185\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ (i\ <\ n)\ ?\ g\_idata[i]\ :\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00186}00186\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00187}00187\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00188}00188\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00189}00189\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00190}00190\ \textcolor{comment}{//\ \ \ \ \ for\ (unsigned\ int\ s\ =\ blockDim.x\ /\ 2;\ s\ >\ 0;\ s\ >>=\ 1)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00191}00191\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (tid\ <\ s)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00192}00192\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ sdata[tid]\ +=\ sdata[tid\ +\ s];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00193}00193\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00194}00194\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00195}00195\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00196}00196\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00197}00197\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00198}00198\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00199}00199\ \textcolor{comment}{//\ \ \ \ \ if\ (tid\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00200}00200\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ sdata[0];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00201}00201\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00202}00202\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00203}00203\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00204}00204\ \textcolor{comment}{//\ \ \ \ \ This\ version\ uses\ n/2\ threads\ -\/-\/}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00205}00205\ \textcolor{comment}{//\ \ \ \ \ it\ performs\ the\ first\ level\ of\ reduction\ when\ reading\ from\ global\ memory.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00206}00206\ \textcolor{comment}{//\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00207}00207\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00208}00208\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce3(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00209}00209\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00210}00210\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00211}00211\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00212}00212\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00213}00213\ \textcolor{comment}{//\ \ \ \ \ //\ perform\ first\ level\ of\ reduction,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00214}00214\ \textcolor{comment}{//\ \ \ \ \ //\ reading\ from\ global\ memory,\ writing\ to\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00215}00215\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00216}00216\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ (blockDim.x\ *\ 2)\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00217}00217\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00218}00218\ \textcolor{comment}{//\ \ \ \ \ T\ mySum\ =\ (i\ <\ n)\ ?\ g\_idata[i]\ :\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00219}00219\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00220}00220\ \textcolor{comment}{//\ \ \ \ \ if\ (i\ +\ blockDim.x\ <\ n)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00221}00221\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i\ +\ blockDim.x];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00222}00222\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00223}00223\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00224}00224\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00225}00225\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00226}00226\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00227}00227\ \textcolor{comment}{//\ \ \ \ \ for\ (unsigned\ int\ s\ =\ blockDim.x\ /\ 2;\ s\ >\ 0;\ s\ >>=\ 1)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00228}00228\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (tid\ <\ s)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00229}00229\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ s];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00230}00230\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00231}00231\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00232}00232\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00233}00233\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00234}00234\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00235}00235\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00236}00236\ \textcolor{comment}{//\ \ \ \ \ if\ (tid\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00237}00237\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00238}00238\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00239}00239\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00240}00240\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00241}00241\ \textcolor{comment}{//\ \ \ \ \ This\ version\ uses\ the\ warp\ shuffle\ operation\ if\ available\ to\ reduce}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00242}00242\ \textcolor{comment}{//\ \ \ \ \ warp\ synchronization.\ When\ shuffle\ is\ not\ available\ the\ final\ warp's}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00243}00243\ \textcolor{comment}{//\ \ \ \ \ worth\ of\ work\ is\ unrolled\ to\ reduce\ looping\ overhead.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00244}00244\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00245}00245\ \textcolor{comment}{//\ \ \ \ \ See}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00246}00246\ \textcolor{comment}{//\ \ \ \ http://devblogs.nvidia.com/parallelforall/faster-\/parallel-\/reductions-\/kepler/}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00247}00247\ \textcolor{comment}{//\ \ \ \ \ for\ additional\ information\ about\ using\ shuffle\ to\ perform\ a\ reduction}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00248}00248\ \textcolor{comment}{//\ \ \ \ \ within\ a\ warp.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00249}00249\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00250}00250\ \textcolor{comment}{//\ \ \ \ \ Note,\ this\ kernel\ needs\ a\ minimum\ of\ 64*sizeof(T)\ bytes\ of\ shared\ memory.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00251}00251\ \textcolor{comment}{//\ \ \ \ \ In\ other\ words\ if\ blockSize\ <=\ 32,\ allocate\ 64*sizeof(T)\ bytes.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00252}00252\ \textcolor{comment}{//\ \ \ \ \ If\ blockSize\ >\ 32,\ allocate\ blockSize*sizeof(T)\ bytes.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00253}00253\ \textcolor{comment}{//\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00254}00254\ \textcolor{comment}{//\ template\ <class\ T,\ unsigned\ int\ blockSize>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00255}00255\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce4(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00256}00256\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00257}00257\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00258}00258\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00259}00259\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00260}00260\ \textcolor{comment}{//\ \ \ \ \ //\ perform\ first\ level\ of\ reduction,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00261}00261\ \textcolor{comment}{//\ \ \ \ \ //\ reading\ from\ global\ memory,\ writing\ to\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00262}00262\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00263}00263\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ (blockDim.x\ *\ 2)\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00264}00264\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00265}00265\ \textcolor{comment}{//\ \ \ \ \ T\ mySum\ =\ (i\ <\ n)\ ?\ g\_idata[i]\ :\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00266}00266\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00267}00267\ \textcolor{comment}{//\ \ \ \ \ if\ (i\ +\ blockSize\ <\ n)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00268}00268\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i\ +\ blockSize];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00269}00269\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00270}00270\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00271}00271\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00272}00272\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00273}00273\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00274}00274\ \textcolor{comment}{//\ \ \ \ \ for\ (unsigned\ int\ s\ =\ blockDim.x\ /\ 2;\ s\ >\ 32;\ s\ >>=\ 1)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00275}00275\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (tid\ <\ s)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00276}00276\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ s];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00277}00277\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00278}00278\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00279}00279\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00280}00280\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00281}00281\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00282}00282\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\_tile<32>\ tile32\ =}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00283}00283\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::tiled\_partition<32>(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00284}00284\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00285}00285\ \textcolor{comment}{//\ \ \ \ \ if\ (cta.thread\_rank()\ <\ 32)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00286}00286\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Fetch\ final\ intermediate\ sum\ from\ 2nd\ warp}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00287}00287\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (blockSize\ >=\ 64)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00288}00288\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ sdata[tid\ +\ 32];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00289}00289\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Reduce\ final\ warp\ using\ shuffle}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00290}00290\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (int\ offset\ =\ tile32.size()\ /\ 2;\ offset\ >\ 0;\ offset\ /=\ 2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00291}00291\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ tile32.shfl\_down(mySum,\ offset);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00292}00292\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00293}00293\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00294}00294\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00295}00295\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00296}00296\ \textcolor{comment}{//\ \ \ \ \ if\ (cta.thread\_rank()\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00297}00297\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00298}00298\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00299}00299\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00300}00300\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00301}00301\ \textcolor{comment}{//\ \ \ \ \ This\ version\ is\ completely\ unrolled,\ unless\ warp\ shuffle\ is\ available,\ then}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00302}00302\ \textcolor{comment}{//\ \ \ \ \ shuffle\ is\ used\ within\ a\ loop.\ \ It\ uses\ a\ template\ parameter\ to\ achieve}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00303}00303\ \textcolor{comment}{//\ \ \ \ \ optimal\ code\ for\ any\ (power\ of\ 2)\ number\ of\ threads.\ \ This\ requires\ a\ switch}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00304}00304\ \textcolor{comment}{//\ \ \ \ \ statement\ in\ the\ host\ code\ to\ handle\ all\ the\ different\ thread\ block\ sizes\ at}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00305}00305\ \textcolor{comment}{//\ \ \ \ \ compile\ time.\ When\ shuffle\ is\ available,\ it\ is\ used\ to\ reduce\ warp}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00306}00306\ \textcolor{comment}{//\ \ \ \ synchronization.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00307}00307\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00308}00308\ \textcolor{comment}{//\ \ \ \ \ Note,\ this\ kernel\ needs\ a\ minimum\ of\ 64*sizeof(T)\ bytes\ of\ shared\ memory.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00309}00309\ \textcolor{comment}{//\ \ \ \ \ In\ other\ words\ if\ blockSize\ <=\ 32,\ allocate\ 64*sizeof(T)\ bytes.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00310}00310\ \textcolor{comment}{//\ \ \ \ \ If\ blockSize\ >\ 32,\ allocate\ blockSize*sizeof(T)\ bytes.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00311}00311\ \textcolor{comment}{//\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00312}00312\ \textcolor{comment}{//\ template\ <class\ T,\ unsigned\ int\ blockSize>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00313}00313\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce5(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00314}00314\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00315}00315\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00316}00316\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00317}00317\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00318}00318\ \textcolor{comment}{//\ \ \ \ \ //\ perform\ first\ level\ of\ reduction,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00319}00319\ \textcolor{comment}{//\ \ \ \ \ //\ reading\ from\ global\ memory,\ writing\ to\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00320}00320\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00321}00321\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ (blockSize\ *\ 2)\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00322}00322\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00323}00323\ \textcolor{comment}{//\ \ \ \ \ T\ mySum\ =\ (i\ <\ n)\ ?\ g\_idata[i]\ :\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00324}00324\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00325}00325\ \textcolor{comment}{//\ \ \ \ \ if\ (i\ +\ blockSize\ <\ n)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00326}00326\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i\ +\ blockSize];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00327}00327\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00328}00328\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00329}00329\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00330}00330\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00331}00331\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00332}00332\ \textcolor{comment}{//\ \ \ \ \ if\ ((blockSize\ >=\ 512)\ \&\&\ (tid\ <\ 256))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00333}00333\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ 256];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00334}00334\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00335}00335\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00336}00336\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00337}00337\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00338}00338\ \textcolor{comment}{//\ \ \ \ \ if\ ((blockSize\ >=\ 256)\ \&\&\ (tid\ <\ 128))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00339}00339\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ 128];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00340}00340\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00341}00341\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00342}00342\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00343}00343\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00344}00344\ \textcolor{comment}{//\ \ \ \ \ if\ ((blockSize\ >=\ 128)\ \&\&\ (tid\ <\ 64))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00345}00345\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ 64];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00346}00346\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00347}00347\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00348}00348\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00349}00349\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00350}00350\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\_tile<32>\ tile32\ =}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00351}00351\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::tiled\_partition<32>(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00352}00352\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00353}00353\ \textcolor{comment}{//\ \ \ \ \ if\ (cta.thread\_rank()\ <\ 32)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00354}00354\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Fetch\ final\ intermediate\ sum\ from\ 2nd\ warp}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00355}00355\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (blockSize\ >=\ 64)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00356}00356\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ sdata[tid\ +\ 32];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00357}00357\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Reduce\ final\ warp\ using\ shuffle}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00358}00358\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (int\ offset\ =\ tile32.size()\ /\ 2;\ offset\ >\ 0;\ offset\ /=\ 2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00359}00359\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ tile32.shfl\_down(mySum,\ offset);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00360}00360\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00361}00361\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00362}00362\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00363}00363\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00364}00364\ \textcolor{comment}{//\ \ \ \ \ if\ (cta.thread\_rank()\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00365}00365\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00366}00366\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00367}00367\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00368}00368\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00369}00369\ \textcolor{comment}{//\ \ \ \ \ This\ version\ adds\ multiple\ elements\ per\ thread\ sequentially.\ \ This\ reduces}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00370}00370\ \textcolor{comment}{//\ \ \ \ the\ overall\ cost\ of\ the\ algorithm\ while\ keeping\ the\ work\ complexity\ O(n)\ and}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00371}00371\ \textcolor{comment}{//\ \ \ \ the\ step\ complexity\ O(log\ n).\ (Brent's\ Theorem\ optimization)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00372}00372\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00373}00373\ \textcolor{comment}{//\ \ \ \ \ Note,\ this\ kernel\ needs\ a\ minimum\ of\ 64*sizeof(T)\ bytes\ of\ shared\ memory.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00374}00374\ \textcolor{comment}{//\ \ \ \ \ In\ other\ words\ if\ blockSize\ <=\ 32,\ allocate\ 64*sizeof(T)\ bytes.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00375}00375\ \textcolor{comment}{//\ \ \ \ \ If\ blockSize\ >\ 32,\ allocate\ blockSize*sizeof(T)\ bytes.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00376}00376\ \textcolor{comment}{//\ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00377}00377\ \textcolor{comment}{//\ template\ <class\ T,\ unsigned\ int\ blockSize,\ bool\ nIsPow2>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00378}00378\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce6(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00379}00379\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00380}00380\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00381}00381\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00382}00382\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00383}00383\ \textcolor{comment}{//\ \ \ \ \ //\ perform\ first\ level\ of\ reduction,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00384}00384\ \textcolor{comment}{//\ \ \ \ \ //\ reading\ from\ global\ memory,\ writing\ to\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00385}00385\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00386}00386\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ gridSize\ =\ blockSize\ *\ gridDim.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00387}00387\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00388}00388\ \textcolor{comment}{//\ \ \ \ \ T\ mySum\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00389}00389\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00390}00390\ \textcolor{comment}{//\ \ \ \ \ //\ we\ reduce\ multiple\ elements\ per\ thread.\ \ The\ number\ is\ determined\ by\ the}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00391}00391\ \textcolor{comment}{//\ \ \ \ \ //\ number\ of\ active\ thread\ blocks\ (via\ gridDim).\ \ More\ blocks\ will\ result}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00392}00392\ \textcolor{comment}{//\ \ \ \ \ //\ in\ a\ larger\ gridSize\ and\ therefore\ fewer\ elements\ per\ thread}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00393}00393\ \textcolor{comment}{//\ \ \ \ \ if\ (nIsPow2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00394}00394\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockSize\ *\ 2\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00395}00395\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ gridSize\ =\ gridSize\ <<\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00396}00396\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00397}00397\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00398}00398\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00399}00399\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ ensure\ we\ don't\ read\ out\ of\ bounds\ -\/-\/\ this\ is\ optimized\ away\ for}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00400}00400\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ powerOf2\ sized\ arrays}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00401}00401\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ ((i\ +\ blockSize)\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00402}00402\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i\ +\ blockSize];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00403}00403\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00404}00404\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ gridSize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00405}00405\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00406}00406\ \textcolor{comment}{//\ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00407}00407\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockSize\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00408}00408\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00409}00409\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00410}00410\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ gridSize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00411}00411\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00412}00412\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00413}00413\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00414}00414\ \textcolor{comment}{//\ \ \ \ \ //\ each\ thread\ puts\ its\ local\ sum\ into\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00415}00415\ \textcolor{comment}{//\ \ \ \ \ sdata[tid]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00416}00416\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00417}00417\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00418}00418\ \textcolor{comment}{//\ \ \ \ \ //\ do\ reduction\ in\ shared\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00419}00419\ \textcolor{comment}{//\ \ \ \ \ if\ ((blockSize\ >=\ 512)\ \&\&\ (tid\ <\ 256))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00420}00420\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ 256];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00421}00421\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00422}00422\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00423}00423\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00424}00424\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00425}00425\ \textcolor{comment}{//\ \ \ \ \ if\ ((blockSize\ >=\ 256)\ \&\&\ (tid\ <\ 128))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00426}00426\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ 128];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00427}00427\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00428}00428\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00429}00429\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00430}00430\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00431}00431\ \textcolor{comment}{//\ \ \ \ \ if\ ((blockSize\ >=\ 128)\ \&\&\ (tid\ <\ 64))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00432}00432\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid]\ =\ mySum\ =\ mySum\ +\ sdata[tid\ +\ 64];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00433}00433\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00434}00434\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00435}00435\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00436}00436\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00437}00437\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\_tile<32>\ tile32\ =}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00438}00438\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::tiled\_partition<32>(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00439}00439\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00440}00440\ \textcolor{comment}{//\ \ \ \ \ if\ (cta.thread\_rank()\ <\ 32)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00441}00441\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Fetch\ final\ intermediate\ sum\ from\ 2nd\ warp}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00442}00442\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (blockSize\ >=\ 64)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00443}00443\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ sdata[tid\ +\ 32];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00444}00444\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Reduce\ final\ warp\ using\ shuffle}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00445}00445\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (int\ offset\ =\ tile32.size()\ /\ 2;\ offset\ >\ 0;\ offset\ /=\ 2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00446}00446\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ tile32.shfl\_down(mySum,\ offset);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00447}00447\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00448}00448\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00449}00449\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00450}00450\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00451}00451\ \textcolor{comment}{//\ \ \ \ \ if\ (cta.thread\_rank()\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00452}00452\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00453}00453\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00454}00454\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00455}00455\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00456}00456\ \textcolor{comment}{//\ \ \ \ \ \ Kernel\ 7}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00457}00457\ \textcolor{comment}{//\ \ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00458}00458\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00459}00459\ \textcolor{comment}{//\ template\ <typename\ T,\ unsigned\ int\ blockSize,\ bool\ nIsPow2>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00460}00460\ \textcolor{comment}{//\ \_\_global\_\_\ void\ reduce7(const\ T\ *\_\_restrict\_\_\ g\_idata,\ T\ *\_\_restrict\_\_\ g\_odata,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00461}00461\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00462}00462\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00463}00463\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00464}00464\ \textcolor{comment}{//\ \ \ \ \ //\ perform\ first\ level\ of\ reduction,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00465}00465\ \textcolor{comment}{//\ \ \ \ \ //\ reading\ from\ global\ memory,\ writing\ to\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00466}00466\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ tid\ =\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00467}00467\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ gridSize\ =\ blockSize\ *\ gridDim.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00468}00468\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ maskLength\ =\ (blockSize\ \&\ 31);\ //\ 31\ =\ warpSize-\/1}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00469}00469\ \textcolor{comment}{//\ \ \ \ \ maskLength\ =\ (maskLength\ >\ 0)\ ?\ (32\ -\/\ maskLength)\ :\ maskLength;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00470}00470\ \textcolor{comment}{//\ \ \ \ \ const\ unsigned\ int\ mask\ =\ (0xffffffff)\ >>\ maskLength;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00471}00471\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00472}00472\ \textcolor{comment}{//\ \ \ \ \ T\ mySum\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00473}00473\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00474}00474\ \textcolor{comment}{//\ \ \ \ \ //\ we\ reduce\ multiple\ elements\ per\ thread.\ \ The\ number\ is\ determined\ by\ the}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00475}00475\ \textcolor{comment}{//\ \ \ \ \ //\ number\ of\ active\ thread\ blocks\ (via\ gridDim).\ \ More\ blocks\ will\ result}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00476}00476\ \textcolor{comment}{//\ \ \ \ \ //\ in\ a\ larger\ gridSize\ and\ therefore\ fewer\ elements\ per\ thread}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00477}00477\ \textcolor{comment}{//\ \ \ \ \ if\ (nIsPow2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00478}00478\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockSize\ *\ 2\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00479}00479\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ gridSize\ =\ gridSize\ <<\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00480}00480\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00481}00481\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00482}00482\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00483}00483\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ ensure\ we\ don't\ read\ out\ of\ bounds\ -\/-\/\ this\ is\ optimized\ away\ for}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00484}00484\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ powerOf2\ sized\ arrays}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00485}00485\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ ((i\ +\ blockSize)\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00486}00486\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i\ +\ blockSize];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00487}00487\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00488}00488\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ gridSize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00489}00489\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00490}00490\ \textcolor{comment}{//\ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00491}00491\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ blockSize\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00492}00492\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00493}00493\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ mySum\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00494}00494\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ gridSize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00495}00495\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00496}00496\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00497}00497\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00498}00498\ \textcolor{comment}{//\ \ \ \ \ //\ Reduce\ within\ warp\ using\ shuffle\ or\ reduce\_add\ if\ T==int\ \&\ CUDA\_ARCH\ ==}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00499}00499\ \textcolor{comment}{//\ \ \ \ \ //\ SM\ 8.0}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00500}00500\ \textcolor{comment}{//\ \ \ \ \ mySum\ =\ warpReduceSum<T>(mask,\ mySum);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00501}00501\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00502}00502\ \textcolor{comment}{//\ \ \ \ \ //\ each\ thread\ puts\ its\ local\ sum\ into\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00503}00503\ \textcolor{comment}{//\ \ \ \ \ if\ ((tid\ \%\ warpSize)\ ==\ 0)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00504}00504\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[tid\ /\ warpSize]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00505}00505\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00506}00506\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00507}00507\ \textcolor{comment}{//\ \ \ \ \ \_\_syncthreads();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00508}00508\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00509}00509\ \textcolor{comment}{//\ \ \ \ \ const\ unsigned\ int\ shmem\_extent\ =}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00510}00510\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ (blockSize\ /\ warpSize)\ >\ 0\ ?\ (blockSize\ /\ warpSize)\ :\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00511}00511\ \textcolor{comment}{//\ \ \ \ \ const\ unsigned\ int\ ballot\_result\ =\ \_\_ballot\_sync(mask,\ tid\ <\ shmem\_extent);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00512}00512\ \textcolor{comment}{//\ \ \ \ \ if\ (tid\ <\ shmem\_extent)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00513}00513\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ mySum\ =\ sdata[tid];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00514}00514\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ Reduce\ final\ warp\ using\ shuffle\ or\ reduce\_add\ if\ T==int\ \&\ CUDA\_ARCH\ ==}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00515}00515\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ SM\ 8.0}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00516}00516\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ mySum\ =\ warpReduceSum<T>(ballot\_result,\ mySum);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00517}00517\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00518}00518\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00519}00519\ \textcolor{comment}{//\ \ \ \ \ //\ write\ result\ for\ this\ block\ to\ global\ mem}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00520}00520\ \textcolor{comment}{//\ \ \ \ \ if\ (tid\ ==\ 0)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00521}00521\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ mySum;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00522}00522\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00523}00523\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00524}00524\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00525}00525\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00526}00526\ \textcolor{comment}{//\ \ \ \ \ Kernel\ 8\ \ gc\_reduce}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00527}00527\ \textcolor{comment}{//\ \ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00528}00528\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00529}00529\ \textcolor{comment}{//\ //\ Performs\ a\ reduction\ step\ and\ updates\ numTotal\ with\ how\ many\ are\ remaining}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00530}00530\ \textcolor{comment}{//\ template\ <typename\ T,\ typename\ Group>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00531}00531\ \textcolor{comment}{//\ \_\_device\_\_\ T\ cg\_reduce\_n(T\ in,\ Group\ \&threads)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00532}00532\ \textcolor{comment}{//\ \ \ \ \ return\ cooperative\_groups::reduce(threads,\ in,\ cooperative\_groups::plus<T>());}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00533}00533\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00534}00534\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00535}00535\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00536}00536\ \textcolor{comment}{//\ \_\_global\_\_\ void\ cg\_reduce(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00537}00537\ \textcolor{comment}{//\ \ \ \ \ //\ Shared\ memory\ for\ intermediate\ steps}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00538}00538\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00539}00539\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00540}00540\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\ cta\ =\ cooperative\_groups::this\_thread\_block();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00541}00541\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ tile\ in\ thread\ block}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00542}00542\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::thread\_block\_tile<32>\ tile\ =}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00543}00543\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::tiled\_partition<32>(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00544}00544\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00545}00545\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ ctaSize\ =\ cta.size();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00546}00546\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ numCtas\ =\ gridDim.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00547}00547\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ threadRank\ =\ cta.thread\_rank();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00548}00548\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ threadIndex\ =\ (blockIdx.x\ *\ ctaSize)\ +\ threadRank;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00549}00549\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00550}00550\ \textcolor{comment}{//\ \ \ \ \ T\ threadVal\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00551}00551\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00552}00552\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ threadIndex;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00553}00553\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ indexStride\ =\ (numCtas\ *\ ctaSize);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00554}00554\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00555}00555\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00556}00556\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ indexStride;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00557}00557\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00558}00558\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[threadRank]\ =\ threadVal;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00559}00559\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00560}00560\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00561}00561\ \textcolor{comment}{//\ \ \ \ \ //\ Wait\ for\ all\ tiles\ to\ finish\ and\ reduce\ within\ CTA}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00562}00562\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00563}00563\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ ctaSteps\ =\ tile.meta\_group\_size();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00564}00564\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ ctaIndex\ =\ ctaSize\ >>\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00565}00565\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (ctaIndex\ >=\ 32)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00566}00566\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ cta.sync();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00567}00567\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (threadRank\ <\ ctaIndex)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00568}00568\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ +=\ sdata[threadRank\ +\ ctaIndex];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00569}00569\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sdata[threadRank]\ =\ threadVal;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00570}00570\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00571}00571\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ ctaSteps\ >>=\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00572}00572\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ ctaIndex\ >>=\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00573}00573\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00574}00574\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00575}00575\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00576}00576\ \textcolor{comment}{//\ \ \ \ \ //\ Shuffle\ redux\ instead\ of\ smem\ redux}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00577}00577\ \textcolor{comment}{//\ \ \ \ \ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00578}00578\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cta.sync();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00579}00579\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (tile.meta\_group\_rank()\ ==\ 0)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00580}00580\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ =\ cg\_reduce\_n(threadVal,\ tile);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00581}00581\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00582}00582\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00583}00583\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00584}00584\ \textcolor{comment}{//\ \ \ \ \ if\ (threadRank\ ==\ 0)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00585}00585\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ threadVal;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00586}00586\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00587}00587\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00588}00588\ \textcolor{comment}{//\ /*}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00589}00589\ \textcolor{comment}{//\ \ \ \ \ Kernel\ 9}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00590}00590\ \textcolor{comment}{//\ \ */}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00591}00591\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00592}00592\ \textcolor{comment}{//\ template\ <class\ T,\ size\_t\ BlockSize,\ size\_t\ MultiWarpGroupSize>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00593}00593\ \textcolor{comment}{//\ \_\_global\_\_\ void\ multi\_warp\_cg\_reduce(T\ *g\_idata,\ T\ *g\_odata,\ unsigned\ int\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00594}00594\ \textcolor{comment}{//\ \ \ \ \ //\ Shared\ memory\ for\ intermediate\ steps}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00595}00595\ \textcolor{comment}{//\ \ \ \ \ T\ *sdata\ =\ SharedMemory<T>();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00596}00596\ \textcolor{comment}{//\ \ \ \ \ \_\_shared\_\_\ cooperative\_groups::experimental::block\_tile\_memory<sizeof(T),\ BlockSize>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00597}00597\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ scratch;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00598}00598\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00599}00599\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ thread\ block\ group}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00600}00600\ \textcolor{comment}{//\ \ \ \ \ auto\ cta\ =\ cooperative\_groups::experimental::this\_thread\_block(scratch);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00601}00601\ \textcolor{comment}{//\ \ \ \ \ //\ Handle\ to\ multiWarpTile\ in\ thread\ block}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00602}00602\ \textcolor{comment}{//\ \ \ \ \ auto\ multiWarpTile\ =}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00603}00603\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cooperative\_groups::experimental::tiled\_partition<MultiWarpGroupSize>(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00604}00604\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00605}00605\ \textcolor{comment}{//\ \ \ \ \ unsigned\ int\ gridSize\ =\ BlockSize\ *\ gridDim.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00606}00606\ \textcolor{comment}{//\ \ \ \ \ T\ threadVal\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00607}00607\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00608}00608\ \textcolor{comment}{//\ \ \ \ \ //\ we\ reduce\ multiple\ elements\ per\ thread.\ \ The\ number\ is\ determined\ by\ the}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00609}00609\ \textcolor{comment}{//\ \ \ \ \ //\ number\ of\ active\ thread\ blocks\ (via\ gridDim).\ \ More\ blocks\ will\ result}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00610}00610\ \textcolor{comment}{//\ \ \ \ \ //\ in\ a\ larger\ gridSize\ and\ therefore\ fewer\ elements\ per\ thread}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00611}00611\ \textcolor{comment}{//\ \ \ \ \ int\ nIsPow2\ =\ !(n\ \&\ n\ -\/\ 1);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00612}00612\ \textcolor{comment}{//\ \ \ \ \ if\ (nIsPow2)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00613}00613\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ BlockSize\ *\ 2\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00614}00614\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ gridSize\ =\ gridSize\ <<\ 1;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00615}00615\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00616}00616\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00617}00617\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00618}00618\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ ensure\ we\ don't\ read\ out\ of\ bounds\ -\/-\/\ this\ is\ optimized\ away\ for}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00619}00619\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ //\ powerOf2\ sized\ arrays}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00620}00620\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ ((i\ +\ BlockSize)\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00621}00621\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ +=\ g\_idata[i\ +\ blockDim.x];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00622}00622\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00623}00623\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ gridSize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00624}00624\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00625}00625\ \textcolor{comment}{//\ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00626}00626\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ unsigned\ int\ i\ =\ blockIdx.x\ *\ BlockSize\ +\ threadIdx.x;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00627}00627\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ while\ (i\ <\ n)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00628}00628\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ +=\ g\_idata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00629}00629\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ gridSize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00630}00630\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00631}00631\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00632}00632\ \textcolor{comment}{//\ \ \ \ \ threadVal\ =\ cg\_reduce\_n(threadVal,\ multiWarpTile);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00633}00633\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00634}00634\ \textcolor{comment}{//\ \ \ \ \ if\ (multiWarpTile.thread\_rank()\ ==\ 0)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00635}00635\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ sdata[multiWarpTile.meta\_group\_rank()]\ =\ threadVal;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00636}00636\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00637}00637\ \textcolor{comment}{//\ \ \ \ \ cooperative\_groups::sync(cta);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00638}00638\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00639}00639\ \textcolor{comment}{//\ \ \ \ \ if\ (threadIdx.x\ ==\ 0)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00640}00640\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ threadVal\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00641}00641\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ for\ (int\ i\ =\ 0;\ i\ <\ multiWarpTile.meta\_group\_size();\ i++)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00642}00642\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ threadVal\ +=\ sdata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00643}00643\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00644}00644\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ g\_odata[blockIdx.x]\ =\ threadVal;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00645}00645\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00646}00646\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00647}00647\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00649}00649\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00650}00650\ \textcolor{comment}{//\ inline\ bool\ isPow2(unsigned\ int\ x)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00651}00651\ \textcolor{comment}{//\ \ \ \ \ return\ ((x\ \&\ (x\ -\/\ 1))\ ==\ 0);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00652}00652\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00653}00653\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00655}00655\ \textcolor{comment}{//\ Wrapper\ function\ for\ kernel\ launch}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00656}00656\ \textcolor{comment}{//\ Now\ make\ kernel\ number\ a\ template\ parameter,\ also\ number\ of\ threads}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00658}00658\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00659}00659\ \textcolor{comment}{//\ template\ <class\ T,\ int\ threads>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00660}00660\ \textcolor{comment}{//\ void\ reduce\_kernel(int\ size,\ int\ blocks,\ T\ *d\_idata,\ T\ *d\_odata)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00661}00661\ \textcolor{comment}{//\ \ \ \ \ dim3\ dimBlock(threads,\ 1,\ 1);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00662}00662\ \textcolor{comment}{//\ \ \ \ \ dim3\ dimGrid(blocks,\ 1,\ 1);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00663}00663\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00664}00664\ \textcolor{comment}{//\ \ \ \ \ //\ when\ there\ is\ only\ one\ warp\ per\ block,\ we\ need\ to\ allocate\ two\ warps}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00665}00665\ \textcolor{comment}{//\ \ \ \ \ //\ worth\ of\ shared\ memory\ so\ that\ we\ don't\ index\ shared\ memory\ out\ of\ bounds}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00666}00666\ \textcolor{comment}{//\ \ \ \ \ int\ smemSize\ =\ (threads\ <=\ 32)\ ?\ 2\ *\ threads\ *\ sizeof(T)\ :\ threads\ *\ sizeof(T);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00667}00667\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00668}00668\ \textcolor{comment}{//\ \ \ \ \ //\ choose\ which\ of\ the\ optimized\ versions\ of\ reduction\ to\ launch}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00669}00669\ \textcolor{comment}{//\ \ \ \ \ switch\ (whichKernel)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00670}00670\ \textcolor{comment}{//\ \ \ \ \ case\ 0:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00671}00671\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ reduce0<T><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00672}00672\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00673}00673\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00674}00674\ \textcolor{comment}{//\ \ \ \ \ case\ 1:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00675}00675\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ reduce1<T><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00676}00676\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00677}00677\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00678}00678\ \textcolor{comment}{//\ \ \ \ \ case\ 2:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00679}00679\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ reduce2<T><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00680}00680\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00681}00681\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00682}00682\ \textcolor{comment}{//\ \ \ \ \ case\ 3:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00683}00683\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ reduce3<T><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00684}00684\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00685}00685\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00686}00686\ \textcolor{comment}{//\ \ \ \ \ case\ 4:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00687}00687\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ reduce4<T,\ threads><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00688}00688\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00689}00689\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00690}00690\ \textcolor{comment}{//\ \ \ \ \ case\ 5:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00691}00691\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ reduce5<T,\ threads><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00692}00692\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00693}00693\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00694}00694\ \textcolor{comment}{//\ \ \ \ \ case\ 6:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00695}00695\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (isPow2(size))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00696}00696\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ reduce6<T,\ threads,\ true>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00697}00697\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00698}00698\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00699}00699\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ reduce6<T,\ threads,\ false>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00700}00700\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00701}00701\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00702}00702\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00703}00703\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00704}00704\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00705}00705\ \textcolor{comment}{//\ \ \ \ \ case\ 7:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00706}00706\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ For\ reduce7\ kernel\ we\ require\ only\ blockSize/warpSize}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00707}00707\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ number\ of\ elements\ in\ shared\ memory}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00708}00708\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ smemSize\ =\ ((threads\ /\ 32)\ +\ 1)\ *\ sizeof(T);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00709}00709\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (isPow2(size))\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00710}00710\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ reduce7<T,\ threads,\ true>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00711}00711\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00712}00712\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00713}00713\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ reduce7<T,\ threads,\ false>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00714}00714\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00715}00715\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00716}00716\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00717}00717\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00718}00718\ \textcolor{comment}{//\ \ \ \ \ case\ 8:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00719}00719\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ cg\_reduce<T><<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00720}00720\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00721}00721\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00722}00722\ \textcolor{comment}{//\ \ \ \ \ case\ 9:}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00723}00723\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ constexpr\ int\ numOfMultiWarpGroups\ =\ 2;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00724}00724\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ smemSize\ =\ numOfMultiWarpGroups\ *\ sizeof(T);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00725}00725\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00726}00726\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ static\_assert(threads\ >=\ 64,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00727}00727\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "{}thread\ block\ size\ of\ <\ 64\ is\ not\ supported\ for\ this\ kernel"{});}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00728}00728\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ multi\_warp\_cg\_reduce<T,\ threads,\ threads\ /\ numOfMultiWarpGroups>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00729}00729\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ <<<dimGrid,\ dimBlock,\ smemSize>>>(d\_idata,\ d\_odata,\ size);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00730}00730\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ break;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00731}00731\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00732}00732\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00733}00733\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00734}00734\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T,\ \textcolor{keyword}{typename}\ index\_type>}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00735}00735\ \_\_global\_\_\ \textcolor{keywordtype}{void}\ minmax\_kernel\_final(\textcolor{keyword}{const}\ T\ *i\_data,\ T\ *minmax\_array\_out,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00736}00736\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ index\_type\ *coordinate\_index\_array,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00737}00737\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ index\_type\ *coordinate\_index\_array\_out,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00738}00738\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ num\_blocks,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ sign\_min\_or\_max)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00739}00739\ \ \ \ \ \textcolor{keywordtype}{int}\ thIdx\ =\ threadIdx.x;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00740}00740\ \ \ \ \ T\ buffer\_value,\ minmax\_value\ =\ i\_data[thIdx];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00741}00741\ \ \ \ \ index\_type\ coordinate\_idx\ =\ coordinate\_index\_array[thIdx];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00742}00742\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00743}00743\ \ \ \ \ \_\_shared\_\_\ T\ minmax\_values[N\_threads];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00744}00744\ \ \ \ \ \_\_shared\_\_\ index\_type\ coordinates[N\_threads];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00745}00745\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00746}00746\ \ \ \ \ \textcolor{keywordflow}{for}\ (index\_type\ i\ =\ thIdx;\ i\ <\ num\_blocks;\ i\ +=\ N\_threads)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00747}00747\ \ \ \ \ \ \ \ \ buffer\_value\ =\ i\_data[i];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00748}00748\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (minmax\_value\ *\ sign\_min\_or\_max\ >\ buffer\_value\ *\ sign\_min\_or\_max)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00749}00749\ \ \ \ \ \ \ \ \ \ \ \ \ minmax\_value\ =\ buffer\_value;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00750}00750\ \ \ \ \ \ \ \ \ \ \ \ \ coordinate\_idx\ =\ coordinate\_index\_array[i];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00751}00751\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00752}00752\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00753}00753\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00754}00754\ \ \ \ \ minmax\_values[thIdx]\ =\ minmax\_value;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00755}00755\ \ \ \ \ coordinates[thIdx]\ =\ coordinate\_idx;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00756}00756\ \ \ \ \ \_\_syncthreads();}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00757}00757\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00758}00758\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ size\ =\ blockDim.x\ /\ 2;\ size\ >\ 0;\ size\ /=\ 2)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00759}00759\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (thIdx\ <\ size)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00760}00760\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (minmax\_values[thIdx]\ *\ sign\_min\_or\_max\ >}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00761}00761\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ minmax\_values[thIdx\ +\ size]\ *\ sign\_min\_or\_max)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00762}00762\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ minmax\_values[thIdx]\ =\ minmax\_values[thIdx\ +\ size];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00763}00763\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ coordinates[thIdx]\ =\ coordinates[thIdx\ +\ size];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00764}00764\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00765}00765\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_syncthreads();}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00766}00766\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00767}00767\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00768}00768\ \ \ \ \ \textcolor{keywordflow}{if}\ (thIdx\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00769}00769\ \ \ \ \ \ \ \ \ minmax\_array\_out[blockIdx.x]\ =\ minmax\_values[0];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00770}00770\ \ \ \ \ \ \ \ \ coordinate\_index\_array\_out[blockIdx.x]\ =\ coordinates[0];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00771}00771\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00772}00772\ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00773}00773\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00774}00774\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T,\ \textcolor{keyword}{typename}\ index\_type>}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00775}00775\ \_\_global\_\_\ \textcolor{keywordtype}{void}\ minmax\_kernel(\textcolor{keyword}{const}\ T\ *i\_data,\ T\ *minmax\_array\_out,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00776}00776\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ index\_type\ *coordinate\_index\_array\_out,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00777}00777\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structbackend__lattice__struct}{backend\_lattice\_struct}}\ loop\_info,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00778}00778\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ sign\_min\_or\_max,\ T\ \textcolor{keyword}{const}\ initial\_value)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00779}00779\ \ \ \ \ index\_type\ thIdx\ =\ threadIdx.x;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00780}00780\ \ \ \ \ index\_type\ gthIdx\ =\ thIdx\ +\ blockIdx.x\ *\ N\_threads\ +\ loop\_info.\mbox{\hyperlink{structbackend__lattice__struct_a9ab2becb7199fa88c43b3e2ea7c9db95}{loop\_begin}};}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00781}00781\ \ \ \ \ \textcolor{keyword}{const}\ index\_type\ grid\_size\ =\ N\_threads\ *\ gridDim.x;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00782}00782\ \ \ \ \ T\ minmax\_value\ =\ initial\_value;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00783}00783\ \ \ \ \ index\_type\ coordinate\_idx\ =\ gthIdx;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00784}00784\ \ \ \ \ T\ buffer\_value;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00785}00785\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00786}00786\ \ \ \ \ \_\_shared\_\_\ T\ minmax\_values[N\_threads];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00787}00787\ \ \ \ \ \_\_shared\_\_\ index\_type\ coordinates[N\_threads];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00788}00788\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00789}00789\ \ \ \ \ \textcolor{keywordflow}{for}\ (index\_type\ i\ =\ gthIdx;\ i\ <\ loop\_info.loop\_end\ ;\ i\ +=\ grid\_size)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00790}00790\ \ \ \ \ \ \ \ \ buffer\_value\ =\ i\_data[i];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00791}00791\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (minmax\_value\ *\ sign\_min\_or\_max\ >\ buffer\_value\ *\ sign\_min\_or\_max)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00792}00792\ \ \ \ \ \ \ \ \ \ \ \ \ minmax\_value\ =\ buffer\_value;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00793}00793\ \ \ \ \ \ \ \ \ \ \ \ \ coordinate\_idx\ =\ i;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00794}00794\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00795}00795\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00796}00796\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00797}00797\ \ \ \ \ minmax\_values[thIdx]\ =\ minmax\_value;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00798}00798\ \ \ \ \ coordinates[thIdx]\ =\ coordinate\_idx;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00799}00799\ \ \ \ \ \_\_syncthreads();}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00800}00800\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00801}00801\ \ \ \ \ \textcolor{keywordflow}{for}\ (index\_type\ size\ =\ N\_threads\ /\ 2;\ size\ >\ 0;\ size\ /=\ 2)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00802}00802\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (thIdx\ <\ size)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00803}00803\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (minmax\_values[thIdx]\ *\ sign\_min\_or\_max\ >}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00804}00804\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ minmax\_values[thIdx\ +\ size]\ *\ sign\_min\_or\_max)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00805}00805\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ minmax\_values[thIdx]\ =\ minmax\_values[thIdx\ +\ size];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00806}00806\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ coordinates[thIdx]\ =\ coordinates[thIdx\ +\ size];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00807}00807\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00808}00808\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00809}00809\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00810}00810\ \ \ \ \ \ \ \ \ \_\_syncthreads();}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00811}00811\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00812}00812\ \ \ \ \ \textcolor{keywordflow}{if}\ (thIdx\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00813}00813\ \ \ \ \ \ \ \ \ minmax\_array\_out[blockIdx.x]\ =\ minmax\_values[0];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00814}00814\ \ \ \ \ \ \ \ \ coordinate\_index\_array\_out[blockIdx.x]\ =\ coordinates[0];}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00815}00815\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00816}00816\ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00817}00817\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00819}00819\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00821}00821\ \textcolor{comment}{//\ Compute\ the\ number\ of\ (threads\ and)\ blocks\ to\ use\ for\ the\ given\ reduction}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00822}00822\ \textcolor{comment}{//\ kernel\ For\ the\ kernels\ >=\ 3,\ we\ set\ threads\ /\ block\ to\ the\ minimum\ of}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00823}00823\ \textcolor{comment}{//\ maxThreads\ and\ n/2.\ For\ kernels\ <\ 3,\ we\ set\ to\ the\ minimum\ of\ maxThreads\ and}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00824}00824\ \textcolor{comment}{//\ n.\ \ For\ kernel\ 6,\ we\ observe\ the\ maximum\ specified\ number\ of\ blocks,\ because}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00825}00825\ \textcolor{comment}{//\ each\ thread\ in\ that\ kernel\ can\ process\ a\ variable\ number\ of\ elements.}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00827}00827\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00829}00829\ \textcolor{comment}{//\ This\ function\ performs\ a\ reduction\ of\ the\ input\ data}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00830}00830\ \textcolor{comment}{//\ d\_odata\ is\ the}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00832}00832\ \textcolor{comment}{}\textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00833}00833\ \textcolor{comment}{//\ T\ gpu\_reduce(int\ size,\ T\ *d\_idata,\ bool\ keep\_buffers)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00834}00834\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00835}00835\ \textcolor{comment}{//\ \ \ \ \ //\ Reasonable\ defaults?\ \ TODO:\ make\ adjustable}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00836}00836\ \textcolor{comment}{//\ \ \ \ \ int\ maxBlocks\ =\ 64;\ //\ only\ for\ kernels\ >=\ 6}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00837}00837\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00838}00838\ \textcolor{comment}{//\ \ \ \ \ int\ numBlocks\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00839}00839\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00840}00840\ \textcolor{comment}{//\ \ \ \ \ if\ (whichKernel\ <\ 3)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00841}00841\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ numBlocks\ =\ (size\ +\ numThreads\ -\/\ 1)\ /\ numThreads;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00842}00842\ \textcolor{comment}{//\ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00843}00843\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ numBlocks\ =\ (size\ +\ (numThreads\ *\ 2\ -\/\ 1))\ /\ (numThreads\ *\ 2);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00844}00844\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (whichKernel\ >=\ 6)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00845}00845\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (numBlocks\ <\ maxBlocks)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00846}00846\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ numBlocks\ =\ maxBlocks;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00847}00847\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00848}00848\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00849}00849\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00850}00850\ \textcolor{comment}{//\ \ \ \ \ static\ T\ *d\_odata\ =\ nullptr;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00851}00851\ \textcolor{comment}{//\ \ \ \ \ static\ T\ *h\_odata\ =\ nullptr;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00852}00852\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00853}00853\ \textcolor{comment}{//\ \ \ \ \ //\ allocate\ buffers\ if\ not\ done\ before}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00854}00854\ \textcolor{comment}{//\ \ \ \ \ if\ (d\_odata\ ==\ nullptr)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00855}00855\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ gpuMalloc(\&d\_odata,\ numBlocks\ *\ sizeof(T));}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00856}00856\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00857}00857\ \textcolor{comment}{//\ \ \ \ \ if\ (h\_odata\ ==\ nullptr)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00858}00858\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ h\_odata\ =\ (T\ *)memalloc(numBlocks\ *\ sizeof(T));}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00859}00859\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00860}00860\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00861}00861\ \textcolor{comment}{//\ \ \ \ \ //\ execute\ the\ kernel}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00862}00862\ \textcolor{comment}{//\ \ \ \ \ reduce\_kernel<T,\ numThreads>(size,\ numBlocks,\ d\_idata,\ d\_odata);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00863}00863\ \textcolor{comment}{//\ \ \ \ \ check\_device\_error("{}reduction"{});}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00864}00864\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00865}00865\ \textcolor{comment}{//\ \ \ \ \ //\ sum\ partial\ sums\ from\ each\ block\ on\ CPU}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00866}00866\ \textcolor{comment}{//\ \ \ \ \ //\ copy\ result\ from\ device\ to\ host}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00867}00867\ \textcolor{comment}{//\ \ \ \ \ gpuMemcpy(h\_odata,\ d\_odata,\ numBlocks\ *\ sizeof(T),\ gpuMemcpyDeviceToHost);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00868}00868\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00869}00869\ \textcolor{comment}{//\ \ \ \ \ T\ gpu\_result\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00870}00870\ \textcolor{comment}{//\ \ \ \ \ for\ (int\ i\ =\ 0;\ i\ <\ numBlocks;\ i++)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00871}00871\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ gpu\_result\ +=\ h\_odata[i];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00872}00872\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00873}00873\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00874}00874\ \textcolor{comment}{//\ \ \ \ \ //\ release\ buffers\ if\ not\ needed\ again}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00875}00875\ \textcolor{comment}{//\ \ \ \ \ if\ (!keep\_buffers)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00876}00876\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ free(h\_odata);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00877}00877\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ gpuFree(d\_odata);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00878}00878\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ h\_odata\ =\ nullptr;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00879}00879\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ d\_odata\ =\ nullptr;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00880}00880\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00881}00881\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00882}00882\ \textcolor{comment}{//\ \ \ \ \ return\ gpu\_result;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00883}00883\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00884}00884\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00885}00885\ \textcolor{comment}{//\ All\ the\ for\ testing\ parts\ allow\ to\ see\ what\ happens\ in\ the\ return\ arrays\ between\ the\ singular\ block\ reduction}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00886}00886\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00887}00887\ std::pair<T,\ unsigned>\ gpu\_launch\_minmax\_kernel(T\ *field\_data,\ \textcolor{keywordtype}{int}\ node\_system\_size,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00888}00888\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ min\_or\_max,\ \mbox{\hyperlink{structbackend__lattice__struct}{backend\_lattice\_struct}}\ lattice\_info)\ \{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00889}00889\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00890}00890\ \ \ \ \ \textcolor{keyword}{using\ }index\_type\ =\ \textcolor{keywordtype}{unsigned}\ long;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00891}00891\ \ \ \ \ \textcolor{keywordtype}{int}\ num\_blocks\ =\ (node\_system\_size\ +\ N\_threads\ -\/\ 1)\ /\ N\_threads;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00892}00892\ \ \ \ \ \textcolor{comment}{//CUDA\ will\ take\ a\ performance\ hit\ if\ num\_blocks\ is\ too\ large\ at\ very\ large\ system\ sizes}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00893}00893\ \ \ \ \ \textcolor{keywordflow}{if}\ (num\_blocks\ >\ 2048)\ num\_blocks\ =\ 2048;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00894}00894\ \ \ \ \ \textcolor{keywordtype}{int}\ block\_size\ =\ N\_threads;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00895}00895\ \ \ \ \ \textcolor{keywordtype}{int}\ \textcolor{keyword}{const}\ sign\_min\_or\_max\ =\ min\_or\_max\ ?\ 1\ :\ -\/1;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00896}00896\ \ \ \ \ T\ \textcolor{keyword}{const}\ initial\_value\ =}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00897}00897\ \ \ \ \ \ \ \ \ min\_or\_max\ ?\ std::numeric\_limits<T>::max()\ :\ \mbox{\hyperlink{namespacestd}{std}}::numeric\_limits<T>::min();}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00898}00898\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00899}00899\ \ \ \ \ T\ *minmax\_array;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00900}00900\ \ \ \ \ index\_type\ *coordinate\_index\_array;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00901}00901\ \ \ \ \ T\ return\_value\_host;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00902}00902\ \ \ \ \ index\_type\ coordinate\_index;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00903}00903\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00904}00904\ \ \ \ \ \textcolor{comment}{//\ for\ testing}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00905}00905\ \ \ \ \ \textcolor{comment}{//\ T\ *return\_value\_list\ =\ new\ T[num\_blocks];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00906}00906\ \ \ \ \ \textcolor{comment}{//\ index\_type\ *coordinate\_list\ =\ new\ index\_type[num\_blocks];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00907}00907\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00908}00908\ \ \ \ \ gpuMalloc(\&minmax\_array,\ \textcolor{keyword}{sizeof}(T)\ *\ num\_blocks);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00909}00909\ \ \ \ \ gpuMalloc(\&coordinate\_index\_array,\ \textcolor{keyword}{sizeof}(index\_type)\ *\ num\_blocks);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00910}00910\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00911}00911\ \ \ \ \ \textcolor{comment}{//\ Find\ num\_blocks\ amount\ of\ max\ or\ min\ values}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00912}00912\ \ \ \ \ \textcolor{comment}{//implement\ loop}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00913}00913\ \ \ \ \ minmax\_kernel<<<num\_blocks,\ block\_size>>>(field\_data,\ minmax\_array,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00914}00914\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ coordinate\_index\_array,\ lattice\_info,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00915}00915\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sign\_min\_or\_max,\ initial\_value);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00916}00916\ \ \ \ \ check\_device\_error(\textcolor{stringliteral}{"{}minmax\_kernel"{}});}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00917}00917\ \ \ \ \ \textcolor{comment}{//\ For\ testing}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00918}00918\ \ \ \ \ \textcolor{comment}{//\ cudaMemcpy(return\_value\_list,\ minmax\_array,\ sizeof(T)\ *\ num\_blocks,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00919}00919\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ cudaMemcpyDeviceToHost);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00920}00920\ \ \ \ \ \textcolor{comment}{//\ cudaMemcpy(coordinate\_list,\ coordinate\_index\_array,\ sizeof(index\_type)\ *\ num\_blocks,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00921}00921\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ cudaMemcpyDeviceToHost);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00922}00922\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00923}00923\ \ \ \ \ \textcolor{comment}{//\ If\ we\ happen\ to\ have\ less\ than\ N\_threads\ worth\ of\ blocks,\ then\ the\ final\ kernel\ will\ be\ launched\ with\ num\_blocks\ worth\ of\ threads}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00924}00924\ \ \ \ \ \textcolor{keywordflow}{if}\ (num\_blocks\ <\ block\_size)\ block\_size\ =\ num\_blocks;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00925}00925\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00926}00926\ \ \ \ \ \textcolor{comment}{//\ Find\ global\ max\ or\ min\ from\ num\_blocks\ amount\ of\ values}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00927}00927\ \ \ \ \ minmax\_kernel\_final<<<1,\ block\_size>>>(}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00928}00928\ \ \ \ \ \ \ \ \ minmax\_array,\ minmax\_array,\ coordinate\_index\_array,\ coordinate\_index\_array,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00929}00929\ \ \ \ \ \ \ \ \ num\_blocks,\ sign\_min\_or\_max);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00930}00930\ \ \ \ \ check\_device\_error(\textcolor{stringliteral}{"{}minmax\_kernel\_final"{}});}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00931}00931\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00932}00932\ \ \ \ \ \textcolor{comment}{//\ Location\ and\ value\ of\ max\ or\ minP\ will\ be\ the\ first\ element\ of\ return\ arrays}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00933}00933\ \ \ \ \ gpuMemcpy(\&return\_value\_host,\ minmax\_array,\ \textcolor{keyword}{sizeof}(T),\ gpuMemcpyDeviceToHost);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00934}00934\ \ \ \ \ gpuMemcpy(\&coordinate\_index,\ coordinate\_index\_array,\ \textcolor{keyword}{sizeof}(index\_type),}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00935}00935\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gpuMemcpyDeviceToHost);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00936}00936\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00937}00937\ \ \ \ \ \textcolor{comment}{//\ for\ testin}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00938}00938\ \ \ \ \ \textcolor{comment}{//\ cudaMemcpy(return\_value\_list,\ minmax\_array,\ sizeof(T)\ *\ num\_blocks,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00939}00939\ \ \ \ \ \textcolor{comment}{//\ cudaMemcpyDeviceToHost);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00940}00940\ \ \ \ \ \textcolor{comment}{//\ cudaMemcpy(coordinate\_list,\ coordinate\_index\_array,\ sizeof(index\_type)\ *\ num\_blocks,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00941}00941\ \ \ \ \ \textcolor{comment}{//\ cudaMemcpyDeviceToHost);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00942}00942\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00943}00943\ \ \ \ \ gpuFree(minmax\_array);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00944}00944\ \ \ \ \ gpuFree(coordinate\_index\_array);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00945}00945\ \ \ \ \ \textcolor{comment}{//\ for\ testing}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00946}00946\ \ \ \ \ \textcolor{comment}{//\ for\ (auto\ i\ =\ 0;\ i\ <\ 1;\ i++)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00947}00947\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ std::cout\ <<\ return\_value\_list[0]\ <<\ "{}:\ value,\ "{}\ <<\ coordinate\_list[0]}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00948}00948\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ "{}:\ index,\ \(\backslash\)n"{};}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00949}00949\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00950}00950\ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(return\_value\_host,\ coordinate\_index);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00951}00951\ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00952}00952\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00954}00954\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00955}00955\ \textcolor{preprocessor}{\#else\ }\textcolor{comment}{//\ if\ !defined(HILAPP)}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00956}00956\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00957}00957\ \textcolor{comment}{//\ just\ declare\ the\ name}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00958}00958\ \textcolor{comment}{//\ template\ <class\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00959}00959\ \textcolor{comment}{//\ T\ gpu\_reduce(int\ size,\ T\ *d\_idata,\ bool\ keep\_buffers);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00960}00960\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00961}00961\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00962}00962\ std::pair<T,\ unsigned>\ gpu\_launch\_minmax\_kernel(T\ *field\_data,\ \textcolor{keywordtype}{int}\ node\_system\_size,}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00963}00963\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ min\_or\_max,\ \mbox{\hyperlink{structbackend__lattice__struct}{backend\_lattice\_struct}}\ lattice\_info);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00964}00964\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00965}00965\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ ifndef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00966}00966\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00967}00967\ \textcolor{preprocessor}{\#include\ "{}com\_mpi.h"{}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00968}00968\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00970}00970\ \textcolor{comment}{//\ Reduce\ field\ var\ over\ the\ lattice}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00971}00971\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00972}00972\ \textcolor{comment}{//\ template\ <typename\ T>}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00973}00973\ \textcolor{comment}{//\ T\ Field<T>::gpu\_reduce\_sum(bool\ allreduce,\ Parity\ par,\ bool\ do\_mpi)\ const\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00974}00974\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00975}00975\ \textcolor{comment}{//\ \#ifndef\ EVEN\_SITES\_FIRST}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00976}00976\ \textcolor{comment}{//\ \ \ \ \ assert(par\ ==\ Parity::all\ \&\&}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00977}00977\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ "{}EVEN\_SITES\_FIRST\ neede\ for\ gpu\ reduction\ with\ parity"{});}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00978}00978\ \textcolor{comment}{//\ \#endif}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00979}00979\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00980}00980\ \textcolor{comment}{//\ \ \ \ \ using\ base\_t\ =\ hila::scalar\_type<T>;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00981}00981\ \textcolor{comment}{//\ \ \ \ \ constexpr\ int\ n\ =\ sizeof(T)\ /\ sizeof(base\_t);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00982}00982\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00983}00983\ \textcolor{comment}{//\ \ \ \ \ //\ fields\ are\ stored\ 1\ after\ another\ on\ gpu\ fields}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00984}00984\ \textcolor{comment}{//\ \ \ \ \ //\ -\/-\/\ this\ really\ relies\ on\ the\ data\ layout!}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00985}00985\ \textcolor{comment}{//\ \ \ \ \ T\ *fb\ =\ this-\/>field\_buffer();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00986}00986\ \textcolor{comment}{//\ \ \ \ \ //\ address\ data\ with\ bptr}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00987}00987\ \textcolor{comment}{//\ \ \ \ \ base\_t\ *bptr\ =\ (base\_t\ *)(fb);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00988}00988\ \textcolor{comment}{//\ \ \ \ \ const\ lattice\_struct\ *lat\ =\ this-\/>fs-\/>lattice;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00989}00989\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00990}00990\ \textcolor{comment}{//\ \ \ \ \ //\ use\ this\ union\ to\ set\ the\ value\ element\ by\ element}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00991}00991\ \textcolor{comment}{//\ \ \ \ \ union\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00992}00992\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ T\ value;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00993}00993\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ base\_t\ element[n];}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00994}00994\ \textcolor{comment}{//\ \ \ \ \ \}\ result;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00995}00995\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00996}00996\ \textcolor{comment}{//\ \ \ \ \ unsigned\ fsize\ =\ lat-\/>field\_alloc\_size();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00997}00997\ \textcolor{comment}{//\ \ \ \ \ unsigned\ size\ =\ lat-\/>mynode.volume();}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00998}00998\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l00999}00999\ \textcolor{comment}{//\ \ \ \ \ if\ (par\ ==\ Parity::even)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01000}01000\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ size\ =\ lat-\/>mynode.evensites;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01001}01001\ \textcolor{comment}{//\ \ \ \ \ \}\ else\ if\ (par\ ==\ Parity::odd)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01002}01002\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ size\ =\ lat-\/>mynode.oddsites;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01003}01003\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ bptr\ +=\ lat-\/>mynode.evensites;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01004}01004\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01005}01005\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01006}01006\ \textcolor{comment}{//\ \ \ \ \ for\ (int\ i\ =\ 0;\ i\ <\ n;\ i++)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01007}01007\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ //\ keep\ buffers\ until\ last\ element}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01008}01008\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ result.element[i]\ =\ gpu\_reduce<base\_t>(size,\ bptr,\ i\ <\ (n\ -\/\ 1));}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01009}01009\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ bptr\ +=\ fsize;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01010}01010\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01011}01011\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01012}01012\ \textcolor{comment}{//\ \ \ \ \ //\ we\ don't\ always\ do\ MPI\ -\/\ not\ in\ generated\ loops}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01013}01013\ \textcolor{comment}{//\ \ \ \ \ if\ (do\_mpi)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01014}01014\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ MPI\_Datatype\ dtype;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01015}01015\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ int\ s;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01016}01016\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01017}01017\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ dtype\ =\ \_type<T>(s);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01018}01018\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ assert(dtype\ !=\ MPI\_BYTE\ \&\&\ "{}Unknown\ number\_type\ in\ gpu\_reduce\_sum"{});}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01019}01019\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01020}01020\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ if\ (allreduce)\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01021}01021\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Allreduce(MPI\_IN\_PLACE,\ \&result.value,\ size,\ dtype,\ MPI\_SUM,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01022}01022\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>fs-\/>lattice.mpi\_comm\_lat);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01023}01023\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}\ else\ \{}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01024}01024\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Reduce(MPI\_IN\_PLACE,\ \&result.value,\ size,\ dtype,\ MPI\_SUM,\ 0,}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01025}01025\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>fs-\/>lattice.mpi\_comm\_lat);}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01026}01026\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01027}\mbox{\hyperlink{classField_a4369fa39e3ffbab5c4060251ca112c5a}{01027}}\ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01028}01028\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01029}01029\ \textcolor{comment}{//\ \ \ \ \ return\ result.value;}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01030}01030\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01031}01031\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01032}01032\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01033}\mbox{\hyperlink{classField_a4369fa39e3ffbab5c4060251ca112c5a}{01033}}\ T\ \mbox{\hyperlink{classField_a4369fa39e3ffbab5c4060251ca112c5a}{Field<T>::gpu\_minmax}}(\textcolor{keywordtype}{bool}\ min\_or\_max,\ Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01034}01034\ \ \ \ \ \mbox{\hyperlink{structbackend__lattice__struct}{backend\_lattice\_struct}}\ lattice\_info\ =\ *(lattice.backend\_lattice);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01035}01035\ \ \ \ \ lattice\_info.\mbox{\hyperlink{structbackend__lattice__struct_a9ab2becb7199fa88c43b3e2ea7c9db95}{loop\_begin}}\ =\ lattice.loop\_begin(par);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01036}01036\ \ \ \ \ lattice\_info.loop\_end\ =\ lattice.loop\_end(par);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01037}01037\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keyword}{const}\ node\_system\_size\ =\ lattice\_info.loop\_end\ -\/\ lattice\_info.\mbox{\hyperlink{structbackend__lattice__struct_a9ab2becb7199fa88c43b3e2ea7c9db95}{loop\_begin}};}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01038}01038\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01039}01039\ \ \ \ \ std::pair<T,\ unsigned>\ value\_and\_coordinate\ =}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01040}01040\ \ \ \ \ \ \ \ \ gpu\_launch\_minmax\_kernel(this-\/>field\_buffer(),\ node\_system\_size,\ min\_or\_max,\ lattice\_info);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01041}01041\ \ \ \ \ loc\ =\ lattice.coordinates(value\_and\_coordinate.second);}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01042}01042\ \ \ \ \ \textcolor{keywordflow}{return}\ value\_and\_coordinate.first;}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01043}01043\ \}}
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01044}01044\ }
+\DoxyCodeLine{\Hypertarget{gpu__reduction_8h_source_l01045}01045\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

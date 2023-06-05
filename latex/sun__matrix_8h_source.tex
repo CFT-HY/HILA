@@ -1,0 +1,255 @@
+\doxysection{sun\+\_\+matrix.\+h}
+\hypertarget{sun__matrix_8h_source}{}\label{sun__matrix_8h_source}\index{sun\_matrix.h@{sun\_matrix.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ SUN\_MATRIX\_H\_}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ SUN\_MATRIX\_H\_}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}matrix.h"{}}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}su2.h"{}}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00010}00010\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ G>}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00011}00011\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classAlgebra}{Algebra}};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00012}00012\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00013}00013\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00014}00014\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classSU}{SU}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ Complex<T>,\ SU<N,\ T>>\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00016}00016\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00017}00017\ \ \ \ \ \textcolor{comment}{//\ std\ incantation\ for\ field\ types}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00018}00018\ \ \ \ \ \textcolor{keyword}{using\ }base\_type\ =\ T;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00019}00019\ \ \ \ \ \textcolor{keyword}{using\ }argument\_type\ =\ \mbox{\hyperlink{classComplex}{Complex<T>}};\ \textcolor{comment}{//\ constructed\ from\ complex}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00021}00021\ \ \ \ \ \textcolor{comment}{//\ get\ all\ constructors\ from\ base}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00022}00022\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ \mbox{\hyperlink{classComplex}{Complex<T>}},\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}>\mbox{\hyperlink{classMatrix__t_a4b6e5835b5910da6eb2f295b5bbb6d69}{::Matrix\_t}};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00023}00023\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ \mbox{\hyperlink{classComplex}{Complex<T>}},\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}>::operator=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00024}00024\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ \mbox{\hyperlink{classComplex}{Complex<T>}},\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}>::operator+=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00025}00025\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ \mbox{\hyperlink{classComplex}{Complex<T>}},\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}>::operator-\/=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00026}00026\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ \mbox{\hyperlink{classComplex}{Complex<T>}},\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}>::operator*=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00027}00027\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N,\ N,\ \mbox{\hyperlink{classComplex}{Complex<T>}},\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}>::operator/=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00034}\mbox{\hyperlink{classSU_ab63971532d327c7a2cd715f0b3e5ec4a}{00034}}\ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classSU}{SU}}\ \&\mbox{\hyperlink{classSU_ab63971532d327c7a2cd715f0b3e5ec4a}{make\_unitary}}()\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00036}00036\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ r\ =\ 0;\ r\ <\ N;\ r++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00038}00038\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ normalize\ row\ r}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00039}00039\ \ \ \ \ \ \ \ \ \ \ \ \ T\ n2\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00040}00040\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ use\ here\ function\ instead\ of\ method,\ works\ for\ double/float\ too}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00041}00041\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}\ =\ 0;\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}\ <\ N;\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}++)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00042}00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n2\ +=\ \mbox{\hyperlink{classMatrix__t_a2107bddb57dfc38917601e5978931a8c}{::squarenorm}}(this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(r,\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}));}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00043}00043\ \ \ \ \ \ \ \ \ \ \ \ \ n2\ =\ 1.0\ /\ sqrt(n2);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}\ =\ 0;\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}\ <\ N;\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}++)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00045}00045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(r,\ \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}})\ *=\ n2;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Now\ make\ rows\ r+1\ ..\ n-\/1\ orthogonal\ to\ row\ r,}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ by\ doing\ j\ =\ j\ -\/\ (r\string^*\ j)\ r}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00049}00049\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00050}00050\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<T>}}\ d;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ r\ +\ 1;\ j\ <\ N;\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dot\ productof\ r\string^*\ j}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00053}00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ d\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00054}00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ N;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00055}00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ d\ +=\ \mbox{\hyperlink{classMatrix__t_a7bda9d240f8c0215799c515d9767f36b}{::conj}}(this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(r,\ i))\ *\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ i);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ j\ -\/=\ d\ *\ r}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ N;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ i)\ -\/=\ d\ *\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(r,\ i);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00062}00062\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00064}00064\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00067}\mbox{\hyperlink{classSU_a18428f189765fcd4a24be100c32dccc1}{00067}}\ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classSU}{SU}}\ \&\mbox{\hyperlink{classSU_a18428f189765fcd4a24be100c32dccc1}{fix\_det}}()\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00069}00069\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<T>}}\ d,\ factor;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00070}00070\ \ \ \ \ \ \ \ \ T\ t;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00072}00072\ \ \ \ \ \ \ \ \ d\ =\ det(*(\textcolor{keyword}{this}));}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00073}00073\ \ \ \ \ \ \ \ \ t\ =\ d.arg()\ /\ N;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00074}00074\ \ \ \ \ \ \ \ \ factor\ =\ \mbox{\hyperlink{classComplex}{Complex<T>}}(cos(-\/t),\ sin(-\/t));}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00075}00075\ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_aa79533d7905f5cab945d3a4572b8bda9}{asArray}}()\ *=\ factor;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00077}00077\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00078}00078\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00080}\mbox{\hyperlink{classSU_ad9f41ccda791dff8ccdffdb8da28034a}{00080}}\ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classSU}{SU}}\ \&\mbox{\hyperlink{classSU_ad9f41ccda791dff8ccdffdb8da28034a}{reunitarize}}()\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU_a59bc13976d5d1fe028a43701771a2642}{make\_unitary}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00082}00082\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU_a26b7db6b29fcee156ec1e3173c0c6d2c}{fix\_det}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00083}00083\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00084}00084\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00085}00085\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00086}00086\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00087}00087\ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classSU}{SU}}\ \&\ \mbox{\hyperlink{classMatrix__t_ae8cc4870752fdec40d0e1207cd19f45f}{random}}(\textcolor{keywordtype}{int}\ nhits\ =\ 16)\ out\_only\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00089}00089\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ use\ Pauli\ matrix\ representation\ to\ generate\ SU(2)\ random\ matrix}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00090}00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (N\ ==\ 2)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00091}00091\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<4,\ T>}}\ v;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00092}00092\ \ \ \ \ \ \ \ \ \ \ \ \ v.\mbox{\hyperlink{classMatrix__t_ade4d90f6ba87badc7d3f68f47c16d4e9}{gaussian\_random}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00093}00093\ \ \ \ \ \ \ \ \ \ \ \ \ v\ /=\ v.\mbox{\hyperlink{classMatrix__t_a7bea1cd49423897dc243005154020c4d}{norm}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00094}00094\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(0,\ 0)\ =\ Complex<T>(v[0],\ v[3]);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00095}00095\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(1,\ 1)\ =\ Complex<T>(v[0],\ -\/v[3]);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00096}00096\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(0,\ 1)\ =\ Complex<T>(v[2],\ v[1]);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00097}00097\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(1,\ 0)\ =\ Complex<T>(-\/v[2],\ v[1]);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00098}00098\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00100}00100\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00101}00101\ \ \ \ \ \ \ \ \ \ \ \ \ *\textcolor{keyword}{this}\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00102}00102\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{SU<2,\ T>}}\ m2;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00103}00103\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00104}00104\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ h\ =\ 1;\ h\ <=\ nhits;\ h++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ r\ =\ 0;\ r\ <\ N\ -\/\ 1;\ r++)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00106}00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ q\ =\ r\ +\ 1;\ q\ <\ N;\ q++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00107}00107\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m2.\mbox{\hyperlink{classSU_afe5a5bf52267e5d3f724bab525f4e633}{random}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00108}00108\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a0167cb9b823e409ea2c9f72cef944175}{mult\_by\_2x2\_left}}(r,\ q,\ m2);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00109}00109\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00111}00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ keep\ it\ SU(N)}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (h\ \%\ 16\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00113}00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classSU_acf460bdae77a5572cc6622ce9d401bbb}{reunitarize}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00115}00115\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nhits\ \%\ 16\ !=\ 0)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00117}00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classSU_acf460bdae77a5572cc6622ce9d401bbb}{reunitarize}}();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00118}00118\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00119}00119\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00120}00120\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00121}00121\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00154}00154\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00155}\mbox{\hyperlink{classSU_ae3abd62855cb396c2d939fe96bb8b549}{00155}}\ \ \ \ \ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>\ \mbox{\hyperlink{classSU_ae3abd62855cb396c2d939fe96bb8b549}{project\_to\_algebra}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00156}00156\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>\ a;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00157}00157\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00158}00158\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ diagonal\ generators}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00159}00159\ \ \ \ \ \ \ \ \ T\ sum\ =\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(0,\ 0).im;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00160}00160\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ N;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00161}00161\ \ \ \ \ \ \ \ \ \ \ \ \ a.e(i\ -\/\ 1)\ =\ (sum\ -\/\ i\ *\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ i).im)\ /\ sqrt(0.5\ *\ i\ *\ (i\ +\ 1));}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00162}00162\ \ \ \ \ \ \ \ \ \ \ \ \ sum\ +=\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ i).im;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00163}00163\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00164}00164\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00165}00165\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Then\ off-\/diag\ bits}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00166}00166\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ k\ =\ a.n\_diag;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00167}00167\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ N\ -\/\ 1;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00168}00168\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ i\ +\ 1;\ j\ <\ N;\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00169}00169\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ od\ =\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ -\/\ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ i).conj();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00170}00170\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ a.e(k)\ =\ od.re;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00171}00171\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ a.e(k\ +\ 1)\ =\ od.im;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00172}00172\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ k\ +=\ 2;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00173}00173\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00174}00174\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00175}00175\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00176}00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00177}00177\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00178}00178\ \};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00179}00179\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00183}00183\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00184}00184\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00185}\mbox{\hyperlink{classAlgebra_3_01SU_3_01N_00_01T_01_4_01_4}{00185}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classAlgebra}{Algebra}}<\mbox{\hyperlink{classSU}{SU}}<N,\ T>>\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ Algebra<SU<N,\ T>>>\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00186}00186\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00187}00187\ \ \ \ \ \textcolor{comment}{//\ std\ incantation\ for\ field\ types}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00188}00188\ \ \ \ \ \textcolor{keyword}{using\ }base\_type\ =\ hila::scalar\_type<T>;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00189}00189\ \ \ \ \ \textcolor{keyword}{using\ }argument\_type\ =\ T;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00190}00190\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00191}00191\ \ \ \ \ \textcolor{comment}{//\ storage\ for\ the\ diagonal\ and\ off-\/diag}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00192}00192\ \ \ \ \ \textcolor{comment}{//\ components\ of\ the\ antihermitean\ traceless\ matrix}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00193}00193\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ n\_offdiag\ =\ N\ *\ (N\ -\/\ 1);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00194}00194\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ n\_diag\ =\ N\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00195}00195\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ N\_a\ =\ N\ *\ N\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00196}00196\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00198}00198\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>>\mbox{\hyperlink{classMatrix__t}{::Matrix\_t}};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00199}00199\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>>::operator=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00200}00200\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>>::operator+=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00201}00201\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>>::operator-\/=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00202}00202\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>>::operator*=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00203}00203\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix__t}{Matrix\_t}}<N\ *\ N\ -\/\ 1,\ 1,\ T,\ \mbox{\hyperlink{classAlgebra}{Algebra<SU<N,\ T>}}>>::operator/=;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00204}00204\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00205}00205\ \ \ \ \ \textcolor{comment}{//\ suN\ generators,\ normalized\ as}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00206}00206\ \ \ \ \ \textcolor{comment}{//\ \ Tr(\(\backslash\)lambda\_i\(\backslash\)lambda\_j)\ =\ 1/2\ \(\backslash\)delta\_ij}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00207}00207\ \ \ \ \ \textcolor{comment}{//\ off-\/diagonal\ are\ just\ that:}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00208}00208\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \(\backslash\)lambda\string^od\_ij,r\ =\ 1/2\ for\ elements\ ij\ and\ ji}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00209}00209\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \(\backslash\)lambda\string^od\_ij,i\ =\ i/2\ for\ ij;\ -\/i\ for\ ji}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00210}00210\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00211}00211\ \ \ \ \ \textcolor{comment}{//\ diagonals:\ su(N)\ has\ N-\/1\ diag\ generators}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00212}00212\ \ \ \ \ \textcolor{comment}{//\ parametrize\ these\ recursively:}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00213}00213\ \ \ \ \ \textcolor{comment}{//\ \ \(\backslash\)lambda\_1\ =\ diag(1,-\/1,0,0,..)/sqrt(1)/2}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00214}00214\ \ \ \ \ \textcolor{comment}{//\ \ \(\backslash\)lambda\_2\ =\ diag(1,1,-\/2,0,..)/sqrt(3)/2}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00215}00215\ \ \ \ \ \textcolor{comment}{//\ \ \(\backslash\)lambda\_3\ =\ diag(1,1,1,-\/3,..)/sqrt(6)/2}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00216}00216\ \ \ \ \ \textcolor{comment}{//\ \ \(\backslash\)lambda\_i\ =\ diag(1,..\ ,-\/i,..)/sqrt(i(i+1)/2)/2}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00217}00217\ \ \ \ \ \textcolor{comment}{//\ \ ..}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00218}00218\ \ \ \ \ \textcolor{comment}{//\ \ \(\backslash\)lambda\_N-\/1\ =\ diag(1,..\ ,1,-\/(N-\/1))/sqrt(N(N-\/1)/2)/2}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00219}00219\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00220}00220\ \ \ \ \ \textcolor{comment}{//\ Define\ \(\backslash\)lambda's\ so\ that\ diagonals\ come\ first}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00221}00221\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00223}\mbox{\hyperlink{classAlgebra_3_01SU_3_01N_00_01T_01_4_01_4_a78e675df6abde7fa6208278ae53c3249}{00223}}\ \ \ \ \ \mbox{\hyperlink{classSU}{SU<N,\ T>}}\ \mbox{\hyperlink{classAlgebra_3_01SU_3_01N_00_01T_01_4_01_4_a78e675df6abde7fa6208278ae53c3249}{expand}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00224}00224\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{SU<N,\ T>}}\ m;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00225}00225\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00226}00226\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<N,\ T>}}\ d;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00227}00227\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00228}00228\ \ \ \ \ \ \ \ \ d.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(0)\ =\ (T)0;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00229}00229\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ N;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00230}00230\ \ \ \ \ \ \ \ \ \ \ \ \ T\ r\ =\ this-\/>e(i\ -\/\ 1)\ *\ sqrt(0.5\ /\ (i\ *\ (i\ +\ 1)));}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00231}00231\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ contributions\ from\ 1's\ above}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00232}00232\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ i;\ j++)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00233}00233\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ d.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j)\ +=\ r;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00234}00234\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ set\ the\ negative\ element\ -\/\ no\ sum\ here,\ first\ contrib}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00235}00235\ \ \ \ \ \ \ \ \ \ \ \ \ d.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i)\ =\ -\/i\ *\ r;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00236}00236\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00237}00237\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00238}00238\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ N;\ i++)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00239}00239\ \ \ \ \ \ \ \ \ \ \ \ \ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ i)\ =\ \mbox{\hyperlink{classComplex}{Complex<T>}}(0,\ d.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i));}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00240}00240\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00241}00241\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ k\ =\ n\_diag;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00242}00242\ \ \ \ \ \ \ \ \ T\ inv2\ =\ 1.0\ /\ 2;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00243}00243\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ N\ -\/\ 1;\ i++)}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00244}00244\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ i\ +\ 1;\ j\ <\ N;\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00245}00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<T>}}\ v(this-\/>c[k]\ *\ inv2,\ this-\/>c[k\ +\ 1]\ *\ inv2);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00246}00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ =\ v;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00247}00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ i)\ =\ -\/v.conj();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00248}00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ k\ +=\ 2;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00249}00249\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00250}00250\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00251}00251\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m;}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00252}00252\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00253}00253\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00254}00254\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00270}00270\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00271}00271\ \ \ \ \ \textcolor{comment}{//\ Algebra\ \&gaussian\_random()\ out\_only\ \{}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00272}00272\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00273}00273\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ for\ (int\ i=0;\ i<N\_a;\ i++)\ \{}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00274}00274\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ a.e(i)\ =\ hila::gaussrand();}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00275}00275\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \}}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00276}00276\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00277}00277\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ return\ *this;}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00278}00278\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00279}00279\ \};}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00280}00280\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00281}00281\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00282}00282\ \mbox{\hyperlink{classSU}{SU<N,\ T>}}\ exp(\textcolor{keyword}{const}\ \mbox{\hyperlink{classAlgebra}{Algebra}}<\mbox{\hyperlink{classSU}{SU<N,\ T>}}>\ \&a)\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00283}00283\ \ \ \ \ \mbox{\hyperlink{classSU}{SU<N,\ T>}}\ m\ =\ a.expand();}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00284}00284\ \ \ \ \ \textcolor{keywordflow}{return}\ exp(m);}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00285}00285\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00286}00286\ \ \ \ \ \textcolor{comment}{//\ SU<N,T>\ m\ =\ a.expand()\ *\ (-\/I);\ //\ make\ hermitean}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00287}00287\ \ \ \ \ \textcolor{comment}{//\ SquareMatrix<N,Complex<T>>\ D;}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00288}00288\ \ \ \ \ \textcolor{comment}{//\ Vector<N,T>\ ev;}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00289}00289\ \ \ \ \ \textcolor{comment}{//\ m.eigen\_jacobi(ev,D);}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00290}00290\ \ \ \ \ \textcolor{comment}{//\ Vector<N,Complex<T>>\ expv;}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00291}00291\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00292}00292\ \ \ \ \ \textcolor{comment}{//\ for\ (int\ i=0;\ i<N;\ i++)\ expv[i]\ =\ exp(I*ev[i]);}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00293}00293\ \ \ \ \ \textcolor{comment}{//\ for\ (int\ i=0;\ i<N;\ i++)\ for\ (int\ j=0;\ j<N;\ j++)\ \{}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00294}00294\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ m.e(i,j)\ =\ D.e(i,0)\ *\ expv[0]\ *\ D.e(j,0).conj();}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00295}00295\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ for\ (int\ k=1;\ k<N;\ k++)}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00296}00296\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ m.e(i,j)\ +=\ D.e(i,k)\ *\ expv[k]\ *\ D.e(j,k).conj();}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00297}00297\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00298}00298\ \ \ \ \ \textcolor{comment}{//\ return\ m;}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00299}00299\ \}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00300}00300\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00301}00301\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacehila}{hila}}\ \{}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00302}00302\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00305}00305\ \textcolor{comment}{//\ template\ <int\ N,\ typename\ T>}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00306}00306\ \textcolor{comment}{//\ void\ random(out\_only\ SU<N,\ T>\ \&m)\ \{}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00307}00307\ \textcolor{comment}{//\ \ \ \ \ m.random();}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00308}00308\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00309}00309\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00310}00310\ }
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00311}00311\ \}\ \textcolor{comment}{//\ namespace\ hila}}
+\DoxyCodeLine{\Hypertarget{sun__matrix_8h_source_l00312}00312\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

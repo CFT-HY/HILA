@@ -1,0 +1,74 @@
+\doxysection{action\+\_\+base Class Reference}
+\hypertarget{classaction__base}{}\label{classaction__base}\index{action\_base@{action\_base}}
+
+
+{\ttfamily \#include $<$integrator.\+h$>$}
+
+
+
+Inheritance diagram for action\+\_\+base\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=346pt]{classaction__base__inherit__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classaction__base_a215dbd8038b0b5d9a67a4c4dcf83cc00}\label{classaction__base_a215dbd8038b0b5d9a67a4c4dcf83cc00} 
+virtual double {\bfseries action} ()
+\begin{DoxyCompactList}\small\item\em Calculate and return the action. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+virtual void \mbox{\hyperlink{classaction__base_a478cf7430fc29604379676676cb8f656}{force\+\_\+step}} (double eps)
+\item 
+\Hypertarget{classaction__base_ab218a6d2a742b9cbfc44a8b33af234df}\label{classaction__base_ab218a6d2a742b9cbfc44a8b33af234df} 
+virtual void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+\Hypertarget{classaction__base_aa72d4ecba3eaef2c846d5de5e5965a25}\label{classaction__base_aa72d4ecba3eaef2c846d5de5e5965a25} 
+virtual void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Define the standard action term class. Action terms are used in the HMC algorithm and implement calculating the action itself and updating the underlying fields 
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00011}{11}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}\label{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4} 
+\index{action\_base@{action\_base}!draw\_gaussian\_fields@{draw\_gaussian\_fields}}
+\index{draw\_gaussian\_fields@{draw\_gaussian\_fields}!action\_base@{action\_base}}
+\doxysubsubsection{\texorpdfstring{draw\_gaussian\_fields()}{draw\_gaussian\_fields()}}
+{\footnotesize\ttfamily virtual void action\+\_\+base\+::draw\+\_\+gaussian\+\_\+fields (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Draw any fields with a gaussian distribution, including the momentum 
+
+Reimplemented in \mbox{\hyperlink{classfermion__action_a11f327ea0dc444b1c1fc821662a16572}{fermion\+\_\+action$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}}, \mbox{\hyperlink{classfermion__action_a11f327ea0dc444b1c1fc821662a16572}{fermion\+\_\+action$<$ gauge\+\_\+field, Hasenbusch\+\_\+operator$<$ DIRAC\+\_\+\+OP $>$ $>$}}, \mbox{\hyperlink{classHasenbusch__action__1_a44054da8122a8d00013b9c20552c3e83}{Hasenbusch\+\_\+action\+\_\+1$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}}, \mbox{\hyperlink{classHasenbusch__action__2_a08e12a4965cfb29025491334497d191e}{Hasenbusch\+\_\+action\+\_\+2$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}}, \mbox{\hyperlink{classgauge__momentum__action_a96f9bc02fff0142b94a9218e29814cca}{gauge\+\_\+momentum\+\_\+action$<$ gauge\+\_\+field $>$}}, and \mbox{\hyperlink{classaction__sum_aea7ac511667c70c2fe1839435740fe37}{action\+\_\+sum}}.
+
+
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00018}{18}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+\Hypertarget{classaction__base_a478cf7430fc29604379676676cb8f656}\label{classaction__base_a478cf7430fc29604379676676cb8f656} 
+\index{action\_base@{action\_base}!force\_step@{force\_step}}
+\index{force\_step@{force\_step}!action\_base@{action\_base}}
+\doxysubsubsection{\texorpdfstring{force\_step()}{force\_step()}}
+{\footnotesize\ttfamily virtual void action\+\_\+base\+::force\+\_\+step (\begin{DoxyParamCaption}\item[{double}]{eps }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Update the momentum with the derivative of the action term 
+
+Reimplemented in \mbox{\hyperlink{classfermion__action_a8cda18c9eecdbf2a52141f8d0a9c408e}{fermion\+\_\+action$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}}, \mbox{\hyperlink{classfermion__action_a8cda18c9eecdbf2a52141f8d0a9c408e}{fermion\+\_\+action$<$ gauge\+\_\+field, Hasenbusch\+\_\+operator$<$ DIRAC\+\_\+\+OP $>$ $>$}}, \mbox{\hyperlink{classHasenbusch__action__1_a2d53424aa209c486419c0b1a3e4e54a0}{Hasenbusch\+\_\+action\+\_\+1$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}}, \mbox{\hyperlink{classHasenbusch__action__2_aa2d4f07f0d5bbbf771705921c44b5587}{Hasenbusch\+\_\+action\+\_\+2$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}}, \mbox{\hyperlink{classgauge__action_a5e1c0e4e2eddd6ab5a34af23f5924559}{gauge\+\_\+action$<$ gauge\+\_\+field $>$}}, and \mbox{\hyperlink{classaction__sum_aadabe1fc27811ed1478d1169b7b0f76f}{action\+\_\+sum}}.
+
+
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00022}{22}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+integrator.\+h\end{DoxyCompactItemize}

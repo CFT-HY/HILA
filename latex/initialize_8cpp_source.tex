@@ -1,0 +1,603 @@
+\doxysection{initialize.\+cpp}
+\hypertarget{initialize_8cpp_source}{}\label{initialize_8cpp_source}\index{initialize.cpp@{initialize.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00002}00002\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00003}00003\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00004}00004\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00005}00005\ \textcolor{comment}{//\ define\ these\ global\ var\ here\ -\/\ somehow\ NULL\ needed\ for\ ostream}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00006}00006\ std::ostream\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}(NULL);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00007}00007\ std::ostream\ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}(NULL);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00008}\mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{00008}}\ std::ofstream\ \mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00009}00009\ \textcolor{keywordtype}{bool}\ hila::about\_to\_finish\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00010}00010\ \textcolor{keywordtype}{bool}\ hila::check\_input\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00011}00011\ \textcolor{keywordtype}{int}\ hila::check\_with\_nodes;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00012}00012\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *hila::input\_file;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00013}\mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{00013}}\ \mbox{\hyperlink{classlogger__class}{logger\_class}}\ \mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{hila::log}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00016}00016\ \textcolor{keywordtype}{void}\ vector\_type\_info();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00018}00018\ \textcolor{preprocessor}{\#include\ <limits.h>}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00019}00019\ \textcolor{preprocessor}{\#include\ <errno.h>}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00032}\mbox{\hyperlink{classcmdlineargs}{00032}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classcmdlineargs}{cmdlineargs}}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00033}00033\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00034}00034\ \ \ \ \ \textcolor{keywordtype}{int}\ argc;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00035}00035\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ **argv;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00036}00036\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00037}00037\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00038}00038\ \ \ \ \ \mbox{\hyperlink{classcmdlineargs}{cmdlineargs}}(\textcolor{keywordtype}{int}\ argc0,\ \textcolor{keywordtype}{char}\ **argv0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00039}00039\ \ \ \ \ \ \ \ \ argc\ =\ argc0;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00040}00040\ \ \ \ \ \ \ \ \ argv\ =\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ **)malloc(argc\ *\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *));}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00041}00041\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ argc;\ i++)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00042}00042\ \ \ \ \ \ \ \ \ \ \ \ \ argv[i]\ =\ argv0[i];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00043}00043\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00044}00044\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00045}00045\ \ \ \ \ \mbox{\hyperlink{classcmdlineargs}{\string~cmdlineargs}}()\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00046}00046\ \ \ \ \ \ \ \ \ free(argv);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00047}00047\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00049}00049\ \ \ \ \ \textcolor{keywordtype}{bool}\ get\_option(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *flag)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00050}00050\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ flaglen\ =\ strlen(flag);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00051}00051\ \ \ \ \ \ \ \ \ assert(flaglen\ >\ 0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00053}00053\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ argc;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00054}00054\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *p\ =\ argv[i];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00055}00055\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::strcmp(p,\ flag)\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ argc-\/-\/;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00058}00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (;\ i\ <\ argc;\ i++)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00059}00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ argv[i]\ =\ argv[i\ +\ 1];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keyword}{true});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00062}00062\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00064}00064\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00065}00065\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00066}00066\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00067}00067\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *get\_cstring(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *flag)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00068}00068\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ flaglen\ =\ strlen(flag);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00069}00069\ \ \ \ \ \ \ \ \ assert(flaglen\ >\ 0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00070}00070\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00071}00071\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ argc;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *p\ =\ argv[i];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00073}00073\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00074}00074\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OK\ if\ p\ starts\ with\ flag}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00075}00075\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::strcmp(p,\ flag)\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00076}00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ >\ argc\ -\/\ 2)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Expecting\ an\ argument\ after\ command\ line\ parameter\ '"{}}\ <<\ flag}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00078}00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}'\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00079}00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00081}00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p\ =\ argv[i\ +\ 1];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00082}00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ argc\ -\/=\ 2;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00083}00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (;\ i\ <\ argc;\ i++)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00084}00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ argv[i]\ =\ argv[i\ +\ 2];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00085}00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (p);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00086}00086\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00087}00087\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00088}00088\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keyword}{nullptr});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00089}00089\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00090}00090\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00091}00091\ \ \ \ \ \textcolor{keywordtype}{long}\ get\_int(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *flag)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00092}00092\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *p\ =\ get\_cstring(flag);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00093}00093\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}\ *end;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00094}00094\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00095}00095\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ ==\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00096}00096\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ LONG\_MAX;\ \textcolor{comment}{//\ not\ found}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00097}00097\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00098}00098\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{long}\ val\ =\ strtol(p,\ \&end,\ 10);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00099}00099\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((errno\ ==\ ERANGE\ \&\&\ (val\ ==\ LONG\_MAX\ ||\ val\ ==\ LONG\_MIN))\ ||\ (errno\ !=\ 0\ \&\&\ val\ ==\ 0)\ ||}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00100}00100\ \ \ \ \ \ \ \ \ \ \ \ \ end\ ==\ p\ ||\ *end\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00101}00101\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Expect\ a\ number\ (integer)\ after\ command\ line\ parameter\ '"{}}\ <<\ flag}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00102}00102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}'\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00103}00103\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00104}00104\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00105}00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00106}00106\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00107}00107\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00109}\mbox{\hyperlink{classcmdlineargs_a0f299d056d52670f1d9a707df2ec7777}{00109}}\ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classcmdlineargs_a0f299d056d52670f1d9a707df2ec7777}{get\_onoff}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *flag)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00110}00110\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *p\ =\ get\_cstring(flag);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00111}00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ ==\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00113}00113\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::strcmp(p,\ \textcolor{stringliteral}{"{}on"{}})\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00115}00115\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::strcmp(p,\ \textcolor{stringliteral}{"{}off"{}})\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00117}00117\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Command\ line\ argument\ "{}}\ <<\ flag\ <<\ \textcolor{stringliteral}{"{}\ requires\ value\ on/off\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00118}00118\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00119}00119\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;\ \textcolor{comment}{//\ gets\ rid\ of\ a\ warning\ of\ no\ return\ value}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00120}00120\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00121}00121\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00122}00122\ \ \ \ \ \textcolor{keywordtype}{int}\ items()\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00123}00123\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ argc\ -\/\ 1;\ \textcolor{comment}{//\ don't\ count\ argv[0]}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00124}00124\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00125}00125\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00126}00126\ \ \ \ \ \textcolor{keywordtype}{void}\ error\_if\_args\_remain()\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00127}00127\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (argc\ <\ 2)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00128}00128\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00129}00129\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00130}00130\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}Unknown\ command\ line\ argument:\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00131}00131\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ argc;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00132}00132\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ \ \ \ "{}}\ <<\ argv[i]\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00133}00133\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00134}00134\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ clang-\/format\ off}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00135}00135\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00136}00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}Recognized:\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00137}00137\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/t\ <seconds>\ \ \ \ :\ cpu\ time\ limit\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00138}00138\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/o\ <name>\ \ \ \ \ \ \ :\ output\ filename\ (default:\ stdout)\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00139}00139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/i\ <name>\ \ \ \ \ \ \ :\ input\ filename\ (overrides\ the\ 1st\ hila::input()\ name)\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00140}00140\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ use\ '-\/i\ -\/'\ for\ standard\ input\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00141}00141\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/check\ \ \ \ \ \ \ \ \ \ :\ check\ input\ \&\ layout\ with\ <nodes>-\/nodes\ \&\ exit\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00142}00142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ only\ with\ 1\ real\ MPI\ node\ (without\ mpirun)\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00143}00143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/n\ nodes\ \ \ \ \ \ \ \ :\ number\ of\ nodes\ used\ in\ layout\ check,\ only\ relevant\ with\ -\/check\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00144}00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/partitions\ n\ \ \ :\ number\ of\ partitioned\ lattice\ streams\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00145}00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ \ -\/sync\ on/off\ \ \ \ :\ synchronize\ partition\ runs\ (default=no)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00146}00146\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ clang-\/format\ on}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00147}00147\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00148}00148\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00149}00149\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00150}00150\ \};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00155}00155\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00156}00156\ \textcolor{preprocessor}{\#if\ (defined(\_\_GNUC\_\_)\ \&\&\ !defined(DARWIN))\ }\textcolor{comment}{//\ ||\ defined(\_\_bg\_\_)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00157}00157\ \textcolor{preprocessor}{\#include\ <malloc.h>}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00158}00158\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00159}00159\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00160}00160\ \textcolor{comment}{//\ \#define\ DEBUG\_NAN}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00161}00161\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00162}00162\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_NAN}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00163}00163\ \textcolor{preprocessor}{\#include\ <fenv.h>}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00164}00164\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00165}00165\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00166}00166\ \textcolor{keywordtype}{void}\ setup\_partitions(\mbox{\hyperlink{classcmdlineargs}{cmdlineargs}}\ \&cl);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00167}00167\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00174}\mbox{\hyperlink{namespacehila_a88d54715010ef67cf2fbea84b00f76bb}{00174}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_a88d54715010ef67cf2fbea84b00f76bb}{hila::initialize}}(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}\ **argv)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00175}00175\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00176}00176\ \textcolor{preprocessor}{\#if\ (defined(\_\_GNUC\_\_)\ \&\&\ !defined(DARWIN)\ \&\&\ !defined(\_MAC\_OSX\_))\ }\textcolor{comment}{//\ ||\ defined(\_\_bg\_\_)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00177}00177\ \ \ \ \ \textcolor{comment}{/*\ First,\ adjust\ malloc\ so\ that\ glibc\ free()\ does\ not}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00178}00178\ \textcolor{comment}{\ \ \ \ \ *\ release\ space\ to\ the\ system,\ increasing\ the\ performance}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00179}00179\ \textcolor{comment}{\ \ \ \ \ *\ of\ the\ glib\ malloc\ substantially.\ \ The\ memory\ use\ is\ cyclic,}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00180}00180\ \textcolor{comment}{\ \ \ \ \ *\ so\ we\ can\ just\ sit\ on\ the\ max\ memory.}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00181}00181\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00182}00182\ \ \ \ \ \textcolor{comment}{//\ mallopt(\ M\_MMAP\_MAX,\ 0\ );\ \ /*\ don't\ use\ mmap\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00183}00183\ \ \ \ \ \textcolor{comment}{/*\ HACK:\ don't\ release\ memory\ by\ calling\ sbrk\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00184}00184\ \ \ \ \ mallopt(M\_TRIM\_THRESHOLD,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00185}00185\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00186}00186\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_NAN}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00187}00187\ \ \ \ \ feenableexcept(FE\_INVALID\ |\ FE\_DIVBYZERO\ |\ FE\_OVERFLOW);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00188}00188\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00189}00189\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00190}00190\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00191}00191\ \ \ \ \ \textcolor{comment}{//\ initialize\ MPI\ so\ that\ hila::myrank()\ etc.\ works}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00192}00192\ \ \ \ \ initialize\_communications(argc,\ \&argv);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00193}00193\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00194}00194\ \ \ \ \ \textcolor{comment}{//\ Default\ output\ file\ -\/\ we're\ happy\ with\ this\ unless\ partitions}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00195}00195\ \ \ \ \ \textcolor{comment}{//\ or\ otherwise\ indicated}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00196}00196\ \ \ \ \ \textcolor{comment}{//\ This\ channels\ outf\ to\ std::cout}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00197}00197\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.rdbuf(std::cout.rdbuf());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00198}00198\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00199}00199\ \ \ \ \ \textcolor{comment}{//\ set\ the\ timing\ so\ that\ gettime()\ returns\ time\ from\ this\ point}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00200}00200\ \ \ \ \ hila::inittime();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00201}00201\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00202}00202\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00203}00203\ \ \ \ \ \textcolor{comment}{//\ open\ hila::out0\ only\ for\ node\ 0}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00204}00204\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00205}00205\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}.rdbuf(std::cout.rdbuf());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00206}00206\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00207}00207\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00208}00208\ \ \ \ \ \textcolor{comment}{//\ Init\ command\ line\ -\/\ after\ MPI\ has\ been\ started,\ so}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00209}00209\ \ \ \ \ \textcolor{comment}{//\ that\ all\ nodes\ do\ this}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00210}00210\ \ \ \ \ \mbox{\hyperlink{classcmdlineargs}{cmdlineargs}}\ commandline(argc,\ argv);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00211}00211\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00212}00212\ \ \ \ \ \textcolor{comment}{//\ check\ the\ "{}-\/check"{}\ -\/input\ early}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00213}00213\ \ \ \ \ \textcolor{comment}{//\ do\ it\ only\ with\ 1\ node}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00214}00214\ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.nodes.number\ ==\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00215}00215\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00216}00216\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (commandline.get\_option(\textcolor{stringliteral}{"{}-\/check"{}}))\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00217}00217\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{long}\ nodes\ =\ commandline.get\_int(\textcolor{stringliteral}{"{}-\/n"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00218}00218\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nodes\ ==\ LONG\_MAX)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nodes\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00220}00220\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00221}00221\ \ \ \ \ \ \ \ \ \ \ \ \ hila::check\_input\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00222}00222\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nodes\ <=\ 0)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00223}00223\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nodes\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00224}00224\ \ \ \ \ \ \ \ \ \ \ \ \ hila::check\_with\_nodes\ =\ nodes;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00225}00225\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}******\ INPUT\ AND\ LAYOUT\ CHECK\ ******"{}}\ <<\ std::endl;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00226}00226\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00227}00227\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ reset\ node\ variables}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00228}00228\ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mynode.rank\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00229}00229\ \ \ \ \ \ \ \ \ \ \ \ \ lattice.nodes.number\ =\ hila::check\_with\_nodes;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00230}00230\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00231}00231\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00232}00232\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00233}00233\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00234}00234\ \ \ \ \ \textcolor{keywordflow}{if}\ (!hila::check\_input)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00235}00235\ \ \ \ \ \ \ \ \ initialize\_gpu(lattice.mynode.rank);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00236}00236\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00237}00237\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00238}00238\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00239}00239\ \ \ \ \ setup\_partitions(commandline);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00240}00240\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00241}00241\ \ \ \ \ \textcolor{comment}{//\ check\ the\ output\ file\ if\ partitions\ not\ used}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00242}00242\ \ \ \ \ \textcolor{keywordflow}{if}\ (hila::partitions.number()\ ==\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00243}00243\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ do\_exit\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00244}00244\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00245}00245\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *name\ =\ commandline.get\_cstring(\textcolor{stringliteral}{"{}-\/o"{}}))\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00246}00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Open\ file\ for\ append}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00247}00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::strlen(name)\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00248}00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}Filename\ must\ be\ given\ with\ option\ '-\/o'\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00249}00249\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ do\_exit\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00250}00250\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (!hila::check\_input)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00251}00251\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}}.open(name,\ std::ios::out\ |\ std::ios::app);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00252}00252\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}}.fail())\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00253}00253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}Cannot\ open\ output\ file\ "{}}\ <<\ name\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00254}00254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ do\_exit\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00255}00255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00256}00256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.flush();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00257}00257\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.rdbuf(}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00258}00258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}}.rdbuf());\ \textcolor{comment}{//\ output\ now\ points\ to\ output\_redirect}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00259}00259\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00260}00260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00261}00261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}.rdbuf(\mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.rdbuf());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00262}00262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00263}00263\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00264}00264\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00265}00265\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00266}00266\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(do\_exit);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00267}00267\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (do\_exit)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00268}00268\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00269}00269\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00270}00270\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00271}00271\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00272}00272\ \ \ \ \ \ \ \ \ print\_dashed\_line(u8\textcolor{stringliteral}{"{}HILA\ ⩩\ lattice\ framework"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00273}00273\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Running\ program\ "{}}\ <<\ argv[0]\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00274}00274\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}with\ command\ line\ arguments\ '"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00275}00275\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ argc;\ i++)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00276}00276\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ argv[i]\ <<\ \textcolor{charliteral}{'\ '};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00277}00277\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}'\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00278}00278\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Code\ version:\ "{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00279}00279\ \textcolor{preprocessor}{\#if\ defined(GIT\_SHA\_VALUE)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00280}00280\ \textcolor{preprocessor}{\#define\ xstr(s)\ makestr(s)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00281}00281\ \textcolor{preprocessor}{\#define\ makestr(s)\ \#s}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00282}00282\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}git\ SHA\ "{}}\ <<\ xstr(GIT\_SHA\_VALUE)\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00283}00283\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00284}00284\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}no\ git\ information\ available\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00285}00285\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00286}00286\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Compiled\ "{}}\ <<\ \_\_DATE\_\_\ <<\ \textcolor{stringliteral}{"{}\ at\ "{}}\ <<\ \_\_TIME\_\_\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00287}00287\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00288}00288\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}with\ options:\ EVEN\_SITES\_FIRST"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00289}00289\ \textcolor{preprocessor}{\#ifndef\ EVEN\_SITES\_FIRST}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00290}00290\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}=0"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00291}00291\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00292}00292\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00293}00293\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ SPECIAL\_BOUNDARY\_CONDITIONS"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00294}00294\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00295}00295\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00296}00296\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00297}00297\ \ \ \ \ \ \ \ \ hila::timestamp(\textcolor{stringliteral}{"{}Starting"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00298}00298\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00299}00299\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00300}00300\ \ \ \ \ \textcolor{keywordtype}{long}\ cputime\ =\ commandline.get\_int(\textcolor{stringliteral}{"{}-\/t"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00301}00301\ \ \ \ \ \textcolor{keywordflow}{if}\ (cputime\ !=\ LONG\_MAX)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00302}00302\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}CPU\ time\ limit\ "{}}\ <<\ cputime\ <<\ \textcolor{stringliteral}{"{}\ seconds\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00303}00303\ \ \ \ \ \ \ \ \ hila::setup\_timelimit(cputime);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00304}00304\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00305}00305\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}No\ runtime\ limit\ given\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00306}00306\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00307}00307\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00308}00308\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00309}00309\ \ \ \ \ \textcolor{keywordflow}{if}\ ((hila::input\_file\ =\ commandline.get\_cstring(\textcolor{stringliteral}{"{}-\/i"{}})))\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00310}00310\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::strlen(hila::input\_file)\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00311}00311\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Filename\ must\ be\ given\ with\ '-\/i\ <name>'\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00312}00312\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}Or\ use\ '-\/i\ stdin'\ to\ use\ standard\ input\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00313}00313\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00314}00314\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00315}00315\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00316}00316\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Input\ file\ from\ command\ line:\ "{}}\ <<\ hila::input\_file\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00317}00317\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00318}00318\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00319}00319\ \ \ \ \ \textcolor{comment}{//\ error\ out\ if\ there\ are\ more\ cmdline\ options}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00320}00320\ \ \ \ \ commandline.error\_if\_args\_remain();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00321}00321\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00322}00322\ \textcolor{preprocessor}{\#if\ defined(OPENMP)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00323}00323\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Using\ option\ OPENMP\ -\/\ with\ "{}}\ <<\ omp\_get\_max\_threads()\ <<\ \textcolor{stringliteral}{"{}\ threads\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00324}00324\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00325}00325\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00326}00326\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00327}00327\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00328}00328\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Using\ thread\ blocks\ of\ size\ "{}}\ <<\ N\_threads\ <<\ \textcolor{stringliteral}{"{}\ threads\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00329}00329\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00330}00330\ \textcolor{preprocessor}{\#if\ defined(GPU\_AWARE\_MPI)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00331}00331\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Using\ GPU\_AWARE\_MPI\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00332}00332\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00333}00333\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Not\ using\ GPU\_AWARE\_MPI\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00334}00334\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00335}00335\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00336}00336\ \textcolor{preprocessor}{\#if\ !defined(GPU\_VECTOR\_REDUCTION\_THREAD\_BLOCKS)\ ||\ GPU\_VECTOR\_REDUCTION\_THREAD\_BLOCKS\ <=\ 0}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00337}00337\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}ReductionVector\ with\ atomic\ operations\ (GPU\_VECTOR\_REDUCTION\_THREAD\_BLOCKS=0)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00338}00338\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00339}00339\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}ReductionVector\ with\ "{}}\ <<\ GPU\_VECTOR\_REDUCTION\_THREAD\_BLOCKS}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00340}00340\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ thread\ blocks\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00341}00341\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00342}00342\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00343}00343\ \ \ \ \ \textcolor{keywordflow}{if}\ (!hila::check\_input)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00344}00344\ \ \ \ \ \ \ \ \ gpu\_device\_info();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00345}00345\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00346}00346\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00347}00347\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00348}00348\ \textcolor{preprocessor}{\#ifdef\ AVX}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00349}00349\ \ \ \ \ vector\_type\_info();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00350}00350\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00351}00351\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00352}00352\ \ \ \ \ \textcolor{comment}{/*\ basic\ static\ node\ variables\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00353}00353\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ \&\&\ !defined(PIZDAINT)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00354}00354\ \ \ \ \ \textcolor{comment}{//\ localhost\_info(\&g\_local\_nodeid,\ \&g\_num\_local\_nodes);}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00355}00355\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00356}00356\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00357}00357\ \textcolor{preprocessor}{\#if\ (defined(\_\_GNUC\_\_)\ \&\&\ !defined(DARWIN))\ }\textcolor{comment}{//\ ||\ defined(\_\_bg\_\_)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00358}00358\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}GNU\ c-\/library\ performance:\ not\ returning\ allocated\ memory\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00359}00359\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00360}00360\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00361}00361\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00362}00362\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00367}\mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{00367}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(\textcolor{keywordtype}{int}\ status)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00368}00368\ \ \ \ \ hila::timestamp(\textcolor{stringliteral}{"{}Terminate"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00369}00369\ \ \ \ \ print\_dashed\_line();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00370}00370\ \ \ \ \ hila::about\_to\_finish\ =\ \textcolor{keyword}{true};\ \textcolor{comment}{//\ avoid\ destructors}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00371}00371\ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_comm\_initialized())\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00372}00372\ \ \ \ \ \ \ \ \ finish\_communications();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00373}00373\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00374}00374\ \ \ \ \ exit(1);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00375}00375\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00376}00376\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00380}00380\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00381}\mbox{\hyperlink{namespacehila_a1b8f68d0ba76b90e065cb427c20bb1d5}{00381}}\ \textcolor{keywordtype}{void}\ hila::error(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *msg)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00382}00382\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Error:\ "{}}\ <<\ msg\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00383}00383\ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00384}00384\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00385}00385\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00386}00386\ \textcolor{keywordtype}{void}\ hila::error(\textcolor{keyword}{const}\ std::string\ \&msg)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00387}00387\ \ \ \ \ hila::error(msg.c\_str());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00388}00388\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00389}00389\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00394}\mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{00394}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}()\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00395}00395\ \ \ \ \ report\_timers();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00396}00396\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00397}00397\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \mbox{\hyperlink{classlattice__struct}{lattice\_struct}}\ *latp\ :\ lattices)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00398}00398\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00399}00399\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00400}00400\ \ \ \ \ \ \ \ \ int64\_t\ gathers\ =\ latp-\/>n\_gather\_done;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00401}00401\ \ \ \ \ \ \ \ \ int64\_t\ avoided\ =\ latp-\/>n\_gather\_avoided;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00402}00402\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00403}00403\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (gathers\ +\ avoided\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00404}00404\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ COMMS\ from\ node\ 0:\ "{}}\ <<\ gathers\ <<\ \textcolor{stringliteral}{"{}\ done,\ "{}}\ <<\ avoided\ <<\ \textcolor{stringliteral}{"{}("{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00405}00405\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ 100.0\ *\ avoided\ /\ (avoided\ +\ gathers)\ <<\ \textcolor{stringliteral}{"{}\%)\ optimized\ away\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00406}00406\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00407}00407\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ No\ communications\ done\ from\ node\ 0\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00408}00408\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00409}00409\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00410}00410\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00411}00411\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00412}00412\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00413}00413\ \ \ \ \ gpuMemPoolReport();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00414}00414\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00415}00415\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00416}00416\ \ \ \ \ \textcolor{keywordflow}{if}\ (hila::partitions.number()\ >\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00417}00417\ \ \ \ \ \ \ \ \ hila::timestamp(\textcolor{stringliteral}{"{}Waiting\ to\ sync\ partitions"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00418}00418\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00419}00419\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00420}00420\ \ \ \ \ \textcolor{comment}{//\ hip\ seems\ to\ want\ this?}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00421}00421\ \ \ \ \ FFT\_delete\_plans();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00422}00422\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00423}00423\ \ \ \ \ \mbox{\hyperlink{namespacehila_a4d1231fee312acb58bf9805b92114aa9}{hila::synchronize}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00424}00424\ \ \ \ \ hila::timestamp(\textcolor{stringliteral}{"{}Finishing"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00425}00425\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00426}00426\ \ \ \ \ hila::about\_to\_finish\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00427}00427\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00428}00428\ \ \ \ \ finish\_communications();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00429}00429\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00430}00430\ \ \ \ \ print\_dashed\_line();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00431}00431\ \ \ \ \ exit(0);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00432}00432\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00433}00433\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00434}00434\ \textcolor{comment}{/******************************************************}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00435}00435\ \textcolor{comment}{\ *\ Open\ parameter\ file\ -\/\ moved\ here\ in\ order\ to}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00436}00436\ \textcolor{comment}{\ *\ enable\ partition\ division\ if\ requested}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00437}00437\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00438}00438\ \textcolor{preprocessor}{\#if\ 0}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00439}00439\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00440}00440\ FILE\ *open\_parameter\_file()}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00441}00441\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00442}00442\ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{char}\ parameter[]\ =\ \textcolor{stringliteral}{"{}parameter"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00443}00443\ \ \ FILE\ *fil\ =\ NULL;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00444}00444\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00445}00445\ \ \ \textcolor{keywordflow}{if}\ (mynode\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00446}00446\ \textcolor{preprocessor}{\#ifdef\ SUBLATTICES}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00447}00447\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_partitions\ >\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00448}00448\ \ \ \ \ \ \ \textcolor{keywordtype}{char}\ parameter\_name[50];}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00449}00449\ \ \ \ \ \ \ \textcolor{comment}{/*\ First,\ try\ opening\ parameter99\ etc.\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00450}00450\ \ \ \ \ \ \ sprintf(parameter\_name,\textcolor{stringliteral}{"{}\%s\%d"{}},parameter,this\_partition);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00451}00451\ \ \ \ \ \ \ fil\ =\ fopen(parameter\_name,\textcolor{stringliteral}{"{}r"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00452}00452\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00453}00453\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fil\ !=\ NULL)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00454}00454\ \ \ \ \ \ \ \ \ fprintf(outf,\textcolor{stringliteral}{"{}\ READING\ PARAMETERS\ FROM\ \%s\(\backslash\)n"{}},parameter\_name);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00455}00455\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00456}00456\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00457}00457\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00458}00458\ \ \ \ \ \textcolor{keywordflow}{if}\ (fil\ ==\ NULL)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00459}00459\ \ \ \ \ \ \ fil\ =\ fopen(parameter,\textcolor{stringliteral}{"{}r"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00460}00460\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fil\ ==\ NULL)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00461}00461\ \ \ \ \ \ \ \ \ halt(\textcolor{stringliteral}{"{}\ **\ No\ parameter\ file?"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00462}00462\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00463}00463\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00464}00464\ \ \ \}\ \textcolor{comment}{//\ mynode\ ==\ 0}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00465}00465\ \ \ \textcolor{keywordflow}{return}(\ fil\ );}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00466}00466\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00467}00467\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00468}00468\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00469}00469\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00470}00470\ \textcolor{comment}{/******************************************************}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00471}00471\ \textcolor{comment}{\ *\ Sublattice\ division}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00472}00472\ \textcolor{comment}{\ *\ Handle\ command\ line\ arguments}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00473}00473\ \textcolor{comment}{\ *\ \ \ partitions=nn}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00474}00474\ \textcolor{comment}{\ *\ \ \ sync=yes\ /\ sync=no}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00475}00475\ \textcolor{comment}{\ *\ \ \ out=name}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00476}00476\ \textcolor{comment}{\ *\ here}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00477}00477\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00478}00478\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00479}00479\ \textcolor{keywordtype}{void}\ setup\_partitions(\mbox{\hyperlink{classcmdlineargs}{cmdlineargs}}\ \&commandline)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00480}00480\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00481}00481\ \ \ \ \ \textcolor{comment}{//\ get\ partitions\ cmdlinearg\ first}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00482}00482\ \ \ \ \ \textcolor{keywordtype}{long}\ lnum\ =\ commandline.get\_int(\textcolor{stringliteral}{"{}-\/partitions"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00483}00483\ \ \ \ \ \textcolor{keywordflow}{if}\ (lnum\ <=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00484}00484\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}partitions=<number>\ command\ line\ argument\ value\ must\ be\ positive\ "{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00485}00485\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}integer\ (or\ argument\ omitted)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00486}00486\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00487}00487\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00488}00488\ \ \ \ \ \textcolor{keywordflow}{if}\ (lnum\ ==\ LONG\_MAX)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00489}00489\ \ \ \ \ \ \ \ \ hila::partitions.\_number\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00490}00490\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00491}00491\ \ \ \ \ \ \ \ \ hila::partitions.\_number\ =\ lnum;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00492}00492\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00493}00493\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00494}00494\ \ \ \ \ \textcolor{keywordflow}{if}\ (hila::partitions.number()\ ==\ 1)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00495}00495\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00496}00496\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00497}00497\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ Dividing\ nodes\ into\ "{}}\ <<\ hila::partitions.number()\ <<\ \textcolor{stringliteral}{"{}\ partitions\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00498}00498\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00499}00499\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ \%\ hila::partitions.number())\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00500}00500\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}**\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ <<\ \textcolor{stringliteral}{"{}\ nodes\ not\ evenly\ divisible\ into\ "{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00501}00501\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ hila::partitions.number()\ <<\ \textcolor{stringliteral}{"{}\ partitions\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00502}00502\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00503}00503\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00504}00504\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00505}00505\ \textcolor{preprocessor}{\#if\ defined(BLUEGENE\_LAYOUT)}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00506}00506\ \ \ \ \ hila::partitions.\_mylattice\ =\ bg\_layout\_partitions(hila::partitions.number());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00507}00507\ \textcolor{preprocessor}{\#else\ }\textcolor{comment}{//\ generic}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00508}00508\ \ \ \ \ hila::partitions.\_mylattice\ =}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00509}00509\ \ \ \ \ \ \ \ \ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ *\ hila::partitions.number())\ /\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00510}00510\ \ \ \ \ \textcolor{comment}{/*\ and\ divide\ system\ into\ partitions\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00511}00511\ \ \ \ \ \textcolor{keywordflow}{if}\ (!hila::check\_input)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00512}00512\ \ \ \ \ \ \ \ \ split\_into\_partitions(hila::partitions.mylattice());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00513}00513\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00514}00514\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00515}00515\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *p\ =\ commandline.get\_cstring(\textcolor{stringliteral}{"{}-\/o"{}});}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00516}00516\ \ \ \ \ std::string\ fname;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00517}00517\ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00518}00518\ \ \ \ \ \ \ \ \ fname\ =\ p\ +\ std::to\_string(hila::partitions.mylattice());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00519}00519\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00520}00520\ \ \ \ \ \ \ \ \ fname\ =\ DEFAULT\_OUTPUT\_NAME\ +\ std::to\_string(hila::partitions.mylattice());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00521}00521\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00522}00522\ \ \ \ \ \textcolor{comment}{//\ now\ need\ to\ open\ output\ file}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00523}00523\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00524}00524\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.flush();\ \textcolor{comment}{//\ this\ should\ be\ cout\ at\ this\ stage}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00525}00525\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00526}00526\ \ \ \ \ \textcolor{comment}{//\ all\ nodes\ open\ the\ file\ -\/-\/\ perhaps\ not?\ \ Leave\ only\ node\ 0}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00527}00527\ \ \ \ \ \textcolor{keywordtype}{int}\ do\_exit\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00528}00528\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0\ \&\&\ !hila::check\_input)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00529}00529\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}}.open(fname,\ std::ios::out\ |\ std::ios::app);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00530}00530\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}}.fail())\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00531}00531\ \ \ \ \ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}Cannot\ open\ output\ file\ "{}}\ <<\ fname\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00532}00532\ \ \ \ \ \ \ \ \ \ \ \ \ do\_exit\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00533}00533\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00534}00534\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00535}00535\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00536}00536\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(do\_exit);}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00537}00537\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00538}00538\ \ \ \ \ \textcolor{keywordflow}{if}\ (do\_exit)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00539}00539\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00540}00540\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00541}00541\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.flush();}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00542}00542\ \ \ \ \ \textcolor{keywordflow}{if}\ (!hila::check\_input)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00543}00543\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.rdbuf(\mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{hila::output\_file}}.rdbuf());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00544}00544\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ output\ now\ points\ to\ output\_redirect}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00545}00545\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00546}00546\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}.rdbuf(\mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.rdbuf());}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00547}00547\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00548}00548\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00549}00549\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ -\/-\/-\/-\/\ SPLIT\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ <<\ \textcolor{stringliteral}{"{}\ nodes\ into\ "{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00550}00550\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ hila::partitions.number()\ <<\ \textcolor{stringliteral}{"{}\ partitions,\ this\ "{}}\ <<\ hila::partitions.mylattice()}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00551}00551\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ -\/-\/-\/-\/\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00552}00552\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00553}00553\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00554}00554\ \ \ \ \ \textcolor{comment}{/*\ Default\ sync\ is\ no\ */}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00555}00555\ \ \ \ \ \textcolor{keywordflow}{if}\ (commandline.\mbox{\hyperlink{classcmdlineargs_a0f299d056d52670f1d9a707df2ec7777}{get\_onoff}}(\textcolor{stringliteral}{"{}-\/sync"{}})\ ==\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00556}00556\ \ \ \ \ \ \ \ \ hila::partitions.\_sync\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00557}00557\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Synchronising\ partition\ trajectories\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00558}00558\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00559}00559\ \ \ \ \ \ \ \ \ hila::partitions.\_sync\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00560}00560\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Not\ synchronising\ the\ partition\ trajectories\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00561}00561\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}Use\ '-\/sync\ on'\ command\ line\ argument\ to\ override\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00562}00562\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00563}00563\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00564}00564\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00566}00566\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00567}00567\ \textcolor{preprocessor}{\#ifdef\ AVX}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00568}00568\ \textcolor{keywordtype}{void}\ vector\_type\_info()\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00569}00569\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00570}00570\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Using\ VCL\ vector\ class\ with\ instruction\ set\ level\ INSTRSET="{}}\ <<\ INSTRSET}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00571}00571\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ <=>\ "{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00572}00572\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00573}00573\ \ \ \ \ \textcolor{keywordflow}{switch}\ (INSTRSET)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00574}00574\ \ \ \ \ \textcolor{keywordflow}{case}\ 2:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00575}00575\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}SSE2"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00576}00576\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00577}00577\ \ \ \ \ \textcolor{keywordflow}{case}\ 3:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00578}00578\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}SSE3"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00579}00579\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00580}00580\ \ \ \ \ \textcolor{keywordflow}{case}\ 4:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00581}00581\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}SSSE3"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00582}00582\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00583}00583\ \ \ \ \ \textcolor{keywordflow}{case}\ 5:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00584}00584\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}SSE4.1"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00585}00585\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00586}00586\ \ \ \ \ \textcolor{keywordflow}{case}\ 6:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00587}00587\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}SSE4.2"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00588}00588\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00589}00589\ \ \ \ \ \textcolor{keywordflow}{case}\ 7:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00590}00590\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}AVX"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00591}00591\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00592}00592\ \ \ \ \ \textcolor{keywordflow}{case}\ 8:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00593}00593\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}AVX2"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00594}00594\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00595}00595\ \ \ \ \ \textcolor{keywordflow}{case}\ 9:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00596}00596\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}AVX512F"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00597}00597\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00598}00598\ \ \ \ \ \textcolor{keywordflow}{case}\ 10:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00599}00599\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}AVX512BW/DQ/VL"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00600}00600\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00601}00601\ \ \ \ \ \textcolor{keywordflow}{default}:}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00602}00602\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Unknown"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00603}00603\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00604}00604\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00605}00605\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00606}00606\ \ \ \ \ \textcolor{keywordflow}{if}\ (INSTRSET\ <\ 8)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00607}00607\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ (You\ probably\ should\ use\ options\ '-\/mavx2\ -\/fmad'\ in\ compilation)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00608}00608\ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00609}00609\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00610}00610\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00611}00611\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00612}00612\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00613}00613\ \textcolor{keywordtype}{void}\ print\_dashed\_line(\textcolor{keyword}{const}\ std::string\ \&text)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00614}00614\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ linelength\ =\ 60;}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00615}00615\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00616}00616\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00617}00617\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00618}00618\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (text.size()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00619}00619\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ linelength;\ i++)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00620}00620\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{charliteral}{'-\/'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00621}00621\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00622}00622\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00623}00623\ }
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00624}00624\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}-\/-\/-\/-\/-\/\ "{}}\ <<\ text\ <<\ \textcolor{charliteral}{'\ '};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00625}00625\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 7\ +\ text.size();\ i\ <\ linelength;\ i++)}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00626}00626\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{charliteral}{'-\/'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00627}00627\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00628}00628\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00629}00629\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{initialize_8cpp_source_l00630}00630\ \}}
+
+\end{DoxyCode}

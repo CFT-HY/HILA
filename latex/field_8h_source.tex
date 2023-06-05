@@ -1,0 +1,1309 @@
+\doxysection{field.\+h}
+\hypertarget{field_8h_source}{}\label{field_8h_source}\index{field.h@{field.h}}
+\mbox{\hyperlink{field_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00002}00002\ \textcolor{preprocessor}{\#ifndef\ FIELD\_H}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00003}00003\ \textcolor{preprocessor}{\#define\ FIELD\_H}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00004}00004\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00007}00007\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00008}00008\ \textcolor{preprocessor}{\#include\ <cstring>}\ \textcolor{comment}{//Memcpy\ is\ here...}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00009}00009\ \textcolor{preprocessor}{\#include\ <math.h>}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00010}00010\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00012}00012\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00013}00013\ \textcolor{preprocessor}{\#include\ "{}plumbing/coordinates.h"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00014}00014\ \textcolor{preprocessor}{\#include\ "{}plumbing/lattice.h"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00015}00015\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{field__storage_8h}{plumbing/field\_storage.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00016}00016\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00017}00017\ \textcolor{preprocessor}{\#include\ "{}plumbing/backend\_vector/vector\_types.h"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00019}00019\ \textcolor{preprocessor}{\#include\ "{}plumbing/com\_mpi.h"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00022}00022\ \textcolor{comment}{//\ This\ is\ a\ marker\ for\ hilapp\ -\/-\/\ will\ be\ removed\ by\ it}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00023}00023\ \textcolor{preprocessor}{\#define\ onsites(p)\ for\ (Parity\ par\_dummy\_\_(p);\ par\_dummy\_\_\ ==\ EVEN;\ par\_dummy\_\_\ =\ ODD)}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00025}00025\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00026}00026\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classField}{Field}};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00028}00028\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00029}00029\ \textcolor{keywordtype}{void}\ ensure\_field\_operators\_exist();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00031}00031\ \textcolor{preprocessor}{\#include\ "{}plumbing/ensure\_loop\_functions.h"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00032}00032\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00053}00053\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00060}00060\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00061}\mbox{\hyperlink{classField}{00061}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classField}{Field}}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00062}00062\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00063}00063\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00064}00064\ \ \ \ \ \textcolor{keyword}{enum\ class}\ gather\_status\_t\ :\ \textcolor{keywordtype}{unsigned}\ \{\ NOT\_DONE,\ STARTED,\ DONE\ \};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00066}00066\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00073}00073\ \ \ \ \ \textcolor{keyword}{class\ }field\_struct\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00074}00074\ \ \ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00075}00075\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classfield__storage}{field\_storage<T>}}\ payload;\ \textcolor{comment}{//\ TODO:\ must\ be\ maximally\ aligned,\ modifiers\ -\/\ never\ null}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ lattice\_id;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00077}00077\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00078}00078\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ get\ a\ direct\ ptr\ from\ here\ too,\ ease\ access}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00079}00079\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structvectorized__lattice__struct}{vectorized\_lattice\_struct<hila::vector\_info<T>::vector\_size}}>\ *vector\_lattice;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00080}00080\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ assigned\_to;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ keeps\ track\ of\ first\ assignment\ to\ parities}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00082}00082\ \ \ \ \ \ \ \ \ gather\_status\_t\ gather\_status\_arr[3][NDIRS];\ \textcolor{comment}{//\ is\ communication\ done}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00083}00083\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00084}00084\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ neighbour\ pointers\ -\/\ because\ of\ boundary\ conditions,\ can\ be\ different\ for}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00085}00085\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ diff.\ fields}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00086}00086\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ *RESTRICT\ neighbours[NDIRS];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00087}00087\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a81cf9e19b8543be54f6afc7d2bd17805}{hila::bc}}\ boundary\_condition[NDIRS];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00089}00089\ \ \ \ \ \ \ \ \ MPI\_Request\ receive\_request[3][NDIRS];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00090}00090\ \ \ \ \ \ \ \ \ MPI\_Request\ send\_request[3][NDIRS];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00091}00091\ \textcolor{preprocessor}{\#ifndef\ VANILLA}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00092}00092\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ vanilla\ needs\ no\ special\ receive\ buffers}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00093}00093\ \ \ \ \ \ \ \ \ T\ *receive\_buffer[NDIRS];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00094}00094\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00095}00095\ \ \ \ \ \ \ \ \ T\ *send\_buffer[NDIRS];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00096}00096\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00097}00097\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ initialize\_communication()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00098}00098\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d\ =\ 0;\ d\ <\ NDIRS;\ d++)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ p\ =\ 0;\ p\ <\ 3;\ p++)}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gather\_status\_arr[p][d]\ =\ gather\_status\_t::NOT\_DONE;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00101}00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ send\_buffer[d]\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00102}00102\ \textcolor{preprocessor}{\#ifndef\ VANILLA}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ receive\_buffer[d]\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00104}00104\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00106}00106\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00107}00107\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00108}00108\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ free\_communication()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00109}00109\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d\ =\ 0;\ d\ <\ NDIRS;\ d++)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00110}00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (send\_buffer[d]\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00111}00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ payload.free\_mpi\_buffer(send\_buffer[d]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00112}00112\ \textcolor{preprocessor}{\#ifndef\ VANILLA}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00113}00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (receive\_buffer[d]\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ payload.free\_mpi\_buffer(receive\_buffer[d]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00115}00115\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00117}00117\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00118}00118\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00119}00119\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ allocate\_payload()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00120}00120\ \ \ \ \ \ \ \ \ \ \ \ \ payload.allocate\_field(lattice);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00121}00121\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00122}00122\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ free\_payload()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00123}00123\ \ \ \ \ \ \ \ \ \ \ \ \ payload.free\_field();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00124}00124\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00125}00125\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00126}00126\ \textcolor{preprocessor}{\#ifndef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00128}00128\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ get(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00129}00129\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ payload.get(i,\ lattice.field\_alloc\_size());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00130}00130\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00131}00131\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00132}00132\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00133}00133\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ set(\textcolor{keyword}{const}\ A\ \&value,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00134}00134\ \ \ \ \ \ \ \ \ \ \ \ \ payload.set(value,\ i,\ lattice.field\_alloc\_size());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00135}00135\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00136}00136\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00139}00139\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ get\_element(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00140}00140\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ payload.\mbox{\hyperlink{classfield__storage_a84bf5b043403a3a422766429ce7cb73f}{get\_element}}(i,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00141}00141\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00142}00142\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00143}00143\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00144}00144\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ set\_element(\textcolor{keyword}{const}\ A\ \&value,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00145}00145\ \ \ \ \ \ \ \ \ \ \ \ \ payload.set\_element(value,\ i,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00146}00146\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00147}00147\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00148}00148\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vecT>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00149}00149\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ vecT\ get\_vector(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00150}00150\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ payload.template\ get\_vector<vecT>(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00151}00151\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00152}00152\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ T\ get\_element(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00153}00153\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ payload.\mbox{\hyperlink{classfield__storage_a84bf5b043403a3a422766429ce7cb73f}{get\_element}}(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00154}00154\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00155}00155\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00156}00156\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vecT>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00157}00157\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ set\_vector(\textcolor{keyword}{const}\ vecT\ \&val,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00158}00158\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ payload.set\_vector(val,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00159}00159\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00160}00160\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ set\_element(\textcolor{keyword}{const}\ T\ \&val,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00161}00161\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ payload.set\_element(val,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00162}00162\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00163}00163\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00164}00164\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00166}00166\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ gather\_comm\_elements(Direction\ d,\ Parity\ par,\ T\ *RESTRICT\ buffer,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00167}00167\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&to\_node)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00168}00168\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00170}00170\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ place\_comm\_elements(Direction\ d,\ Parity\ par,\ T\ *RESTRICT\ buffer,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00171}00171\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&from\_node);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00174}00174\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ set\_local\_boundary\_elements(Direction\ dir,\ Parity\ par);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00175}00175\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00177}00177\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ gather\_elements(T\ *buffer,\ \textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00178}00178\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ root\ =\ 0)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00179}00179\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ scatter\_elements(T\ *buffer,\ \textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00180}00180\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ root\ =\ 0);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00181}00181\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00182}00182\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00184}00184\ \ \ \ \ \ \ \ \ T\ *get\_receive\_buffer(Direction\ d,\ Parity\ par,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00185}00185\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&from\_node);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00186}00186\ \ \ \ \ \};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00187}00187\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00188}00188\ \ \ \ \ \textcolor{comment}{//\ static\_assert(\ std::is\_pod<T>::value,\ "{}Field\ expects\ only\ pod-\/type\ elements}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00189}00189\ \ \ \ \ \textcolor{comment}{//\ (plain\ data):\ default\ constructor,\ copy\ and\ delete"{});}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00190}00190\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_trivial<T>::value\ \&\&\ std::is\_standard\_layout<T>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00191}00191\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Field\ expects\ only\ pod-\/type\ elements\ (plain\ data):\ default\ "{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00192}00192\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}constructor,\ copy\ and\ delete"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00193}00193\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00194}00194\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00198}00198\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00199}\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{00199}}\ \ \ \ \ field\_struct\ *RESTRICT\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00209}\mbox{\hyperlink{classField_a05c4ad5e101c1d79a90f8a9d92e0069b}{00209}}\ \ \ \ \ \mbox{\hyperlink{classField_a05c4ad5e101c1d79a90f8a9d92e0069b}{Field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00210}00210\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00211}00211\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ put\ here\ some\ implementation\ checks\ for\ field\ vars}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00212}00212\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00213}00213\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(hila::scalar\_type<T>)\ ==\ 4\ ||\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>)\ ==\ 8,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00214}00214\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}In\ vectorized\ arch\ (e.g.\ AVX2),\ only\ 4\ or\ 8\ byte\ (32\ or\ 64\ bit)\ numbers\ for\ "{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00215}00215\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Field<>\ implemented,\ sorry!"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00216}00216\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00217}00217\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00218}00218\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(!std::is\_same<hila::scalar\_type<T>,\ \textcolor{keywordtype}{long}\ \textcolor{keywordtype}{double}>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Type\ 'long\ double'\ numbers\ in\ Field<>\ not\ supported\ by\ cuda/hip"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00220}00220\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00221}00221\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00222}00222\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ =\ \textcolor{keyword}{nullptr};\ \textcolor{comment}{//\ lazy\ allocation\ on\ 1st\ use}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00223}00223\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00229}\mbox{\hyperlink{classField_a522b40a16a45ee82cc0e4f22e5bf8bb3}{00229}}\ \ \ \ \ \mbox{\hyperlink{classField_a522b40a16a45ee82cc0e4f22e5bf8bb3}{Field}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}\ \&other)\ :\ \mbox{\hyperlink{classField}{Field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00230}00230\ \ \ \ \ \ \ \ \ assert(other.\mbox{\hyperlink{classField_a5766687a08277255d9496f4884e792a7}{is\_initialized}}(ALL)\ \&\&\ \textcolor{stringliteral}{"{}Initializer\ Field\ value\ not\ set"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00231}00231\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00232}00232\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ other[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00233}00233\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00240}00240\ \ \ \ \ template\ <typename\ A,\ std::enable\_if\_t<std::is\_convertible<A,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00241}\mbox{\hyperlink{classField_a995954d6f5b9afbb61c97d26ede30245}{00241}}\ \ \ \ \ \mbox{\hyperlink{classField_a995954d6f5b9afbb61c97d26ede30245}{Field}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&other)\ :\ \mbox{\hyperlink{classField}{Field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00242}00242\ \ \ \ \ \ \ \ \ assert(other.\mbox{\hyperlink{classField_a5766687a08277255d9496f4884e792a7}{is\_initialized}}(ALL)\ \&\&\ \textcolor{stringliteral}{"{}Initializer\ Field\ value\ not\ set"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00243}00243\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00244}00244\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ other[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00245}00245\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00253}00253\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00254}00254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00255}00255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ hila::is\_assignable<T\ \&,\ A>::value\ ||\ std::is\_convertible<A,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00256}\mbox{\hyperlink{classField_ad5ced73338d6e65ef02e8666b77734f7}{00256}}\ \ \ \ \ \mbox{\hyperlink{classField_ad5ced73338d6e65ef02e8666b77734f7}{Field}}(\textcolor{keyword}{const}\ A\ \&val)\ :\ \mbox{\hyperlink{classField}{Field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00257}00257\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ val;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00258}00258\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00264}\mbox{\hyperlink{classField_ac6efe16047ac3c0e1085484fee66e36c}{00264}}\ \ \ \ \ \mbox{\hyperlink{classField_ac6efe16047ac3c0e1085484fee66e36c}{Field}}(\textcolor{keyword}{const}\ std::nullptr\_t\ z)\ :\ \mbox{\hyperlink{classField}{Field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00265}00265\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00266}00266\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00267}00267\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00274}\mbox{\hyperlink{classField_a7c18c5ae7f65ac1c62b3b3404d41c3a6}{00274}}\ \ \ \ \ \mbox{\hyperlink{classField_a7c18c5ae7f65ac1c62b3b3404d41c3a6}{Field}}(\mbox{\hyperlink{classField}{Field}}\ \&\&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00275}00275\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ =\ rhs.fs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00276}00276\ \ \ \ \ \ \ \ \ rhs.fs\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00277}00277\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00278}00278\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00279}00279\ \ \ \ \ \mbox{\hyperlink{classField}{\string~Field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00280}00280\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a701808b5751abf7067322af0374a350c}{free}}();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00281}00281\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00282}00282\ \textcolor{preprocessor}{\#ifdef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00283}00283\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Because\ destructor\ is\ instantiated\ for\ all\ fields,}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00284}00284\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ use\ this\ to\ put\ in\ a\ hook\ for\ generating\ call\ to\ this\ function}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00285}00285\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ in\ preprocessing\ stage}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00286}00286\ \ \ \ \ \ \ \ \ ensure\_field\_operators\_exist<T>();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00287}00287\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00288}00288\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00290}00290\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00294}\mbox{\hyperlink{classField_a90d9d8c48d69b16572cd59b3665a087a}{00294}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a90d9d8c48d69b16572cd59b3665a087a}{allocate}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00295}00295\ \ \ \ \ \ \ \ \ assert(\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ ==\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00296}00296\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.volume()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00297}00297\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Can\ not\ allocate\ Field\ variables\ before\ lattice.setup()\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00298}00298\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00299}00299\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00300}00300\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ =\ (field\_struct\ *)memalloc(\textcolor{keyword}{sizeof}(field\_struct));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00301}00301\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>lattice\_id\ =\ lattice.id();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00302}00302\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>allocate\_payload();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00303}00303\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>initialize\_communication();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00304}00304\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(ALL);\ \ \ \textcolor{comment}{//\ guarantees\ communications\ will\ be\ done}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00305}00305\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>assigned\_to\ =\ 0;\ \textcolor{comment}{//\ and\ this\ means\ that\ it\ is\ not\ assigned}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00306}00306\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00307}00307\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (Direction\ d\ =\ (Direction)0;\ d\ <\ NDIRS;\ ++d)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00308}00308\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00309}00309\ \textcolor{preprocessor}{\#if\ !defined(CUDA)\ \&\&\ !defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00310}00310\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>neighbours[d]\ =\ lattice.\mbox{\hyperlink{classlattice__struct_aaedf7c99b6c1e8ea3086810bffddc44a}{neighb}}[d];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00311}00311\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00312}00312\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>payload.neighbours[d]\ =\ lattice.backend\_lattice-\/>\mbox{\hyperlink{structbackend__lattice__struct_ae4dff93a090b31c38998b0bfe06ad5bb}{d\_neighb}}[d];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00313}00313\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00314}00314\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00315}00315\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00316}00316\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00317}00317\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00318}00318\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[dir]\ =\ hila::bc::PERIODIC;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[-\/dir]\ =\ hila::bc::PERIODIC;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00320}00320\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00321}00321\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00322}00322\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00323}00323\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00324}00324\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{hila::is\_vectorizable\_type<T>::value}})\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00325}00325\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>vector\_lattice\ =\ lattice.backend\_lattice}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00326}00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/>\mbox{\hyperlink{structbackend__lattice__struct_a920f7abb24a2d1252ee31185a2f077f4}{get\_vectorized\_lattice}}<\mbox{\hyperlink{structhila_1_1vector__info}{hila::vector\_info<T>::vector\_size}}>();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00327}00327\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00328}00328\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>vector\_lattice\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00329}00329\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00330}00330\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00331}00331\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00332}00332\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00338}\mbox{\hyperlink{classField_a701808b5751abf7067322af0374a350c}{00338}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a701808b5751abf7067322af0374a350c}{free}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00339}00339\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ don't\ call\ destructors\ when\ exiting\ -\/\ either\ MPI\ or\ cuda\ can\ already}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00340}00340\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ be\ off.}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00341}00341\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ !=\ \textcolor{keyword}{nullptr}\ \&\&\ !hila::about\_to\_finish)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00342}00342\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (Direction\ d\ =\ (Direction)0;\ d\ <\ NDIRS;\ ++d)}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00343}00343\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_abeefcc169a728e8ead3e13961926e689}{drop\_comms}}(d,\ ALL);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00344}00344\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>free\_payload();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00345}00345\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>free\_communication();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00346}00346\ \ \ \ \ \ \ \ \ \ \ \ \ std::free(\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00347}00347\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00348}00348\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00349}00349\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00350}00350\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00359}\mbox{\hyperlink{classField_aabd27a065b6419d6cb20b83ff3a3e56a}{00359}}\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classField_aabd27a065b6419d6cb20b83ff3a3e56a}{is\_allocated}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00360}00360\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ !=\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00361}00361\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00362}00362\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00369}\mbox{\hyperlink{classField_a5766687a08277255d9496f4884e792a7}{00369}}\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classField_a5766687a08277255d9496f4884e792a7}{is\_initialized}}(Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00370}00370\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ !=\ \textcolor{keyword}{nullptr}\ \&\&\ ((\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>assigned\_to\ \&\ parity\_bits(p))\ !=\ 0);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00371}00371\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00372}00372\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00380}\mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{00380}}\ \ \ \ \ gather\_status\_t\ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(Parity\ p,\ \textcolor{keywordtype}{int}\ d)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00381}00381\ \ \ \ \ \ \ \ \ assert(parity\_bits(p)\ \&\&\ d\ >=\ 0\ \&\&\ d\ <\ NDIRS);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00382}00382\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>gather\_status\_arr[(int)p\ -\/\ 1][d];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00383}00383\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00384}00384\ \ \ \ \ \textcolor{keywordtype}{void}\ set\_gather\_status(Parity\ p,\ \textcolor{keywordtype}{int}\ d,\ gather\_status\_t\ stat)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00385}00385\ \ \ \ \ \ \ \ \ assert(parity\_bits(p)\ \&\&\ d\ >=\ 0\ \&\&\ d\ <\ NDIRS);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00386}00386\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>gather\_status\_arr[(int)p\ -\/\ 1][d]\ =\ stat;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00387}00387\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00388}00388\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00396}\mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{00396}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{check\_alloc}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00397}00397\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!\mbox{\hyperlink{classField_aabd27a065b6419d6cb20b83ff3a3e56a}{is\_allocated}}())}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00398}00398\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a90d9d8c48d69b16572cd59b3665a087a}{allocate}}();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00399}00399\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00400}00400\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00404}\mbox{\hyperlink{classField_ac2b47d5fd4285b4d0ec0792eabfc6d5d}{00404}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ac2b47d5fd4285b4d0ec0792eabfc6d5d}{check\_alloc}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00405}00405\ \ \ \ \ \ \ \ \ assert(\mbox{\hyperlink{classField_aabd27a065b6419d6cb20b83ff3a3e56a}{is\_allocated}}());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00406}00406\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00407}00407\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00408}00408\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00414}\mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{00414}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(\textcolor{keyword}{const}\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00415}00415\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00416}00416\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (Direction\ i\ =\ (Direction)0;\ i\ <\ NDIRS;\ ++i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00417}00417\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ check\ if\ there's\ ongoing\ comms,\ invalidate\ it!}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00418}00418\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_abeefcc169a728e8ead3e13961926e689}{drop\_comms}}(i,\ opp\_parity(p));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00419}00419\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00420}00420\ \ \ \ \ \ \ \ \ \ \ \ \ set\_gather\_status(opp\_parity(p),\ i,\ gather\_status\_t::NOT\_DONE);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00421}00421\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ !=\ ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00422}00422\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ set\_gather\_status(ALL,\ i,\ gather\_status\_t::NOT\_DONE);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00423}00423\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00424}00424\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ set\_gather\_status(EVEN,\ i,\ gather\_status\_t::NOT\_DONE);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00425}00425\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ set\_gather\_status(ODD,\ i,\ gather\_status\_t::NOT\_DONE);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00426}00426\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00427}00427\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00428}00428\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>assigned\_to\ |=\ parity\_bits(p);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00429}00429\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00430}00430\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00443}\mbox{\hyperlink{classField_a6284838229f7f16695a53b4f6614b09e}{00443}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a6284838229f7f16695a53b4f6614b09e}{mark\_gathered}}(\textcolor{keywordtype}{int}\ dir,\ \textcolor{keyword}{const}\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00444}00444\ \ \ \ \ \ \ \ \ set\_gather\_status(p,\ dir,\ gather\_status\_t::DONE);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00445}00445\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00446}00446\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00457}\mbox{\hyperlink{classField_ae2a7603d2c586f8d9f750fa033f86330}{00457}}\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classField_ae2a7603d2c586f8d9f750fa033f86330}{is\_gathered}}(\textcolor{keywordtype}{int}\ dir,\ Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00458}00458\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (par\ !=\ ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00459}00459\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(par,\ dir)\ ==\ gather\_status\_t::DONE\ ||}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00460}00460\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(ALL,\ dir)\ ==\ gather\_status\_t::DONE;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00461}00461\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00462}00462\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(ALL,\ dir)\ ==\ gather\_status\_t::DONE\ ||}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00463}00463\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(EVEN,\ dir)\ ==\ gather\_status\_t::DONE\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00464}00464\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(ODD,\ dir)\ ==\ gather\_status\_t::DONE);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00465}00465\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00466}00466\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00467}00467\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00474}\mbox{\hyperlink{classField_abaef3528d25dda53c9da36b0a4e3a6ca}{00474}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_abaef3528d25dda53c9da36b0a4e3a6ca}{mark\_gather\_started}}(\textcolor{keywordtype}{int}\ dir,\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00475}00475\ \ \ \ \ \ \ \ \ set\_gather\_status(p,\ dir,\ gather\_status\_t::STARTED);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00476}00476\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00477}00477\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00485}\mbox{\hyperlink{classField_adbf039c5421f877e1ed7c95ff361fc7b}{00485}}\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classField_adbf039c5421f877e1ed7c95ff361fc7b}{is\_gather\_started}}(\textcolor{keywordtype}{int}\ dir,\ Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00486}00486\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(par,\ dir)\ ==\ gather\_status\_t::STARTED;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00487}00487\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00488}00488\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00489}00489\ \ \ \ \ \textcolor{keywordtype}{bool}\ gather\_not\_done(\textcolor{keywordtype}{int}\ dir,\ Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00490}00490\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_abb3c6ec5d1f79839d38fb1eec7c4c536}{gather\_status}}(par,\ dir)\ ==\ gather\_status\_t::NOT\_DONE;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00491}00491\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00492}00492\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00495}00495\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00496}\mbox{\hyperlink{classField_a060ef9db979e95d8477ffa2437289272}{00496}}\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{classField_a060ef9db979e95d8477ffa2437289272}{boundary\_need\_to\_communicate}}(\textcolor{keyword}{const}\ Direction\ dir)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00497}00497\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00498}00498\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00499}00499\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{namespacehila_a929c11bba2f9ff3de00b5b886ae7ed9c}{hila::bc\_need\_communication}}(\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[dir])\ ||}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00500}00500\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !lattice.mynode.\mbox{\hyperlink{structlattice__struct_1_1node__struct_af493bb3385334627ed15b9c538d5cf85}{is\_on\_edge}}(dir);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00501}00501\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00502}00502\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00503}00503\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00504}00504\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00505}00505\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00506}00506\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00513}\mbox{\hyperlink{classField_a2344d33fe247023dd759e2d232a5d04e}{00513}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a2344d33fe247023dd759e2d232a5d04e}{set\_boundary\_condition}}(Direction\ dir,\ \mbox{\hyperlink{namespacehila_a81cf9e19b8543be54f6afc7d2bd17805}{hila::bc}}\ bc)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00514}00514\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00515}00515\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00516}00516\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00517}00517\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00518}00518\ \textcolor{preprocessor}{\#ifdef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00519}00519\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ this\ section\ is\ just\ to\ generate\ loop\ function\ calls\ for\ unary-\/.\ \ Will\ removed\ by\ hilapp}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00520}00520\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ from\ final\ code.\ \ If\ type\ T\ does\ not\ have\ -\/,\ give\ error}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00521}00521\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00522}00522\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(\mbox{\hyperlink{classhas__unary__minus}{has\_unary\_minus<T>::value}},\ \textcolor{stringliteral}{"{}BC\ possible\ only\ for\ types\ which\ implement\ unary\ "{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00523}00523\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}minus\ (-\/)\ -\/operator\ and\ are\ not\ unsigned"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00524}00524\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00525}00525\ \ \ \ \ \ \ \ \ ensure\_unary\_minus\_is\_loop\_function<T>();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00526}00526\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00527}00527\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00528}00528\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ TODO:\ This\ works\ as\ intended\ only\ for\ periodic/antiperiodic\ b.c.}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00529}00529\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{check\_alloc}}();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00530}00530\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[dir]\ =\ bc;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00531}00531\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[-\/dir]\ =\ bc;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00532}00532\ \textcolor{preprocessor}{\#if\ !defined(CUDA)\ \&\&\ !defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00533}00533\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>neighbours[dir]\ =\ lattice.get\_neighbour\_array(dir,\ bc);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00534}00534\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>neighbours[-\/dir]\ =\ lattice.get\_neighbour\_array(-\/dir,\ bc);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00535}00535\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00536}00536\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bc\ ==\ hila::bc::PERIODIC)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00537}00537\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>payload.neighbours[dir]\ =\ lattice.backend\_lattice-\/>\mbox{\hyperlink{structbackend__lattice__struct_ae4dff93a090b31c38998b0bfe06ad5bb}{d\_neighb}}[dir];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00538}00538\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>payload.neighbours[-\/dir]\ =\ lattice.backend\_lattice-\/>\mbox{\hyperlink{structbackend__lattice__struct_ae4dff93a090b31c38998b0bfe06ad5bb}{d\_neighb}}[-\/dir];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00539}00539\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00540}00540\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>payload.neighbours[dir]\ =\ lattice.backend\_lattice-\/>d\_neighb\_special[dir];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00541}00541\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>payload.neighbours[-\/dir]\ =\ lattice.backend\_lattice-\/>d\_neighb\_special[-\/dir];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00542}00542\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00543}00543\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00544}00544\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00545}00545\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ boundaries\ get\ refreshed}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00546}00546\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(ALL);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00547}00547\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00548}00548\ \ \ \ \ \ \ \ \ assert(bc\ ==\ hila::bc::PERIODIC\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00549}00549\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Only\ periodic\ bondary\ conditions\ when\ SPECIAL\_BOUNDARY\_CONDITIONS\ is\ undefined"{}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00550}00550\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00551}00551\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00552}00552\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00559}\mbox{\hyperlink{classField_a38e40eed1d9107a489224206282bb179}{00559}}\ \ \ \ \ \mbox{\hyperlink{namespacehila_a81cf9e19b8543be54f6afc7d2bd17805}{hila::bc}}\ \mbox{\hyperlink{classField_a38e40eed1d9107a489224206282bb179}{get\_boundary\_condition}}(Direction\ dir)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00560}00560\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00561}00561\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[dir];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00562}00562\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00563}00563\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ hila::bc::PERIODIC;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00564}00564\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00565}00565\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00566}00566\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00567}00567\ \ \ \ \ \textcolor{keywordtype}{void}\ print\_boundary\_condition()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00568}00568\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{check\_alloc}}();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00569}00569\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ (\ "{}};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00570}00570\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ dir\ =\ 0;\ dir\ <\ NDIRS;\ dir++)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00571}00571\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ (int)\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>boundary\_condition[dir]\ <<\ \textcolor{stringliteral}{"{}\ "{}};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00572}00572\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00573}00573\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{})\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00574}00574\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00575}00575\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00582}00582\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00583}\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{00583}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00584}00584\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00585}00585\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a2344d33fe247023dd759e2d232a5d04e}{set\_boundary\_condition}}(dir,\ rhs.\mbox{\hyperlink{classField_a38e40eed1d9107a489224206282bb179}{get\_boundary\_condition}}(dir));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00586}00586\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00587}00587\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00588}00588\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00589}00589\ \ \ \ \ \textcolor{comment}{//\ Overloading\ []}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00590}00590\ \ \ \ \ \textcolor{comment}{//\ declarations\ -\/-\/\ WILL\ BE\ implemented\ by\ hilapp,\ not\ written\ here}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00591}00591\ \ \ \ \ \textcolor{comment}{//\ let\ there\ be\ const\ and\ non-\/const\ protos}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00592}00592\ \ \ \ \ T\ operator[](\textcolor{keyword}{const}\ Parity\ p)\ \textcolor{keyword}{const};\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ f[EVEN]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00593}00593\ \ \ \ \ T\ operator[](\textcolor{keyword}{const}\ \mbox{\hyperlink{classX__index__type}{X\_index\_type}})\ \textcolor{keyword}{const};\ \ \ \ \ \ \ \textcolor{comment}{//\ f[X]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00594}00594\ \ \ \ \ T\ operator[](\textcolor{keyword}{const}\ \mbox{\hyperlink{structX__plus__direction}{X\_plus\_direction}}\ p)\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ f[X+dir]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00595}00595\ \ \ \ \ T\ operator[](\textcolor{keyword}{const}\ \mbox{\hyperlink{structX__plus__offset}{X\_plus\_offset}}\ p)\ \textcolor{keyword}{const};\ \ \ \ \textcolor{comment}{//\ f[X+dir1+dir2]\ and\ others}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00596}00596\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00597}00597\ \ \ \ \ T\ \&operator[](\textcolor{keyword}{const}\ Parity\ p);\ \ \ \ \ \textcolor{comment}{//\ f[EVEN]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00598}00598\ \ \ \ \ T\ \&operator[](\textcolor{keyword}{const}\ \mbox{\hyperlink{classX__index__type}{X\_index\_type}});\ \textcolor{comment}{//\ f[X]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00599}00599\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00600}00600\ \ \ \ \ T\ \&operator[](\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v);\ \ \ \ \ \ \ \textcolor{comment}{//\ f[CoordinateVector]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00601}00601\ \ \ \ \ T\ \&operator[](\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v)\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ f[CoordinateVector]}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00602}00602\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00603}00603\ \ \ \ \ \textcolor{comment}{//\ TEMPORARY\ HACK:\ return\ ptr\ to\ bare\ array}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00604}00604\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ field\_buffer()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00605}00605\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>payload.get\_buffer();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00606}00606\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00607}00607\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00608}00608\ \textcolor{preprocessor}{\#ifndef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00611}\mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{00611}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00612}00612\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>get\_element(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00613}00613\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00614}00614\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00615}00615\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00616}00616\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>get\_element(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00617}00617\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00618}00618\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vecT>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00619}00619\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ get\_vector\_at(\textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00620}00620\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>template\ get\_vector<vecT>(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00621}00621\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00622}00622\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ get\_value\_at\_nb\_site(Direction\ d,\ \textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00623}00623\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>get\_element(\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>vector\_lattice-\/>site\_neighbour(d,\ i));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00624}00624\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00625}00625\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00626}00626\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00627}00627\ \textcolor{preprocessor}{\#ifndef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00630}00630\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00631}\mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{00631}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(\textcolor{keyword}{const}\ A\ \&value,\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00632}00632\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>set\_element(value,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00633}00633\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00634}00634\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00635}00635\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00636}00636\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vecT>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00637}00637\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ set\_vector\_at(\textcolor{keyword}{const}\ vecT\ \&value,\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00638}00638\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>set\_vector(value,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00639}00639\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00640}00640\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00641}00641\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00642}00642\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(\textcolor{keyword}{const}\ A\ \&value,\ \textcolor{keywordtype}{unsigned}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00643}00643\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}-\/>set\_element(value,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00644}00644\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00645}00645\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00646}00646\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00652}00652\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00666}\mbox{\hyperlink{classField_a0524b7e483fa9fdd178f71c7981c6771}{00666}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField_a0524b7e483fa9fdd178f71c7981c6771}{operator=}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00667}00667\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00668}00668\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00669}00669\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00670}00670\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00671}00671\ \ \ \ \ \textcolor{comment}{//\ More\ general\ =\ -\/\ possible\ only\ if\ T\ =\ A\ is\ OK}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00672}00672\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00673}00673\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00674}00674\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ hila::is\_assignable<T\ \&,\ A>::value\ ||\ std::is\_convertible<A,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00675}00675\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField_a0524b7e483fa9fdd178f71c7981c6771}{operator=}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00676}00676\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00677}00677\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00678}00678\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00679}00679\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00680}00680\ \ \ \ \ \textcolor{comment}{//\ Assign\ from\ element}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00681}00681\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00682}00682\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00683}00683\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ hila::is\_assignable<T\ \&,\ A>::value\ ||\ std::is\_convertible<A,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00684}00684\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField_a0524b7e483fa9fdd178f71c7981c6771}{operator=}}(\textcolor{keyword}{const}\ A\ \&d)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00685}00685\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ d;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00686}00686\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00687}00687\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00688}00688\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00689}00689\ \ \ \ \ \textcolor{comment}{//\ assignment\ of\ 0\ -\/\ nullptr,\ zeroes\ field}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00690}00690\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField_a0524b7e483fa9fdd178f71c7981c6771}{operator=}}(\textcolor{keyword}{const}\ std::nullptr\_t\ \&z)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00691}00691\ \ \ \ \ \ \ \ \ (*this)[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00692}00692\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00693}00693\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00694}00694\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00695}00695\ \ \ \ \ \textcolor{comment}{//\ Do\ also\ move\ assignment}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00696}00696\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField_a0524b7e483fa9fdd178f71c7981c6771}{operator=}}(\mbox{\hyperlink{classField}{Field<T>}}\ \&\&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00697}00697\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{this}\ !=\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00698}00698\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a701808b5751abf7067322af0374a350c}{free}}();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00699}00699\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}}\ =\ rhs.fs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00700}00700\ \ \ \ \ \ \ \ \ \ \ \ \ rhs.fs\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00701}00701\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00702}00702\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00703}00703\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00704}00704\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00705}00705\ \ \ \ \ \textcolor{comment}{//\ +=,\ -\/=\ \ etc\ operators\ from\ compatible\ types}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00706}00706\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00707}00707\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_plus<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00708}00708\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator+=(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00709}00709\ \ \ \ \ \ \ \ \ (*this)[ALL]\ +=\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00710}00710\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00711}00711\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00712}00712\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00713}00713\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00714}00714\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_minus<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00715}00715\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator-\/=(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00716}00716\ \ \ \ \ \ \ \ \ (*this)[ALL]\ -\/=\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00717}00717\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00718}00718\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00719}00719\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00720}00720\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00721}00721\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_mul<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00722}00722\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator*=(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00723}00723\ \ \ \ \ \ \ \ \ (*this)[ALL]\ *=\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00724}00724\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00725}00725\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00726}00726\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00727}00727\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00728}00728\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_div<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00729}00729\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator/=(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00730}00730\ \ \ \ \ \ \ \ \ (*this)[ALL]\ /=\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00731}00731\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00732}00732\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00733}00733\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00734}00734\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00735}00735\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_plus<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00736}00736\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator+=(\textcolor{keyword}{const}\ A\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00737}00737\ \ \ \ \ \ \ \ \ (*this)[ALL]\ +=\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00738}00738\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00739}00739\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00740}00740\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00741}00741\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00742}00742\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_minus<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00743}00743\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator-\/=(\textcolor{keyword}{const}\ A\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00744}00744\ \ \ \ \ \ \ \ \ (*this)[ALL]\ -\/=\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00745}00745\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00746}00746\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00747}00747\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00748}00748\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00749}00749\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_mul<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00750}00750\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator*=(\textcolor{keyword}{const}\ A\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00751}00751\ \ \ \ \ \ \ \ \ (*this)[ALL]\ *=\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00752}00752\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00753}00753\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00754}00754\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00755}00755\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00756}00756\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_convertible<hila::type\_div<T,\ A>,\ T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00757}00757\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&operator/=(\textcolor{keyword}{const}\ A\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00758}00758\ \ \ \ \ \ \ \ \ (*this)[ALL]\ /=\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00759}00759\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00760}00760\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00761}00761\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00762}00762\ \ \ \ \ \textcolor{comment}{//\ Unary\ +\ and\ -\/}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00763}00763\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ operator+()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00764}00764\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00765}00765\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00766}00766\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00767}00767\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ operator-\/()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00768}00768\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00769}00769\ \ \ \ \ \ \ \ \ f[ALL]\ =\ -\/(*this)[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00770}00770\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00771}00771\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00772}00772\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00773}00773\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&rhs)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00774}00774\ \ \ \ \ \ \ \ \ hila::scalar\_type<T>\ epsilon\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00775}00775\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ((*\textcolor{keyword}{this})\ -\/\ rhs).squarenorm()\ <=\ epsilon;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00776}00776\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00777}00777\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00778}00778\ \ \ \ \ \textcolor{keywordtype}{double}\ squarenorm()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00779}00779\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ n\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00780}00780\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00781}00781\ \ \ \ \ \ \ \ \ \ \ \ \ n\ +=\ ::squarenorm((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00782}00782\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00783}00783\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ n;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00784}00784\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00785}00785\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00786}00786\ \ \ \ \ \textcolor{keywordtype}{double}\ norm()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00787}00787\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sqrt(squarenorm());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00788}00788\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00789}00789\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00790}00790\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ conj()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00791}00791\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00792}00792\ \ \ \ \ \ \ \ \ f[ALL]\ =\ ::conj((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00793}00793\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00794}00794\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00795}00795\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00796}00796\ \ \ \ \ template\ <typename\ R\ =\ T,\ typename\ A\ =\ decltype(::dagger(std::declval<R>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00797}00797\ \ \ \ \ \mbox{\hyperlink{classField}{Field<A>}}\ dagger()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00798}00798\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<A>}}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00799}00799\ \ \ \ \ \ \ \ \ f[ALL]\ =\ ::dagger((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00800}00800\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00801}00801\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00802}00802\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00803}00803\ \ \ \ \ template\ <typename\ R\ =\ T,\ typename\ A\ =\ decltype(::real(std::declval<R>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00804}00804\ \ \ \ \ \mbox{\hyperlink{classField}{Field<A>}}\ real()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00805}00805\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<A>}}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00806}00806\ \ \ \ \ \ \ \ \ f[ALL]\ =\ ::real((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00807}00807\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00808}00808\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00809}00809\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00810}00810\ \ \ \ \ template\ <typename\ R\ =\ T,\ typename\ A\ =\ decltype(::imag(std::declval<R>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00811}00811\ \ \ \ \ \mbox{\hyperlink{classField}{Field<A>}}\ imag()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00812}00812\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<A>}}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00813}00813\ \ \ \ \ \ \ \ \ f[ALL]\ =\ ::imag((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00814}00814\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00815}00815\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00819}00819\ \ \ \ \ dir\_mask\_t\ \mbox{\hyperlink{classField_ac76a0477380e02532746853d16983c4a}{start\_gather}}(Direction\ d,\ Parity\ p\ =\ ALL)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00820}00820\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ab039d34f2e65c9cd58326fd013efd90c}{wait\_gather}}(Direction\ d,\ Parity\ p)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00821}\mbox{\hyperlink{classField_a12fc62db1df52e6c69f9a9328b74921e}{00821}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a12fc62db1df52e6c69f9a9328b74921e}{gather}}(Direction\ d,\ Parity\ p\ =\ ALL)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00822}\mbox{\hyperlink{classField_abeefcc169a728e8ead3e13961926e689}{00822}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_abeefcc169a728e8ead3e13961926e689}{drop\_comms}}(Direction\ d,\ Parity\ p)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00823}\mbox{\hyperlink{classField_aea30d8bfc43c059834bf931328796fdd}{00823}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_aea30d8bfc43c059834bf931328796fdd}{cancel\_comm}}(Direction\ d,\ Parity\ p)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00824}00824\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00839}00839\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&shift(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v,\ \mbox{\hyperlink{classField}{Field<T>}}\ \&r,\ Parity\ par)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00845}\mbox{\hyperlink{classField_aecd390783ab59a1d36902e794f6d0641}{00845}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField_aecd390783ab59a1d36902e794f6d0641}{shift}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v,\ \mbox{\hyperlink{classField}{Field<T>}}\ \&r)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00846}00846\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ shift(v,\ r,\ ALL);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00847}00847\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00853}\mbox{\hyperlink{classField_a8a40a58d44e5b87e4189bf3242b79a32}{00853}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ \mbox{\hyperlink{classField_a8a40a58d44e5b87e4189bf3242b79a32}{shift}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v,\ Parity\ par)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00858}00858\ \ \ \ \ \textcolor{comment}{//\ General\ getters\ and\ setters}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00859}00859\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00862}00862\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00863}00863\ \ \ \ \ template\ <typename\ A,\ std::enable\_if\_t<std::is\_assignable<T\ \&,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00864}\mbox{\hyperlink{classField_abd01a2a3e8b22665b12767bbc1d4a3b6}{00864}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_abd01a2a3e8b22665b12767bbc1d4a3b6}{set\_element}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coord,\ \textcolor{keyword}{const}\ A\ \&value)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00865}00865\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_a42fcdd75a779e3d63c5ca80827f125bc}{is\_on\_mynode}}(coord))\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00866}00866\ \ \ \ \ \ \ \ \ \ \ \ \ T\ element;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00867}00867\ \ \ \ \ \ \ \ \ \ \ \ \ element\ =\ value;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00868}00868\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(element,\ lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(coord));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00869}00869\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00870}00870\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(coord.parity());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00871}00871\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00872}00872\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00879}\mbox{\hyperlink{classField_a33f905efa61f6af54664845f72430d69}{00879}}\ \ \ \ \ \textcolor{keyword}{const}\ T\ \mbox{\hyperlink{classField_a33f905efa61f6af54664845f72430d69}{get\_element}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coord)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00880}00880\ \ \ \ \ \ \ \ \ T\ element;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00881}00881\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00882}00882\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ owner\ =\ lattice.node\_rank(coord);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00883}00883\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00884}00884\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ owner)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00885}00885\ \ \ \ \ \ \ \ \ \ \ \ \ element\ =\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(coord));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00886}00886\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00887}00887\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00888}00888\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00889}00889\ \ \ \ \ \ \ \ \ MPI\_Bcast(\&element,\ \textcolor{keyword}{sizeof}(T),\ MPI\_BYTE,\ owner,\ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00890}00890\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00891}00891\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ element;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00892}00892\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00893}00893\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00902}00902\ \ \ \ \ \textcolor{keywordtype}{void}\ set\_elements(\textcolor{keyword}{const}\ std::vector<T>\ \&elements,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00903}00903\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00910}00910\ \ \ \ \ std::vector<T>\ \mbox{\hyperlink{classField_ae62500759ad146835236688bfca45354}{get\_elements}}(\textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00911}00911\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ broadcast\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00912}00912\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00913}00913\ \ \ \ \ std::vector<T>\ \mbox{\hyperlink{classField_a14250b89ec6fdb483bf70195f7a31124}{get\_subvolume}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmin,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmax,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00914}00914\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ broadcast\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00915}00915\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00916}00916\ \ \ \ \ std::vector<T>\ \mbox{\hyperlink{classField_af47e166050f2c100782500c5eda41925}{get\_slice}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&c,\ \textcolor{keywordtype}{bool}\ broadcast\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00917}00917\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00918}00918\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a48de521e9e9beb5907351e7ee8721b0e}{copy\_local\_data}}(std::vector<T>\ \&buffer)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00919}00919\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ada9786ec56558e6d5ba76fc2b7bc062e}{set\_local\_data}}(\textcolor{keyword}{const}\ std::vector<T>\ \&buffer);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00920}00920\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00921}00921\ \ \ \ \ \textcolor{keywordtype}{void}\ copy\_local\_data\_with\_halo(std::vector<T>\ \&buffer)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00922}00922\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00923}00923\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00924}00924\ \ \ \ \ \textcolor{comment}{//\ inline\ void\ set\_element\_at(const\ CoordinateVector\ \&coord,\ const\ A\ \&elem)\ \{}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00925}00925\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ T\ e;}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00926}00926\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ e\ =\ elem;}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00927}00927\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ set\_element(e,\ coord);}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00928}00928\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00929}00929\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00930}00930\ \ \ \ \ \textcolor{comment}{//\ inline\ void\ set\_element\_at(const\ CoordinateVector\ \&coord,\ std::nullptr\_t\ elem)\ \{}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00931}00931\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ T\ e;}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00932}00932\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ e\ =\ 0;}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00933}00933\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ set\_element(e,\ coord);}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00934}00934\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00935}00935\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00936}00936\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00937}00937\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_assignable<T\ \&,\ hila::type\_plus<T,\ A>>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00938}00938\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ compound\_add\_element(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coord,\ \textcolor{keyword}{const}\ A\ \&av)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00939}00939\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_a42fcdd75a779e3d63c5ca80827f125bc}{is\_on\_mynode}}(coord))\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00940}00940\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ i\ =\ lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(coord);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00941}00941\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ v\ =\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00942}00942\ \ \ \ \ \ \ \ \ \ \ \ \ v\ +=\ av;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00943}00943\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(v,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00944}00944\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00945}00945\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(coord.parity());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00946}00946\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00947}00947\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00948}00948\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00949}00949\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_assignable<T\ \&,\ hila::type\_minus<T,\ A>>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00950}00950\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ compound\_sub\_element(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coord,\ \textcolor{keyword}{const}\ A\ \&av)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00951}00951\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_a42fcdd75a779e3d63c5ca80827f125bc}{is\_on\_mynode}}(coord))\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00952}00952\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ i\ =\ lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(coord);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00953}00953\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ v\ =\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00954}00954\ \ \ \ \ \ \ \ \ \ \ \ \ v\ -\/=\ av;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00955}00955\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(v,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00956}00956\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00957}00957\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(coord.parity());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00958}00958\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00959}00959\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00960}00960\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00961}00961\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_assignable<T\ \&,\ hila::type\_mul<T,\ A>>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00962}00962\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ compound\_mul\_element(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coord,\ \textcolor{keyword}{const}\ A\ \&av)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00963}00963\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_a42fcdd75a779e3d63c5ca80827f125bc}{is\_on\_mynode}}(coord))\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00964}00964\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ i\ =\ lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(coord);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00965}00965\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ v\ =\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00966}00966\ \ \ \ \ \ \ \ \ \ \ \ \ v\ *=\ av;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00967}00967\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(v,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00968}00968\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00969}00969\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(coord.parity());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00970}00970\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00971}00971\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00972}00972\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00973}00973\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_assignable<T\ \&,\ hila::type\_div<T,\ A>>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00974}00974\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ compound\_div\_element(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coord,\ \textcolor{keyword}{const}\ A\ \&av)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00975}00975\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_a42fcdd75a779e3d63c5ca80827f125bc}{is\_on\_mynode}}(coord))\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00976}00976\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ i\ =\ lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(coord);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00977}00977\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ v\ =\ \mbox{\hyperlink{classField_a6206388d8c609b6a22dd2379fed258c6}{get\_value\_at}}(i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00978}00978\ \ \ \ \ \ \ \ \ \ \ \ \ v\ /=\ av;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00979}00979\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a6e46f9db917092b26a09fe72dc625892}{set\_value\_at}}(v,\ i);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00980}00980\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00981}00981\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField_a23333e84caea23096552c81d4d14228f}{mark\_changed}}(coord.parity());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00982}00982\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00983}00983\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00984}00984\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00985}00985\ \ \ \ \ \textcolor{comment}{//\ Fourier\ transform\ declarations}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00986}00986\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ FFT(fft\_direction\ fdir\ =\ fft\_direction::forward)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00987}00987\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ FFT(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&dirs,\ fft\_direction\ fdir\ =\ fft\_direction::forward)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00988}00988\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00989}00989\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Complex<hila::scalar\_type<T>}}>>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00990}00990\ \ \ \ \ \mbox{\hyperlink{classField_ab6d7704bd2de4fdfff86808f7cb27f04}{FFT\_real\_to\_complex}}(fft\_direction\ fdir\ =\ fft\_direction::forward)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00991}00991\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::scalar\_type<T>}}>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00992}00992\ \ \ \ \ FFT\_complex\_to\_real(fft\_direction\ fdir\ =\ fft\_direction::forward)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00993}00993\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00994}00994\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00995}00995\ \ \ \ \ \textcolor{comment}{//\ Reflect\ the\ field\ along\ all\ or\ 1\ coordinate}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00996}00996\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ reflect()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00997}00997\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ reflect(Direction\ dir)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00998}00998\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ reflect(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&dirs)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l00999}00999\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01000}01000\ \ \ \ \ \textcolor{comment}{//\ Writes\ the\ Field\ to\ disk}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01001}01001\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ae3d3528ee76668357b5a12aae4a0e2f6}{write}}(std::ofstream\ \&outputfile,\ \textcolor{keywordtype}{bool}\ binary\ =\ \textcolor{keyword}{true},\ \textcolor{keywordtype}{int}\ precision\ =\ 8)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01002}01002\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ae3d3528ee76668357b5a12aae4a0e2f6}{write}}(\textcolor{keyword}{const}\ std::string\ \&filename,\ \textcolor{keywordtype}{bool}\ binary\ =\ \textcolor{keyword}{true},\ \textcolor{keywordtype}{int}\ precision\ =\ 8)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01003}01003\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01004}01004\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_af31e8d394963efc4827ff582abddaadc}{read}}(std::ifstream\ \&inputfile);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01005}01005\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_af31e8d394963efc4827ff582abddaadc}{read}}(\textcolor{keyword}{const}\ std::string\ \&filename);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01006}01006\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01007}01007\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a2e5c03dc76de38ba2c953edf1e8ebb7b}{write\_subvolume}}(std::ofstream\ \&outputfile,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmin,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01008}01008\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmax,\ \textcolor{keywordtype}{int}\ precision\ =\ 6)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01009}01009\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a2e5c03dc76de38ba2c953edf1e8ebb7b}{write\_subvolume}}(\textcolor{keyword}{const}\ std::string\ \&filenname,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmin,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01010}01010\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmax,\ \textcolor{keywordtype}{int}\ precision\ =\ 6)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01011}01011\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01012}01012\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Out>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01013}01013\ \ \ \ \ \textcolor{keywordtype}{void}\ write\_slice(Out\ \&outputfile,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&slice,\ \textcolor{keywordtype}{int}\ precision\ =\ 6)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01014}01014\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01015}01015\ \ \ \ \ \textcolor{comment}{//\ and\ sum\ reduction}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01016}01016\ \ \ \ \ T\ sum(Parity\ par\ =\ Parity::all,\ \textcolor{keywordtype}{bool}\ allreduce\ =\ \textcolor{keyword}{true})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01017}01017\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01018}01018\ \ \ \ \ T\ product(Parity\ par\ =\ Parity::all,\ \textcolor{keywordtype}{bool}\ allreduce\ =\ \textcolor{keyword}{true})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01019}01019\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01020}01020\ \ \ \ \ \textcolor{comment}{//\ Declare\ gpu\_reduce\ here,\ defined\ only\ for\ GPU\ targets}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01021}01021\ \ \ \ \ \textcolor{comment}{//\ For\ internal\ use\ only,\ preferably}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01022}01022\ \ \ \ \ \textcolor{comment}{//\ T\ gpu\_reduce\_sum(bool\ allreduce\ =\ true,\ Parity\ par\ =\ Parity::all,}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01023}01023\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ bool\ do\_mpi\ =\ true)\ const;}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01026}01026\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01027}01027\ \ \ \ \ T\ \mbox{\hyperlink{classField_a4369fa39e3ffbab5c4060251ca112c5a}{gpu\_minmax}}(\textcolor{keywordtype}{bool}\ min\_or\_max,\ Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01028}01028\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01029}01029\ \ \ \ \ T\ \mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{min}}(Parity\ par\ =\ ALL)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01030}01030\ \ \ \ \ T\ \mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{min}}(\mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01031}01031\ \ \ \ \ T\ \mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{min}}(Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01032}01032\ \ \ \ \ T\ \mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{max}}(Parity\ par\ =\ ALL)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01033}01033\ \ \ \ \ T\ \mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{max}}(\mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01034}01034\ \ \ \ \ T\ \mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{max}}(Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01035}01035\ \ \ \ \ T\ minmax(\textcolor{keywordtype}{bool}\ is\_min,\ Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01036}01036\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01037}01037\ \ \ \ \ \textcolor{keywordtype}{void}\ random();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01038}01038\ \ \ \ \ \textcolor{keywordtype}{void}\ gaussian\_random(\textcolor{keywordtype}{double}\ width\ =\ 1.0);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01039}01039\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01040}01040\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01041}01041\ \};\ \textcolor{comment}{//\ End\ of\ class\ Field<>}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01042}01042\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01044}01044\ \textcolor{comment}{//\ operators\ +-\/*/}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01045}01045\ \textcolor{comment}{//\ these\ operators\ rely\ on\ SFINAE,\ OK\ if\ field\_hila::type\_plus<A,B>\ exists\ i.e.\ A+B\ is}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01046}01046\ \textcolor{comment}{//\ OK}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01047}01047\ \textcolor{comment}{//\ There\ are\ several\ versions\ of\ the\ operators,\ depending\ if\ one\ of\ the\ arguments\ is}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01048}01048\ \textcolor{comment}{//\ Field\ or\ scalar,\ and\ if\ the\ return\ type\ is\ the\ same\ as\ the\ Field\ argument.\ \ This\ can}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01049}01049\ \textcolor{comment}{//\ enable\ the\ compiler\ to\ avoid\ extra\ copies\ of\ the\ args}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01050}01050\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01053}01053\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01054}01054\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_plus<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01055}01055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !std::is\_same<hila::type\_plus<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01056}01056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01057}\mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{01057}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_plus<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01058}01058\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_plus<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01059}01059\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ +\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01060}01060\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01061}01061\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01062}01062\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01063}01063\ \textcolor{comment}{//\ (Possibly)\ optimzed\ version\ where\ the\ 1st\ argument\ can\ be\ reused}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01064}01064\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01065}01065\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_plus<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01066}01066\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01067}01067\ \ \ \ \ lhs[ALL]\ +=\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01068}01068\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01069}01069\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01070}01070\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01071}01071\ \textcolor{comment}{//\ Optimzed\ version\ where\ the\ 2nd\ argument\ can\ be\ reused}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01072}01072\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01073}01073\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_plus<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01074}01074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same<hila::type\_plus<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01075}01075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01076}01076\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01077}01077\ \ \ \ \ rhs[ALL]\ +=\ lhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01078}01078\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01079}01079\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01080}01080\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01083}01083\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01084}01084\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01085}01085\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_plus<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01086}\mbox{\hyperlink{field_8h_a95c8df79a795e8181f694fb37cb91c9e}{01086}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_plus<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01087}01087\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_plus<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01088}01088\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ +\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01089}01089\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01090}01090\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01091}01091\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01092}01092\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01093}01093\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_plus<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01094}01094\ \mbox{\hyperlink{classField}{Field<A>}}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01095}01095\ \ \ \ \ lhs[ALL]\ +=\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01096}01096\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01097}01097\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01098}01098\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01099}01099\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01102}01102\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01103}01103\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01104}01104\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_plus<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01105}\mbox{\hyperlink{field_8h_ac74c0c5355856d4d4883145015e779fe}{01105}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_plus<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01106}01106\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs\ +\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01107}01107\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01108}01108\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01109}01109\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01110}01110\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_plus<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01111}01111\ \mbox{\hyperlink{classField}{Field<B>}}\ \mbox{\hyperlink{field_8h_a6edca1a27714497ca64119212c8701c9}{operator+}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01112}01112\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs\ +\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01113}01113\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01114}01114\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01115}01115\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01118}01118\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01119}01119\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_minus<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01120}01120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !std::is\_same<hila::type\_minus<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01121}01121\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01122}\mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{01122}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_minus<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01123}01123\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_minus<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01124}01124\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ -\/\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01125}01125\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01126}01126\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01127}01127\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01128}01128\ \textcolor{comment}{//\ Optimzed\ version\ where\ the\ 1st\ argument\ can\ be\ reused}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01129}01129\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01130}01130\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_minus<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01131}01131\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01132}01132\ \ \ \ \ lhs[ALL]\ -\/=\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01133}01133\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01134}01134\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01135}01135\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01136}01136\ \textcolor{comment}{//\ Optimzed\ version\ where\ the\ 2nd\ argument\ can\ be\ reused}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01137}01137\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01138}01138\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_minus<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01139}01139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same<hila::type\_minus<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01140}01140\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01141}01141\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01142}01142\ \ \ \ \ rhs[ALL]\ =\ lhs[X]\ -\/\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01143}01143\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01144}01144\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01145}01145\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01148}01148\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01149}01149\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01150}01150\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_minus<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01151}\mbox{\hyperlink{field_8h_a0441525a9312d7e80220fa8c63b32e2e}{01151}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_minus<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01152}01152\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_minus<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01153}01153\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ -\/\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01154}01154\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01155}01155\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01156}01156\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01157}01157\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01158}01158\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_minus<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01159}01159\ \mbox{\hyperlink{classField}{Field<A>}}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01160}01160\ \ \ \ \ lhs[ALL]\ -\/=\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01161}01161\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01162}01162\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01163}01163\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01166}01166\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01167}01167\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01168}01168\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_minus<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01169}\mbox{\hyperlink{field_8h_a59e444c8ca6e8b6c090b8055497268f6}{01169}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_minus<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01170}01170\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_minus<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01171}01171\ \ \ \ \ tmp[ALL]\ =\ lhs\ -\/\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01172}01172\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01173}01173\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01174}01174\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01175}01175\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01176}01176\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_minus<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01177}01177\ \mbox{\hyperlink{classField}{Field<B>}}\ \mbox{\hyperlink{field_8h_aaf322c561ef5060d91359389d737edff}{operator-\/}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01178}01178\ \ \ \ \ rhs[ALL]\ =\ lhs\ -\/\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01179}01179\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01180}01180\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01181}01181\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01185}01185\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01186}01186\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_mul<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01187}01187\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !std::is\_same<hila::type\_mul<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01188}01188\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01189}\mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{01189}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_mul<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01190}01190\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_mul<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01191}01191\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ *\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01192}01192\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01193}01193\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01194}01194\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01196}01196\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01197}01197\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_mul<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01198}\mbox{\hyperlink{field_8h_af1655574ab388c925a50461393d47103}{01198}}\ \mbox{\hyperlink{classField}{Field<A>}}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01199}01199\ \ \ \ \ lhs[ALL]\ =\ lhs[X]\ *\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01200}01200\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01201}01201\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01202}01202\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01204}01204\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01205}01205\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_mul<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01206}01206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same<hila::type\_mul<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01207}01207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01208}\mbox{\hyperlink{field_8h_aa0979906b8140de268607d1442d1e567}{01208}}\ \mbox{\hyperlink{classField}{Field<B>}}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01209}01209\ \ \ \ \ rhs[ALL]\ =\ lhs[X]\ *\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01210}01210\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01211}01211\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01212}01212\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01215}01215\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01216}01216\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01217}01217\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_mul<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01218}\mbox{\hyperlink{field_8h_a3da23460dcb8c389fe78fd0a47b8087b}{01218}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_mul<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01219}01219\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_mul<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01220}01220\ \ \ \ \ tmp[ALL]\ =\ lhs\ *\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01221}01221\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01222}01222\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01223}01223\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01224}01224\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01225}01225\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_mul<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01226}01226\ \mbox{\hyperlink{classField}{Field<B>}}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01227}01227\ \ \ \ \ rhs[ALL]\ =\ lhs\ *\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01228}01228\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01229}01229\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01230}01230\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01233}01233\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01234}01234\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01235}01235\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_mul<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01236}\mbox{\hyperlink{field_8h_acdad38036ade23ec66b7d37d6dad10ba}{01236}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_mul<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01237}01237\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_mul<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01238}01238\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ *\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01239}01239\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01240}01240\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01241}01241\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01242}01242\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01243}01243\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_mul<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01244}01244\ \mbox{\hyperlink{classField}{Field<A>}}\ \mbox{\hyperlink{field_8h_ab75954362c3586094f8a25befe875986}{operator*}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01245}01245\ \ \ \ \ lhs[ALL]\ =\ lhs[X]\ *\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01246}01246\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01247}01247\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01248}01248\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01252}01252\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01253}01253\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_div<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01254}01254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !std::is\_same<hila::type\_div<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01255}01255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01256}\mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{01256}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&l,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&r)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_div<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01257}01257\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_div<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01258}01258\ \ \ \ \ tmp[ALL]\ =\ l[X]\ /\ r[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01259}01259\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01260}01260\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01261}01261\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01263}01263\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01264}01264\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_div<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01265}\mbox{\hyperlink{field_8h_ad6ea90d346aa5ee83aa663c74c91b456}{01265}}\ \mbox{\hyperlink{classField}{Field<A>}}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\mbox{\hyperlink{classField}{Field<A>}}\ l,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&r)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01266}01266\ \ \ \ \ l[ALL]\ =\ l[X]\ /\ r[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01267}01267\ \ \ \ \ \textcolor{keywordflow}{return}\ l;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01268}01268\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01269}01269\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01271}01271\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01272}01272\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_div<A,\ B>,\ A>::value\ \&\&}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01273}01273\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same<hila::type\_div<A,\ B>,\ B>::value,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01274}01274\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01275}\mbox{\hyperlink{field_8h_adef3e32092d16c49a785d4fa297d8f9d}{01275}}\ \mbox{\hyperlink{classField}{Field<B>}}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&l,\ \mbox{\hyperlink{classField}{Field<B>}}\ r)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01276}01276\ \ \ \ \ r[ALL]\ =\ l[X]\ /\ r[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01277}01277\ \ \ \ \ \textcolor{keywordflow}{return}\ r;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01278}01278\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01279}01279\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01282}01282\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01283}01283\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_div<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01284}\mbox{\hyperlink{field_8h_a104b60df67db8bcd66696d03ba77e34d}{01284}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_div<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01285}01285\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_div<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01286}01286\ \ \ \ \ tmp[ALL]\ =\ lhs\ /\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01287}01287\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01288}01288\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01289}01289\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01290}01290\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01291}01291\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_div<A,\ B>,\ B>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01292}01292\ \mbox{\hyperlink{classField}{Field<B>}}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\textcolor{keyword}{const}\ A\ \&lhs,\ \mbox{\hyperlink{classField}{Field<B>}}\ rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01293}01293\ \ \ \ \ rhs[ALL]\ =\ lhs\ /\ rhs[X];}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01294}01294\ \ \ \ \ \textcolor{keywordflow}{return}\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01295}01295\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01296}01296\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01299}01299\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01300}01300\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<!std::is\_same<hila::type\_div<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01301}\mbox{\hyperlink{field_8h_a4b69034c20f45ec9ade41db8f4ed1f48}{01301}}\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ -\/>\ \mbox{\hyperlink{classField}{Field<hila::type\_div<A,\ B>}}>\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01302}01302\ \ \ \ \ \mbox{\hyperlink{classField}{Field<hila::type\_div<A,\ B>}}>\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01303}01303\ \ \ \ \ tmp[ALL]\ =\ lhs[X]\ /\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01304}01304\ \ \ \ \ \textcolor{keywordflow}{return}\ tmp;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01305}01305\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01306}01306\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01307}01307\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ A,\ \textcolor{keyword}{typename}\ B,}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01308}01308\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_same<hila::type\_div<A,\ B>,\ A>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01309}01309\ \textcolor{keyword}{auto}\ \mbox{\hyperlink{field_8h_a14e3d508e035daad4aeac3cf077e21c2}{operator/}}(\mbox{\hyperlink{classField}{Field<A>}}\ lhs,\ \textcolor{keyword}{const}\ B\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01310}01310\ \ \ \ \ lhs[ALL]\ =\ lhs[X]\ /\ rhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01311}01311\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01312}01312\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01313}01313\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01316}\mbox{\hyperlink{namespacestd}{01316}}\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacestd}{std}}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01317}01317\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01318}01318\ \textcolor{keywordtype}{void}\ swap(\mbox{\hyperlink{classField}{Field<T>}}\ \&A,\ \mbox{\hyperlink{classField}{Field<T>}}\ \&B)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01319}01319\ \ \ \ \ std::swap(A.\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}},\ B.\mbox{\hyperlink{classField_a9f12ebc3ba5eeb4c781c484e244e3a55}{fs}});}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01320}01320\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01321}01321\ \}\ \textcolor{comment}{//\ namespace\ std}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01322}01322\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01325}01325\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01326}01326\ template\ <typename\ T,\ typename\ R\ =\ decltype(exp(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01327}\mbox{\hyperlink{field_8h_ab9f70f748a8550f29a4d7f7344f5f006}{01327}}\ \mbox{\hyperlink{classField}{Field<R>}}\ \mbox{\hyperlink{field_8h_ab9f70f748a8550f29a4d7f7344f5f006}{exp}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01328}01328\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01329}01329\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01330}01330\ \ \ \ \ \ \ \ \ res[X]\ =\ \mbox{\hyperlink{field_8h_ab9f70f748a8550f29a4d7f7344f5f006}{exp}}(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01331}01331\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01332}01332\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01333}01333\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01334}01334\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01335}01335\ template\ <typename\ T,\ typename\ R\ =\ decltype(log(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01336}01336\ \mbox{\hyperlink{classField}{Field<R>}}\ \mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{log}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01337}01337\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01338}01338\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01339}01339\ \ \ \ \ \ \ \ \ res[X]\ =\ \mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{log}}(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01340}01340\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01341}01341\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01342}01342\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01343}01343\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01344}01344\ template\ <typename\ T,\ typename\ R\ =\ decltype(sin(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01345}01345\ \mbox{\hyperlink{classField}{Field<R>}}\ sin(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01346}01346\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01347}01347\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01348}01348\ \ \ \ \ \ \ \ \ res[X]\ =\ sin(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01349}01349\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01350}01350\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01351}01351\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01352}01352\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01353}01353\ template\ <typename\ T,\ typename\ R\ =\ decltype(cos(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01354}01354\ \mbox{\hyperlink{classField}{Field<R>}}\ cos(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01355}01355\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01356}01356\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01357}01357\ \ \ \ \ \ \ \ \ res[X]\ =\ cos(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01358}01358\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01359}01359\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01360}01360\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01361}01361\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01362}01362\ template\ <typename\ T,\ typename\ R\ =\ decltype(tan(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01363}01363\ \mbox{\hyperlink{classField}{Field<R>}}\ tan(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01364}01364\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01365}01365\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01366}01366\ \ \ \ \ \ \ \ \ res[X]\ =\ tan(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01367}01367\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01368}01368\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01369}01369\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01370}01370\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01371}01371\ template\ <typename\ T,\ typename\ R\ =\ decltype(asin(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01372}01372\ \mbox{\hyperlink{classField}{Field<R>}}\ asin(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01373}01373\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01374}01374\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01375}01375\ \ \ \ \ \ \ \ \ res[X]\ =\ asin(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01376}01376\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01377}01377\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01378}01378\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01379}01379\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01380}01380\ template\ <typename\ T,\ typename\ R\ =\ decltype(acos(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01381}01381\ \mbox{\hyperlink{classField}{Field<R>}}\ acos(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01382}01382\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01383}01383\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01384}01384\ \ \ \ \ \ \ \ \ res[X]\ =\ acos(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01385}01385\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01386}01386\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01387}01387\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01388}01388\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01389}01389\ template\ <typename\ T,\ typename\ R\ =\ decltype(atan(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01390}01390\ \mbox{\hyperlink{classField}{Field<R>}}\ atan(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01391}01391\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01392}01392\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01393}01393\ \ \ \ \ \ \ \ \ res[X]\ =\ atan(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01394}01394\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01395}01395\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01396}01396\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01397}01397\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01398}01398\ template\ <typename\ T,\ typename\ R\ =\ decltype(abs(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01399}01399\ \mbox{\hyperlink{classField}{Field<R>}}\ abs(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01400}01400\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01401}01401\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01402}01402\ \ \ \ \ \ \ \ \ res[X]\ =\ abs(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01403}01403\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01404}01404\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01405}01405\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01406}01406\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01407}01407\ template\ <typename\ T,\ typename\ P,\ typename\ R\ =\ decltype(pow(std::declval<T>()),\ std::declval<P>())>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01408}01408\ \mbox{\hyperlink{classField}{Field<R>}}\ pow(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg,\ \textcolor{keyword}{const}\ P\ p)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01409}01409\ \ \ \ \ \mbox{\hyperlink{classField}{Field<R>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01410}01410\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01411}01411\ \ \ \ \ \ \ \ \ res[X]\ =\ pow(arg[X],\ p);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01412}01412\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01413}01413\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01414}01414\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01415}01415\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01416}01416\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01417}01417\ \textcolor{keywordtype}{double}\ squarenorm(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01418}01418\ \ \ \ \ \textcolor{keywordtype}{double}\ r\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01419}01419\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01420}01420\ \ \ \ \ \ \ \ \ r\ +=\ squarenorm(arg[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01421}01421\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01422}01422\ \ \ \ \ \textcolor{keywordflow}{return}\ r;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01423}01423\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01424}01424\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01425}01425\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01426}01426\ \textcolor{keywordtype}{double}\ norm(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01427}01427\ \ \ \ \ \textcolor{keywordflow}{return}\ sqrt(squarenorm(arg));}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01428}01428\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01429}01429\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01430}01430\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01431}01431\ \mbox{\hyperlink{classField}{Field<T>}}\ conj(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01432}01432\ \ \ \ \ \textcolor{keywordflow}{return}\ arg.conj();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01433}01433\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01434}01434\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01435}01435\ template\ <typename\ T,\ typename\ A\ =\ decltype(::dagger(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01436}01436\ \mbox{\hyperlink{classField}{Field<A>}}\ dagger(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01437}01437\ \ \ \ \ \textcolor{keywordflow}{return}\ arg.dagger();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01438}01438\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01439}01439\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01440}01440\ template\ <typename\ T,\ typename\ A\ =\ decltype(::real(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01441}01441\ \mbox{\hyperlink{classField}{Field<A>}}\ real(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01442}01442\ \ \ \ \ \textcolor{keywordflow}{return}\ arg.real();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01443}01443\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01444}01444\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01445}01445\ template\ <typename\ T,\ typename\ A\ =\ decltype(::imag(std::declval<T>()))>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01446}01446\ \mbox{\hyperlink{classField}{Field<A>}}\ imag(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01447}01447\ \ \ \ \ \textcolor{keywordflow}{return}\ arg.imag();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01448}01448\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01449}01449\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01450}01450\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01451}01451\ template\ <typename\ A,\ typename\ B,\ typename\ R\ =\ decltype(std::declval<A>()\ -\/\ std::declval<B>())>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01452}01452\ \textcolor{keywordtype}{double}\ squarenorm\_relative(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<A>}}\ \&a,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<B>}}\ \&b)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01453}01453\ \ \ \ \ \textcolor{keywordtype}{double}\ res\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01454}01454\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01455}01455\ \ \ \ \ \ \ \ \ res\ +=\ squarenorm(a[X]\ -\/\ b[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01456}01456\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01457}01457\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01458}01458\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01459}01459\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01460}01460\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01464}01464\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01465}\mbox{\hyperlink{classField_a8a40a58d44e5b87e4189bf3242b79a32}{01465}}\ \mbox{\hyperlink{classField}{Field<T>}}\ \mbox{\hyperlink{classField}{Field<T>::shift}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v,\ \textcolor{keyword}{const}\ Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01466}01466\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01467}01467\ \ \ \ \ shift(v,\ res,\ par);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01468}01468\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01469}01469\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01470}01470\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01471}01471\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01475}01475\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01476}\mbox{\hyperlink{classField_abeefcc169a728e8ead3e13961926e689}{01476}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_abeefcc169a728e8ead3e13961926e689}{Field<T>::drop\_comms}}(Direction\ d,\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01477}01477\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01478}01478\ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_comm\_initialized())\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01479}01479\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ ALL))}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01480}01480\ \ \ \ \ \ \ \ \ \ \ \ \ cancel\_comm(d,\ ALL);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01481}01481\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ !=\ ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01482}01482\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ p))}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01483}01483\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cancel\_comm(d,\ p);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01484}01484\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01485}01485\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ EVEN))}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01486}01486\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cancel\_comm(d,\ EVEN);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01487}01487\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ ODD))}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01488}01488\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cancel\_comm(d,\ ODD);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01489}01489\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01490}01490\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01491}01491\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01492}01492\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01494}01494\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01495}01495\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01496}\mbox{\hyperlink{classField_aea30d8bfc43c059834bf931328796fdd}{01496}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_aea30d8bfc43c059834bf931328796fdd}{Field<T>::cancel\_comm}}(Direction\ d,\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01497}01497\ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_ada69c8d4dcc2048d42395613ba3e6040}{nn\_comminfo}}[d].from\_node.rank\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01498}01498\ \ \ \ \ \ \ \ \ cancel\_receive\_timer.start();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01499}01499\ \ \ \ \ \ \ \ \ MPI\_Cancel(\&fs-\/>receive\_request[(\textcolor{keywordtype}{int})p\ -\/\ 1][d]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01500}01500\ \ \ \ \ \ \ \ \ cancel\_receive\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01501}01501\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01502}01502\ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_ada69c8d4dcc2048d42395613ba3e6040}{nn\_comminfo}}[d].to\_node.rank\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01503}01503\ \ \ \ \ \ \ \ \ cancel\_send\_timer.start();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01504}01504\ \ \ \ \ \ \ \ \ MPI\_Cancel(\&fs-\/>send\_request[(\textcolor{keywordtype}{int})p\ -\/\ 1][d]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01505}01505\ \ \ \ \ \ \ \ \ cancel\_send\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01506}01506\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01507}01507\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01508}01508\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01509}01509\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01511}01511\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01512}\mbox{\hyperlink{classField_a12fc62db1df52e6c69f9a9328b74921e}{01512}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a12fc62db1df52e6c69f9a9328b74921e}{Field<T>::gather}}(Direction\ d,\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01513}01513\ \ \ \ \ start\_gather(d,\ p);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01514}01514\ \ \ \ \ wait\_gather(d,\ p);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01515}01515\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01516}01516\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01517}01517\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01518}01518\ \textcolor{comment}{//\ Read\ in\ the\ "{}technical"{}\ communication\ bits}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01519}01519\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01520}01520\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{field__comm_8h}{field\_comm.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01521}01521\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01522}01522\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01523}01523\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01524}01524\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::random}}()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01525}01525\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01526}01526\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01527}01527\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01528}01528\ \ \ \ \ \textcolor{keywordflow}{if}\ (!\mbox{\hyperlink{namespacehila_a5a53f45a43c7851763604561203673b3}{hila::is\_device\_rng\_on}}())\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01529}01529\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01530}01530\ \ \ \ \ \ \ \ \ std::vector<T>\ rng\_buffer(lattice.mynode.volume());}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01531}01531\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&element\ :\ rng\_buffer)}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01532}01532\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila}{hila}}::random(element);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01533}01533\ \ \ \ \ \ \ \ \ (*this).set\_local\_data(rng\_buffer);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01534}01534\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01535}01535\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01536}01536\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01537}01537\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01538}01538\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01539}01539\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01540}01540\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01541}01541\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01542}01542\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01543}01543\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}((*\textcolor{keyword}{this})[X]);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01544}01544\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01545}01545\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01546}01546\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01547}01547\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01548}01548\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01549}01549\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01550}01550\ \textcolor{preprocessor}{\#ifdef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01551}01551\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01553}01553\ \textcolor{comment}{//\ A\ couple\ of\ placeholder\ functions,\ not\ included\ in\ produced\ code.}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01554}01554\ \textcolor{comment}{//\ These\ are\ here\ in\ order\ for\ hilapp\ to\ generate\ explicitly}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01555}01555\ \textcolor{comment}{//\ some\ Direction\ and\ CoordinateVector\ operations,\ which\ may\ not\ exist\ in}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01556}01556\ \textcolor{comment}{//\ original\ code\ as\ such.\ \ It\ is\ easiest\ to\ let\ the\ general\ hilapp}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01557}01557\ \textcolor{comment}{//\ code\ generation\ to\ do\ it\ using\ this\ hack,\ instead\ of\ hard-\/coding\ these\ to}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01558}01558\ \textcolor{comment}{//\ hilapp.}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01559}01559\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01560}01560\ \textcolor{comment}{//\ These\ are\ needed\ because\ hilapp\ changes\ X+d-\/d\ -\/>\ +d-\/d,\ which\ may\ involve}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01561}01561\ \textcolor{comment}{//\ an\ operator\ not\ met\ before}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01562}01562\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01563}01563\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ dummy\_X\_f()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01564}01564\ \ \ \ \ Direction\ d1\ =\ e\_x;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01565}01565\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ v1(0);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01566}01566\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01567}01567\ \ \ \ \ \ \ \ \ Direction\ d;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01568}01568\ \ \ \ \ \ \ \ \ d\ =\ +d1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01569}01569\ \ \ \ \ \ \ \ \ d\ =\ -\/d1;\ \textcolor{comment}{//\ unaryops}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01570}01570\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ vec;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01571}01571\ \ \ \ \ \ \ \ \ vec\ =\ +v1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01572}01572\ \ \ \ \ \ \ \ \ vec\ =\ -\/v1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01573}01573\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01574}01574\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Direction\ +\ vector\ combos}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01575}01575\ \ \ \ \ \ \ \ \ vec\ =\ d\ +\ d1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01576}01576\ \ \ \ \ \ \ \ \ vec\ =\ d\ -\/\ d1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01577}01577\ \ \ \ \ \ \ \ \ vec\ =\ v1\ +\ d1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01578}01578\ \ \ \ \ \ \ \ \ vec\ =\ v1\ -\/\ d1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01579}01579\ \ \ \ \ \ \ \ \ vec\ =\ d1\ +\ v1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01580}01580\ \ \ \ \ \ \ \ \ vec\ =\ d1\ -\/\ v1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01581}01581\ \ \ \ \ \ \ \ \ vec\ =\ vec\ +\ v1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01582}01582\ \ \ \ \ \ \ \ \ vec\ =\ vec\ -\/\ v1;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01583}01583\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01584}01584\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ Direction\ index\ func}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01585}01585\ \ \ \ \ \ \ \ \ vec[e\_x]\ =\ vec[0]\ +\ vec[e\_y]\ +\ vec.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(e\_y);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01586}01586\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01587}01587\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01588}01588\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01595}01595\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01596}01596\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ensure\_field\_operators\_exist()\ \{}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01597}01597\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01598}01598\ \ \ \ \ ensure\_unary\_minus\_is\_loop\_function<T>();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01599}01599\ \ \ \ \ ensure\_assign\_zero\_is\_loop\_function<T>();}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01600}01600\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01601}01601\ \ \ \ \ \textcolor{comment}{//\ make\ shift\ also\ explicit}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01602}01602\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ v\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01603}01603\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ f;}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01604}01604\ \ \ \ \ f\ =\ f.shift(v,\ ALL);}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01605}01605\ \}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01606}01606\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01607}01607\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01608}01608\ }
+\DoxyCodeLine{\Hypertarget{field_8h_source_l01609}01609\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ FIELD\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,144 @@
+\doxysection{map\+\_\+node\+\_\+layout.\+cpp}
+\hypertarget{map__node__layout_8cpp_source}{}\label{map__node__layout_8cpp_source}\index{map\_node\_layout.cpp@{map\_node\_layout.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00015}00015\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00016}00016\ \textcolor{preprocessor}{\#include\ "{}plumbing/lattice.h"{}}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00018}00018\ \textcolor{preprocessor}{\#if\ defined(NODE\_LAYOUT\_TRIVIAL)}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00021}00021\ \textcolor{comment}{//\ This\ is\ the\ trivial\ version,\ so\ that\ the\ order\ is\ unmodified}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00023}00023\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00024}00024\ \textcolor{keywordtype}{void}\ lattice\_struct::allnodes::create\_remap()\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00025}00025\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Node\ remapping:\ NODE\_LAYOUT\_TRIVIAL\ (no\ reordering)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00026}00026\ \ \ \ \ lattice.nodes.map\_array\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00027}00027\ \ \ \ \ lattice.nodes.map\_inverse\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00028}00028\ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00030}00030\ \textcolor{keywordtype}{unsigned}\ lattice\_struct::allnodes::remap(\textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00031}00031\ \ \ \ \ \textcolor{keywordflow}{return}\ i;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00032}00032\ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00034}00034\ \textcolor{keywordtype}{unsigned}\ lattice\_struct::allnodes::inverse\_remap(\textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00035}00035\ \ \ \ \ \textcolor{keywordflow}{return}\ i;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00036}00036\ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00039}00039\ \textcolor{preprocessor}{\#elif\ defined(NODE\_LAYOUT\_BLOCK)}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00040}00040\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00042}00042\ \textcolor{comment}{//\ Arrange\ nodes\ so\ that\ NODE\_LAYOUT\_BLOCK\ nodes\ are\ "{}close"{}}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00043}00043\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00044}00044\ \textcolor{comment}{//\ For\ example,\ in\ 2d\ and\ NODE\_LAYOUT\_BLOCK\ =\ 4\ the\ MPI\ indices\ run\ as}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00045}00045\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00046}00046\ \textcolor{comment}{//\ \ 1\ \ 2\ |\ \ 5\ \ 6\ |\ 9\ \ 10}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00047}00047\ \textcolor{comment}{//\ \ 3\ \ 4\ |\ \ 7\ \ 8\ |\ 11\ 12}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00048}00048\ \textcolor{comment}{//\ \ -\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/-\/+-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00049}00049\ \textcolor{comment}{//\ 13\ 14\ |\ 17\ 18\ |\ 21\ 22}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00050}00050\ \textcolor{comment}{//\ 15\ 16\ |\ 19\ 20\ |\ 23\ 24}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00051}00051\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00053}00053\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00054}00054\ \textcolor{keywordtype}{void}\ lattice\_struct::allnodes::create\_remap()\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00055}00055\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00056}00056\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Node\ remapping:\ NODE\_LAYOUT\_BLOCK\ with\ blocksize\ "{}}\ <<\ NODE\_LAYOUT\_BLOCK}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00058}00058\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00059}00059\ \ \ \ \ \textcolor{comment}{//\ let\ us\ allow\ only\ factors\ of\ 5,3\ and\ 2\ in\ NODE\_LAYOUT\_BLOCK}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00060}00060\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ blocksize;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00061}00061\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ blockdivs\ =\ lattice.nodes.n\_divisions;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00062}00062\ \ \ \ \ \textcolor{keywordtype}{int}\ nblocks\ =\ NODE\_LAYOUT\_BLOCK;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00063}00063\ \ \ \ \ blocksize.\mbox{\hyperlink{classMatrix__t_afd76c41aaeb324852fa52b7edb5a14e3}{fill}}(1);}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00064}00064\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00065}00065\ \ \ \ \ \textcolor{keywordtype}{bool}\ found\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00066}00066\ \ \ \ \ \textcolor{keywordflow}{while}\ (found\ \&\&\ nblocks\ >\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00067}00067\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00068}00068\ \ \ \ \ \ \ \ \ found\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ if\ not\ divisible\ stop\ trying}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00069}00069\ \ \ \ \ \ \ \ \ foralldir\ (d)\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00070}00070\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ divide\ directions\ one\ by\ one}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00071}00071\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ div;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (div\ =\ 2;\ div\ <=\ 5;\ div++)}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00073}00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nblocks\ \%\ div\ ==\ 0\ \&\&\ blockdivs[d]\ \%\ div\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00074}00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00075}00075\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (div\ <=\ 5)\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00076}00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ blocksize[d]\ *=\ div;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ blockdivs[d]\ /=\ div;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00078}00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nblocks\ /=\ div;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00079}00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00081}00081\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00082}00082\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00083}00083\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00084}00084\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Node\ block\ size\ "{}}\ <<\ blocksize\ <<\ \textcolor{stringliteral}{"{}\ \ block\ division\ "{}}\ <<\ blockdivs\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00085}00085\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00086}00086\ \ \ \ \ \textcolor{comment}{//\ now\ blocksize\ tells\ us\ how\ many\ nodes\ to\ each\ direction\ in\ block}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00087}00087\ \ \ \ \ \textcolor{comment}{//\ these\ are\ taken\ in\ order}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00089}00089\ \ \ \ \ lattice.nodes.map\_array\ =}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00090}00090\ \ \ \ \ \ \ \ \ (\textcolor{keywordtype}{unsigned}\ *)memalloc(lattice.nodes.number\ *\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}));}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00091}00091\ \ \ \ \ \textcolor{comment}{//\ we\ don't\ need\ the\ inverse\ at\ the\ moment?}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00092}00092\ \ \ \ \ \textcolor{comment}{//\ lattice.nodes.map\_inverse\ =\ (unsigned\ *)memalloc(lattice.nodes.number\ *}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00093}00093\ \ \ \ \ \textcolor{comment}{//\ sizeof(unsigned));}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00094}00094\ \ \ \ \ lattice.nodes.map\_inverse\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00096}00096\ \ \ \ \ nblocks\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00097}00097\ \ \ \ \ foralldir\ (d)}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00098}00098\ \ \ \ \ \ \ \ \ nblocks\ *=\ blocksize[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00099}00099\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00100}00100\ \ \ \ \ \textcolor{comment}{//\ Loop\ over\ the\ "{}logical"{}\ node\ indices\ (i.e.)}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00101}00101\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00102}00102\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ lattice.nodes.number;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00103}00103\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ lcoord\ is\ the\ coordinate\ of\ the\ logical\ node,}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00104}00104\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ bcoord\ the\ block\ coord\ and\ icoord\ coord\ inside\ block}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00105}00105\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ lcoord,\ bcoord,\ icoord;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00106}00106\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ idiv\ =\ i;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00107}00107\ \ \ \ \ \ \ \ \ foralldir\ (d)\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00108}00108\ \ \ \ \ \ \ \ \ \ \ \ \ lcoord[d]\ =\ idiv\ \%\ lattice.nodes.n\_divisions[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00109}00109\ \ \ \ \ \ \ \ \ \ \ \ \ idiv\ /=\ lattice.nodes.n\_divisions[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00111}00111\ \ \ \ \ \ \ \ \ \ \ \ \ bcoord[d]\ =\ lcoord[d]\ /\ blocksize[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ icoord[d]\ =\ lcoord[d]\ \%\ blocksize[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00113}00113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00114}00114\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00115}00115\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ii\ -\/\ index\ within\ a\ block}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00116}00116\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ bi\ -\/\ index\ of\ a\ block}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00117}00117\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ ii,\ bi,\ im,\ bm;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00118}00118\ \ \ \ \ \ \ \ \ ii\ =\ bi\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00119}00119\ \ \ \ \ \ \ \ \ im\ =\ bm\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00120}00120\ \ \ \ \ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00121}00121\ \ \ \ \ \ \ \ \ \ \ \ \ ii\ +=\ icoord[d]\ *\ im;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00122}00122\ \ \ \ \ \ \ \ \ \ \ \ \ im\ *=\ blocksize[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00123}00123\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00124}00124\ \ \ \ \ \ \ \ \ \ \ \ \ bi\ +=\ bcoord[d]\ *\ bm;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00125}00125\ \ \ \ \ \ \ \ \ \ \ \ \ bm\ *=\ blockdivs[d];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00126}00126\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00127}00127\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00128}00128\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ hila::out0\ <<\ lcoord\ <<\ bcoord\ <<\ icoord\ <<\ '\(\backslash\)n';}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00129}00129\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ hila::out0\ <<\ "{}ii\ "{}\ <<\ ii\ <<\ "{}\ bi\ "{}\ <<\ bi\ <<\ '\(\backslash\)n';}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00131}00131\ \ \ \ \ \ \ \ \ lattice.nodes.map\_array[i]\ =\ bi\ *\ nblocks\ +\ ii;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00132}00132\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00133}00133\ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00134}00134\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00136}00136\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00137}00137\ \textcolor{keywordtype}{unsigned}\ lattice\_struct::allnodes::remap(\textcolor{keywordtype}{unsigned}\ i)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00138}00138\ \ \ \ \ \textcolor{keywordflow}{return}\ lattice.nodes.map\_array[i];}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00139}00139\ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00140}00140\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00141}00141\ \textcolor{keywordtype}{unsigned}\ lattice\_struct::allnodes::inverse\_remap(\textcolor{keywordtype}{unsigned}\ idx)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00142}00142\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ lattice.nodes.number;\ i++)}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00143}00143\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.nodes.map\_array[i]\ ==\ idx)}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00144}00144\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ i;}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00145}00145\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00146}00146\ \ \ \ \ \textcolor{keywordflow}{return}\ 1\ <<\ 30;\ \textcolor{comment}{//\ big\ number,\ crash}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00147}00147\ \}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00148}00148\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00149}00149\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00150}00150\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00152}00152\ NODE\_LAYOUT\_BLOCK\ or\ NODE\_LAYOUT\_TRIVIAL\ must\ be\ defined}
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00153}00153\ }
+\DoxyCodeLine{\Hypertarget{map__node__layout_8cpp_source_l00154}00154\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

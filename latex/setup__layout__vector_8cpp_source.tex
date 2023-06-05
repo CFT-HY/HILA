@@ -1,0 +1,364 @@
+\doxysection{setup\+\_\+layout\+\_\+vector.\+cpp}
+\hypertarget{setup__layout__vector_8cpp_source}{}\label{setup__layout__vector_8cpp_source}\index{setup\_layout\_vector.cpp@{setup\_layout\_vector.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00007}00007\ \textcolor{preprocessor}{\#include\ "{}plumbing/lattice.h"{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00009}00009\ \textcolor{comment}{/***************************************************************/}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00011}00011\ \textcolor{comment}{/*\ number\ of\ primes\ to\ be\ used\ in\ factorization\ */}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00012}00012\ \textcolor{preprocessor}{\#define\ NPRIMES\ 12}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00013}00013\ \textcolor{keyword}{const}\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ prime[NPRIMES]\ =\ \{2,\ 3,\ 5,\ 7,\ 11,\ 13,\ 17,\ 19,\ 23,\ 29,\ 31,\ 37\};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00015}00015\ \textcolor{comment}{//\ Set\ up\ now\ squaresize\ and\ nsquares\ -\/\ arrays}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00016}00016\ \textcolor{comment}{//\ Print\ info\ to\ outf\ as\ we\ proceed}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00018}00018\ \textcolor{keywordtype}{void}\ lattice\_struct::setup\_layout()\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00019}00019\ \ \ \ \ \textcolor{keywordtype}{int}\ nfactors[NPRIMES];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00020}00020\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nodesiz;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00022}00022\ \ \ \ \ print\_dashed\_line();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00023}00023\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}LAYOUT:\ subnode\ lattice,\ with\ "{}}\ <<\ VECTOR\_SIZE\ /\ \textcolor{keyword}{sizeof}(float)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00024}00024\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ subnodes\(\backslash\)n"{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00025}00025\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}Enabling\ vector\ length\ "{}}\ <<\ VECTOR\_SIZE\ *\ 8}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00026}00026\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ bits\ =\ "{}}\ <<\ VECTOR\_SIZE\ /\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double})\ <<\ \textcolor{stringliteral}{"{}\ doubles\ or\ "{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00027}00027\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ VECTOR\_SIZE\ /\ \textcolor{keyword}{sizeof}(float)\ <<\ \textcolor{stringliteral}{"{}\ floats/ints\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00028}00028\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Lattice\ size\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00029}00029\ \ \ \ \ foralldir\ (d)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00030}00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (d\ !=\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00031}00031\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00032}00032\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ size(d);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00033}00033\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00034}00034\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ =\ \ "{}}\ <<\ l\_volume\ <<\ \textcolor{stringliteral}{"{}\ sites\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00035}00035\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Dividing\ to\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ <<\ \textcolor{stringliteral}{"{}\ nodes\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00036}00036\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Layout\ using\ vector\ of\ "{}}\ <<\ number\_of\_subnodes\ <<\ \textcolor{stringliteral}{"{}\ elements\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00038}00038\ \ \ \ \ foralldir\ (d)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00039}00039\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size(d)\ \%\ 2\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00040}00040\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Lattice\ must\ be\ even\ to\ all\ directions\ (odd\ size:TODO)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00041}00041\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00042}00042\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00044}00044\ \ \ \ \ \textcolor{comment}{//\ we\ want\ to\ divide\ up\ to\ numnode\ *\ vector\_size\ virtual\ nodes}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00045}00045\ \ \ \ \ \textcolor{comment}{//\ use\ the\ float\ vector\ size\ to\ divide\ to\ hila::number\_of\_nodes()\ *\ vector\_size}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00046}00046\ \ \ \ \ \textcolor{comment}{//\ nodes,\ this\ is\ the\ most\ demanding.\ The\ directions\ where\ the\ extra\ divisions\ have}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00047}00047\ \ \ \ \ \textcolor{comment}{//\ been\ done\ the\ node\ size\ must\ be\ even,\ so\ that\ these\ can\ be\ handled\ by\ vectors}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00049}00049\ \ \ \ \ \textcolor{comment}{//\ Factorize\ the\ node\ number\ in\ primes}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00050}00050\ \ \ \ \ \textcolor{comment}{//\ These\ factors\ must\ be\ used\ in\ slicing\ the\ lattice!}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00051}00051\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00052}00052\ \ \ \ \ \textcolor{comment}{//\ number\ of\ virtual\ nodes}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00053}00053\ \ \ \ \ \textcolor{keywordtype}{int}\ nn\ =\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ *\ number\_of\_subnodes;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00055}00055\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ nn;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00056}00056\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ n\ =\ 0;\ n\ <\ NPRIMES;\ n++)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00057}00057\ \ \ \ \ \ \ \ \ nfactors[n]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00058}00058\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (i\ \%\ prime[n]\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00059}00059\ \ \ \ \ \ \ \ \ \ \ \ \ i\ /=\ prime[n];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ nfactors[n]++;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00061}00061\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00062}00062\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00063}00063\ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ !=\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00064}00064\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Cannot\ factorize\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00065}00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ nodes\ with\ primes\ up\ to\ "{}}\ <<\ prime[NPRIMES\ -\/\ 1]\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00066}00066\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00067}00067\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00069}00069\ \ \ \ \ \textcolor{comment}{//\ strategy:\ try\ to\ increase\ the\ box\ size\ to\ one\ of\ the\ directions\ until\ rem\ =\ 0}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00070}00070\ \ \ \ \ \textcolor{comment}{//\ find\ the\ optimal\ direction\ to\ do\ it}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00071}00071\ \ \ \ \ \textcolor{comment}{//\ Use\ simple\ heuristic:\ take\ the\ dim\ with\ the\ least\ amount\ of\ added\ "{}ghost\ sites"{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00072}00072\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00073}00073\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nsize;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00074}00074\ \ \ \ \ int64\_t\ ghosts[NDIM];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00075}00075\ \ \ \ \ foralldir\ (d)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00076}00076\ \ \ \ \ \ \ \ \ int64\_t\ cosize\ =\ l\_volume\ /\ size(d);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00077}00077\ \ \ \ \ \ \ \ \ int64\_t\ n\ =\ size(d);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00078}00078\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ ((n\ *\ cosize)\ \%\ nn\ !=\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00079}00079\ \ \ \ \ \ \ \ \ \ \ \ \ n++;\ \textcolor{comment}{//\ virtual\ size\ can\ be\ odd}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00080}00080\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ nsize\ is\ the\ new\ would-\/be\ size}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00081}00081\ \ \ \ \ \ \ \ \ ghosts[d]\ =\ (n\ -\/\ size(d))\ *\ cosize;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00082}00082\ \ \ \ \ \ \ \ \ nsize[d]\ =\ n;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00083}00083\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00084}00084\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00085}00085\ \ \ \ \ int64\_t\ ghost\_volume\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00086}00086\ \ \ \ \ foralldir\ (d)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00087}00087\ \ \ \ \ \ \ \ \ ghost\_volume\ *=\ nsize[d];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00089}00089\ \ \ \ \ \textcolor{comment}{//\ if\ the\ division\ goes\ even\ nsize\ =\ size()\ and\ ghost\_volume\ =\ volume}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00090}00090\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00091}00091\ \ \ \ \ \textcolor{comment}{//\ now\ try\ to\ divide\ the\ nsize-\/volume\ to\ subnodes.\ \ We\ don't\ try\ to\ do}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00092}00092\ \ \ \ \ \textcolor{comment}{//\ the\ division\ to\ direction\ where\ there\ are\ ghost\ sites}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00093}00093\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00094}00094\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ divisions,\ subdiv;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00096}00096\ \ \ \ \ \textcolor{keywordtype}{int}\ gdir;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00097}00097\ \ \ \ \ \textcolor{keywordtype}{bool}\ secondtime\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00098}00098\ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00099}00099\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ try\ the\ division\ a\ couple\ of\ times,\ if\ the\ 1st\ fails}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00100}00100\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00101}00101\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ghost\_volume\ >\ l\_volume)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00102}00102\ \ \ \ \ \ \ \ \ \ \ \ \ gdir\ =\ NDIM\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00103}00103\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir\ (j)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00104}00104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ghosts[gdir]\ >\ ghosts[j])}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00105}00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gdir\ =\ j;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00106}00106\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ gdir\ is\ the\ direction\ where\ we\ do\ uneven\ division\ (if\ done)}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00107}00107\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ hila::out0\ <<\ "{}gdir\ "{}\ <<\ gdir\ <<\ "{}\ ghosts\ gdir\ "{}\ <<\ ghosts[gdir]\ <<\ "{}\ nsize}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00108}00108\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00109}00109\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ <<\ nsize[gdir]\ <<\ '\(\backslash\)n';}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00110}00110\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00111}00111\ \ \ \ \ \ \ \ \ \ \ \ \ gdir\ =\ -\/1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00112}00112\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00113}00113\ \ \ \ \ \ \ \ \ foralldir\ (i)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ nodesiz[i]\ =}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00115}00115\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (i\ ==\ gdir)\ ?\ nsize[i]\ :\ size(i);\ \textcolor{comment}{//\ start\ with\ ghosted\ lattice\ size}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ divisions[i]\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00117}00117\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00118}00118\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00119}00119\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ n\ =\ NPRIMES\ -\/\ 1;\ n\ >=\ 0;\ n-\/-\/)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00120}00120\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ nfactors[n];\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00121}00121\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ figure\ out\ which\ direction\ to\ divide\ -\/-\/\ start\ from\ the\ largest\ prime,}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00122}00122\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ because\ we\ don't\ want\ this\ to\ be\ last\ divisor!\ (would\ probably\ wind}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00123}00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ up\ with\ size\ 1)}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00124}00124\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00125}00125\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Try\ to\ keep\ even\ node\ sizes,\ these\ are\ needed\ for\ vectors}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00126}00126\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ We\ don't\ worry\ about\ evenness\ to\ gdir}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00127}00127\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00128}00128\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ find\ largest\ divisible\ dimension\ of\ h-\/cubes}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00129}00129\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ msize\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00130}00130\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ dir,\ mdir;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00131}00131\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (dir\ =\ 0;\ dir\ <\ NDIM;\ dir++)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00132}00132\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nodesiz[dir]\ >\ msize\ \&\&}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00133}00133\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ((dir\ ==\ gdir\ \&\&\ nodesiz[dir]\ \%\ prime[n]\ ==\ 0)\ ||}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00134}00134\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (dir\ !=\ gdir\ \&\&\ nodesiz[dir]\ \%\ (2\ *\ prime[n])\ ==\ 0))\ \&\&}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00135}00135\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nodesiz[dir]\ /\ prime[n]\ >\ 3)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00136}00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ msize\ =\ nodesiz[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00137}00137\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ dir;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00138}00138\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00139}00139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00140}00140\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00141}00141\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ even\ divide\ failed,\ divide\ to\ odd}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00142}00142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (msize\ ==\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00143}00143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (dir\ =\ 0;\ dir\ <\ NDIM;\ dir++)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00144}00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nodesiz[dir]\ >\ msize\ \&\&\ dir\ !=\ gdir\ \&\&}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00145}00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nodesiz[dir]\ \%\ (prime[n])\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00146}00146\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ msize\ =\ nodesiz[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00147}00147\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ dir;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00148}00148\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00149}00149\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00150}00150\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00152}00152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (msize\ ==\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00153}00153\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ cannot\ happen}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00154}00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}CANNOT\ HAPPEN!\ in\ setup\_layout\_vector.c\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00155}00155\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00156}00156\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00157}00157\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00158}00158\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Now\ slice\ it}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00159}00159\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nodesiz[mdir]\ /=\ prime[n];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00160}00160\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ divisions[mdir]\ *=\ prime[n];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00161}00161\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00162}00162\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ hila::out0\ <<\ nodesiz\ <<\ '\ '\ <<\ divisions\ <<\ '\(\backslash\)n';}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00163}00163\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00164}00164\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00165}00165\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Division\ done,\ now\ check\ that\ the\ div\ makes\ sense}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00167}00167\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ fail\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00168}00168\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00169}00169\ \ \ \ \ \ \ \ \ foralldir\ (dir)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00170}00170\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nodesiz[dir]\ <\ 3)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00171}00171\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fail\ =\ \textcolor{keyword}{true};\ \textcolor{comment}{//\ don't\ allow\ nodes\ of\ size\ 1\ or\ 2}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00173}00173\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!fail)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00174}00174\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00175}00175\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ check\ here\ that\ this\ can\ be\ used\ for\ vectorized\ division}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00176}00176\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00177}00177\ \ \ \ \ \ \ \ \ \ \ \ \ subdiv.\mbox{\hyperlink{classMatrix__t_afd76c41aaeb324852fa52b7edb5a14e3}{fill}}(1);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00178}00178\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ div\_done;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00179}00179\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\_subn\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00180}00180\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00181}00181\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ div\_done\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00182}00182\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00183}00183\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ direction\ where\ the\ vector\ subnodes\ are\ must\ not\ be}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00184}00184\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ an\ uneven\ direction,\ node\ size\ to\ the\ direction\ should\ be}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00185}00185\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ divisible\ by\ 2\ and\ the\ number\ of\ nodes\ to\ this\ dir\ should\ also\ be}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00186}00186\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ a\ multiple\ of\ subdivs}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00187}00187\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00188}00188\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ sd\ =\ subdiv[dir]\ *\ 2;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00189}00189\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ !=\ gdir\ \&\&\ nodesiz[dir]\ \%\ 2\ ==\ 0\ \&\&}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00190}00190\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ divisions[dir]\ \%\ sd\ ==\ 0\ \&\&\ n\_subn\ <\ number\_of\_subnodes)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00191}00191\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ subdiv[dir]\ =\ sd;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00192}00192\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n\_subn\ *=\ 2;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00193}00193\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ div\_done\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00194}00194\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mynode.subnodes.merged\_subnodes\_dir\ =\ dir;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00195}00195\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00196}00196\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00197}00197\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (div\_done\ \&\&\ n\_subn\ <\ number\_of\_subnodes);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00198}00198\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00199}00199\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_subn\ !=\ number\_of\_subnodes)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00200}00200\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fail\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00201}00201\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00202}00202\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00203}00203\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fail\ \&\&\ !secondtime\ \&\&\ gdir\ >=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00204}00204\ \ \ \ \ \ \ \ \ \ \ \ \ secondtime\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00205}00205\ \ \ \ \ \ \ \ \ \ \ \ \ ghosts[gdir]\ =}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00206}00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (1ULL}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00207}00207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ 62);\ \textcolor{comment}{//\ this\ short-\/circuits\ direction\ gdir,\ some\ other\ taken\ next}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00208}00208\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (fail)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00209}00209\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Could\ not\ successfully\ lay\ out\ the\ lattice\ with\ "{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00210}00210\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ <<\ \textcolor{stringliteral}{"{}\ nodes!\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00211}00211\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ The\ division\ of\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00212}00212\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir\ (d)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00213}00213\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00214}00214\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (d\ <\ NDIM\ -\/\ 1)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00215}00215\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'*'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00216}00216\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00217}00217\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ lattice\ using\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00218}00218\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ nodes\ with\ vector\ layout\ can\ be\ done\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ if\ the\ lattice\ can\ be\ divided\ into\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00220}00220\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ <<\ \textcolor{charliteral}{'*'}\ <<\ number\_of\_subnodes}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00221}00221\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ virtual\ nodes\ so\ that\ the\ virtual\ node\ size\ is\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00222}00222\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ even\ to\ directions\ where\ the\ extra\ divisions\ are\ done,\ "{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00223}00223\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}and\ the\ node\ size\ is\ >\ 2.\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00224}00224\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00225}00225\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00226}00226\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00227}00227\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00228}00228\ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (secondtime);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00229}00229\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00230}00230\ \ \ \ \ \textcolor{comment}{//\ set\ up\ struct\ nodes\ variables}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00231}00231\ \ \ \ \ nodes.number\ =\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00232}00232\ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00233}00233\ \ \ \ \ \ \ \ \ nodesiz[dir]\ *=\ subdiv[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00234}00234\ \ \ \ \ \ \ \ \ nodes.n\_divisions[dir]\ =\ divisions[dir]\ /\ subdiv[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00235}00235\ \ \ \ \ \ \ \ \ nodes.divisors[dir].resize(nodes.n\_divisions[dir]\ +\ 1);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00236}00236\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Node\ divisors:\ note,\ this\ MUST\ BE\ compatible\ with}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00237}00237\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ node\_rank\ in\ lattice.cpp}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00238}00238\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ to\ be\ sure,\ we\ use\ naively\ the\ same\ method\ than\ in\ node\_rank}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00239}00239\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ last\ element\ will\ be\ size(dir),\ for\ convenience}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00240}00240\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\ =\ -\/1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00241}00241\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <=\ size(dir);\ i++)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00242}00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((i\ *\ nodes.n\_divisions[dir])\ /\ size(dir)\ !=\ n)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00243}00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++n;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00244}00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nodes.divisors[dir][n]\ =\ i;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00245}00245\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00246}00246\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00247}00247\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00248}00248\ \ \ \ \ \textcolor{comment}{//\ set\ up\ the\ subnode\ divisions\ here\ -\/-\/\ rest\ is\ set\ in\ setup\_node}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00249}00249\ \ \ \ \ foralldir\ (d)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00250}00250\ \ \ \ \ \ \ \ \ mynode.subnodes.divisions[d]\ =\ subdiv[d];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00251}00251\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00252}00252\ \ \ \ \ \textcolor{comment}{//\ mynode\ is\ set\ up\ in\ setup\_node}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00253}00253\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00254}00254\ \ \ \ \ \textcolor{comment}{//\ Now\ division\ done\ -\/\ check\ how\ good\ it\ is}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00255}00255\ \ \ \ \ \textcolor{keywordtype}{int}\ ghost\_slices\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00256}00256\ \ \ \ \ \textcolor{keywordflow}{if}\ (gdir\ >=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00257}00257\ \ \ \ \ \ \ \ \ ghost\_slices\ =\ nsize[gdir]\ -\/\ size(gdir);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00258}00258\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00259}00259\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)nUsing\ uneven\ node\ division\ to\ direction\ "{}}\ <<\ gdir\ <<\ \textcolor{stringliteral}{"{}:\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00260}00260\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Lengths:\ "{}}\ <<\ nodes.n\_divisions[gdir]\ -\/\ ghost\_slices\ <<\ \textcolor{stringliteral}{"{}\ *\ ("{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00261}00261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ nodesiz[gdir]\ <<\ \textcolor{stringliteral}{"{}\ sites)\ +\ "{}}\ <<\ ghost\_slices\ <<\ \textcolor{stringliteral}{"{}\ *\ ("{}}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00262}00262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ nodesiz[gdir]\ -\/\ 1\ <<\ \textcolor{stringliteral}{"{}\ sites)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00263}00263\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Divisions:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00264}00264\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ nodes.n\_divisions[gdir];\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00265}00265\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00266}00266\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ -\/\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00267}00267\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ nodes.divisors[gdir][i\ +\ 1]\ -\/\ nodes.divisors[gdir][i];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00268}00268\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00269}00269\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)nFilling\ efficiency:\ "{}}\ <<\ (100.0\ *\ size(gdir))\ /\ nsize[gdir]}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00270}00270\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\%\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00271}00271\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00272}00272\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ghost\_slices\ >\ nodes.n\_divisions[gdir]\ /\ 2)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00273}00273\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}NOTE:\ number\ of\ smaller\ nodes\ >\ large\ nodes\ \(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00274}00274\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00275}00275\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00276}00276\ \ \ \ \ \textcolor{comment}{//\ this\ was\ hila::number\_of\_nodes()\ >\ 1}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00277}00277\ \ \ \ \ \textcolor{keywordflow}{if}\ (1)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00278}00278\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)nSites\ on\ node:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00279}00279\ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00280}00280\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00281}00281\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00282}00282\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ ==\ gdir)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00283}00283\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'('}\ <<\ nodesiz[dir]\ -\/\ 1\ <<\ \textcolor{charliteral}{'-\/'}\ <<\ nodesiz[dir]\ <<\ \textcolor{charliteral}{')'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00284}00284\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00285}00285\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ nodesiz[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00286}00286\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00287}00287\ \ \ \ \ \ \ \ \ int64\_t\ ns\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00288}00288\ \ \ \ \ \ \ \ \ foralldir\ (dir)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00289}00289\ \ \ \ \ \ \ \ \ \ \ \ \ ns\ *=\ nodesiz[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00290}00290\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ghost\_slices\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00291}00291\ \ \ \ \ \ \ \ \ \ \ \ \ int64\_t\ ns2\ =\ ns\ *\ (nodesiz[gdir]\ -\/\ 1)\ /\ nodesiz[gdir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00292}00292\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ =\ \ "{}}\ <<\ ns2\ <<\ \textcolor{stringliteral}{"{}\ -\/\ "{}}\ <<\ ns\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00293}00293\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00294}00294\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ =\ \ "{}}\ <<\ ns\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00295}00295\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00296}00296\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00297}00297\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Node\ layout:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00298}00298\ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00299}00299\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00300}00300\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00301}00301\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ nodes.n\_divisions[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00302}00302\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00303}00303\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ =\ \ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ <<\ \textcolor{stringliteral}{"{}\ nodes\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00304}00304\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00305}00305\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00306}00306\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00307}00307\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Node\ subdivision\ to\ 32bit\ elems:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00308}00308\ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00309}00309\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00310}00310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00311}00311\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ subdiv[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00312}00312\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00313}00313\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ =\ \ "{}}\ <<\ number\_of\_subnodes\ <<\ \textcolor{stringliteral}{"{}\ subnodes\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00314}00314\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00315}00315\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Sites\ on\ subnodes:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00316}00316\ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00317}00317\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00318}00318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ ==\ gdir)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00320}00320\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'('}\ <<\ nodesiz[dir]\ -\/\ 1\ <<\ \textcolor{charliteral}{'-\/'}\ <<\ nodesiz[dir]\ <<\ \textcolor{charliteral}{')'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00321}00321\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00322}00322\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ nodesiz[dir]\ /\ subdiv[dir];}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00323}00323\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00324}00324\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00325}00325\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00326}00326\ \ \ \ \ \ \ \ \ Direction\ dmerge\ =\ mynode.subnodes.merged\_subnodes\_dir;}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00327}00327\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00328}00328\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Node\ subdivision\ to\ 64bit\ elems:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00329}00329\ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00330}00330\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00331}00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00332}00332\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ ((dir\ ==\ dmerge)\ ?\ subdiv[dir]\ /\ 2\ :\ subdiv[dir]);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00333}00333\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00334}00334\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ \ =\ \ "{}}\ <<\ number\_of\_subnodes\ /\ 2\ <<\ \textcolor{stringliteral}{"{}\ subnodes\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00335}00335\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00336}00336\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Sites\ on\ subnodes:\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00337}00337\ \ \ \ \ \ \ \ \ foralldir\ (dir)\ \{}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00338}00338\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00339}00339\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ x\ "{}};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00340}00340\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dir\ ==\ gdir)}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00341}00341\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'('}\ <<\ nodesiz[dir]\ -\/\ 1\ <<\ \textcolor{charliteral}{'-\/'}\ <<\ nodesiz[dir]\ <<\ \textcolor{charliteral}{')'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00342}00342\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00343}00343\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ ((dir\ ==\ dmerge)\ ?\ 2\ *\ nodesiz[dir]\ /\ subdiv[dir]}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00344}00344\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ nodesiz[dir]\ /\ subdiv[dir]);}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00345}00345\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00346}00346\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00347}00347\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00348}00348\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00349}00349\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00350}00350\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00351}00351\ \ \ \ \ \textcolor{comment}{//\ For\ MPI,\ remap\ the\ nodes\ for\ periodic\ torus}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00352}00352\ \ \ \ \ \textcolor{comment}{//\ in\ the\ desired\ manner}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00353}00353\ \ \ \ \ \textcolor{comment}{//\ we\ have\ at\ least\ 2\ options:}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00354}00354\ \ \ \ \ \textcolor{comment}{//\ map\_node\_layout\_trivial.c}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00355}00355\ \ \ \ \ \textcolor{comment}{//\ map\_node\_layout\_block2.c\ -\/\ for\ 2\string^n\ n.n.\ blocks}}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00356}00356\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00357}00357\ \ \ \ \ nodes.create\_remap();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00358}00358\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00359}00359\ }
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00360}00360\ \ \ \ \ print\_dashed\_line();}
+\DoxyCodeLine{\Hypertarget{setup__layout__vector_8cpp_source_l00361}00361\ \}}
+
+\end{DoxyCode}

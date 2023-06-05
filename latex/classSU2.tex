@@ -1,0 +1,92 @@
+\doxysection{SU2\texorpdfstring{$<$}{<} T \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classSU2}{}\label{classSU2}\index{SU2$<$ T $>$@{SU2$<$ T $>$}}
+
+
+{\ttfamily \#include $<$su2.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classSU2_a4139ae57c48f61a2f0645548e8fce8a8}\label{classSU2_a4139ae57c48f61a2f0645548e8fce8a8} 
+{\footnotesize template$<$typename B , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, B $>$\+::value, int $>$  = 0$>$ }\\{\bfseries SU2} (const B z)
+\begin{DoxyCompactList}\small\item\em construct from \textquotesingle{}scalar\textquotesingle{} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_acd6584b74d5766cda18a02a3d6354c40}\label{classSU2_acd6584b74d5766cda18a02a3d6354c40} 
+{\footnotesize template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\+::value, int $>$  = 0$>$ }\\{\bfseries SU2} (std\+::initializer\+\_\+list$<$ S $>$ rhs)
+\begin{DoxyCompactList}\small\item\em initializer list constructor \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a9cf34bfc209202577db1259733ff8659}\label{classSU2_a9cf34bfc209202577db1259733ff8659} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries normalize} ()
+\begin{DoxyCompactList}\small\item\em Normalize det = 1 to make sure it\textquotesingle{}s an element of \doxylink{classSU2}{SU2}. \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_aae68edcb20cbd5e665dc5db09803d5b0}\label{classSU2_aae68edcb20cbd5e665dc5db09803d5b0} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries reunitarize} ()
+\begin{DoxyCompactList}\small\item\em Normalize det = 1 to make sure it\textquotesingle{}s an element of \doxylink{classSU2}{SU2}. \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_ab9c8f72bc4bde6b5b0b87a6a359ef816}\label{classSU2_ab9c8f72bc4bde6b5b0b87a6a359ef816} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ {\bfseries dagger} () const
+\begin{DoxyCompactList}\small\item\em complex conjugate transpose \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a56ae7e33dd6f2837dc2d1921a338593f}\label{classSU2_a56ae7e33dd6f2837dc2d1921a338593f} 
+T {\bfseries trace} () const
+\begin{DoxyCompactList}\small\item\em for \doxylink{classSU2}{SU2} same as .\doxylink{classSU2_ab9c8f72bc4bde6b5b0b87a6a359ef816}{dagger()} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a929d9d5404f808e3f221765596d36bf7}\label{classSU2_a929d9d5404f808e3f221765596d36bf7} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ {\bfseries operator-\/} () const
+\begin{DoxyCompactList}\small\item\em unary -\/ \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a8179a349952cf026f6c3f80ddf85ff18}\label{classSU2_a8179a349952cf026f6c3f80ddf85ff18} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ {\bfseries operator+} () const
+\begin{DoxyCompactList}\small\item\em unary + \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_af588cb40fc694fb7e8a5794ef015a511}\label{classSU2_af588cb40fc694fb7e8a5794ef015a511} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, A $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator=} (const \mbox{\hyperlink{classSU2}{SU2}}$<$ A $>$ \&rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em assign from another \doxylink{classSU2}{SU2} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a3234715ce0a90bf2c065bbb75ef5371d}\label{classSU2_a3234715ce0a90bf2c065bbb75ef5371d} 
+{\footnotesize template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator=} (std\+::initializer\+\_\+list$<$ S $>$ rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em assign from initializer list \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a7d64b20c781eb9b9c32e826e812dacfb}\label{classSU2_a7d64b20c781eb9b9c32e826e812dacfb} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, A $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator=} (A rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em assign from \textquotesingle{}scalar\textquotesingle{} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a19b48d63dcd70394c00d4cee4d94a6b8}\label{classSU2_a19b48d63dcd70394c00d4cee4d94a6b8} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, \mbox{\hyperlink{namespacehila_adf272b5e8b834ba16564fd7bfff5adef}{hila\+::type\+\_\+plus}}$<$ T \&, A $>$ $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator+=} (const \mbox{\hyperlink{classSU2}{SU2}}$<$ A $>$ \&rhs)
+\begin{DoxyCompactList}\small\item\em add assign another \doxylink{classSU2}{SU2} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a574248deb494b78ce5329505379a7e8a}\label{classSU2_a574248deb494b78ce5329505379a7e8a} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, hila\+::type\+\_\+minus$<$ T \&, A $>$ $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator-\/=} (const \mbox{\hyperlink{classSU2}{SU2}}$<$ A $>$ \&rhs)
+\begin{DoxyCompactList}\small\item\em subtract assign another \doxylink{classSU2}{SU2} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_aff656ef80a1c050b1ea27c2c44d0a366}\label{classSU2_aff656ef80a1c050b1ea27c2c44d0a366} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, \mbox{\hyperlink{namespacehila_adf272b5e8b834ba16564fd7bfff5adef}{hila\+::type\+\_\+plus}}$<$ T \&, A $>$ $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator+=} (const A rhs)
+\begin{DoxyCompactList}\small\item\em add assign (\textquotesingle{}scalar\textquotesingle{} \texorpdfstring{$\ast$}{*} identity matrix) \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a640adc0d3531fdeb5eb50c080f5437ef}\label{classSU2_a640adc0d3531fdeb5eb50c080f5437ef} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, hila\+::type\+\_\+minus$<$ T \&, A $>$ $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator-\/=} (const A rhs)
+\begin{DoxyCompactList}\small\item\em subtract assign (\textquotesingle{}scalar\textquotesingle{} \texorpdfstring{$\ast$}{*} identity matrix) \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a498f4c7d7d49341e74d6d716b7447d75}\label{classSU2_a498f4c7d7d49341e74d6d716b7447d75} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, hila\+::type\+\_\+mul$<$ T \&, A $>$ $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator\texorpdfstring{$\ast$}{*}=} (const A rhs)
+\begin{DoxyCompactList}\small\item\em multiply assign scalar \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_ab89494cc1ab5a873b9604b390d23e6bb}\label{classSU2_ab89494cc1ab5a873b9604b390d23e6bb} 
+{\footnotesize template$<$typename A , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, hila\+::type\+\_\+div$<$ T \&, A $>$ $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries operator/=} (const A rhs)
+\begin{DoxyCompactList}\small\item\em divide assign scalar \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a2754020dec4f47e70a547e7ccc62e0b9}\label{classSU2_a2754020dec4f47e70a547e7ccc62e0b9} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries random} (double width=1.\+0) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em make random \doxylink{classSU2}{SU2} \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a58a41130c5620571681f6476622c66c0}\label{classSU2_a58a41130c5620571681f6476622c66c0} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ \& {\bfseries gaussian\+\_\+random} (double width=1.\+0) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em make gaussian random matrix, does not normalize \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_a0a7cacd8e47b754ec109efbadc099c4d}\label{classSU2_a0a7cacd8e47b754ec109efbadc099c4d} 
+\mbox{\hyperlink{classAlgebra}{Algebra}}$<$ \mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ $>$ {\bfseries project\+\_\+to\+\_\+algebra} () const
+\begin{DoxyCompactList}\small\item\em project \doxylink{classSU2}{SU2} to generators \$\textbackslash{}lambda\+\_\+a = 1/2 \textbackslash{}sigma\+\_\+a\$ \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_af1b50518b24898d5389ed178800f7e36}\label{classSU2_af1b50518b24898d5389ed178800f7e36} 
+\mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ {\bfseries exp} () const
+\begin{DoxyCompactList}\small\item\em \doxylink{classSU2}{SU2} matrix exp. \end{DoxyCompactList}\item 
+\Hypertarget{classSU2_ae30431eabb8d29b2c5bbde71a6a48fe7}\label{classSU2_ae30431eabb8d29b2c5bbde71a6a48fe7} 
+\mbox{\hyperlink{classAlgebra}{Algebra}}$<$ \mbox{\hyperlink{classSU2}{SU2}}$<$ T $>$ $>$ {\bfseries log} () const
+\begin{DoxyCompactList}\small\item\em \doxylink{classSU2}{SU2} matrix log, returns \doxylink{classSU2}{SU2} algebra. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename T$>$\newline
+class SU2$<$ T $>$}
+This implementation represents the matrices as \$U = d + a i\textbackslash{}sigma\+\_\+1 + b i\textbackslash{}sigma\+\_\+2 + c i\textbackslash{}sigma\+\_\+3\$ This is in \doxylink{classSU}{SU(2)} if \$a\texorpdfstring{$^\wedge$}{\string^}2 + b\texorpdfstring{$^\wedge$}{\string^}2 + c\texorpdfstring{$^\wedge$}{\string^}2 + d\texorpdfstring{$^\wedge$}{\string^}2 = 1\$
+
+\doxylink{classSU2}{SU2} matrices are equivalent to SU$<$2, radix$>$, but are implemented more efficiently here. This implementation represents the matrices as U = d + a \texorpdfstring{$\ast$}{*} sigma\+\_\+1 + b \texorpdfstring{$\ast$}{*} sigma\+\_\+2 + c \texorpdfstring{$\ast$}{*} sigma\+\_\+3. This is in \doxylink{classSU}{SU(2)} if a\texorpdfstring{$^\wedge$}{\string^}2 + b\texorpdfstring{$^\wedge$}{\string^}2 + c\texorpdfstring{$^\wedge$}{\string^}2 + d\texorpdfstring{$^\wedge$}{\string^}2 = 1. 
+
+Definition at line \mbox{\hyperlink{su2_8h_source_l00014}{14}} of file \mbox{\hyperlink{su2_8h_source}{su2.\+h}}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+su2.\+h\item 
+sun.\+h\end{DoxyCompactItemize}

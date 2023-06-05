@@ -1,0 +1,177 @@
+\doxysection{gauge\+\_\+field\texorpdfstring{$<$}{<} matrix \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classgauge__field}{}\label{classgauge__field}\index{gauge\_field$<$ matrix $>$@{gauge\_field$<$ matrix $>$}}
+
+
+{\ttfamily \#include $<$gauge\+\_\+field.\+h$>$}
+
+
+
+Inheritance diagram for gauge\+\_\+field\texorpdfstring{$<$}{<} matrix \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=236pt]{classgauge__field__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for gauge\+\_\+field\texorpdfstring{$<$}{<} matrix \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classgauge__field__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}\label{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d} 
+using {\bfseries gauge\+\_\+type} = matrix
+\begin{DoxyCompactList}\small\item\em The matrix type. \end{DoxyCompactList}\item 
+using \mbox{\hyperlink{classgauge__field_aa3a20a9bd2c473f7249d070215625323}{fund\+\_\+type}} = matrix
+\item 
+\Hypertarget{classgauge__field_a332b3cd0b42566e71babae8fefcc3372}\label{classgauge__field_a332b3cd0b42566e71babae8fefcc3372} 
+using {\bfseries basetype} = hila\+::scalar\+\_\+type$<$ matrix $>$
+\begin{DoxyCompactList}\small\item\em The base type (double, float, int...) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Types inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ matrix $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+using {\bfseries basetype} = hila\+::scalar\+\_\+type$<$ matrix $>$
+\begin{DoxyCompactList}\small\item\em The base type of the matrix (double, int,...) \end{DoxyCompactList}\item 
+using {\bfseries gauge\+\_\+type} = matrix
+\begin{DoxyCompactList}\small\item\em The matrix type. \end{DoxyCompactList}\item 
+using \mbox{\hyperlink{classgauge__field__base_a33da644f6d068c0879e45ec9dd78cf89}{gauge\+\_\+type\+\_\+flt}} = matrix
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0}\label{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0} 
+void {\bfseries set\+\_\+unity} ()
+\begin{DoxyCompactList}\small\item\em Set the gauge field to unity. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a56e00674460fe00fc052a3637f00b88e}\label{classgauge__field_a56e00674460fe00fc052a3637f00b88e} 
+void {\bfseries random} ()
+\begin{DoxyCompactList}\small\item\em Draw a random gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a992a5340137630d537be54e1bb452c21}\label{classgauge__field_a992a5340137630d537be54e1bb452c21} 
+void {\bfseries draw\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Gaussian random momentum for each element. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402}\label{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402} 
+void {\bfseries zero\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Set the momentum to zero. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a40a5cb2c41bd75e1c24359393317b00c}\label{classgauge__field_a40a5cb2c41bd75e1c24359393317b00c} 
+void {\bfseries gauge\+\_\+update} (double eps)
+\begin{DoxyCompactList}\small\item\em Update the gauge field with time step eps. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}{add\+\_\+momentum}} (\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ \mbox{\hyperlink{classgauge__field_aac0971baaf696f12749268ad1b7c7281}{N}}, \mbox{\hyperlink{classComplex}{Complex}}$<$ \mbox{\hyperlink{classgauge__field_a332b3cd0b42566e71babae8fefcc3372}{basetype}} $>$ $>$ $>$ \texorpdfstring{$\ast$}{*}force)
+\item 
+\Hypertarget{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}\label{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82} 
+void {\bfseries backup} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}\label{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff} 
+void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a826c0db8d7b5e880dc148a4aa799294e}\label{classgauge__field_a826c0db8d7b5e880dc148a4aa799294e} 
+void {\bfseries read\+\_\+file} (std\+::string filename)
+\begin{DoxyCompactList}\small\item\em Read the gauge field from a file. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_afabc7773b67c334043e42e8ddd6df805}\label{classgauge__field_afabc7773b67c334043e42e8ddd6df805} 
+void {\bfseries write\+\_\+file} (std\+::string filename)
+\begin{DoxyCompactList}\small\item\em Write the gauge field to a file. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_ab9f46c717bdee404f23c544febd3ec90}\label{classgauge__field_ab9f46c717bdee404f23c544febd3ec90} 
+double {\bfseries plaquette} ()
+\begin{DoxyCompactList}\small\item\em Calculate the plaquette. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a7e8349e8587014235fe5875bf8a11e0e}\label{classgauge__field_a7e8349e8587014235fe5875bf8a11e0e} 
+double {\bfseries polyakov} (int dir)
+\begin{DoxyCompactList}\small\item\em Calculate the polyakov loop. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae}\label{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae} 
+\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{gauge\+\_\+type}} $>$ \& {\bfseries get\+\_\+momentum} (int dir)
+\begin{DoxyCompactList}\small\item\em Return a reference to the momentum field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6}\label{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6} 
+\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{gauge\+\_\+type}} $>$ \& {\bfseries get\+\_\+gauge} (int dir)
+\begin{DoxyCompactList}\small\item\em Return a reference to the gauge field. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ matrix $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual void {\bfseries refresh} ()
+\begin{DoxyCompactList}\small\item\em Recalculate represented or smeared field. \end{DoxyCompactList}\item 
+virtual void {\bfseries set\+\_\+unity} ()
+\begin{DoxyCompactList}\small\item\em Set the field to unity. \end{DoxyCompactList}\item 
+virtual void {\bfseries random} ()
+\begin{DoxyCompactList}\small\item\em Draw a random gauge field. \end{DoxyCompactList}\item 
+virtual void {\bfseries add\+\_\+momentum} (\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ \mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{N}}, \mbox{\hyperlink{classComplex}{Complex}}$<$ \mbox{\hyperlink{classgauge__field__base_a727a4fad505a5d7dc1b045d895f8e80e}{basetype}} $>$ $>$ $>$ \texorpdfstring{$\ast$}{*}force)
+\begin{DoxyCompactList}\small\item\em Update the momentum by given force. \end{DoxyCompactList}\item 
+virtual void {\bfseries draw\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Draw gaussian random momentum. \end{DoxyCompactList}\item 
+virtual void {\bfseries zero\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Set the momentum to zero. \end{DoxyCompactList}\item 
+virtual void {\bfseries backup} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of the gauge field for HMC. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classgauge__field__base_a116c7b6e1c1cd51711e8ed3036ec4e18}{restore\+\_\+backup}} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field_a5e911b848f75315ef621de39570fe523}\label{classgauge__field_a5e911b848f75315ef621de39570fe523} 
+\mbox{\hyperlink{classField}{Field}}$<$ matrix $>$ {\bfseries gauge\+\_\+backup} \mbox{[}NDIM\mbox{]}
+\begin{DoxyCompactList}\small\item\em Storage for a backup of the gauge field. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ matrix $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classField}{Field}}$<$ matrix $>$ {\bfseries gauge} \mbox{[}NDIM\mbox{]}
+\begin{DoxyCompactList}\small\item\em A matrix field for each Direction. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classField}{Field}}$<$ matrix $>$ \mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}} \mbox{[}NDIM\mbox{]}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field_aac0971baaf696f12749268ad1b7c7281}\label{classgauge__field_aac0971baaf696f12749268ad1b7c7281} 
+static constexpr int {\bfseries N} = matrix\+::size
+\begin{DoxyCompactList}\small\item\em The size of the matrix. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Attributes inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ matrix $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+static constexpr int {\bfseries N}
+\begin{DoxyCompactList}\small\item\em The size of the matrix. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename matrix$>$\newline
+class gauge\+\_\+field$<$ matrix $>$}
+A gauge field contains a \doxylink{classSU}{SU(\+N)} matrix in each Direction for the gauge field and for the momentum. Defines methods for HMC to update the field and the momentum. 
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00193}{193}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Typedef Documentation}
+\Hypertarget{classgauge__field_aa3a20a9bd2c473f7249d070215625323}\label{classgauge__field_aa3a20a9bd2c473f7249d070215625323} 
+\index{gauge\_field$<$ matrix $>$@{gauge\_field$<$ matrix $>$}!fund\_type@{fund\_type}}
+\index{fund\_type@{fund\_type}!gauge\_field$<$ matrix $>$@{gauge\_field$<$ matrix $>$}}
+\doxysubsubsection{\texorpdfstring{fund\_type}{fund\_type}}
+{\footnotesize\ttfamily template$<$typename matrix $>$ \\
+using \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}$<$ matrix $>$\+::fund\+\_\+type =  matrix}
+
+The fundamental gauge type. In the standard case it is the same as the matrix type 
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00199}{199}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}\label{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86} 
+\index{gauge\_field$<$ matrix $>$@{gauge\_field$<$ matrix $>$}!add\_momentum@{add\_momentum}}
+\index{add\_momentum@{add\_momentum}!gauge\_field$<$ matrix $>$@{gauge\_field$<$ matrix $>$}}
+\doxysubsubsection{\texorpdfstring{add\_momentum()}{add\_momentum()}}
+{\footnotesize\ttfamily template$<$typename matrix $>$ \\
+void \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}$<$ matrix $>$\+::add\+\_\+momentum (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ \mbox{\hyperlink{classgauge__field_aac0971baaf696f12749268ad1b7c7281}{N}}, \mbox{\hyperlink{classComplex}{Complex}}$<$ \mbox{\hyperlink{classgauge__field_a332b3cd0b42566e71babae8fefcc3372}{basetype}} $>$ $>$ $>$ \texorpdfstring{$\ast$}{*}}]{force }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Project a force term to the algebra and add to the momentum 
+
+Reimplemented from \mbox{\hyperlink{classgauge__field__base_ae03bb8db75c725bd5d04a027ca06d6f0}{gauge\+\_\+field\+\_\+base$<$ matrix $>$}}.
+
+
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00249}{249}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+gauge\+\_\+field.\+h\end{DoxyCompactItemize}

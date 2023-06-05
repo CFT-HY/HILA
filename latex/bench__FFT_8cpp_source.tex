@@ -1,0 +1,77 @@
+\doxysection{bench\+\_\+\+FFT.\+cpp}
+\hypertarget{bench__FFT_8cpp_source}{}\label{bench__FFT_8cpp_source}\index{bench\_FFT.cpp@{bench\_FFT.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00001}00001\ \textcolor{preprocessor}{\#include\ "{}bench.h"{}}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00002}00002\ \textcolor{preprocessor}{\#include\ "{}plumbing/timing.h"{}}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00003}00003\ \textcolor{preprocessor}{\#include\ "{}plumbing/fft.h"{}}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00004}00004\ \textcolor{comment}{//\#include\ "{}plumbing/FFT.h"{}}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00006}00006\ \textcolor{preprocessor}{\#ifndef\ SEED}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00007}00007\ \textcolor{preprocessor}{\#define\ SEED\ 100}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00008}00008\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00010}00010\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ latsize\ =\ \{32,\ 32,\ 32,\ 32\};}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00012}00012\ \textcolor{keywordtype}{int}\ main(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}\ **argv)\ \{}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00013}00013\ \ \ \ \ \textcolor{keywordtype}{int}\ n\_runs\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00014}00014\ \ \ \ \ \textcolor{keyword}{struct\ }timeval\ start,\ end;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00015}00015\ \ \ \ \ \textcolor{keywordtype}{double}\ timing;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00016}00016\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00017}00017\ \ \ \ \ \mbox{\hyperlink{namespacehila_a88d54715010ef67cf2fbea84b00f76bb}{hila::initialize}}(argc,\ argv);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00019}00019\ \ \ \ \ lattice.\mbox{\hyperlink{classlattice__struct_a12f6b6a0c725399c8aa00740274b34b0}{setup}}(latsize);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00021}00021\ \ \ \ \ \mbox{\hyperlink{namespacehila_a90e5e5f9365383ef279039371798f09b}{hila::seed\_random}}(SEED);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00022}00022\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00023}00023\ \ \ \ \ \textcolor{keyword}{using\ }T\ =\ \mbox{\hyperlink{classMatrix}{Matrix<2,\ 2,\ Complex<double>}}>;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00024}00024\ \ \ \ \ \textcolor{keyword}{using\ }Tf\ =\ \mbox{\hyperlink{classMatrix}{Matrix<2,\ 2,\ Complex<float>}}>;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00026}00026\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ d,\ d2;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00028}00028\ \ \ \ \ \textcolor{comment}{//\ Generate\ a\ random\ field}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00029}00029\ \ \ \ \ onsites(ALL)\ \{\ d[X].random();\ \}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00031}00031\ \ \ \ \ \textcolor{comment}{//\ Run\ once\ to\ make\ sure\ everything\ is\ set\ up}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00032}00032\ \ \ \ \ FFT\_field(d,\ d2);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00034}00034\ \ \ \ \ timing\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00035}00035\ \ \ \ \ \textcolor{keywordflow}{for}\ (n\_runs\ =\ 1;\ timing\ <\ mintime;)\ \{}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00036}00036\ \ \ \ \ \ \ \ \ n\_runs\ *=\ 2;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00037}00037\ \ \ \ \ \ \ \ \ gettimeofday(\&start,\ NULL);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00038}00038\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ n\_runs;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00039}00039\ \ \ \ \ \ \ \ \ \ \ \ \ FFT\_field(d,\ d2);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00040}00040\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00041}00041\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ //\ synchronize();}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00042}00042\ \ \ \ \ \ \ \ \ gettimeofday(\&end,\ NULL);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00043}00043\ \ \ \ \ \ \ \ \ timing\ =\ timediff(start,\ end);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00044}00044\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(timing);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00045}00045\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00046}00046\ \ \ \ \ timing\ =\ timing\ /\ (double)n\_runs;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00047}00047\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}FFT\ double\ precision\ :\ "{}}\ <<\ timing\ <<\ \textcolor{stringliteral}{"{}\ ms\ \(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00049}00049\ \ \ \ \ \textcolor{comment}{//\ Generate\ a\ random\ field}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00050}00050\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Tf>}}\ f,\ f2;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00051}00051\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00052}00052\ \ \ \ \ \textcolor{comment}{//\ Generate\ a\ random\ field}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00053}00053\ \ \ \ \ onsites(ALL)\ \{\ f[X].random();\ \}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00055}00055\ \ \ \ \ timing\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00056}00056\ \ \ \ \ \textcolor{keywordflow}{for}\ (n\_runs\ =\ 1;\ timing\ <\ mintime;)\ \{}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00057}00057\ \ \ \ \ \ \ \ \ n\_runs\ *=\ 2;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00058}00058\ \ \ \ \ \ \ \ \ gettimeofday(\&start,\ NULL);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00059}00059\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ n\_runs;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ FFT\_field(f,\ f2);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00061}00061\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00062}00062\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ //\ synchronize();}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00063}00063\ \ \ \ \ \ \ \ \ gettimeofday(\&end,\ NULL);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00064}00064\ \ \ \ \ \ \ \ \ timing\ =\ timediff(start,\ end);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00065}00065\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(timing);}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00066}00066\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00067}00067\ \ \ \ \ timing\ =\ timing\ /\ (double)n\_runs;}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00068}00068\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}FFT\ single\ precision\ :\ "{}}\ <<\ timing\ <<\ \textcolor{stringliteral}{"{}\ ms\ \(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00069}00069\ }
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00070}00070\ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{bench__FFT_8cpp_source_l00071}00071\ \}}
+
+\end{DoxyCode}

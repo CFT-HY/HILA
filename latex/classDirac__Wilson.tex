@@ -1,0 +1,100 @@
+\doxysection{Dirac\+\_\+\+Wilson\texorpdfstring{$<$}{<} matrix \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classDirac__Wilson}{}\label{classDirac__Wilson}\index{Dirac\_Wilson$<$ matrix $>$@{Dirac\_Wilson$<$ matrix $>$}}
+
+
+{\ttfamily \#include $<$wilson.\+h$>$}
+
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}\label{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811} 
+using {\bfseries vector\+\_\+type} = Wilson\+\_\+vector$<$ \mbox{\hyperlink{classDirac__Wilson_a0362bf1de4c296c3f5234da0cfc9e908}{N}}, radix $>$
+\begin{DoxyCompactList}\small\item\em The wilson vector type. \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_ae29f507bdc789da374c734b828f38100}\label{classDirac__Wilson_ae29f507bdc789da374c734b828f38100} 
+using {\bfseries matrix\+\_\+type} = matrix
+\begin{DoxyCompactList}\small\item\em The matrix type. \end{DoxyCompactList}\item 
+using \mbox{\hyperlink{classDirac__Wilson_ae3d7fc9d83ea2edc0a0dfa1a36fa7045}{type\+\_\+flt}} = \mbox{\hyperlink{classDirac__Wilson}{Dirac\+\_\+\+Wilson}}$<$ typename \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$ matrix $>$\+::gauge\+\_\+type\+\_\+flt $>$
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classDirac__Wilson_acdd1495e4665f8c119584a9518f3619e}\label{classDirac__Wilson_acdd1495e4665f8c119584a9518f3619e} 
+{\bfseries Dirac\+\_\+\+Wilson} (\mbox{\hyperlink{classDirac__Wilson}{Dirac\+\_\+\+Wilson}} \&d)
+\begin{DoxyCompactList}\small\item\em Constructor\+: initialize mass and gauge. \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_ad63da3c622e0bec2150e30db8a9e4ae7}\label{classDirac__Wilson_ad63da3c622e0bec2150e30db8a9e4ae7} 
+{\bfseries Dirac\+\_\+\+Wilson} (double k, \mbox{\hyperlink{classField}{Field}}$<$ matrix $>$(\&U)\mbox{[}NDIM\mbox{]})
+\begin{DoxyCompactList}\small\item\em Constructor\+: initialize mass and gauge. \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_a92caff112a91ffaacfe44b466f7764ab}\label{classDirac__Wilson_a92caff112a91ffaacfe44b466f7764ab} 
+{\bfseries Dirac\+\_\+\+Wilson} (double k, \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$ matrix $>$ \&g)
+\begin{DoxyCompactList}\small\item\em Constructor\+: initialize mass and gauge. \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_a6e6f2144cf5a0968563a34c9873f203a}\label{classDirac__Wilson_a6e6f2144cf5a0968563a34c9873f203a} 
+{\footnotesize template$<$typename M $>$ }\\{\bfseries Dirac\+\_\+\+Wilson} (\mbox{\hyperlink{classDirac__Wilson}{Dirac\+\_\+\+Wilson}}$<$ M $>$ \&d, \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$ matrix $>$ \&g)
+\begin{DoxyCompactList}\small\item\em Construct from another \doxylink{classDirac__Wilson}{Dirac\+\_\+\+Wilson} operator of a different type. \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_a21434d2cfc0344354f7834cca32cf11f}\label{classDirac__Wilson_a21434d2cfc0344354f7834cca32cf11f} 
+void {\bfseries apply} (const \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&in, \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&out)
+\begin{DoxyCompactList}\small\item\em Applies the operator to in. \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_a4f796c1c8619129e5788d0c57ebf88ad}\label{classDirac__Wilson_a4f796c1c8619129e5788d0c57ebf88ad} 
+void {\bfseries dagger} (const \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&in, \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&out)
+\begin{DoxyCompactList}\small\item\em Applies the conjugate of the operator. \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename momtype $>$ }\\void \mbox{\hyperlink{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869}{force}} (const \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&chi, const \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&psi, \mbox{\hyperlink{classField}{Field}}$<$ momtype $>$(\&force)\mbox{[}NDIM\mbox{]}, int sign=1)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}\label{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597} 
+double {\bfseries kappa}
+\begin{DoxyCompactList}\small\item\em The hopping parameter, kappa = 1/(8-\/2m) \end{DoxyCompactList}\item 
+\Hypertarget{classDirac__Wilson_a4280c12c11919d7a24e6edf5484ea908}\label{classDirac__Wilson_a4280c12c11919d7a24e6edf5484ea908} 
+Parity {\bfseries par} = ALL
+\begin{DoxyCompactList}\small\item\em The parity this operator applies to. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classDirac__Wilson_a0362bf1de4c296c3f5234da0cfc9e908}\label{classDirac__Wilson_a0362bf1de4c296c3f5234da0cfc9e908} 
+static constexpr int {\bfseries N} = matrix\+::size
+\begin{DoxyCompactList}\small\item\em Size of the gauge matrix and color dimension of the Wilson vector. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename matrix$>$\newline
+class Dirac\+\_\+\+Wilson$<$ matrix $>$}
+An operator class that applies the Wilson Dirac operator D.\+apply(in, out) aplies the operator D.\+dagger(int out) aplies the conjugate of the operator
+
+This is useful for defining inverters as composite operators. For example the conjugate gradient inverter is CG$<$\+Dirac\+\_\+\+Wilson$>$. 
+
+Definition at line \mbox{\hyperlink{wilson_8h_source_l00146}{146}} of file \mbox{\hyperlink{wilson_8h_source}{wilson.\+h}}.
+
+
+
+\doxysubsection{Member Typedef Documentation}
+\Hypertarget{classDirac__Wilson_ae3d7fc9d83ea2edc0a0dfa1a36fa7045}\label{classDirac__Wilson_ae3d7fc9d83ea2edc0a0dfa1a36fa7045} 
+\index{Dirac\_Wilson$<$ matrix $>$@{Dirac\_Wilson$<$ matrix $>$}!type\_flt@{type\_flt}}
+\index{type\_flt@{type\_flt}!Dirac\_Wilson$<$ matrix $>$@{Dirac\_Wilson$<$ matrix $>$}}
+\doxysubsubsection{\texorpdfstring{type\_flt}{type\_flt}}
+{\footnotesize\ttfamily template$<$typename matrix $>$ \\
+using \mbox{\hyperlink{classDirac__Wilson}{Dirac\+\_\+\+Wilson}}$<$ matrix $>$\+::type\+\_\+flt =  \mbox{\hyperlink{classDirac__Wilson}{Dirac\+\_\+\+Wilson}}$<$typename \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$matrix$>$\+::gauge\+\_\+type\+\_\+flt$>$}
+
+Single precision type in case the base type is double precision. This is used to precondition the inversion of this operator 
+
+Definition at line \mbox{\hyperlink{wilson_8h_source_l00165}{165}} of file \mbox{\hyperlink{wilson_8h_source}{wilson.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869}\label{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869} 
+\index{Dirac\_Wilson$<$ matrix $>$@{Dirac\_Wilson$<$ matrix $>$}!force@{force}}
+\index{force@{force}!Dirac\_Wilson$<$ matrix $>$@{Dirac\_Wilson$<$ matrix $>$}}
+\doxysubsubsection{\texorpdfstring{force()}{force()}}
+{\footnotesize\ttfamily template$<$typename matrix $>$ \\
+template$<$typename momtype $>$ \\
+void \mbox{\hyperlink{classDirac__Wilson}{Dirac\+\_\+\+Wilson}}$<$ matrix $>$\+::force (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&}]{chi,  }\item[{const \mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\+\_\+type}} $>$ \&}]{psi,  }\item[{\mbox{\hyperlink{classField}{Field}}$<$ momtype $>$(\&)}]{force\mbox{[}\+NDIM\mbox{]},  }\item[{int}]{sign = {\ttfamily 1} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Applies the derivative of the Dirac operator with respect to the gauge \doxylink{classField}{Field} 
+
+Definition at line \mbox{\hyperlink{wilson_8h_source_l00197}{197}} of file \mbox{\hyperlink{wilson_8h_source}{wilson.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+wilson.\+h\end{DoxyCompactItemize}

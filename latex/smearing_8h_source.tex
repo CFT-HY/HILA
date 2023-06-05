@@ -1,0 +1,461 @@
+\doxysection{smearing.\+h}
+\hypertarget{smearing_8h_source}{}\label{smearing_8h_source}\index{smearing.h@{smearing.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ SMEARING\_H}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ SMEARING\_H}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}datatypes/sun.h"{}}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}hmc/gauge\_field.h"{}}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00008}00008\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ sun>}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00009}00009\ \textcolor{keywordtype}{void}\ exp\_and\_derivative(sun\ \&Q,\ sun\ \&m0,\ sun\ \&lambda,\ sun\ \&eQ,\ \textcolor{keywordtype}{int}\ exp\_steps)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00010}00010\ \ \ \ \ sun\ m1,\ qn;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00011}00011\ \ \ \ \ eQ\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00012}00012\ \ \ \ \ qn\ =\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00013}00013\ \ \ \ \ \textcolor{keywordtype}{double}\ n\ =\ 1.0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00014}00014\ \ \ \ \ m1\ =\ m0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00015}00015\ \ \ \ \ \textcolor{keywordflow}{if}\ (exp\_steps\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00016}00016\ \ \ \ \ \ \ \ \ lambda\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00017}00017\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00018}00018\ \ \ \ \ \ \ \ \ lambda\ =\ m1;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00019}00019\ \ \ \ \ \ \ \ \ eQ\ =\ eQ\ +\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00020}00020\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00021}00021\ \ \ \ \ \textcolor{comment}{//\ gamma\ matrix\ (morningstar\ paper,\ eq\ 74)}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00022}00022\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ k\ =\ 2;\ k\ <=\ exp\_steps;\ k++)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00023}00023\ \ \ \ \ \ \ \ \ n\ =\ n\ *\ 1.0\ /\ ((double)k);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00024}00024\ \ \ \ \ \ \ \ \ m1\ =\ m0\ *\ qn\ +\ Q\ *\ m1;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00025}00025\ \ \ \ \ \ \ \ \ qn\ =\ qn\ *\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00026}00026\ \ \ \ \ \ \ \ \ eQ\ =\ eQ\ +\ n\ *\ qn;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00027}00027\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ lambda\ =\ 1/(n+1)!*m1}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00028}00028\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ hila::out0\ <<\ "{}\ *\ "{}\ <<\ 1.0/n\ <<\ "{}\(\backslash\)n"{};}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00029}00029\ \ \ \ \ \ \ \ \ lambda\ =\ lambda\ +\ m1\ *\ n;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00030}00030\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00031}00031\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00032}00032\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00035}00035\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ matrix,\ \textcolor{keyword}{typename}\ forcetype>}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00036}00036\ \textcolor{keywordtype}{void}\ staple\_dir\_derivative(\mbox{\hyperlink{classField}{Field<matrix>}}\ \&basegauge1,\ \mbox{\hyperlink{classField}{Field<matrix>}}\ \&basegauge2,}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00037}00037\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ \&Lambda,\ \mbox{\hyperlink{classField}{Field<forcetype>}}\ \&result1,}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00038}00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<forcetype>}}\ \&result2,\ Direction\ dir1,\ Direction\ dir2)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00039}00039\ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ stapleder2,\ stapleder3;\ \textcolor{comment}{//\ Two\ derivatives\ that\ need\ to\ be\ communicated}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00040}00040\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00041}00041\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00042}00042\ \ \ \ \ \ \ \ \ matrix\ \mbox{\hyperlink{classU1}{U1}},\ U2,\ U3,\ U4,\ L,\ L2;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00043}00043\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classU1}{U1}}\ =\ basegauge1[X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ U2\ =\ basegauge2[X\ +\ dir1];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00045}00045\ \ \ \ \ \ \ \ \ U3\ =\ basegauge1[X\ +\ dir2];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00046}00046\ \ \ \ \ \ \ \ \ U4\ =\ basegauge2[X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ L\ =\ Lambda[X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ L2\ =\ Lambda[X\ +\ dir2];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00049}00049\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00050}00050\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Up\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ result2[X]\ +=\ (L\ *\ U2\ *\ U3.dagger()).dagger();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ stapleder2[X]\ =\ U3.dagger()\ *\ U4.dagger()\ *\ L;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00053}00053\ \ \ \ \ \ \ \ \ stapleder3[X]\ =\ (U4.dagger()\ *\ L\ *\ U2).dagger();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00055}00055\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Down\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ stapleder2[X]\ =\ stapleder2[X]\ +\ L2.dagger()\ *\ U4.dagger()\ *\ \mbox{\hyperlink{classU1}{U1}};}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ result1[X]\ +=\ U2\ *\ L2.dagger()\ *\ U4.dagger();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ result2[X]\ +=\ L2\ *\ U2.dagger()\ *\ \mbox{\hyperlink{classU1}{U1}}.dagger();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00059}00059\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00061}00061\ \ \ \ \ \textcolor{comment}{//\ Move\ derivatives\ up\ where\ necessary}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00062}00062\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ result2[X]\ +=\ stapleder2[X\ -\/\ dir1];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00064}00064\ \ \ \ \ \ \ \ \ result1[X]\ +=\ stapleder3[X\ -\/\ dir2];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00065}00065\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00066}00066\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00067}00067\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00076}\mbox{\hyperlink{classstout__smeared__field}{00076}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ sun>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classstout__smeared__field}{stout\_smeared\_field}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base}}<sun>\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00077}00077\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00078}00078\ \ \ \ \ \textcolor{keyword}{using\ }gauge\_type\ =\ sun;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00079}00079\ \ \ \ \ \textcolor{keyword}{using\ }fund\_type\ =\ sun;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00080}00080\ \ \ \ \ \textcolor{keyword}{using\ }basetype\ =\ hila::scalar\_type<sun>;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00081}00081\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ Nf\ =\ sun::size;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00082}00082\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ N\ =\ sun::size;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00083}00083\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00084}00084\ \ \ \ \ \textcolor{keywordtype}{double}\ c;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00085}00085\ \ \ \ \ \textcolor{keywordtype}{int}\ smear\_steps\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00086}00086\ \ \ \ \ \textcolor{keywordtype}{int}\ exp\_steps\ =\ 10;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00087}00087\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00088}00088\ \ \ \ \ \mbox{\hyperlink{classgauge__field}{gauge\_field<sun>}}\ \&base\_field;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00089}00089\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ **staples;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00090}00090\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ **smeared\_fields;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00091}00091\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00092}00092\ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field}{stout\_smeared\_field}}(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f,\ \textcolor{keywordtype}{double}\ coeff)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00093}00093\ \ \ \ \ \ \ \ \ :\ base\_field(f),\ c(coeff)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00094}00094\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00095}00095\ \ \ \ \ \ \ \ \ allocate();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00096}00096\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00097}00097\ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field}{stout\_smeared\_field}}(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f,\ \textcolor{keywordtype}{double}\ coeff,\ \textcolor{keywordtype}{int}\ nsteps)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00098}00098\ \ \ \ \ \ \ \ \ :\ base\_field(f),\ c(coeff),\ smear\_steps(nsteps)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ allocate();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00101}00101\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00102}00102\ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field}{stout\_smeared\_field}}(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f,\ \textcolor{keywordtype}{double}\ coeff,\ \textcolor{keywordtype}{int}\ nsteps,\ \textcolor{keywordtype}{int}\ expsteps)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ :\ base\_field(f),\ c(coeff),\ smear\_steps(nsteps),\ exp\_steps(expsteps)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00104}00104\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ allocate();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00106}00106\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00107}00107\ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field}{stout\_smeared\_field}}(\mbox{\hyperlink{classstout__smeared__field}{stout\_smeared\_field}}\ \&r)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00108}00108\ \ \ \ \ \ \ \ \ :\ base\_field(r.base\_field),\ c(r.c),\ smear\_steps(r.smear\_steps),}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00109}00109\ \ \ \ \ \ \ \ \ \ \ exp\_steps(r.exp\_steps)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00110}00110\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00111}00111\ \ \ \ \ \ \ \ \ allocate();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00112}00112\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00114}00114\ \ \ \ \ \textcolor{keywordtype}{void}\ allocate()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00115}00115\ \ \ \ \ \ \ \ \ staples\ =\ (\mbox{\hyperlink{classField}{Field<sun>}}\ **)malloc(smear\_steps\ *\ \textcolor{keyword}{sizeof}(\mbox{\hyperlink{classField}{Field<sun>}}\ *));}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ smeared\_fields\ =\ (\mbox{\hyperlink{classField}{Field<sun>}}\ **)malloc(smear\_steps\ *\ \textcolor{keyword}{sizeof}(\mbox{\hyperlink{classField}{Field<sun>}}\ *));}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00117}00117\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ step\ =\ 0;\ step\ <\ smear\_steps\ -\/\ 1;\ step++)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00118}00118\ \ \ \ \ \ \ \ \ \ \ \ \ staples[step]\ =\ \textcolor{keyword}{new}\ \mbox{\hyperlink{classField}{Field<sun>}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00119}00119\ \ \ \ \ \ \ \ \ \ \ \ \ smeared\_fields[step]\ =\ \textcolor{keyword}{new}\ \mbox{\hyperlink{classField}{Field<sun>}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00120}00120\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00121}00121\ \ \ \ \ \ \ \ \ staples[smear\_steps\ -\/\ 1]\ =\ \textcolor{keyword}{new}\ \mbox{\hyperlink{classField}{Field<sun>}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00122}00122\ \ \ \ \ \ \ \ \ smeared\_fields[smear\_steps\ -\/\ 1]\ =\ \&(this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[0]);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00123}00123\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00124}00124\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00125}00125\ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field}{\string~stout\_smeared\_field}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00126}00126\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ step\ =\ 0;\ step\ <\ smear\_steps\ -\/\ 1;\ step++)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00127}00127\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{delete}\ staples[step];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00128}00128\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{delete}\ smeared\_fields[step];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00129}00129\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00130}00130\ \ \ \ \ \ \ \ \ free(staples);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00131}00131\ \ \ \ \ \ \ \ \ free(smeared\_fields);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00132}00132\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00133}00133\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00134}00134\ \ \ \ \ \textcolor{comment}{//\ Represent\ the\ fields}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00135}\mbox{\hyperlink{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38}{00135}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38}{refresh}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00136}00136\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ *previous;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00137}00137\ \ \ \ \ \ \ \ \ previous\ =\ \&base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[0];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00138}00138\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00139}00139\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ step\ =\ 0;\ step\ <\ smear\_steps;\ step++)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00140}00140\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ previous[dir].\mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{check\_alloc}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00141}00141\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00142}00142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ staples[step][dir]\ =\ calc\_staples(previous,\ dir);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00143}00143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00144}00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00145}00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c\ *\ previous[dir][X]\ *\ staples[step][dir][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00146}00146\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00147}00147\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ Q.exp(exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00148}00148\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ smeared\_fields[step][dir][X]\ =\ previous[dir][X]\ *\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00149}00149\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00150}00150\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00151}00151\ \ \ \ \ \ \ \ \ \ \ \ \ previous\ =\ smeared\_fields[step];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00152}00152\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00153}00153\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00154}00154\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00155}\mbox{\hyperlink{classstout__smeared__field_a8a13ab9832465a512bb9eb323f05747b}{00155}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_a8a13ab9832465a512bb9eb323f05747b}{set\_unity}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00156}00156\ \ \ \ \ \ \ \ \ base\_field.\mbox{\hyperlink{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0}{set\_unity}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00157}00157\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38}{refresh}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00158}00158\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00159}00159\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00160}\mbox{\hyperlink{classstout__smeared__field_a2be823e434dbde3f1e950b19b70cc26f}{00160}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_a2be823e434dbde3f1e950b19b70cc26f}{random}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00161}00161\ \ \ \ \ \ \ \ \ base\_field.\mbox{\hyperlink{classgauge__field_a56e00674460fe00fc052a3637f00b88e}{random}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00162}00162\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38}{refresh}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00163}00163\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00164}00164\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00165}\mbox{\hyperlink{classstout__smeared__field_ad230c99c5b59d72fa77d1e339331e319}{00165}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_ad230c99c5b59d72fa77d1e339331e319}{add\_momentum}}(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{SquareMatrix}}<N,\ \mbox{\hyperlink{classComplex}{Complex<basetype>}}>>\ *force)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00166}00166\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Two\ storage\ fields\ for\ the\ current\ and\ previous\ levels\ of\ the\ force}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00167}00167\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ storage1[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00168}00168\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ storage2[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00169}00169\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ storage1[dir]\ =\ force[dir];\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00170}00170\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ *previous\ =\ \&storage1[0];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00171}00171\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ *result\ =\ \&storage2[0];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00173}00173\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Another\ storage\ Field,\ for\ the\ derivative\ of\ the\ exponential}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00174}00174\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ Lambda[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00175}00175\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00176}00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ step\ =\ smear\_steps\ -\/\ 1;\ step\ >=\ 0;\ step-\/-\/)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00177}00177\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Find\ the\ gauge\ field\ the\ current\ level\ is\ calculated\ from}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00178}00178\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ *basegauge;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00179}00179\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (step\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00180}00180\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ basegauge\ =\ \&base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[0];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00181}00181\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00182}00182\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ basegauge\ =\ smeared\_fields[step\ -\/\ 1];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00183}00183\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00184}00184\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00185}00185\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Take\ the\ derivative\ of\ the\ exponential}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00186}00186\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00187}00187\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[dir][ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00188}00188\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00189}00189\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ m0,\ m1,\ qn,\ eQ,\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00190}00190\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c\ *\ basegauge[dir][X]\ *\ staples[step][dir][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00191}00191\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00192}00192\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00193}00193\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m0\ =\ previous[dir][X]\ *\ basegauge[dir][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00194}00194\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ exp\_and\_derivative(Q,\ m0,\ Lambda[dir][X],\ eQ,\ exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00195}00195\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00196}00196\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Lambda[dir][X]);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00197}00197\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00198}00198\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ derivative\ term,\ R\ in\ R*exp(Q)*L}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00199}00199\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[dir][X]\ =\ eQ\ *\ previous[dir][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00201}00201\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ second\ derivative\ term,\ the\ first\ link\ in\ the\ plaquette}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00202}00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[dir][X]\ -\/=\ c\ *\ staples[step][dir][X]\ *\ Lambda[dir][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00203}00203\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00204}00204\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Now\ update\ Lambda\ to\ the\ derivative\ of\ the\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00205}00205\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Lambda[dir][X]\ =\ -\/c\ *\ Lambda[dir][X]\ *\ basegauge[dir][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00206}00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00207}00207\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00208}00208\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00209}00209\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Take\ the\ derivetive\ with\ respect\ to\ the\ links\ in\ the\ staples}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00210}00210\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(dir1)\ foralldir(dir2)\ \textcolor{keywordflow}{if}\ (dir1\ !=\ dir2)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00211}00211\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ staple\_dir\_derivative(basegauge[dir1],\ basegauge[dir2],\ Lambda[dir1],}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00212}00212\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[dir1],\ result[dir2],\ dir1,\ dir2);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00213}00213\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00214}00214\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00215}00215\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Swap\ previous\ and\ result\ for\ the\ next\ iteration}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00216}00216\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ *tmp\ =\ previous;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00217}00217\ \ \ \ \ \ \ \ \ \ \ \ \ previous\ =\ result;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00218}00218\ \ \ \ \ \ \ \ \ \ \ \ \ result\ =\ tmp;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ basegauge\ =\ \&smeared\_fields[step][0];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00220}00220\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00221}00221\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00222}00222\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Since\ we\ swap\ at\ the\ end,\ the\ force\ is\ now\ in\ "{}previous"{}}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00223}00223\ \ \ \ \ \ \ \ \ base\_field.\mbox{\hyperlink{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}{add\_momentum}}(previous);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00224}00224\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00225}00225\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00226}\mbox{\hyperlink{classstout__smeared__field_a854af3214e5869ddb89698e02d236dfb}{00226}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_a854af3214e5869ddb89698e02d236dfb}{draw\_momentum}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a992a5340137630d537be54e1bb452c21}{draw\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00227}\mbox{\hyperlink{classstout__smeared__field_aafeee9db3df5e90244ef91eb63d7d1b0}{00227}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_aafeee9db3df5e90244ef91eb63d7d1b0}{zero\_momentum}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402}{zero\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00228}00228\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00229}\mbox{\hyperlink{classstout__smeared__field_adbefe78929accaa0aea4cdbd53e624be}{00229}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_adbefe78929accaa0aea4cdbd53e624be}{backup}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}{backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00230}00230\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00231}00231\ \ \ \ \ \textcolor{comment}{//\ Restore\ the\ previous\ backup}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00232}\mbox{\hyperlink{classstout__smeared__field_a1e2df56a708d217fc9e2e6d7abb0d94e}{00232}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classstout__smeared__field_a1e2df56a708d217fc9e2e6d7abb0d94e}{restore\_backup}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}{restore\_backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00233}00233\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00234}00234\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ \&get\_momentum(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ base\_field.\mbox{\hyperlink{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae}{get\_momentum}}(dir);\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00235}00235\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ \&get\_gauge(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ base\_field.\mbox{\hyperlink{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6}{get\_gauge}}(dir);\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00236}00236\ \};}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00237}00237\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00238}00238\ \textcolor{preprocessor}{\#if\ NDIM\ ==\ 4}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00239}00239\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00240}00240\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ sun>\ \textcolor{keyword}{struct\ }HEX\_smeared\_field\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base}}<sun>\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00241}00241\ \ \ \ \ \textcolor{keyword}{using\ }gauge\_type\ =\ sun;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00242}00242\ \ \ \ \ \textcolor{keyword}{using\ }fund\_type\ =\ sun;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00243}00243\ \ \ \ \ \textcolor{keyword}{using\ }basetype\ =\ hila::scalar\_type<sun>;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00244}00244\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ Nf\ =\ sun::size;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00245}00245\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ N\ =\ sun::size;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00246}00246\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00247}00247\ \ \ \ \ \textcolor{comment}{//\ SU2\ default\ parameters}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00248}00248\ \ \ \ \ \textcolor{keywordtype}{double}\ c1\ =\ 0.13;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00249}00249\ \ \ \ \ \textcolor{keywordtype}{double}\ c2\ =\ 0.1525;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00250}00250\ \ \ \ \ \textcolor{keywordtype}{double}\ c3\ =\ 0.175;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00251}00251\ \ \ \ \ \textcolor{keywordtype}{int}\ exp\_steps\ =\ 10;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00252}00252\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00253}00253\ \ \ \ \ \mbox{\hyperlink{classgauge__field}{gauge\_field<sun>}}\ \&base\_field;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00254}00254\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ staples3[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00255}00255\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ level3[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00256}00256\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ staples2[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00257}00257\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ level2[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00258}00258\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ staples1[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00259}00259\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00260}00260\ \ \ \ \ HEX\_smeared\_field(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f)\ :\ base\_field(f)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00261}00261\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00262}00262\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00263}00263\ \ \ \ \ HEX\_smeared\_field(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f,\ \textcolor{keywordtype}{int}\ nsteps)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00264}00264\ \ \ \ \ \ \ \ \ :\ base\_field(f),\ exp\_steps(nsteps)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00265}00265\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00266}00266\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00267}00267\ \ \ \ \ HEX\_smeared\_field(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f,\ \textcolor{keywordtype}{double}\ \_c1,\ \textcolor{keywordtype}{double}\ \_c2,\ \textcolor{keywordtype}{double}\ \_c3)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00268}00268\ \ \ \ \ \ \ \ \ :\ base\_field(f),\ c1(\_c1),\ c2(\_c2),\ c3(\_c3)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00269}00269\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00270}00270\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00271}00271\ \ \ \ \ HEX\_smeared\_field(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f,\ \textcolor{keywordtype}{double}\ \_c1,\ \textcolor{keywordtype}{double}\ \_c2,\ \textcolor{keywordtype}{double}\ \_c3,}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00272}00272\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nsteps)}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00273}00273\ \ \ \ \ \ \ \ \ :\ base\_field(f),\ c1(\_c1),\ c2(\_c2),\ c3(\_c3),\ exp\_steps(nsteps)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00274}00274\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<sun>}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00275}00275\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00276}00276\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00277}00277\ \ \ \ \ \textcolor{comment}{//\ Represent\ the\ fields}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00278}00278\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea}{refresh}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00279}00279\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ *previous;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00280}00280\ \ \ \ \ \ \ \ \ previous\ =\ \&base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[0];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00281}00281\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00282}00282\ \ \ \ \ \ \ \ \ foralldir(mu)\ \{\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu].\mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{check\_alloc}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00283}00283\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00284}00284\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Level\ 3,\ link\ to\ Direction\ mu,\ staples\ only\ summed\ to}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00285}00285\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ to\ Direction\ nu}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00286}00286\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00287}00287\ \ \ \ \ \ \ \ \ \ \ \ \ staples3[nu][mu]\ =\ calc\_staples(base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}},\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}},\ mu,\ nu);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00288}00288\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00289}00289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00290}00290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c3\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ staples3[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00291}00291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00292}00292\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ Q.exp(exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00293}00293\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ level3[nu][mu][X]\ =\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00294}00294\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00295}00295\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00296}00296\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00297}00297\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Level\ 2,\ link\ to\ Direction\ mu,\ staples\ summed\ to\ Direction}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00298}00298\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ rho\ !=\ mu,\ nu.\ label\ directions\ nu\ and\ rho\ by\ eta\ !=\ mu,\ nu,\ rho}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00299}00299\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00300}00300\ \ \ \ \ \ \ \ \ \ \ \ \ staples2[nu][mu][ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00301}00301\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(rho)\ \textcolor{keywordflow}{if}\ (rho\ !=\ mu)\ \textcolor{keywordflow}{if}\ (rho\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00302}00302\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Direction\ eta;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00303}00303\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(e)\ \textcolor{keywordflow}{if}\ (e\ !=\ mu\ \&\&\ e\ !=\ nu\ \&\&\ e\ !=\ rho)\ eta\ =\ e;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00304}00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ stp\ =\ calc\_staples(level3[eta],\ level3[eta],\ mu,\ rho);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00305}00305\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ staples2[nu][mu][ALL]\ =\ staples2[nu][mu][X]\ +\ stp[X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00306}00306\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00307}00307\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00308}00308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00309}00309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c2\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ staples2[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00310}00310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00311}00311\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ Q.exp(exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00312}00312\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ level2[nu][mu][X]\ =\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00313}00313\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00314}00314\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00315}00315\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00316}00316\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Level\ 1,\ link\ to\ Direction\ mu,\ staples\ summed\ to\ directions\ nu}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00317}00317\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ with\ Direction\ nu\ excluded\ from\ lower\ levels}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00318}00318\ \ \ \ \ \ \ \ \ foralldir(mu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ staples1[mu][ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00320}00320\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00321}00321\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ stp\ =\ calc\_staples(level2[nu],\ level2[mu],\ mu,\ nu);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00322}00322\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ staples1[mu][ALL]\ =\ staples1[mu][X]\ +\ stp[X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00323}00323\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00324}00324\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00325}00325\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00326}00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c1\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ staples1[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00327}00327\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00328}00328\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ Q.exp(exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00329}00329\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>gauge[mu][X]\ =\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00330}00330\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00331}00331\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00332}00332\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00333}00333\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00334}00334\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_abb3b1c2368af04e06b39e819698a44e7}{set\_unity}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00335}00335\ \ \ \ \ \ \ \ \ base\_field.\mbox{\hyperlink{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0}{set\_unity}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00336}00336\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea}{refresh}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00337}00337\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00338}00338\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00339}00339\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a6c68959f87cc42285e219923272a1626}{random}}()\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00340}00340\ \ \ \ \ \ \ \ \ base\_field.\mbox{\hyperlink{classgauge__field_a56e00674460fe00fc052a3637f00b88e}{random}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00341}00341\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea}{refresh}}();}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00342}00342\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00343}00343\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00344}00344\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_ae03bb8db75c725bd5d04a027ca06d6f0}{add\_momentum}}(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{SquareMatrix}}<N,\ \mbox{\hyperlink{classComplex}{Complex<basetype>}}>>\ *force)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00345}00345\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ lambda1[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00346}00346\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ result1[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00347}00347\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ lambda2[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00348}00348\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ result2[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00349}00349\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ lambda3[NDIM][NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00350}00350\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<SquareMatrix<N,\ Complex<basetype>}}>>\ result[NDIM];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00351}00351\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00352}00352\ \ \ \ \ \ \ \ \ foralldir(mu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00353}00353\ \ \ \ \ \ \ \ \ \ \ \ \ result[mu]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00354}00354\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00355}00355\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result1[mu][nu]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00356}00356\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result2[mu][nu]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00357}00357\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00358}00358\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00359}00359\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00360}00360\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Level1\ exponential}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00361}00361\ \ \ \ \ \ \ \ \ foralldir(mu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00362}00362\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00363}00363\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ m0,\ m1,\ qn,\ eQ,\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00364}00364\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c1\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ staples1[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00365}00365\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00366}00366\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00367}00367\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m0\ =\ force[mu][X]\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00368}00368\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ exp\_and\_derivative(Q,\ m0,\ lambda1[mu][X],\ eQ,\ exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00369}00369\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(lambda1[mu][X]);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00370}00370\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00371}00371\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ derivative\ term,\ R\ in\ R*exp(Q)*L}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00372}00372\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[mu][X]\ =\ eQ\ *\ force[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00373}00373\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00374}00374\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ second\ derivative\ term,\ the\ first\ link\ in\ the\ plaquette}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00375}00375\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[mu][X]\ -\/=\ c1\ *\ staples1[mu][X]\ *\ lambda1[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00376}00376\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00377}00377\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Now\ update\ Lambda\ to\ the\ derivative\ with\ respect\ to\ the\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00378}00378\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lambda1[mu][X]\ =\ -\/c1\ *\ lambda1[mu][X]\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00379}00379\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00380}00380\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00381}00381\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00382}00382\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ level1\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00383}00383\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00384}00384\ \ \ \ \ \ \ \ \ \ \ \ \ staple\_dir\_derivative(level2[nu][mu],\ level2[mu][nu],\ lambda1[mu],}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00385}00385\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result1[nu][mu],\ result1[mu][nu],\ mu,\ nu);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00386}00386\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00387}00387\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00388}00388\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ level2\ exponential}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00389}00389\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00390}00390\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00391}00391\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ m0,\ m1,\ qn,\ eQ,\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00392}00392\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c2\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ staples2[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00393}00393\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00394}00394\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00395}00395\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m0\ =\ result1[nu][mu][X]\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00396}00396\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ exp\_and\_derivative(Q,\ m0,\ lambda2[nu][mu][X],\ eQ,\ exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00397}00397\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(lambda2[nu][mu][X]);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00398}00398\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00399}00399\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ derivative\ term,\ R\ in\ R*exp(Q)*L}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00400}00400\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[mu][X]\ +=\ eQ\ *\ result1[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00401}00401\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00402}00402\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ second\ derivative\ term,\ the\ first\ link\ in\ the\ plaquette}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00403}00403\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[mu][X]\ -\/=\ c2\ *\ staples2[nu][mu][X]\ *\ lambda2[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00404}00404\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00405}00405\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Now\ update\ Lambda\ to\ the\ derivative\ with\ respect\ to\ the\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00406}00406\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lambda2[nu][mu][X]\ =\ -\/c2\ *\ lambda2[nu][mu][X]\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00407}00407\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00408}00408\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00409}00409\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00410}00410\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ level2\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00411}00411\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00412}00412\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(rho)\ \textcolor{keywordflow}{if}\ (rho\ !=\ mu)\ \textcolor{keywordflow}{if}\ (rho\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00413}00413\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Direction\ eta;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00414}00414\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(e)\ \textcolor{keywordflow}{if}\ (e\ !=\ mu\ \&\&\ e\ !=\ nu\ \&\&\ e\ !=\ rho)\ eta\ =\ e;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00415}00415\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ staple\_dir\_derivative(level3[eta][mu],\ level3[eta][rho],\ lambda2[nu][mu],}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00416}00416\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result2[eta][mu],\ result2[eta][rho],\ mu,\ rho);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00417}00417\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00418}00418\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00419}00419\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00420}00420\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ level3\ exponential}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00421}00421\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00422}00422\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00423}00423\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<sun>\ m0,\ m1,\ qn,\ eQ,\ Q;}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00424}00424\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Q\ =\ -\/c3\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X]\ *\ staples3[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00425}00425\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(Q);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00426}00426\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00427}00427\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m0\ =\ result2[nu][mu][X]\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00428}00428\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ exp\_and\_derivative(Q,\ m0,\ lambda3[nu][mu][X],\ eQ,\ exp\_steps);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00429}00429\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(lambda3[nu][mu][X]);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00430}00430\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00431}00431\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ derivative\ term,\ R\ in\ R*exp(Q)*L}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00432}00432\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[mu][X]\ +=\ eQ\ *\ result2[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00433}00433\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00434}00434\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ second\ derivative\ term,\ the\ first\ link\ in\ the\ plaquette}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00435}00435\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ result[mu][X]\ -\/=\ c3\ *\ staples3[nu][mu][X]\ *\ lambda3[nu][mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00436}00436\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00437}00437\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Now\ update\ Lambda\ to\ the\ derivative\ with\ respect\ to\ the\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00438}00438\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lambda3[nu][mu][X]\ =\ -\/c3\ *\ lambda3[nu][mu][X]\ *\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu][X];}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00439}00439\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00440}00440\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00441}00441\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00442}00442\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ level3\ staple}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00443}00443\ \ \ \ \ \ \ \ \ foralldir(mu)\ foralldir(nu)\ \textcolor{keywordflow}{if}\ (mu\ !=\ nu)\ \{}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00444}00444\ \ \ \ \ \ \ \ \ \ \ \ \ staple\_dir\_derivative(base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[mu],\ base\_field.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[nu],}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00445}00445\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lambda3[nu][mu],\ result[mu],\ result[nu],\ mu,\ nu);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00446}00446\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00447}00447\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00448}00448\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ to\ the\ base\ gauge\ momentum}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00449}00449\ \ \ \ \ \ \ \ \ base\_field.\mbox{\hyperlink{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}{add\_momentum}}(result);}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00450}00450\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00451}00451\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00452}00452\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a2f83670dc7790b2e08e683780cf0b66a}{draw\_momentum}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a992a5340137630d537be54e1bb452c21}{draw\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00453}00453\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_ae76527abf82a1fcd4734a1dd4eb4011a}{zero\_momentum}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402}{zero\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00454}00454\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00455}00455\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_addc9c94369482f532e9d89f663a2341c}{backup}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}{backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00456}00456\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00457}00457\ \ \ \ \ \textcolor{comment}{//\ Restore\ the\ previous\ backup}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00458}00458\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a116c7b6e1c1cd51711e8ed3036ec4e18}{restore\_backup}}()\ \{\ base\_field.\mbox{\hyperlink{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}{restore\_backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00459}00459\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00460}00460\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ \&get\_momentum(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ base\_field.\mbox{\hyperlink{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae}{get\_momentum}}(dir);\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00461}00461\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ \&get\_gauge(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ base\_field.\mbox{\hyperlink{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6}{get\_gauge}}(dir);\ \}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00462}00462\ \};}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00463}00463\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00464}00464\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00465}00465\ }
+\DoxyCodeLine{\Hypertarget{smearing_8h_source_l00466}00466\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

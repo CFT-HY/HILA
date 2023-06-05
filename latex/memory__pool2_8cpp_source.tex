@@ -1,0 +1,409 @@
+\doxysection{memory\+\_\+pool2.\+cpp}
+\hypertarget{memory__pool2_8cpp_source}{}\label{memory__pool2_8cpp_source}\index{memory\_pool2.cpp@{memory\_pool2.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}plumbing/lattice.h"{}}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{field_8h}{plumbing/field.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00007}00007\ \textcolor{preprocessor}{\#include\ "{}plumbing/backend\_gpu/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00008}00008\ \textcolor{preprocessor}{\#include\ <list>}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00009}00009\ \textcolor{preprocessor}{\#include\ <iomanip>}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00029}00029\ \textcolor{preprocessor}{\#if\ defined(GPU\_MEMORY\_POOL)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00031}00031\ \textcolor{preprocessor}{\#ifndef\ GPU\_MEMORY\_POOL\_FRACTION}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00032}00032\ \textcolor{preprocessor}{\#define\ GPU\_MEMORY\_POOL\_FRACTION\ 0.2}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00033}00033\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00035}00035\ \textcolor{preprocessor}{\#if\ !defined(CUDA)\ \&\&\ !defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00036}00036\ \textcolor{keyword}{static\_assert}(0\ \&\&\ \textcolor{stringliteral}{"{}HIP\ or\ CUDA\ must\ be\ defined"{}});}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00037}00037\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00039}00039\ \textcolor{comment}{//\ keep\ relatively\ large\ min\ allocation}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00040}00040\ \textcolor{preprocessor}{\#define\ ALLOC\_ALIGNMENT\ 256}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00042}00042\ \textcolor{comment}{//\ Use\ doubly\ 2-\/directional\ linked\ list\ to\ keep\ track}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00043}00043\ \textcolor{keyword}{struct\ }block\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00044}00044\ \ \ \ \ \textcolor{keywordtype}{void}\ *ptr;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00045}00045\ \ \ \ \ block\ *next,\ *prev;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00046}00046\ \ \ \ \ block\ *up,\ *down;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00047}00047\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00048}00048\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_free;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00049}00049\ \};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00051}00051\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ max\_used\_size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00052}00052\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ current\_used\_size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00053}00053\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ total\_pool\_size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00054}00054\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ n\_allocs\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00055}00055\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ free\_list\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00056}00056\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ gpu\_total\_memory\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00057}00057\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00058}00058\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ free\_list\_avg\_size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00059}00059\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{double}\ free\_list\_avg\_search\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00061}00061\ \textcolor{keyword}{static}\ block\ *memory\_blocks;\ \textcolor{comment}{//\ keeps\ track\ of\ all\ of\ memory}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00062}00062\ \textcolor{keyword}{static}\ block\ *free\_blocks;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00063}00063\ \textcolor{keyword}{static}\ block\ *in\_use\_blocks;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00064}00064\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00065}00065\ \textcolor{keyword}{static}\ block\ *unused\_blocks;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00066}00066\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00068}00068\ \textcolor{comment}{//\ Memory\ block\ descriptor\ manager}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00069}00069\ \textcolor{comment}{//\ make\ some\ memory\ alloc\ tracking\ blocks\ -\/\ last.up\ ==\ nullptr}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00070}00070\ block\ *alloc\_more\_block\_descriptors()\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00071}00071\ \ \ \ \ block\ *p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00072}00072\ \ \ \ \ \textcolor{keywordtype}{int}\ n\_blocks\ =\ 1000;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00073}00073\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00074}00074\ \ \ \ \ p\ =\ (block\ *)memalloc(n\_blocks\ *\ \textcolor{keyword}{sizeof}(block));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00075}00075\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00076}00076\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ n\_blocks\ -\/\ 1;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00077}00077\ \ \ \ \ \ \ \ \ p[i].up\ =\ \&p[i\ +\ 1];}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00078}00078\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00079}00079\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00080}00080\ \ \ \ \ p[n\_blocks\ -\/\ 1].up\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00081}00081\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00082}00082\ \ \ \ \ \textcolor{keywordflow}{return}\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00083}00083\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00084}00084\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00085}00085\ block\ *get\_block\_descriptor()\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00086}00086\ \ \ \ \ \textcolor{keywordflow}{if}\ (unused\_blocks\ ==\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00087}00087\ \ \ \ \ \ \ \ \ unused\_blocks\ =\ alloc\_more\_block\_descriptors();}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00088}00088\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00089}00089\ \ \ \ \ block\ *ret\ =\ unused\_blocks;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00090}00090\ \ \ \ \ unused\_blocks\ =\ unused\_blocks-\/>up;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00091}00091\ \ \ \ \ ret-\/>ptr\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00092}00092\ \ \ \ \ ret-\/>up\ =\ ret-\/>down\ =\ ret-\/>next\ =\ ret-\/>prev\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00093}00093\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00094}00094\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00096}00096\ \textcolor{keywordtype}{void}\ release\_block\_descriptor(block\ *p)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00097}00097\ \ \ \ \ p-\/>up\ =\ unused\_blocks;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00098}00098\ \ \ \ \ unused\_blocks\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00099}00099\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00100}00100\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00102}00102\ \textcolor{comment}{//\ Alloc\ memory\ slabs}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00104}00104\ \textcolor{comment}{}\textcolor{keywordtype}{void}\ *gpu\_memory\_allocate(\textcolor{keywordtype}{size\_t}\ m\_alloc)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00105}00105\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kb\ =\ 1024;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00106}00106\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ mb\ =\ kb\ *\ kb;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00107}00107\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00108}00108\ \ \ \ \ \textcolor{comment}{//\ ensure\ size\ is\ multiple\ of\ alignment}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00109}00109\ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_alloc\ \%\ ALLOC\_ALIGNMENT\ !=\ 0)}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00110}00110\ \ \ \ \ \ \ \ \ m\_alloc\ =\ m\_alloc\ -\/\ m\_alloc\ \%\ ALLOC\_ALIGNMENT\ +\ ALLOC\_ALIGNMENT;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00111}00111\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00112}00112\ \ \ \ \ \textcolor{keywordtype}{double}\ fraction\ =\ (double)m\_alloc\ /\ gpu\_total\_memory;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00114}00114\ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}GPU\ memory:\ allocating\ "{}}\ <<\ m\_alloc\ /\ mb\ <<\ \textcolor{stringliteral}{"{}\ MB\ out\ of\ total\ "{}}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00115}00115\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ gpu\_total\_memory\ /\ mb\ <<\ \textcolor{stringliteral}{"{}("{}}\ <<\ (int)(fraction\ *\ 100)\ <<\ \textcolor{stringliteral}{"{}\%)\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00116}00116\ \ \ \ \ total\_pool\_size\ +=\ m\_alloc;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00117}00117\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00118}00118\ \ \ \ \ \textcolor{keywordtype}{void}\ *b\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00119}00119\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00120}00120\ \textcolor{preprocessor}{\#ifndef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00121}00121\ \textcolor{preprocessor}{\#if\ defined(CUDA)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00122}00122\ \ \ \ \ GPU\_CHECK(cudaMalloc(\&b,\ m\_alloc));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00123}00123\ \textcolor{preprocessor}{\#elif\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00124}00124\ \ \ \ \ GPU\_CHECK(hipMalloc(\&b,\ m\_alloc));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00125}00125\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00126}00126\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00127}00127\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00128}00128\ \ \ \ \ \textcolor{keywordflow}{return}\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00129}00129\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00132}00132\ \textcolor{comment}{//\ Init\ memory;\ allocate\ the\ slab}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00134}00134\ \textcolor{comment}{}\textcolor{keywordtype}{void}\ gpu\_memory\_pool\_init()\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00135}00135\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00136}00136\ \textcolor{preprocessor}{\#ifndef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00137}00137\ \textcolor{preprocessor}{\#if\ defined(CUDA)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00138}00138\ \ \ \ \ cudaDeviceProp\ props;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00139}00139\ \ \ \ \ \textcolor{keywordtype}{int}\ my\_device;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00140}00140\ \ \ \ \ GPU\_CHECK(cudaGetDevice(\&my\_device));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00141}00141\ \ \ \ \ GPU\_CHECK(cudaGetDeviceProperties(\&props,\ my\_device));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00142}00142\ \textcolor{preprocessor}{\#elif\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00143}00143\ \ \ \ \ hipDeviceProp\_t\ props;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00144}00144\ \ \ \ \ \textcolor{keywordtype}{int}\ my\_device;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00145}00145\ \ \ \ \ GPU\_CHECK(hipGetDevice(\&my\_device));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00146}00146\ \ \ \ \ GPU\_CHECK(hipGetDeviceProperties(\&props,\ my\_device));}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00147}00147\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00148}00148\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00149}00149\ \ \ \ \ gpu\_total\_memory\ =\ props.totalGlobalMem;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00150}00150\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00152}00152\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_alloc\ =\ gpu\_total\_memory\ *\ GPU\_MEMORY\_POOL\_FRACTION;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00153}00153\ \ \ \ \ \textcolor{comment}{//\ ensure\ size\ is\ multiple\ of\ alignment}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00154}00154\ \ \ \ \ m\_alloc\ =\ m\_alloc\ -\/\ m\_alloc\ \%\ ALLOC\_ALIGNMENT\ +\ ALLOC\_ALIGNMENT;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00155}00155\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00156}00156\ \ \ \ \ block\ *b\ =\ get\_block\_descriptor();}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00157}00157\ \ \ \ \ memory\_blocks\ =\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00158}00158\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00159}00159\ \ \ \ \ b-\/>ptr\ =\ gpu\_memory\_allocate(m\_alloc);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00160}00160\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00161}00161\ \ \ \ \ b-\/>up\ =\ b-\/>down\ =\ b-\/>next\ =\ b-\/>prev\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00162}00162\ \ \ \ \ b-\/>size\ =\ m\_alloc;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00163}00163\ \ \ \ \ b-\/>is\_free\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00164}00164\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00165}00165\ \ \ \ \ \textcolor{comment}{//\ one\ huge\ block\ free}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00166}00166\ \ \ \ \ free\_blocks\ =\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00167}00167\ \ \ \ \ in\_use\_blocks\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00168}00168\ \ \ \ \ free\_list\_size\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00169}00169\ \ \ \ \ max\_used\_size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00170}00170\ \ \ \ \ current\_used\_size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00171}00171\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00174}00174\ \textcolor{comment}{//\ Manage\ free\ and\ in-\/use\ lists:\ remove\_from\_list\ and}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00175}00175\ \textcolor{comment}{//\ insert\_to\_list\_head.\ \ New\ list\ member\ is\ at\ the\ head,\ anticipating}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00176}00176\ \textcolor{comment}{//\ reuse\ soon}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00177}00177\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00178}00178\ \textcolor{keywordtype}{void}\ remove\_from\_list(block\ *p,\ block\ **head)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00179}00179\ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>next\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00180}00180\ \ \ \ \ \ \ \ \ p-\/>next-\/>prev\ =\ p-\/>prev;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00181}00181\ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>prev\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00182}00182\ \ \ \ \ \ \ \ \ p-\/>prev-\/>next\ =\ p-\/>next;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00183}00183\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00184}00184\ \ \ \ \ \ \ \ \ *head\ =\ p-\/>next;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00185}00185\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00186}00186\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00187}00187\ \textcolor{keywordtype}{void}\ insert\_to\_list\_head(block\ *p,\ block\ **head)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00188}00188\ \ \ \ \ \textcolor{keywordflow}{if}\ (*head\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00189}00189\ \ \ \ \ \ \ \ \ (*head)-\/>prev\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00190}00190\ \ \ \ \ p-\/>next\ =\ *head;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00191}00191\ \ \ \ \ p-\/>prev\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00192}00192\ \ \ \ \ *head\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00193}00193\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00194}00194\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00196}00196\ \textcolor{comment}{//\ \ Manage\ active\ block\ lists:}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00197}00197\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00198}00198\ \textcolor{comment}{//\ Merge\ block\ with\ free\ block\ below.\ \ If\ orig\ block\ was\ free,\ remove}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00199}00199\ \textcolor{comment}{//\ from\ free\ list}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00200}00200\ \textcolor{keywordtype}{void}\ merge\_block\_down\_free(block\ *p)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00201}00201\ \ \ \ \ block\ *pdown\ =\ p-\/>down;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00202}00202\ \ \ \ \ pdown-\/>size\ +=\ p-\/>size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00203}00203\ \ \ \ \ pdown-\/>up\ =\ p-\/>up;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00204}00204\ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>up\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00205}00205\ \ \ \ \ \ \ \ \ p-\/>up-\/>down\ =\ pdown;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00206}00206\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00207}00207\ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>is\_free)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00208}00208\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ remove\ from\ free\ list}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00209}00209\ \ \ \ \ \ \ \ \ remove\_from\_list(p,\ \&free\_blocks);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00210}00210\ \ \ \ \ \ \ \ \ free\_list\_size-\/-\/;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00211}00211\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00212}00212\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00213}00213\ \ \ \ \ release\_block\_descriptor(p);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00214}00214\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00215}00215\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00216}00216\ \textcolor{comment}{//\ \ Merge\ block\ with\ free\ block\ above.}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00217}00217\ \textcolor{keywordtype}{void}\ merge\_block\_up\_free(block\ *p)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00218}00218\ \ \ \ \ block\ *pup\ =\ p-\/>up;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00219}00219\ \ \ \ \ pup-\/>size\ +=\ p-\/>size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00220}00220\ \ \ \ \ pup-\/>ptr\ =\ p-\/>ptr;\ \textcolor{comment}{//\ set\ the\ ptr\ to\ base}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00221}00221\ \ \ \ \ pup-\/>down\ =\ p-\/>down;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00222}00222\ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>down\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00223}00223\ \ \ \ \ \ \ \ \ p-\/>down-\/>up\ =\ pup;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00224}00224\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00225}00225\ \ \ \ \ \ \ \ \ memory\_blocks\ =\ pup;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00226}00226\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00227}00227\ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>is\_free)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00228}00228\ \ \ \ \ \ \ \ \ remove\_from\_list(p,\ \&free\_blocks);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00229}00229\ \ \ \ \ \ \ \ \ free\_list\_size-\/-\/;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00230}00230\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00231}00231\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00232}00232\ \ \ \ \ release\_block\_descriptor(p);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00233}00233\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00234}00234\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00235}00235\ \textcolor{comment}{//\ split\ free\ block,\ insert\ new\ block\ above\ p\ and\ return\ it}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00236}00236\ \textcolor{comment}{//\ return\ the\ upper\ slice\ of\ the\ free\ block}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00237}00237\ block\ *split\_free\_block(block\ *p,\ \textcolor{keywordtype}{size\_t}\ req\_size)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00238}00238\ \ \ \ \ block\ *b\ =\ get\_block\_descriptor();}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00239}00239\ \ \ \ \ b-\/>up\ =\ p-\/>up;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00240}00240\ \ \ \ \ b-\/>down\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00241}00241\ \ \ \ \ p-\/>up\ =\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00242}00242\ \ \ \ \ \textcolor{keywordflow}{if}\ (b-\/>up\ !=\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00243}00243\ \ \ \ \ \ \ \ \ b-\/>up-\/>down\ =\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00244}00244\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00245}00245\ \ \ \ \ \textcolor{comment}{//\ set\ data\ pointer\ as\ appropriate}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00246}00246\ \ \ \ \ b-\/>ptr\ =\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{char}\ *\textcolor{keyword}{>}(p-\/>ptr)\ +\ p-\/>size\ -\/\ req\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00247}00247\ \ \ \ \ b-\/>size\ =\ req\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00248}00248\ \ \ \ \ p-\/>size\ -\/=\ req\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00249}00249\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00250}00250\ \ \ \ \ b-\/>is\_free\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00251}00251\ \ \ \ \ \textcolor{comment}{//\ Free\ list\ pointers\ remain\ OK\ (p\ is\ there)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00252}00252\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00253}00253\ \ \ \ \ \textcolor{keywordflow}{return}\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00254}00254\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00255}00255\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00256}00256\ \textcolor{comment}{//\ Make\ memory\ block\ free,\ insert\ to\ free\ list}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00257}00257\ \textcolor{keywordtype}{void}\ mark\_block\_free(block\ *p)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00258}00258\ \ \ \ \ p-\/>is\_free\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00259}00259\ \ \ \ \ insert\_to\_list\_head(p,\ \&free\_blocks);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00260}00260\ \ \ \ \ free\_list\_size++;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00261}00261\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00262}00262\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00263}00263\ \textcolor{comment}{//\ Add\ block\ to\ the\ tail\ of\ block\ list}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00264}00264\ \textcolor{keywordtype}{void}\ add\_block\_to\_top(block\ *p)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00265}00265\ \ \ \ \ p-\/>up\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00266}00266\ \ \ \ \ \textcolor{keywordflow}{if}\ (memory\_blocks\ ==\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00267}00267\ \ \ \ \ \ \ \ \ memory\_blocks\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00268}00268\ \ \ \ \ \ \ \ \ p-\/>down\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00269}00269\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00270}00270\ \ \ \ \ \ \ \ \ block\ *b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00271}00271\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ memory\_blocks;\ b-\/>up\ !=\ \textcolor{keyword}{nullptr};\ b\ =\ b-\/>up)}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00272}00272\ \ \ \ \ \ \ \ \ \ \ \ \ ;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00273}00273\ \ \ \ \ \ \ \ \ b-\/>up\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00274}00274\ \ \ \ \ \ \ \ \ p-\/>down\ =\ b;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00275}00275\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00276}00276\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00277}00277\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00279}00279\ \textcolor{comment}{//\ Memory\ allocator;\ similar\ interface\ to\ cudaMalloc}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00281}00281\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00282}00282\ \textcolor{keywordtype}{void}\ gpu\_memory\_pool\_alloc(\textcolor{keywordtype}{void}\ **ret,\ \textcolor{keywordtype}{size\_t}\ req\_size)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00283}00283\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00284}00284\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ initialized\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00285}00285\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00286}00286\ \ \ \ \ \textcolor{keywordflow}{if}\ (!initialized)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00287}00287\ \ \ \ \ \ \ \ \ initialized\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00288}00288\ \ \ \ \ \ \ \ \ gpu\_memory\_pool\_init();}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00289}00289\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00290}00290\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00291}00291\ \ \ \ \ gpuStreamSynchronize(0);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00292}00292\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00293}00293\ \ \ \ \ \textcolor{comment}{//\ make\ req\_size\ to\ be\ multiple\ of\ alignment}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00294}00294\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ align\_mod\ =\ req\_size\ \%\ ALLOC\_ALIGNMENT;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00295}00295\ \ \ \ \ \textcolor{keywordflow}{if}\ (align\_mod\ >\ 0)}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00296}00296\ \ \ \ \ \ \ \ \ req\_size\ =\ req\_size\ -\/\ align\_mod\ +\ ALLOC\_ALIGNMENT;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00297}00297\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00298}00298\ \ \ \ \ \textcolor{comment}{//\ hila::out0\ <<\ "{}REQ\ SIZE\ "{}\ <<\ req\_size\ <<\ '\(\backslash\)n';}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00299}00299\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00300}00300\ \ \ \ \ n\_allocs++;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00301}00301\ \ \ \ \ free\_list\_avg\_size\ +=\ free\_list\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00302}00302\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00303}00303\ \ \ \ \ \textcolor{comment}{//\ do\ we\ have\ free\ stuff?\ \ Simple\ linear\ search\ -\/\ list\ should\ not\ be\ too\ large}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00304}00304\ \ \ \ \ \textcolor{keywordtype}{bool}\ found\_match\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00305}00305\ \ \ \ \ \textcolor{keywordtype}{int}\ steps\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00306}00306\ \ \ \ \ block\ *ptr\ =\ free\_blocks;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00307}00307\ \ \ \ \ \textcolor{keywordflow}{for}\ (block\ *p\ =\ free\_blocks;\ p\ !=\ \textcolor{keyword}{nullptr};\ p\ =\ p-\/>next)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00308}00308\ \ \ \ \ \ \ \ \ steps++;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00309}00309\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>size\ ==\ req\_size)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00310}00310\ \ \ \ \ \ \ \ \ \ \ \ \ found\_match\ =\ \textcolor{keyword}{true};\ \textcolor{comment}{//\ perfect\ match,\ use\ it}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00311}00311\ \ \ \ \ \ \ \ \ \ \ \ \ ptr\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00312}00312\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00313}00313\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00314}00314\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00315}00315\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p-\/>size\ >\ req\_size)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00316}00316\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ find\ smallest\ free\ block\ which\ is\ OK}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00317}00317\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found\_match\ ||\ ptr-\/>size\ >\ p-\/>size)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00318}00318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ptr\ =\ p;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00320}00320\ \ \ \ \ \ \ \ \ \ \ \ \ found\_match\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00321}00321\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00322}00322\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00323}00323\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00324}00324\ \ \ \ \ free\_list\_avg\_search\ +=\ steps;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00325}00325\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00326}00326\ \ \ \ \ \textcolor{comment}{//\ got\ it,\ split\ a\ piece\ out\ of\ it}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00327}00327\ \ \ \ \ \textcolor{keywordflow}{if}\ (found\_match)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00328}00328\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ptr-\/>size\ >\ req\_size)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00329}00329\ \ \ \ \ \ \ \ \ \ \ \ \ ptr\ =\ split\_free\_block(ptr,\ req\_size);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00330}00330\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00331}00331\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ ptr-\/>size\ ==\ req\_size}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00332}00332\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ rm\ from\ free\ list}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00333}00333\ \ \ \ \ \ \ \ \ \ \ \ \ remove\_from\_list(ptr,\ \&free\_blocks);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00334}00334\ \ \ \ \ \ \ \ \ \ \ \ \ free\_list\_size-\/-\/;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00335}00335\ \ \ \ \ \ \ \ \ \ \ \ \ ptr-\/>is\_free\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00336}00336\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00337}00337\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00338}00338\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ move\ to\ in-\/use\ list}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00339}00339\ \ \ \ \ \ \ \ \ insert\_to\_list\_head(ptr,\ \&in\_use\_blocks);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00340}00340\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00341}00341\ \ \ \ \ \ \ \ \ current\_used\_size\ +=\ req\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00342}00342\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (current\_used\_size\ >\ max\_used\_size)}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00343}00343\ \ \ \ \ \ \ \ \ \ \ \ \ max\_used\_size\ =\ current\_used\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00344}00344\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00345}00345\ \ \ \ \ \ \ \ \ *ret\ =\ ptr-\/>ptr;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00346}00346\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00347}00347\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00348}00348\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00349}00349\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ try\ to\ allocate\ more?}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00350}00350\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (total\_pool\_size\ <\ (1.0\ -\/\ 1.5\ *\ GPU\_MEMORY\_POOL\_FRACTION)\ *\ gpu\_total\_memory)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00351}00351\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_alloc\ =\ GPU\_MEMORY\_POOL\_FRACTION\ *\ gpu\_total\_memory;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00352}00352\ \ \ \ \ \ \ \ \ \ \ \ \ m\_alloc\ =\ (m\_alloc\ >\ req\_size)\ ?\ m\_alloc\ :\ req\_size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00353}00353\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ leave\ 10\%\ of\ total\ memory}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00354}00354\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_alloc\ +\ total\_pool\_size\ <\ 0.9\ *\ gpu\_total\_memory)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00355}00355\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ put\ an\ "{}empty"{}\ block\ as\ a\ separator\ (non-\/mergeable)}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00356}00356\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ block\ *p\ =\ get\_block\_descriptor();}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00357}00357\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p-\/>size\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00358}00358\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p-\/>is\_free\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00359}00359\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ add\_block\_to\_top(p);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00360}00360\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00361}00361\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ new\ memory\ block}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00362}00362\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p\ =\ get\_block\_descriptor();}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00363}00363\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p-\/>ptr\ =\ gpu\_memory\_allocate(m\_alloc);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00364}00364\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ total\_pool\_size\ +=\ m\_alloc;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00365}00365\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p-\/>size\ =\ m\_alloc;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00366}00366\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ add\_block\_to\_top(p);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00367}00367\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mark\_block\_free(p);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00368}00368\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00369}00369\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gpu\_memory\_pool\_alloc(ret,\ req\_size);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00370}00370\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00371}00371\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00372}00372\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00373}00373\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00374}00374\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00375}00375\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}MPI\ rank\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ <<\ \textcolor{stringliteral}{"{}:\ out\ of\ memory\ in\ GPU\ pool,\ request\ size\ "{}}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00376}00376\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ req\_size\ <<\ \textcolor{stringliteral}{"{},\ current\ pool\ size\ "{}}\ <<\ total\_pool\_size\ <<\ std::endl;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00377}00377\ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(0);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00378}00378\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00379}00379\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00381}00381\ \textcolor{comment}{//\ And\ release\ memory.\ \ Pointer\ must\ be\ exactly\ the\ same!}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00383}00383\ \textcolor{comment}{}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00384}00384\ \textcolor{keywordtype}{void}\ gpu\_memory\_pool\_free(\textcolor{keywordtype}{void}\ *ptr)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00385}00385\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00386}00386\ \ \ \ \ \textcolor{comment}{//\ search\ the\ list\ for\ the\ memory\ block}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00387}00387\ \ \ \ \ \textcolor{keywordflow}{for}\ (block\ *f\ =\ in\_use\_blocks;\ f\ !=\ \textcolor{keyword}{nullptr};\ f\ =\ f-\/>next)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00388}00388\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (f-\/>ptr\ ==\ ptr)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00389}00389\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ found\ the\ allocation,\ remove\ from\ in\_use}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00390}00390\ \ \ \ \ \ \ \ \ \ \ \ \ remove\_from\_list(f,\ \&in\_use\_blocks);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00391}00391\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00392}00392\ \ \ \ \ \ \ \ \ \ \ \ \ current\_used\_size\ -\/=\ f-\/>size;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00393}00393\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00394}00394\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Are\ neighbour\ blocks\ also\ free?}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00395}00395\ \ \ \ \ \ \ \ \ \ \ \ \ block\ *down\ =\ f-\/>down;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00396}00396\ \ \ \ \ \ \ \ \ \ \ \ \ block\ *up\ =\ f-\/>up;}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00397}00397\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (down\ !=\ \textcolor{keyword}{nullptr}\ \&\&\ down-\/>is\_free)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00398}00398\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ merge\_block\_down\_free(f);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00399}00399\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (up\ !=\ \textcolor{keyword}{nullptr}\ \&\&\ up-\/>is\_free)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00400}00400\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ merge\_block\_down\_free(up);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00401}00401\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00402}00402\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (up\ !=\ \textcolor{keyword}{nullptr}\ \&\&\ up-\/>is\_free)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00403}00403\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ merge\_block\_up\_free(f);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00404}00404\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00405}00405\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ no\ merging\ now}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00406}00406\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mark\_block\_free(f);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00407}00407\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00408}00408\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00409}00409\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00410}00410\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00411}00411\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00412}00412\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00413}00413\ \ \ \ \ \textcolor{comment}{//\ did\ not\ find!\ \ serious\ error,\ quit}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00414}00414\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}Memory\ free\ error\ -\/\ unknown\ pointer\ \ "{}}\ <<\ ptr\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00415}00415\ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00416}00416\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00417}00417\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00419}00419\ \textcolor{keywordtype}{void}\ gpu\_memory\_pool\_purge()\ \{\}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00420}00420\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00421}00421\ \textcolor{keywordtype}{void}\ gpu\_memory\_pool\_report()\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00422}00422\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00423}00423\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)nGPU\ Memory\ pool\ statistics\ from\ node\ 0:\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00424}00424\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ \ \ Total\ pool\ size\ "{}}\ <<\ ((double)total\_pool\_size)\ /\ (1024\ *\ 1024)\ <<\ \textcolor{stringliteral}{"{}\ MB\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00425}00425\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ \ \ \#\ of\ allocations\ "{}}\ <<\ n\_allocs\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00426}00426\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ \ \ Average\ free\ list\ search\ "{}}\ <<\ free\_list\_avg\_search\ /\ n\_allocs}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00427}00427\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ steps\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00428}00428\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ \ \ Average\ free\ list\ size\ "{}}\ <<\ free\_list\_avg\_size\ /\ n\_allocs\ <<\ \textcolor{stringliteral}{"{}\ items\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00429}00429\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ \ \ Maximum\ memory\ use\ "{}}\ <<\ max\_used\_size\ /\ (1024\ *\ 1024)\ <<\ \textcolor{stringliteral}{"{}\ MB\(\backslash\)n\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00430}00430\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00431}00431\ \}}
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00432}00432\ }
+\DoxyCodeLine{\Hypertarget{memory__pool2_8cpp_source_l00433}00433\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ GPU\_MEMORY\_POOL}}
+
+\end{DoxyCode}

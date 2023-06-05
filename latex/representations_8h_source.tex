@@ -1,0 +1,290 @@
+\doxysection{representations.\+h}
+\hypertarget{representations_8h_source}{}\label{representations_8h_source}\index{representations.h@{representations.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ REPRESENTATIONS\_H\_}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ REPRESENTATIONS\_H\_}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}sun.h"{}}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00023}00023\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00024}\mbox{\hyperlink{classadjointRep}{00024}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classadjointRep}{adjointRep}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<N\ *\ N\ -\/\ 1,\ radix>\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00025}00025\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00026}00026\ \ \ \ \ \textcolor{keyword}{static\_assert}(\mbox{\hyperlink{structhila_1_1is__arithmetic}{hila::is\_arithmetic<radix>::value}},\ \textcolor{stringliteral}{"{}adjointRep<type>:\ type\ has\ to\ be\ real"{}});}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00029}\mbox{\hyperlink{classadjointRep_ad2f8f0d821e60650ee1422384a97e163}{00029}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classadjointRep_ad2f8f0d821e60650ee1422384a97e163}{base\_type}}\ =\ hila::scalar\_type<radix>;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00030}00030\ \ \ \ \ \textcolor{keyword}{using\ }argument\_type\ =\ radix;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00032}\mbox{\hyperlink{classadjointRep_aa65fdb8a81327c46cb42dc76220017d3}{00032}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU}{sun}}\ =\ \mbox{\hyperlink{classSU}{SU<N,\ radix>}};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00035}\mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{00035}}\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}}\ =\ N\ *\ N\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00037}\mbox{\hyperlink{classadjointRep_a0d02885b774cc8e5eef206dafbb26e3a}{00037}}\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classSU}{sun}}\ \mbox{\hyperlink{classadjointRep_a0d02885b774cc8e5eef206dafbb26e3a}{generator}}(\textcolor{keywordtype}{int}\ i)\ \{\ \textcolor{keywordflow}{return}\ sun::generator(i);\ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00040}\mbox{\hyperlink{classadjointRep_a9f05ce527155b2d2bcc6de3cf26d8553}{00040}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_a9f05ce527155b2d2bcc6de3cf26d8553}{adjointRep}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00042}\mbox{\hyperlink{classadjointRep_a3d93f43bf86ea996fdb5ed11c8a63be8}{00042}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_a3d93f43bf86ea996fdb5ed11c8a63be8}{\string~adjointRep}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00044}\mbox{\hyperlink{classadjointRep_a39cfc988c5df7f0c46764392fc0913d5}{00044}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_a39cfc988c5df7f0c46764392fc0913d5}{adjointRep}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classadjointRep}{adjointRep}}\ \&a)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00047}00047\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00048}\mbox{\hyperlink{classadjointRep_a3ff51a8fbad8147f84665a11e526351c}{00048}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_a3ff51a8fbad8147f84665a11e526351c}{adjointRep}}(\textcolor{keyword}{const}\ scalart\ m)\ :\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}},\ radix>(m)\ \{\}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00049}00049\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00051}00051\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00052}\mbox{\hyperlink{classadjointRep_a249e30815c927ada7b237f4c279f5b82}{00052}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_a249e30815c927ada7b237f4c279f5b82}{adjointRep}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classadjointRep}{adjointRep<N,\ scalart>}}\ m)\ :\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}},\ scalart>(m)\ \{\}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00053}00053\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00055}\mbox{\hyperlink{classadjointRep_aacf8325dbf16ddef7c126b694ea98bad}{00055}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_aacf8325dbf16ddef7c126b694ea98bad}{adjointRep}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classMatrix}{SquareMatrix<size,radix>}}\ m)\ :\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}},radix>(m)\ \{\}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00056}00056\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00057}00057\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00060}\mbox{\hyperlink{classadjointRep_aebba90adcf77448f7caf455a4899cbb2}{00060}}\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classadjointRep}{adjointRep}}\ \mbox{\hyperlink{classadjointRep_aebba90adcf77448f7caf455a4899cbb2}{represented\_generator\_I}}(\textcolor{keywordtype}{int}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00061}00061\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ initialize\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00062}00062\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classadjointRep}{adjointRep}}\ r\_generators[\mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}}];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (initialize)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00064}00064\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00065}00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_generators[g]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00066}00066\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tg\ =\ sun::generator(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00067}00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}};\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00068}00068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tj\ =\ \mbox{\hyperlink{classadjointRep_a0d02885b774cc8e5eef206dafbb26e3a}{generator}}(j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00069}00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ k\ =\ 0;\ k\ <\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}};\ k++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00070}00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tk\ =\ \mbox{\hyperlink{classadjointRep_a0d02885b774cc8e5eef206dafbb26e3a}{generator}}(k);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00071}00071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ tr1\ =\ (tg\ *\ tj\ *\ tk).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}();}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ tr2\ =\ (tj\ *\ tg\ *\ tk).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}();}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00073}00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ k)\ =\ 2\ *\ (tr1.im\ -\/\ tr2.im);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00074}00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00075}00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ initialize\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00078}00078\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ r\_generators[i];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00079}00079\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00082}\mbox{\hyperlink{classadjointRep_a8bc1b16e49f769609e3ac09fc754e3cc}{00082}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classadjointRep_a8bc1b16e49f769609e3ac09fc754e3cc}{represent}}(\mbox{\hyperlink{classSU}{sun}}\ \&m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00083}00083\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}};\ i++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00084}00084\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}};\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00085}00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (*this).e(i,\ j)\ =}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00086}00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 2\ *\ (m.\mbox{\hyperlink{classMatrix__t_af6b8555883c5ba97083a06bf3bdc0959}{adjoint}}()\ *\ \mbox{\hyperlink{classadjointRep_a0d02885b774cc8e5eef206dafbb26e3a}{generator}}(i)\ *\ m\ *\ \mbox{\hyperlink{classadjointRep_a0d02885b774cc8e5eef206dafbb26e3a}{generator}}(j)).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}().re;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00087}00087\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00088}00088\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00089}00089\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00092}00092\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<radix>}}>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00093}\mbox{\hyperlink{classadjointRep_ad3629bb83c969a96bddbe349ea0eef45}{00093}}\ \ \ \ \ \mbox{\hyperlink{classadjointRep_ad3629bb83c969a96bddbe349ea0eef45}{project\_force}}(\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}},\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>\ rforce)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00094}00094\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<radix>}}>\ fforce\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00095}00095\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classadjointRep_a5de16c8a588902b2f5c9e7dd37794e89}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00096}00096\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classadjointRep}{adjointRep}}\ rg\ =\ \mbox{\hyperlink{classadjointRep_aebba90adcf77448f7caf455a4899cbb2}{represented\_generator\_I}}(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00097}00097\ \ \ \ \ \ \ \ \ \ \ \ \ radix\ C\ =\ (rg.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()\ *\ rforce).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}().re;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00098}00098\ \ \ \ \ \ \ \ \ \ \ \ \ fforce\ +=\ C\ *\ sun::generator(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ ct(0,\ 2.0);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00101}00101\ \ \ \ \ \ \ \ \ fforce\ =\ fforce\ *\ ct;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00102}00102\ \ \ \ \ \ \ \ \ project\_antihermitean(fforce);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fforce;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00104}00104\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00105}00105\ \};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00106}00106\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00125}00125\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00126}\mbox{\hyperlink{classantisymmetric}{00126}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classantisymmetric}{antisymmetric}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<N\ *(N\ -\/\ 1)\ /\ 2,\ Complex<radix>>\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00127}00127\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00129}\mbox{\hyperlink{classantisymmetric_a01d15ad2da7e3916bd37183cc414ed8b}{00129}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classantisymmetric_a01d15ad2da7e3916bd37183cc414ed8b}{base\_type}}\ =\ hila::scalar\_type<radix>;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00130}00130\ \ \ \ \ \textcolor{keyword}{using\ }argument\_type\ =\ radix;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00132}\mbox{\hyperlink{classantisymmetric_ae242291218d219ef4027b7c975ad9a1c}{00132}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU}{sun}}\ =\ \mbox{\hyperlink{classSU}{SU<N,\ radix>}};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00133}00133\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00135}\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{00135}}\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}}\ =\ N\ *\ (N\ -\/\ 1)\ /\ 2;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00136}00136\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00138}00138\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}},\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>\mbox{\hyperlink{classMatrix}{::SquareMatrix}};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00140}00140\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}},\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>::operator=;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00141}00141\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00143}\mbox{\hyperlink{classantisymmetric_a2c83f2837f1604dc25f8d20e0bee15b1}{00143}}\ \ \ \ \ \mbox{\hyperlink{classantisymmetric_a2c83f2837f1604dc25f8d20e0bee15b1}{antisymmetric}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00144}00144\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00146}00146\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00147}\mbox{\hyperlink{classantisymmetric_aa6eb343870dba013f69e6d36d881bb32}{00147}}\ \ \ \ \ \mbox{\hyperlink{classantisymmetric_aa6eb343870dba013f69e6d36d881bb32}{antisymmetric}}(\textcolor{keyword}{const}\ scalart\ m)\ :\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}},\ \mbox{\hyperlink{classComplex}{Complex}}<radix>>(m)\ \{\}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00148}00148\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00150}00150\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00151}\mbox{\hyperlink{classantisymmetric_a00bfd31dbe98f92320a2fd03a8aabbfa}{00151}}\ \ \ \ \ \mbox{\hyperlink{classantisymmetric_a00bfd31dbe98f92320a2fd03a8aabbfa}{antisymmetric}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classantisymmetric}{antisymmetric<N,\ scalart>}}\ m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00152}00152\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ j++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00153}00153\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00154}00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ =\ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00155}00155\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00156}00156\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00157}00157\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00159}\mbox{\hyperlink{classantisymmetric_aca0525ec064ea1d2185d821b3500b3fa}{00159}}\ \ \ \ \ \mbox{\hyperlink{classantisymmetric_aca0525ec064ea1d2185d821b3500b3fa}{antisymmetric}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}},\mbox{\hyperlink{classComplex}{Complex<radix>}}>\ m)\ :\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}},\mbox{\hyperlink{classComplex}{Complex}}<radix>>(m)\ \{\}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00160}00160\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00162}00162\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00163}\mbox{\hyperlink{classantisymmetric_ac00eab7f06b481049fa6d08b39382828}{00163}}\ \ \ \ \ \textcolor{keyword}{inline}\ \mbox{\hyperlink{classantisymmetric}{antisymmetric}}\ \&\mbox{\hyperlink{classantisymmetric_ac00eab7f06b481049fa6d08b39382828}{operator=}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classantisymmetric}{antisymmetric<N,\ scalart>}}\ m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00164}00164\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ j++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00165}00165\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00166}00166\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ =\ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00167}00167\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00168}00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00169}00169\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00170}00170\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00172}\mbox{\hyperlink{classantisymmetric_a33bd98bdc5a8e073673f2d2a09e708bd}{00172}}\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classSU}{sun}}\ \mbox{\hyperlink{classantisymmetric_a33bd98bdc5a8e073673f2d2a09e708bd}{generator}}(\textcolor{keywordtype}{int}\ ng)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00173}00173\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ initialize\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00174}00174\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classSU}{sun}}\ generators[\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}}];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00175}00175\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (initialize)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00176}00176\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00177}00177\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00178}00178\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ k\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00179}00179\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ m1\ =\ 0;\ m1\ <\ N;\ m1++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00180}00180\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ m2\ =\ m1\ +\ 1;\ m2\ <\ N;\ m2++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00181}00181\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (g\ ==\ k)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00182}00182\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(m1,\ m2).re\ =\ 0.5;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00183}00183\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(m2,\ m1).re\ =\ -\/0.5;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00184}00184\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00185}00185\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ k++;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00186}00186\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00187}00187\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ initialize\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00188}00188\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00189}00189\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ generators[ng];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00190}00190\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00191}00191\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00193}\mbox{\hyperlink{classantisymmetric_a630a0b22a6aee176b40aca51b75c64c6}{00193}}\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classantisymmetric}{antisymmetric}}\ \mbox{\hyperlink{classantisymmetric_a630a0b22a6aee176b40aca51b75c64c6}{represented\_generator\_I}}(\textcolor{keywordtype}{int}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00194}00194\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ initialize\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00195}00195\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classantisymmetric}{antisymmetric}}\ r\_generators[\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}}];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00196}00196\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (initialize)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00197}00197\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00198}00198\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_generators[g]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00199}00199\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tg\ =\ sun::generator(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00200}00200\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ N\ *\ (N\ -\/\ 1)\ /\ 2;\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00201}00201\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tj\ =\ \mbox{\hyperlink{classantisymmetric_a33bd98bdc5a8e073673f2d2a09e708bd}{generator}}(j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00202}00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ k\ =\ 0;\ k\ <\ N\ *\ (N\ -\/\ 1)\ /\ 2;\ k++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00203}00203\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tk\ =\ \mbox{\hyperlink{classantisymmetric_a33bd98bdc5a8e073673f2d2a09e708bd}{generator}}(k);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00204}00204\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00205}00205\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ tr\ =\ (tj\ *\ tg\ *\ tk).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}();}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00206}00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ k)\ =\ \mbox{\hyperlink{classComplex}{Complex<radix>}}(0,\ 4)\ *\ tr;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00207}00207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00208}00208\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00209}00209\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ initialize\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00210}00210\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00211}00211\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ r\_generators[i];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00212}00212\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00213}00213\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00215}\mbox{\hyperlink{classantisymmetric_a36c61edb212d17bb9cfaafc4b1c4cf4d}{00215}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classantisymmetric_a36c61edb212d17bb9cfaafc4b1c4cf4d}{represent}}(\mbox{\hyperlink{classSU}{sun}}\ \&m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00216}00216\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ i++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00217}00217\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00218}00218\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (*this).e(i,\ j)\ =}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 2\ *}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00220}00220\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\mbox{\hyperlink{classantisymmetric_a33bd98bdc5a8e073673f2d2a09e708bd}{generator}}(i)\ *\ m\ *\ \mbox{\hyperlink{classantisymmetric_a33bd98bdc5a8e073673f2d2a09e708bd}{generator}}(j).\mbox{\hyperlink{classMatrix__t_af6b8555883c5ba97083a06bf3bdc0959}{adjoint}}()\ *\ m.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}();}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00221}00221\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00222}00222\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00223}00223\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00226}00226\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<radix>}}>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00227}\mbox{\hyperlink{classantisymmetric_a28d45c941d1a3c940e4850defc713da9}{00227}}\ \ \ \ \ \mbox{\hyperlink{classantisymmetric_a28d45c941d1a3c940e4850defc713da9}{project\_force}}(\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}},\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>\ rforce)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00228}00228\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<radix>}}>\ fforce\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00229}00229\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classantisymmetric_a7c49a708b1da7e1337eeb0c342f7db7c}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00230}00230\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classantisymmetric}{antisymmetric}}\ rg\ =\ \mbox{\hyperlink{classantisymmetric_a630a0b22a6aee176b40aca51b75c64c6}{represented\_generator\_I}}(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00231}00231\ \ \ \ \ \ \ \ \ \ \ \ \ radix\ C\ =\ (rg.\mbox{\hyperlink{classMatrix__t_af6b8555883c5ba97083a06bf3bdc0959}{adjoint}}()\ *\ rforce).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}().re;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00232}00232\ \ \ \ \ \ \ \ \ \ \ \ \ fforce\ +=\ C\ *\ sun::generator(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00233}00233\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00234}00234\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ ct(0,\ -\/2.0);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00235}00235\ \ \ \ \ \ \ \ \ fforce\ =\ fforce\ *\ ct;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00236}00236\ \ \ \ \ \ \ \ \ project\_antihermitean(fforce);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00237}00237\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fforce;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00238}00238\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00239}00239\ \};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00240}00240\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00259}00259\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00260}\mbox{\hyperlink{classsymmetric}{00260}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classsymmetric}{symmetric}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classMatrix}{SquareMatrix}}<N\ *(N\ +\ 1)\ /\ 2,\ Complex<radix>>\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00261}00261\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00263}\mbox{\hyperlink{classsymmetric_ac4c80c7d36200e75bd8850b0e484d646}{00263}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classsymmetric_ac4c80c7d36200e75bd8850b0e484d646}{base\_type}}\ =\ hila::scalar\_type<radix>;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00264}00264\ \ \ \ \ \textcolor{keyword}{using\ }argument\_type\ =\ radix;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00266}\mbox{\hyperlink{classsymmetric_a011518e7d2bbd08b5878d72c255fbd27}{00266}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU}{sun}}\ =\ \mbox{\hyperlink{classSU}{SU<N,\ radix>}};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00267}00267\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00269}00269\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{SquareMatrix}}<N\ *(N\ +\ 1)\ /\ 2,\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>\mbox{\hyperlink{classMatrix}{::SquareMatrix}};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00271}00271\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{SquareMatrix}}<N\ *(N\ +\ 1)\ /\ 2,\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>::operator=;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00272}00272\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00274}\mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{00274}}\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}}\ =\ N\ *\ (N\ +\ 1)\ /\ 2;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00275}00275\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00277}\mbox{\hyperlink{classsymmetric_a95c9436301338b75b8e7918eed7abf3a}{00277}}\ \ \ \ \ \mbox{\hyperlink{classsymmetric_a95c9436301338b75b8e7918eed7abf3a}{symmetric}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00278}00278\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00280}00280\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00281}\mbox{\hyperlink{classsymmetric_a317076709dec29ad6f98472b58846b45}{00281}}\ \ \ \ \ \mbox{\hyperlink{classsymmetric_a317076709dec29ad6f98472b58846b45}{symmetric}}(\textcolor{keyword}{const}\ scalart\ m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00282}00282\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00283}00283\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00284}00284\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00285}00285\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00286}00286\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}[j][j]\ =\ m;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00287}00287\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00288}00288\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00289}00289\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00291}00291\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00292}\mbox{\hyperlink{classsymmetric_a83e0ba3c3691fdc7a079db0b22e0ad44}{00292}}\ \ \ \ \ \mbox{\hyperlink{classsymmetric_a83e0ba3c3691fdc7a079db0b22e0ad44}{symmetric}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classsymmetric}{symmetric<N,\ scalart>}}\ m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00293}00293\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ j++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00294}00294\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00295}00295\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ =\ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00296}00296\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00297}00297\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00298}00298\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00300}00300\ \ \ \ \ template\ <typename\ scalart,\ std::enable\_if\_t<hila::is\_arithmetic<scalart>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00301}\mbox{\hyperlink{classsymmetric_a24531f44bffe0ac8cff28eddc9da6804}{00301}}\ \ \ \ \ \textcolor{keyword}{inline}\ \mbox{\hyperlink{classsymmetric}{symmetric}}\ \&\mbox{\hyperlink{classsymmetric_a24531f44bffe0ac8cff28eddc9da6804}{operator=}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classsymmetric}{symmetric<N,\ scalart>}}\ m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00302}00302\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ j++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00303}00303\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00304}00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j)\ =\ m.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i,\ j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00305}00305\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00306}00306\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00307}00307\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00308}00308\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00310}\mbox{\hyperlink{classsymmetric_a39f9402a29f4a84c891d4320f5e952fc}{00310}}\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classSU}{sun}}\ \mbox{\hyperlink{classsymmetric_a39f9402a29f4a84c891d4320f5e952fc}{generator}}(\textcolor{keywordtype}{int}\ ng)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00311}00311\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ initialize\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00312}00312\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classSU}{sun}}\ generators[\mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}}];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00313}00313\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (initialize)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00314}00314\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00315}00315\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00316}00316\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (g\ <\ N)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00317}00317\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(g,\ g).re\ =\ sqrt(0.5);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00318}00318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ k\ =\ N;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00320}00320\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ m1\ =\ 0;\ m1\ <\ N;\ m1++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00321}00321\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ m2\ =\ m1\ +\ 1;\ m2\ <\ N;\ m2++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00322}00322\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (g\ ==\ k)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00323}00323\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(m1,\ m2).re\ =\ 0.5;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00324}00324\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(m2,\ m1).re\ =\ 0.5;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00325}00325\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00326}00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ k++;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00327}00327\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00328}00328\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ initialize\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00329}00329\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00330}00330\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ generators[ng];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00331}00331\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00332}00332\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00334}\mbox{\hyperlink{classsymmetric_afd0e5cdfe38411f8af26ef6b7b4e5672}{00334}}\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classsymmetric}{symmetric}}\ \mbox{\hyperlink{classsymmetric_afd0e5cdfe38411f8af26ef6b7b4e5672}{represented\_generator\_I}}(\textcolor{keywordtype}{int}\ i)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00335}00335\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ initialize\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00336}00336\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classsymmetric}{symmetric}}\ r\_generators[\mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}}];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00337}00337\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (initialize)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00338}00338\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00339}00339\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_generators[g]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00340}00340\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tg\ =\ sun::generator(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00341}00341\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ N\ *\ (N\ +\ 1)\ /\ 2;\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00342}00342\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tj\ =\ \mbox{\hyperlink{classsymmetric_a39f9402a29f4a84c891d4320f5e952fc}{generator}}(j);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00343}00343\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ k\ =\ 0;\ k\ <\ N\ *\ (N\ +\ 1)\ /\ 2;\ k++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00344}00344\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classSU}{sun}}\ tk\ =\ \mbox{\hyperlink{classsymmetric_a39f9402a29f4a84c891d4320f5e952fc}{generator}}(k);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00345}00345\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00346}00346\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ tr\ =\ (tj\ *\ tg\ *\ tk).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}();}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00347}00347\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_generators[g].\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(j,\ k)\ =\ \mbox{\hyperlink{classComplex}{Complex<radix>}}(0,\ 4)\ *\ tr;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00348}00348\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00349}00349\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00350}00350\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ initialize\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00351}00351\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00352}00352\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ r\_generators[i];}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00353}00353\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00354}00354\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00356}\mbox{\hyperlink{classsymmetric_af21d29c07959f490fd871aa944549209}{00356}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classsymmetric_af21d29c07959f490fd871aa944549209}{represent}}(\mbox{\hyperlink{classSU}{sun}}\ \&m)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00357}00357\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ i++)}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00358}00358\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00359}00359\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (*this).e(i,\ j)\ =}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00360}00360\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 2\ *\ (\mbox{\hyperlink{classsymmetric_a39f9402a29f4a84c891d4320f5e952fc}{generator}}(i)\ *\ m\ *\ \mbox{\hyperlink{classsymmetric_a39f9402a29f4a84c891d4320f5e952fc}{generator}}(j)\ *\ m.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}();}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00361}00361\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00362}00362\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00363}00363\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00366}00366\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<radix>}}>}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00367}\mbox{\hyperlink{classsymmetric_ad7443708842780e4126ba53b991d6e95}{00367}}\ \ \ \ \ \mbox{\hyperlink{classsymmetric_ad7443708842780e4126ba53b991d6e95}{project\_force}}(\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}},\ \mbox{\hyperlink{classComplex}{Complex<radix>}}>\ rforce)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00368}00368\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<radix>}}>\ fforce\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00369}00369\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ g\ =\ 0;\ g\ <\ \mbox{\hyperlink{classsymmetric_a17653fbd876c684788c0fbb8685fac75}{size}};\ g++)\ \{}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00370}00370\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classsymmetric}{symmetric}}\ rg\ =\ \mbox{\hyperlink{classsymmetric_afd0e5cdfe38411f8af26ef6b7b4e5672}{represented\_generator\_I}}(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00371}00371\ \ \ \ \ \ \ \ \ \ \ \ \ radix\ C\ =\ (rg\ *\ rforce).\mbox{\hyperlink{classMatrix__t_a0297b3f98f0fada413f290dc6d86da8e}{trace}}().re;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00372}00372\ \ \ \ \ \ \ \ \ \ \ \ \ fforce\ +=\ C\ *\ sun::generator(g);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00373}00373\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00374}00374\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<radix>}}\ ct(0,\ -\/2.0);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00375}00375\ \ \ \ \ \ \ \ \ fforce\ =\ fforce\ *\ ct;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00376}00376\ \ \ \ \ \ \ \ \ project\_antihermitean(fforce);}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00377}00377\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fforce;}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00378}00378\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00379}00379\ \};}
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00380}00380\ }
+\DoxyCodeLine{\Hypertarget{representations_8h_source_l00381}00381\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

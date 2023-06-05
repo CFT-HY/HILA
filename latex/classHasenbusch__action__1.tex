@@ -1,0 +1,96 @@
+\doxysection{Hasenbusch\+\_\+action\+\_\+1\texorpdfstring{$<$}{<} gauge\+\_\+field, DIRAC\+\_\+\+OP \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classHasenbusch__action__1}{}\label{classHasenbusch__action__1}\index{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$@{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$}}
+
+
+{\ttfamily \#include $<$fermion\+\_\+field.\+h$>$}
+
+
+
+Inheritance diagram for Hasenbusch\+\_\+action\+\_\+1\texorpdfstring{$<$}{<} gauge\+\_\+field, DIRAC\+\_\+\+OP \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=231pt]{classHasenbusch__action__1__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Hasenbusch\+\_\+action\+\_\+1\texorpdfstring{$<$}{<} gauge\+\_\+field, DIRAC\+\_\+\+OP \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHasenbusch__action__1__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classHasenbusch__action__1_acab8ee13660d2a46090e294e3341de6c}\label{classHasenbusch__action__1_acab8ee13660d2a46090e294e3341de6c} 
+double {\bfseries action} ()
+\begin{DoxyCompactList}\small\item\em Calculate and return the action. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHasenbusch__action__1_a44054da8122a8d00013b9c20552c3e83}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+void \mbox{\hyperlink{classHasenbusch__action__1_a2d53424aa209c486419c0b1a3e4e54a0}{force\+\_\+step}} (double eps)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classaction__base}{action\+\_\+base}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual double {\bfseries action} ()
+\begin{DoxyCompactList}\small\item\em Calculate and return the action. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+virtual void \mbox{\hyperlink{classaction__base_a478cf7430fc29604379676676cb8f656}{force\+\_\+step}} (double eps)
+\item 
+virtual void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+virtual void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, typename DIRAC\+\_\+\+OP$>$\newline
+class Hasenbusch\+\_\+action\+\_\+1$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}
+The Hasenbusch method for updating fermion fields\+: Split the Dirac determinant into two parts, D\+\_\+h1 = D + mh and D\+\_\+h2 = D \texorpdfstring{$\ast$}{*} 1 / (D + mh)\texorpdfstring{$^\wedge$}{\string^}dagger
+
+This is the first action term, with D\+\_\+h1 = D + mh. Since the only real difference here is an addition to the original operator, we can use \doxylink{classfermion__action}{fermion\+\_\+action} with a different operator. 
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00182}{182}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classHasenbusch__action__1_a44054da8122a8d00013b9c20552c3e83}\label{classHasenbusch__action__1_a44054da8122a8d00013b9c20552c3e83} 
+\index{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$@{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$}!draw\_gaussian\_fields@{draw\_gaussian\_fields}}
+\index{draw\_gaussian\_fields@{draw\_gaussian\_fields}!Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$@{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{draw\_gaussian\_fields()}{draw\_gaussian\_fields()}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+void \mbox{\hyperlink{classHasenbusch__action__1}{Hasenbusch\+\_\+action\+\_\+1}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::draw\+\_\+gaussian\+\_\+fields (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Draw any fields with a gaussian distribution, including the momentum 
+
+Reimplemented from \mbox{\hyperlink{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}{action\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00198}{198}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+\Hypertarget{classHasenbusch__action__1_a2d53424aa209c486419c0b1a3e4e54a0}\label{classHasenbusch__action__1_a2d53424aa209c486419c0b1a3e4e54a0} 
+\index{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$@{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$}!force\_step@{force\_step}}
+\index{force\_step@{force\_step}!Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$@{Hasenbusch\_action\_1$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{force\_step()}{force\_step()}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+void \mbox{\hyperlink{classHasenbusch__action__1}{Hasenbusch\+\_\+action\+\_\+1}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::force\+\_\+step (\begin{DoxyParamCaption}\item[{double}]{eps }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Update the momentum with the derivative of the action term 
+
+Reimplemented from \mbox{\hyperlink{classaction__base_a478cf7430fc29604379676676cb8f656}{action\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00199}{199}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+fermion\+\_\+field.\+h\end{DoxyCompactItemize}

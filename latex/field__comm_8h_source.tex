@@ -1,0 +1,890 @@
+\doxysection{field\+\_\+comm.\+h}
+\hypertarget{field__comm_8h_source}{}\label{field__comm_8h_source}\index{field\_comm.h@{field\_comm.h}}
+\mbox{\hyperlink{field__comm_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00003}00003\ \textcolor{preprocessor}{\#ifndef\ FIELD\_COMM\_H}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00004}00004\ \textcolor{preprocessor}{\#define\ FIELD\_COMM\_H}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{field_8h}{field.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00007}00007\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00015}00015\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00016}00016\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::field\_struct::gather\_comm\_elements}}(}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00017}00017\ \ \ \ \ Direction\ d,\ Parity\ par,\ T\ *RESTRICT\ buffer,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00018}00018\ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&to\_node)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00019}00019\ \textcolor{preprocessor}{\#ifndef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00020}00020\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00021}00021\ \ \ \ \ \textcolor{comment}{//\ note:\ -\/d\ in\ is\_on\_edge,\ because\ we're\ about\ to\ send\ stuff\ to\ that}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00022}00022\ \ \ \ \ \textcolor{comment}{//\ Direction\ (gathering\ from\ Direction\ +d)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00023}00023\ \ \ \ \ \textcolor{keywordflow}{if}\ (boundary\_condition[d]\ ==\ hila::bc::ANTIPERIODIC\ \&\&\ lattice.mynode.\mbox{\hyperlink{structlattice__struct_1_1node__struct_af493bb3385334627ed15b9c538d5cf85}{is\_on\_edge}}(-\/d))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00024}00024\ \ \ \ \ \ \ \ \ payload.gather\_comm\_elements(buffer,\ to\_node,\ par,\ lattice,\ \textcolor{keyword}{true});}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00025}00025\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00026}00026\ \ \ \ \ \ \ \ \ payload.gather\_comm\_elements(buffer,\ to\_node,\ par,\ lattice,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00027}00027\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00028}00028\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00029}00029\ \ \ \ \ payload.gather\_comm\_elements(buffer,\ to\_node,\ par,\ lattice,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00030}00030\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00031}00031\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00032}00032\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00033}00033\ \ \ \ \ \textcolor{comment}{//\ this\ is\ vectorized\ branch}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00034}00034\ \ \ \ \ \textcolor{keywordtype}{bool}\ antiperiodic\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00035}00035\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00036}00036\ \ \ \ \ \textcolor{keywordflow}{if}\ (boundary\_condition[d]\ ==\ hila::bc::ANTIPERIODIC\ \&\&\ lattice.mynode.\mbox{\hyperlink{structlattice__struct_1_1node__struct_af493bb3385334627ed15b9c538d5cf85}{is\_on\_edge}}(-\/d))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00037}00037\ \ \ \ \ \ \ \ \ antiperiodic\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00038}00038\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00039}00039\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00040}00040\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00041}00041\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{hila::is\_vectorizable\_type<T>::value}})\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00042}00042\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ vectorized\ layout}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00043}00043\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vector\_lattice-\/>is\_boundary\_permutation[abs(d)])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ with\ boundary\ permutation\ need\ to\ gather\ elems\ 1-\/by-\/1}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00045}00045\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00046}00046\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ *index\_list\ =\ to\_node.get\_sitelist(par,\ n);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!antiperiodic)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ payload.gather\_elements(buffer,\ index\_list,\ n,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00049}00049\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00050}00050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ payload.gather\_elements\_negated(buffer,\ index\_list,\ n,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00053}00053\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ without\ it,\ can\ do\ the\ full\ block}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00054}00054\ \ \ \ \ \ \ \ \ \ \ \ \ payload.gather\_comm\_vectors(buffer,\ to\_node,\ par,\ vector\_lattice,\ antiperiodic);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00055}00055\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00056}00056\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ not\ vectoizable,\ standard\ methods}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ *index\_list\ =\ to\_node.get\_sitelist(par,\ n);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00060}00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!antiperiodic)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ payload.gather\_elements(buffer,\ index\_list,\ n,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00062}00062\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ \ \ \ \ payload.gather\_elements\_negated(buffer,\ index\_list,\ n,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00064}00064\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00065}00065\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00066}00066\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00067}00067\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00072}00072\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00073}00073\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::field\_struct::place\_comm\_elements}}(}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00074}00074\ \ \ \ \ Direction\ d,\ Parity\ par,\ T\ *RESTRICT\ buffer,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00075}00075\ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&from\_node)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00076}00076\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00077}00077\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00078}00078\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{hila::is\_vectorizable\_type<T>::value}})\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00079}00079\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ vectorized\ layout,\ act\ accordingly}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00080}00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vector\_lattice-\/>is\_boundary\_permutation[abs(d)])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \ \ \ \ payload.place\_recv\_elements(buffer,\ d,\ par,\ vector\_lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00082}00082\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00083}00083\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ nothing\ to\ do\ here,\ comms\ directly\ in\ place}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00084}00084\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00085}00085\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00086}00086\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ non-\/vectorized,\ using\ vanilla\ method,\ again\ nothing\ to\ do}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00087}00087\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00088}00088\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00089}00089\ \ \ \ \ \textcolor{comment}{//\ this\ one\ is\ only\ for\ CUDA}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00090}00090\ \ \ \ \ payload.place\_comm\_elements(d,\ par,\ buffer,\ from\_node,\ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00091}00091\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00092}00092\ \ \ \ \ \textcolor{comment}{//\ \#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00093}00093\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00094}00094\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00097}00097\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00098}00098\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00099}00099\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::field\_struct::set\_local\_boundary\_elements}}(Direction\ dir,\ Parity\ par)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00100}00100\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00101}00101\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00102}00102\ \ \ \ \ \textcolor{keywordtype}{bool}\ antiperiodic\ =}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ (boundary\_condition[dir]\ ==\ hila::bc::ANTIPERIODIC\ \&\&\ lattice.mynode.\mbox{\hyperlink{structlattice__struct_1_1node__struct_af493bb3385334627ed15b9c538d5cf85}{is\_on\_edge}}(dir));}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00104}00104\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00105}00105\ \ \ \ \ \textcolor{keywordtype}{bool}\ antiperiodic\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00106}00106\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00107}00107\ \ \ \ \ payload.set\_local\_boundary\_elements(dir,\ par,\ lattice,\ antiperiodic);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00108}00108\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00109}00109\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00114}00114\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00115}00115\ T\ *\mbox{\hyperlink{classField}{Field<T>::field\_struct::get\_receive\_buffer}}(Direction\ d,\ Parity\ par,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&from\_node)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00117}00117\ \textcolor{preprocessor}{\#if\ defined(VANILLA)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00118}00118\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00119}00119\ \ \ \ \ \textcolor{keywordflow}{return}\ (T\ *)payload.get\_buffer()\ +\ from\_node.offset(par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00120}00120\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00121}00121\ \textcolor{preprocessor}{\#elif\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00122}00122\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00123}00123\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ offs\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00124}00124\ \ \ \ \ \textcolor{keywordflow}{if}\ (par\ ==\ ODD)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00125}00125\ \ \ \ \ \ \ \ \ offs\ =\ from\_node.sites\ /\ 2;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00126}00126\ \ \ \ \ \textcolor{keywordflow}{if}\ (receive\_buffer[d]\ ==\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00127}00127\ \ \ \ \ \ \ \ \ receive\_buffer[d]\ =\ payload.allocate\_mpi\_buffer(from\_node.sites);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00128}00128\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00129}00129\ \ \ \ \ \textcolor{keywordflow}{return}\ receive\_buffer[d]\ +\ offs;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00131}00131\ \textcolor{preprocessor}{\#elif\ defined(VECTORIZED)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00132}00132\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00133}00133\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (!\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{hila::is\_vectorizable\_type<T>::value}})\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00134}00134\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ use\ vanilla\ type,\ field\ laid\ out\ in\ std\ fashion}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00135}00135\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (T\ *)payload.get\_buffer()\ +\ from\_node.offset(par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00136}00136\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00137}00137\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ offs\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00138}00138\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (par\ ==\ ODD)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00139}00139\ \ \ \ \ \ \ \ \ \ \ \ \ offs\ =\ from\_node.sites\ /\ 2;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00140}00140\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00141}00141\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vector\_lattice-\/>is\_boundary\_permutation[abs(d)])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00142}00142\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ extra\ copy\ operation\ needed}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00143}00143\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (receive\_buffer[d]\ ==\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00144}00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ receive\_buffer[d]\ =\ payload.allocate\_mpi\_buffer(from\_node.sites);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00145}00145\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00146}00146\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ receive\_buffer[d]\ +\ offs;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00147}00147\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00148}00148\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ directly\ to\ halo\ buffer}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00149}00149\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ vector\_size\ =\ \mbox{\hyperlink{structhila_1_1vector__info}{hila::vector\_info<T>::vector\_size}};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00150}00150\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ((T\ *)payload.get\_buffer()\ +}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00151}00151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (vector\_lattice-\/>halo\_offset[d]\ *\ vector\_size\ +\ offs));}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00152}00152\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00153}00153\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00154}00154\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00155}00155\ \}\ \textcolor{comment}{//\ end\ of\ get\_receive\_buffer}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00156}00156\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00157}00157\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00158}00158\ \textcolor{preprocessor}{\#define\ NAIVE\_SHIFT}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00159}00159\ \textcolor{preprocessor}{\#if\ defined(NAIVE\_SHIFT)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00160}00160\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00161}00161\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00162}00162\ \mbox{\hyperlink{classField}{Field<T>}}\ \&\mbox{\hyperlink{classField}{Field<T>::shift}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&v,\ \mbox{\hyperlink{classField}{Field<T>}}\ \&res,\ \textcolor{keyword}{const}\ Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00163}00163\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00164}00164\ \ \ \ \ \textcolor{comment}{//\ use\ this\ to\ store\ remaining\ moves}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00165}00165\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ rem\ =\ v;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00167}00167\ \ \ \ \ \textcolor{comment}{//\ check\ the\ parity\ of\ the\ move}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00168}00168\ \ \ \ \ Parity\ par\_s;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00169}00169\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00170}00170\ \ \ \ \ \textcolor{keywordtype}{int}\ len\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00171}00171\ \ \ \ \ foralldir(d)\ len\ +=\ abs(rem[d]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00173}00173\ \ \ \ \ \textcolor{comment}{//\ no\ move,\ just\ copy\ field}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00174}00174\ \ \ \ \ \textcolor{keywordflow}{if}\ (len\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00175}00175\ \ \ \ \ \ \ \ \ res\ =\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00176}00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00177}00177\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00178}00178\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00179}00179\ \ \ \ \ \textcolor{comment}{//\ opp\_parity(ALL)\ ==\ ALL}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00180}00180\ \ \ \ \ \textcolor{keywordflow}{if}\ (len\ \%\ 2\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00181}00181\ \ \ \ \ \ \ \ \ par\_s\ =\ opp\_parity(par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00182}00182\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00183}00183\ \ \ \ \ \ \ \ \ par\_s\ =\ par;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00184}00184\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00185}00185\ \ \ \ \ \textcolor{comment}{//\ is\ this\ already\ gathered\ from\ one\ of\ the\ dirs\ in\ v?}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00186}00186\ \ \ \ \ \textcolor{keywordtype}{bool}\ found\_dir\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00187}00187\ \ \ \ \ Direction\ mdir;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00188}00188\ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00189}00189\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rem[d]\ >\ 0\ \&\&\ gather\_status(par\_s,\ d)\ !=\ gather\_status\_t::NOT\_DONE)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00190}00190\ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ d;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00191}00191\ \ \ \ \ \ \ \ \ \ \ \ \ found\_dir\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00192}00192\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00193}00193\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (rem[d]\ <\ 0\ \&\&\ gather\_status(par\_s,\ -\/d)\ !=\ gather\_status\_t::NOT\_DONE)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00194}00194\ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ -\/d;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00195}00195\ \ \ \ \ \ \ \ \ \ \ \ \ found\_dir\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00196}00196\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00197}00197\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00198}00198\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00199}00199\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00200}00200\ \ \ \ \ \textcolor{keywordflow}{if}\ (!found\_dir)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00201}00201\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ did\ not\ find\ a\ 'ready'\ dir.\ Take\ the\ 1st\ available}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00202}00202\ \ \ \ \ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00203}00203\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rem[d]\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00204}00204\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ d;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00205}00205\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00206}00206\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (rem[d]\ <\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00207}00207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ -\/d;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00208}00208\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00209}00209\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00210}00210\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00211}00211\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00212}00212\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00213}00213\ \ \ \ \ \textcolor{comment}{//\ Len\ 1,\ copy\ directly}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00214}00214\ \ \ \ \ \textcolor{keywordflow}{if}\ (len\ ==\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00215}00215\ \ \ \ \ \ \ \ \ res[par\_s]\ =\ (*this)[X\ +\ mdir];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00216}00216\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00217}00217\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00218}00218\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00219}00219\ \ \ \ \ \textcolor{comment}{//\ now\ longer\ -\/\ need\ buffer}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00220}00220\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ r1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00221}00221\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ *from,\ *to;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00222}00222\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00223}00223\ \ \ \ \ \textcolor{comment}{//\ this\ ensures\ that\ the\ final\ move\ lands\ on\ res}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00224}00224\ \ \ \ \ \textcolor{keywordflow}{if}\ (len\ \%\ 2\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00225}00225\ \ \ \ \ \ \ \ \ from\ =\ \&r1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00226}00226\ \ \ \ \ \ \ \ \ to\ =\ \&res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00227}00227\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00228}00228\ \ \ \ \ \ \ \ \ from\ =\ \&res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00229}00229\ \ \ \ \ \ \ \ \ to\ =\ \&r1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00230}00230\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00231}00231\ \ \ \ \ \textcolor{comment}{//\ and\ copy\ initially\ to\ "{}from"{}}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00232}00232\ \ \ \ \ (*from)[par\_s]\ =\ (*this)[X\ +\ mdir];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00233}00233\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00234}00234\ \ \ \ \ \textcolor{comment}{//\ and\ subtract\ remaining\ moves\ from\ rem}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00235}00235\ \ \ \ \ rem\ =\ rem\ -\/\ mdir;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00236}00236\ \ \ \ \ par\_s\ =\ opp\_parity(par\_s);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00237}00237\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00238}00238\ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00239}00239\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rem[d]\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00240}00240\ \ \ \ \ \ \ \ \ \ \ \ \ mdir\ =\ (rem[d]\ >\ 0)\ ?\ d\ :\ -\/d;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00241}00241\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00242}00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (rem[d]\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00243}00243\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00244}00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (*to)[par\_s]\ =\ (*from)[X\ +\ mdir];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00245}00245\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00246}00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ par\_s\ =\ opp\_parity(par\_s);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00247}00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ rem\ =\ rem\ -\/\ mdir;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00248}00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(to,\ from);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00249}00249\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00250}00250\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00251}00251\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00252}00252\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00253}00253\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00254}00254\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00255}00255\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00256}00256\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ NAIVE\_SHIFT}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00257}00257\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00261}00261\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00262}\mbox{\hyperlink{classField_ac76a0477380e02532746853d16983c4a}{00262}}\ dir\_mask\_t\ \mbox{\hyperlink{classField_ac76a0477380e02532746853d16983c4a}{Field<T>::start\_gather}}(Direction\ d,\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00263}00263\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00264}00264\ \ \ \ \ \textcolor{comment}{//\ get\ the\ mpi\ message\ tag\ right\ away,\ to\ ensure\ that\ we\ are\ always\ synchronized}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00265}00265\ \ \ \ \ \textcolor{comment}{//\ with\ the\ mpi\ calls\ -\/-\/\ some\ nodes\ might\ not\ need\ comms,\ but\ the\ tags\ must\ be\ in}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00266}00266\ \ \ \ \ \textcolor{comment}{//\ sync}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00267}00267\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00268}00268\ \ \ \ \ \textcolor{keywordtype}{int}\ tag\ =\ get\_next\_msg\_tag();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00269}00269\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00270}00270\ \ \ \ \ \mbox{\hyperlink{structlattice__struct_1_1nn__comminfo__struct}{lattice\_struct::nn\_comminfo\_struct}}\ \&ci\ =\ lattice.\mbox{\hyperlink{classlattice__struct_ada69c8d4dcc2048d42395613ba3e6040}{nn\_comminfo}}[d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00271}00271\ \ \ \ \ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&from\_node\ =\ ci.from\_node;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00272}00272\ \ \ \ \ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&to\_node\ =\ ci.to\_node;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00273}00273\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00274}00274\ \ \ \ \ \textcolor{comment}{//\ check\ if\ this\ is\ done\ -\/\ either\ gathered\ or\ no\ comm\ to\ be\ done\ in\ the\ 1st\ place}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00275}00275\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00276}00276\ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gathered(d,\ p))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00277}00277\ \ \ \ \ \ \ \ \ lattice.n\_gather\_avoided++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00278}00278\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;\ \textcolor{comment}{//\ nothing\ to\ wait\ for}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00279}00279\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00280}00280\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00281}00281\ \ \ \ \ \textcolor{comment}{//\ No\ comms\ to\ do,\ nothing\ to\ wait\ for\ -\/-\/\ we'll\ use\ the\ is\_gathered}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00282}00282\ \ \ \ \ \textcolor{comment}{//\ status\ to\ keep\ track\ of\ vector\ boundary\ shuffle\ anyway}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00283}00283\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00284}00284\ \ \ \ \ \textcolor{keywordflow}{if}\ (from\_node.rank\ ==\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ \&\&\ to\_node.rank\ ==\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00285}00285\ \ \ \ \ \ \ \ \ fs-\/>set\_local\_boundary\_elements(d,\ p);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00286}00286\ \ \ \ \ \ \ \ \ mark\_gathered(d,\ p);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00287}00287\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00288}00288\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00289}00289\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00290}00290\ \ \ \ \ \textcolor{comment}{//\ if\ this\ parity\ or\ ALL-\/type\ gather\ is\ going\ on\ nothing\ to\ be\ done}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00291}00291\ \ \ \ \ \textcolor{keywordflow}{if}\ (!gather\_not\_done(d,\ p)\ ||\ !gather\_not\_done(d,\ ALL))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00292}00292\ \ \ \ \ \ \ \ \ lattice.n\_gather\_avoided++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00293}00293\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ get\_dir\_mask(d);\ \textcolor{comment}{//\ nothing\ to\ do,\ but\ still\ need\ to\ wait}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00294}00294\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00295}00295\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00296}00296\ \ \ \ \ Parity\ par\ =\ p;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00297}00297\ \ \ \ \ \textcolor{comment}{//\ if\ p\ is\ ALL\ but\ ODD\ or\ EVEN\ is\ going\ on/done,\ turn\ off\ parity\ which\ is\ not\ needed}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00298}00298\ \ \ \ \ \textcolor{comment}{//\ corresponding\ wait\ must\ do\ the\ same\ thing}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00299}00299\ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ ==\ ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00300}00300\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!gather\_not\_done(d,\ EVEN)\ \&\&\ !gather\_not\_done(d,\ ODD))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00301}00301\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ even\ and\ odd\ are\ going\ on\ or\ ready,\ nothing\ to\ be\ done}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00302}00302\ \ \ \ \ \ \ \ \ \ \ \ \ lattice.n\_gather\_avoided++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00303}00303\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ get\_dir\_mask(d);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00304}00304\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00305}00305\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!gather\_not\_done(d,\ EVEN))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00306}00306\ \ \ \ \ \ \ \ \ \ \ \ \ par\ =\ ODD;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00307}00307\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (!gather\_not\_done(d,\ ODD))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00308}00308\ \ \ \ \ \ \ \ \ \ \ \ \ par\ =\ EVEN;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00309}00309\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ if\ neither\ is\ the\ case\ par\ =\ ALL}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00310}00310\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00311}00311\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00312}00312\ \ \ \ \ mark\_gather\_started(d,\ par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00313}00313\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00314}00314\ \ \ \ \ \textcolor{comment}{//\ Communication\ hasn't\ been\ started\ yet,\ do\ it\ now}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00315}00315\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00316}00316\ \ \ \ \ \textcolor{keywordtype}{int}\ par\_i\ =\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{int}\textcolor{keyword}{>}(par)\ -\/\ 1;\ \textcolor{comment}{//\ index\ to\ dim-\/3\ arrays}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00317}00317\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00318}00318\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ size\ =\ \textcolor{keyword}{sizeof}(T);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00319}00319\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00320}00320\ \ \ \ \ T\ *receive\_buffer;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00321}00321\ \ \ \ \ T\ *send\_buffer;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00322}00322\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00323}00323\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size\_type;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00324}00324\ \ \ \ \ MPI\_Datatype\ mpi\_type\ =\ get\_MPI\_number\_type<T>(size\_type);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00325}00325\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00326}00326\ \ \ \ \ \textcolor{keywordflow}{if}\ (from\_node.rank\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ \&\&\ boundary\_need\_to\_communicate(d))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00327}00327\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00328}00328\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ HANDLE\ RECEIVES:\ get\ node\ which\ will\ send\ here}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00329}00329\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00330}00330\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ buffer\ can\ be\ separate\ or\ in\ Field\ buffer}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00331}00331\ \ \ \ \ \ \ \ \ receive\_buffer\ =\ fs-\/>get\_receive\_buffer(d,\ par,\ from\_node);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00332}00332\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00333}00333\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\ =\ from\_node.n\_sites(par)\ *\ size\ /\ size\_type;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00334}00334\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00335}00335\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >=\ (1ULL\ <<\ 31))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00336}00336\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}Too\ large\ MPI\ message!\ \ Size\ "{}}\ <<\ n\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00337}00337\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00338}00338\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00339}00339\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00340}00340\ \ \ \ \ \ \ \ \ post\_receive\_timer.start();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00341}00341\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00342}00342\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ c++\ version\ does\ not\ return\ errors}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00343}00343\ \ \ \ \ \ \ \ \ MPI\_Irecv(receive\_buffer,\ (\textcolor{keywordtype}{int})n,\ mpi\_type,\ from\_node.rank,\ tag,\ lattice.mpi\_comm\_lat,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00344}00344\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&fs-\/>receive\_request[par\_i][d]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00345}00345\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00346}00346\ \ \ \ \ \ \ \ \ post\_receive\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00347}00347\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00348}00348\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00349}00349\ \ \ \ \ \textcolor{keywordflow}{if}\ (to\_node.rank\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ \&\&\ boundary\_need\_to\_communicate(-\/d))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00350}00350\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ HANDLE\ SENDS:\ Copy\ Field\ elements\ on\ the\ boundary\ to\ a\ send\ buffer\ and\ send}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00351}00351\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00352}00352\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ sites\ =\ to\_node.n\_sites(par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00353}00353\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00354}00354\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fs-\/>send\_buffer[d]\ ==\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00355}00355\ \ \ \ \ \ \ \ \ \ \ \ \ fs-\/>send\_buffer[d]\ =\ fs-\/>payload.allocate\_mpi\_buffer(to\_node.sites);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00356}00356\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00357}00357\ \ \ \ \ \ \ \ \ send\_buffer\ =\ fs-\/>send\_buffer[d]\ +\ to\_node.offset(par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00358}00358\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00359}00359\ \ \ \ \ \ \ \ \ fs-\/>gather\_comm\_elements(d,\ par,\ send\_buffer,\ to\_node);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00360}00360\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00361}00361\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\ =\ sites\ *\ size\ /\ size\_type;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00362}00362\ \textcolor{preprocessor}{\#ifdef\ GPU\_AWARE\_MPI}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00363}00363\ \ \ \ \ \ \ \ \ gpuStreamSynchronize(0);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00364}00364\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ gpuDeviceSynchronize();}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00365}00365\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00366}00366\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00367}00367\ \ \ \ \ \ \ \ \ start\_send\_timer.start();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00368}00368\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00369}00369\ \ \ \ \ \ \ \ \ MPI\_Isend(send\_buffer,\ (\textcolor{keywordtype}{int})n,\ mpi\_type,\ to\_node.rank,\ tag,\ lattice.mpi\_comm\_lat,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00370}00370\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&fs-\/>send\_request[par\_i][d]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00371}00371\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00372}00372\ \ \ \ \ \ \ \ \ start\_send\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00373}00373\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00374}00374\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00375}00375\ \ \ \ \ \textcolor{comment}{//\ and\ do\ the\ boundary\ shuffle\ here,\ after\ MPI\ has\ started}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00376}00376\ \ \ \ \ \textcolor{comment}{//\ NOTE:\ there\ should\ be\ no\ danger\ of\ MPI\ and\ shuffle\ overwriting,\ MPI\ writes}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00377}00377\ \ \ \ \ \textcolor{comment}{//\ to\ halo\ buffers\ only\ if\ no\ permutation\ is\ needed.\ \ With\ a\ permutation\ MPI}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00378}00378\ \ \ \ \ \textcolor{comment}{//\ uses\ special\ receive\ buffer}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00379}00379\ \ \ \ \ fs-\/>set\_local\_boundary\_elements(d,\ par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00380}00380\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00381}00381\ \ \ \ \ \textcolor{keywordflow}{return}\ get\_dir\_mask(d);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00382}00382\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00383}00383\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00393}00393\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00394}\mbox{\hyperlink{classField_ab039d34f2e65c9cd58326fd013efd90c}{00394}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ab039d34f2e65c9cd58326fd013efd90c}{Field<T>::wait\_gather}}(Direction\ d,\ Parity\ p)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00395}00395\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00396}00396\ \ \ \ \ \mbox{\hyperlink{structlattice__struct_1_1nn__comminfo__struct}{lattice\_struct::nn\_comminfo\_struct}}\ \&ci\ =\ lattice.\mbox{\hyperlink{classlattice__struct_ada69c8d4dcc2048d42395613ba3e6040}{nn\_comminfo}}[d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00397}00397\ \ \ \ \ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&from\_node\ =\ ci.from\_node;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00398}00398\ \ \ \ \ \mbox{\hyperlink{structlattice__struct_1_1comm__node__struct}{lattice\_struct::comm\_node\_struct}}\ \&to\_node\ =\ ci.to\_node;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00399}00399\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00400}00400\ \ \ \ \ \textcolor{comment}{//\ check\ if\ this\ is\ done\ -\/\ either\ gathered\ or\ no\ comm\ to\ be\ done\ in\ the\ 1st\ place}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00401}00401\ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gathered(d,\ p))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00402}00402\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00403}00403\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00404}00404\ \ \ \ \ \textcolor{comment}{//\ this\ is\ the\ branch\ if\ no\ comms\ -\/-\/\ shuffle\ was\ done\ in\ start\_gather}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00405}00405\ \ \ \ \ \textcolor{keywordflow}{if}\ (from\_node.rank\ ==\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ \&\&\ to\_node.rank\ ==\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00406}00406\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00407}00407\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00408}00408\ \ \ \ \ \textcolor{comment}{//\ if\ (!is\_gather\_started(d,p))\ \{}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00409}00409\ \ \ \ \ \textcolor{comment}{//\ \ \ hila::out0\ <<\ "{}Wait\ gather\ error\ -\/\ wait\_gather\ without\ corresponding}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00410}00410\ \ \ \ \ \textcolor{comment}{//\ \ \ start\_gather\(\backslash\)n"{};\ exit(1);}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00411}00411\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00412}00412\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00413}00413\ \ \ \ \ \textcolor{comment}{//\ Note:\ the\ move\ can\ be\ Parity\ p\ OR\ ALL\ -\/-\/\ need\ to\ wait\ for\ it\ in\ any\ case}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00414}00414\ \ \ \ \ \textcolor{comment}{//\ set\ par\ to\ be\ the\ "{}sum"{}\ over\ both\ parities}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00415}00415\ \ \ \ \ \textcolor{comment}{//\ There\ never\ should\ be\ ongoing\ ALL\ and\ other\ parity\ gather\ -\/-\/\ start\_gather\ takes}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00416}00416\ \ \ \ \ \textcolor{comment}{//\ care}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00417}00417\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00418}00418\ \ \ \ \ \textcolor{comment}{//\ check\ here\ consistency,\ this\ should\ never\ happen}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00419}00419\ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ !=\ ALL\ \&\&\ is\_gather\_started(d,\ p)\ \&\&\ is\_gather\_started(d,\ ALL))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00420}00420\ \ \ \ \ \ \ \ \ exit(1);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00421}00421\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00422}00422\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00423}00423\ \ \ \ \ Parity\ par;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00424}00424\ \ \ \ \ \textcolor{keywordtype}{int}\ n\_wait\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00425}00425\ \ \ \ \ \textcolor{comment}{//\ what\ par\ to\ wait\ for?}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00426}00426\ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ p))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00427}00427\ \ \ \ \ \ \ \ \ par\ =\ p;\ \textcolor{comment}{//\ standard\ match}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00428}00428\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (p\ !=\ ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00429}00429\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ ALL))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00430}00430\ \ \ \ \ \ \ \ \ \ \ \ \ par\ =\ ALL;\ \textcolor{comment}{//\ if\ all\ is\ running\ wait\ for\ it}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00431}00431\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00432}00432\ \ \ \ \ \ \ \ \ \ \ \ \ exit(1);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00433}00433\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00434}00434\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00435}00435\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ p\ ==\ ALL\ and\ ALL\ is\ not\ running}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00436}00436\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_gathered(d,\ EVEN)\ \&\&\ is\_gather\_started(d,\ ODD))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00437}00437\ \ \ \ \ \ \ \ \ \ \ \ \ par\ =\ ODD;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00438}00438\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (is\_gathered(d,\ ODD)\ \&\&\ is\_gather\_started(d,\ EVEN))}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00439}00439\ \ \ \ \ \ \ \ \ \ \ \ \ par\ =\ EVEN;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00440}00440\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (is\_gather\_started(d,\ EVEN)\ \&\&\ is\_gather\_started(d,\ ODD))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00441}00441\ \ \ \ \ \ \ \ \ \ \ \ \ n\_wait\ =\ 2;\ \textcolor{comment}{//\ need\ to\ wait\ for\ both!}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00442}00442\ \ \ \ \ \ \ \ \ \ \ \ \ par\ =\ ALL;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00443}00443\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00444}00444\ \ \ \ \ \ \ \ \ \ \ \ \ exit(1);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00445}00445\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00446}00446\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00447}00447\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00448}00448\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_wait\ ==\ 2)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00449}00449\ \ \ \ \ \ \ \ \ par\ =\ EVEN;\ \textcolor{comment}{//\ we'll\ flip\ both}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00450}00450\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00451}00451\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ wait\_i\ =\ 0;\ wait\_i\ <\ n\_wait;\ ++wait\_i)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00452}00452\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00453}00453\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ par\_i\ =\ (int)par\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00454}00454\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00455}00455\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (from\_node.rank\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ \&\&\ boundary\_need\_to\_communicate(d))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00456}00456\ \ \ \ \ \ \ \ \ \ \ \ \ wait\_receive\_timer.start();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00457}00457\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00458}00458\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Status\ status;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00459}00459\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Wait(\&fs-\/>receive\_request[par\_i][d],\ \&status);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00460}00460\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00461}00461\ \ \ \ \ \ \ \ \ \ \ \ \ wait\_receive\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00462}00462\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00463}00463\ \textcolor{preprocessor}{\#ifndef\ VANILLA}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00464}00464\ \ \ \ \ \ \ \ \ \ \ \ \ fs-\/>place\_comm\_elements(d,\ par,\ fs-\/>get\_receive\_buffer(d,\ par,\ from\_node),\ from\_node);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00465}00465\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00466}00466\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00467}00467\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00468}00468\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ then\ wait\ for\ the\ sends}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00469}00469\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (to\_node.rank\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ \&\&\ boundary\_need\_to\_communicate(-\/d))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00470}00470\ \ \ \ \ \ \ \ \ \ \ \ \ wait\_send\_timer.start();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00471}00471\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Status\ status;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00472}00472\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Wait(\&fs-\/>send\_request[par\_i][d],\ \&status);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00473}00473\ \ \ \ \ \ \ \ \ \ \ \ \ wait\_send\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00474}00474\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00475}00475\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00476}00476\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Mark\ the\ parity\ gathered\ from\ Direction\ dir}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00477}00477\ \ \ \ \ \ \ \ \ mark\_gathered(d,\ par);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00478}00478\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00479}00479\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Keep\ count\ of\ communications}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00480}00480\ \ \ \ \ \ \ \ \ lattice.n\_gather\_done\ +=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00481}00481\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00482}00482\ \ \ \ \ \ \ \ \ par\ =\ opp\_parity(par);\ \textcolor{comment}{//\ flip\ if\ 2\ loops}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00483}00483\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00484}00484\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00485}00485\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00486}00486\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00489}00489\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00490}00490\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::field\_struct::gather\_elements}}(T\ *RESTRICT\ buffer,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00491}00491\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00492}00492\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ root)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00493}00493\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00494}00494\ \ \ \ \ std::vector<unsigned>\ index\_list;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00495}00495\ \ \ \ \ std::vector<int>\ sites\_on\_rank(lattice.n\_nodes());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00496}00496\ \ \ \ \ std::vector<int>\ reshuffle\_list(coord\_list.size());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00497}00497\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00498}00498\ \ \ \ \ std::fill(sites\_on\_rank.begin(),\ sites\_on\_rank.end(),\ 0);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00499}00499\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00500}00500\ \ \ \ \ \textcolor{keywordtype}{int}\ nranks\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00501}00501\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00502}00502\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00503}00503\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&c\ :\ coord\_list)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00504}00504\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rank\ =\ lattice.node\_rank(c);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00505}00505\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ rank)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00506}00506\ \ \ \ \ \ \ \ \ \ \ \ \ index\_list.push\_back(lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(c));}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00507}00507\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00508}00508\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00509}00509\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sites\_on\_rank[rank]\ ==\ 0\ \&\&\ rank\ !=\ root)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00510}00510\ \ \ \ \ \ \ \ \ \ \ \ \ nranks++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00511}00511\ \ \ \ \ \ \ \ \ sites\_on\_rank[rank]++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00512}00512\ \ \ \ \ \ \ \ \ reshuffle\_list[i++]\ =\ rank;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00513}00513\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00514}00514\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00515}00515\ \ \ \ \ std::vector<T>\ send\_buffer(index\_list.size());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00516}00516\ \ \ \ \ payload.gather\_elements((T\ *)send\_buffer.data(),\ index\_list.data(),\ send\_buffer.size(),}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00517}00517\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00518}00518\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ !=\ root\ \&\&\ sites\_on\_rank[\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()]\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00519}00519\ \ \ \ \ \ \ \ \ MPI\_Send((\textcolor{keywordtype}{char}\ *)send\_buffer.data(),\ sites\_on\_rank[\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()]\ *\ \textcolor{keyword}{sizeof}(T),\ MPI\_BYTE,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00520}00520\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ root,\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}(),\ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00521}00521\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00522}00522\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ root)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00523}00523\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00524}00524\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ allocate\ buffer\ for\ receiving\ data}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00525}00525\ \ \ \ \ \ \ \ \ T\ *b;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00526}00526\ \ \ \ \ \ \ \ \ std::vector<T>\ pb(coord\_list.size()\ -\/\ sites\_on\_rank[root]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00527}00527\ \ \ \ \ \ \ \ \ b\ =\ pb.data();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00528}00528\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ vector\ for\ node\ ptrs\ -\/-\/\ point\ to\ stuff\ from\ nodes}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00529}00529\ \ \ \ \ \ \ \ \ std::vector<T\ *>\ nptr(lattice.n\_nodes());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00530}00530\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00531}00531\ \ \ \ \ \ \ \ \ std::vector<MPI\_Request>\ mpi\_req(nranks);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00532}00532\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nreqs\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00533}00533\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ n\ =\ 0;\ n\ <\ sites\_on\_rank.size();\ n++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00534}00534\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sites\_on\_rank[n]\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00535}00535\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ !=\ root)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00536}00536\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Status\ status;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00537}00537\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Irecv(b,\ (\textcolor{keywordtype}{int})(sites\_on\_rank[n]\ *\ \textcolor{keyword}{sizeof}(T)),\ MPI\_BYTE,\ n,\ n,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00538}00538\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mpi\_comm\_lat,\ \&mpi\_req[nreqs++]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00539}00539\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00540}00540\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nptr[n]\ =\ b;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00541}00541\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ b\ +=\ sites\_on\_rank[n];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00542}00542\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00543}00543\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00544}00544\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00545}00545\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nptr[n]\ =\ send\_buffer.data();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00546}00546\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00547}00547\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00548}00548\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00549}00549\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00550}00550\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nreqs\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00551}00551\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<MPI\_Status>\ stat\_arr(nreqs);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00552}00552\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Waitall(nreqs,\ mpi\_req.data(),\ stat\_arr.data());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00553}00553\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00554}00554\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00555}00555\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ copy\ the\ data\ from\ bp\ to\ buffer,\ reordering}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00556}00556\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ coord\_list.size();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00557}00557\ \ \ \ \ \ \ \ \ \ \ \ \ buffer[i]\ =\ *nptr[reshuffle\_list[i]];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00558}00558\ \ \ \ \ \ \ \ \ \ \ \ \ nptr[reshuffle\_list[i]]++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00559}00559\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00560}00560\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00561}00561\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00562}00562\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00565}00565\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00566}00566\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00567}00567\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::field\_struct::scatter\_elements}}(T\ *RESTRICT\ buffer,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00568}00568\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00569}00569\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ root)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00570}00570\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00571}00571\ \ \ \ \ std::vector<unsigned>\ index\_list;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00572}00572\ \ \ \ \ std::vector<int>\ sites\_on\_rank(lattice.n\_nodes());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00573}00573\ \ \ \ \ std::vector<int>\ reshuffle\_list(coord\_list.size());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00574}00574\ \ \ \ \ std::fill(sites\_on\_rank.begin(),\ sites\_on\_rank.end(),\ 0);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00575}00575\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00576}00576\ \ \ \ \ \textcolor{keywordtype}{int}\ nranks\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00577}00577\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00578}00578\ \ \ \ \ \textcolor{keywordflow}{for}\ (\mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c\ :\ coord\_list)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00579}00579\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rank\ =\ lattice.node\_rank(c);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00580}00580\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ rank)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00581}00581\ \ \ \ \ \ \ \ \ \ \ \ \ index\_list.push\_back(lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(c));}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00582}00582\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00583}00583\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00584}00584\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sites\_on\_rank[rank]\ ==\ 0\ \&\&\ rank\ !=\ root)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00585}00585\ \ \ \ \ \ \ \ \ \ \ \ \ nranks++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00586}00586\ \ \ \ \ \ \ \ \ sites\_on\_rank[rank]++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00587}00587\ \ \ \ \ \ \ \ \ reshuffle\_list[i++]\ =\ rank;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00588}00588\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00589}00589\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00590}00590\ \ \ \ \ \textcolor{comment}{//\ payload.gather\_elements((T\ *)recv\_buffer.data(),\ index\_list.data(),}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00591}00591\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ recv\_buffer.size(),\ lattice);}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00592}00592\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00593}00593\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ !=\ root\ \&\&\ sites\_on\_rank[\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()]\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00594}00594\ \ \ \ \ \ \ \ \ std::vector<T>\ recv\_buffer(index\_list.size());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00595}00595\ \ \ \ \ \ \ \ \ MPI\_Status\ status;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00596}00596\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00597}00597\ \ \ \ \ \ \ \ \ MPI\_Recv((\textcolor{keywordtype}{char}\ *)recv\_buffer.data(),\ sites\_on\_rank[\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()]\ *\ \textcolor{keyword}{sizeof}(T),\ MPI\_BYTE,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00598}00598\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ root,\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}(),\ lattice.mpi\_comm\_lat,\ \&status);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00599}00599\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00600}00600\ \ \ \ \ \ \ \ \ payload.place\_elements((T\ *)recv\_buffer.data(),\ index\_list.data(),\ recv\_buffer.size(),}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00601}00601\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00602}00602\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00603}00603\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ root)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00604}00604\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ reordering\ buffers}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00605}00605\ \ \ \ \ \ \ \ \ std::vector<T>\ pb(coord\_list.size());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00606}00606\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ vector\ for\ node\ counters\ -\/-\/\ point\ to\ stuff\ from\ nodes}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00607}00607\ \ \ \ \ \ \ \ \ std::vector<unsigned>\ nloc(lattice.n\_nodes());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00608}00608\ \ \ \ \ \ \ \ \ std::vector<unsigned>\ ncount(lattice.n\_nodes());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00609}00609\ \ \ \ \ \ \ \ \ nloc[0]\ =\ ncount[0]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00610}00610\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00611}00611\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ n\ =\ 1;\ n\ <\ lattice.n\_nodes();\ n++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00612}00612\ \ \ \ \ \ \ \ \ \ \ \ \ nloc[n]\ =\ nloc[n\ -\/\ 1]\ +\ sites\_on\_rank[n\ -\/\ 1];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00613}00613\ \ \ \ \ \ \ \ \ \ \ \ \ ncount[n]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00614}00614\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00615}00615\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ coord\_list.size();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00616}00616\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ node\ =\ reshuffle\_list[i];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00617}00617\ \ \ \ \ \ \ \ \ \ \ \ \ pb[nloc[node]\ +\ ncount[node]]\ =\ buffer[i];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00618}00618\ \ \ \ \ \ \ \ \ \ \ \ \ ncount[node]++;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00619}00619\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00620}00620\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00621}00621\ \ \ \ \ \ \ \ \ std::vector<MPI\_Request>\ mpi\_req(nranks);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00622}00622\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nreqs\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00623}00623\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ n\ =\ 0;\ n\ <\ sites\_on\_rank.size();\ n++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00624}00624\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sites\_on\_rank[n]\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00625}00625\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ !=\ root)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00626}00626\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Isend(pb.data()\ +\ nloc[n],\ (\textcolor{keywordtype}{int})(sites\_on\_rank[n]\ *\ \textcolor{keyword}{sizeof}(T)),\ MPI\_BYTE,\ n,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00627}00627\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ n,\ lattice.mpi\_comm\_lat,\ \&mpi\_req[nreqs++]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00628}00628\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00629}00629\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00630}00630\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00631}00631\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00632}00632\ \ \ \ \ \ \ \ \ payload.place\_elements(pb.data()\ +\ nloc[root],\ index\_list.data(),\ index\_list.size(),}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00633}00633\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00634}00634\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00635}00635\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nreqs\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00636}00636\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<MPI\_Status>\ stat\_arr(nreqs);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00637}00637\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Waitall(nreqs,\ mpi\_req.data(),\ stat\_arr.data());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00638}00638\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00639}00639\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00640}00640\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00641}00641\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00642}00642\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00643}00643\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::set\_elements}}(\textcolor{keyword}{const}\ std::vector<T>\ \&elements,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00644}00644\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00645}00645\ \ \ \ \ assert(elements.size()\ ==\ coord\_list.size()\ \&\&\ \textcolor{stringliteral}{"{}vector\ size\ mismatch\ in\ set\_elments"{}});}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00646}00646\ \ \ \ \ std::vector<unsigned>\ my\_indexes;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00647}00647\ \ \ \ \ std::vector<T>\ my\_elements;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00648}00648\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ coord\_list.size();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00649}00649\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c\ =\ coord\_list[i];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00650}00650\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lattice.\mbox{\hyperlink{classlattice__struct_a42fcdd75a779e3d63c5ca80827f125bc}{is\_on\_mynode}}(c))\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00651}00651\ \ \ \ \ \ \ \ \ \ \ \ \ my\_indexes.push\_back(lattice.\mbox{\hyperlink{classlattice__struct_af06f3e962e02f77edb5a6b096a44340d}{site\_index}}(c));}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00652}00652\ \ \ \ \ \ \ \ \ \ \ \ \ my\_elements.push\_back(elements[i]);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00653}00653\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00654}00654\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00655}00655\ \ \ \ \ fs-\/>payload.place\_elements(my\_elements.data(),\ my\_indexes.data(),\ my\_indexes.size(),\ lattice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00656}00656\ \ \ \ \ mark\_changed(ALL);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00657}00657\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00658}00658\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00659}00659\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00661}00661\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00662}\mbox{\hyperlink{classField_ae62500759ad146835236688bfca45354}{00662}}\ std::vector<T>\ \mbox{\hyperlink{classField_ae62500759ad146835236688bfca45354}{Field<T>::get\_elements}}(\textcolor{keyword}{const}\ std::vector<CoordinateVector>\ \&coord\_list,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00663}00663\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ bcast)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00664}00664\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00665}00665\ \ \ \ \ std::vector<T>\ res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00666}00666\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00667}00667\ \ \ \ \ \ \ \ \ res.resize(coord\_list.size());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00668}00668\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00669}00669\ \ \ \ \ fs-\/>gather\_elements(res.data(),\ coord\_list);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00670}00670\ \ \ \ \ \textcolor{keywordflow}{if}\ (bcast)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00671}00671\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(res);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00672}00672\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00673}00673\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00674}00674\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00675}00675\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00676}00676\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00678}00678\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00679}\mbox{\hyperlink{classField_a14250b89ec6fdb483bf70195f7a31124}{00679}}\ std::vector<T>\ \mbox{\hyperlink{classField_a14250b89ec6fdb483bf70195f7a31124}{Field<T>::get\_subvolume}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmin,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&cmax,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00680}00680\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ bcast)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00681}00681\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00682}00682\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ vol\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00683}00683\ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00684}00684\ \ \ \ \ \ \ \ \ vol\ *=\ cmax[d]\ -\/\ cmin[d]\ +\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00685}00685\ \ \ \ \ \ \ \ \ assert(cmax[d]\ >=\ cmin[d]\ \&\&\ cmin[d]\ >=\ 0\ \&\&\ cmax[d]\ <\ lattice.size(d));}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00686}00686\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00687}00687\ \ \ \ \ std::vector<CoordinateVector>\ clist(vol);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00688}00688\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00689}00689\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00690}00690\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00691}00691\ \ \ \ \ forcoordinaterange(c,\ cmin,\ cmax)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00692}00692\ \ \ \ \ \ \ \ \ clist[i++]\ =\ c;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00693}00693\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00694}00694\ \ \ \ \ \textcolor{keywordflow}{return}\ get\_elements(clist,\ bcast);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00695}00695\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00696}00696\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00697}00697\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00699}00699\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00700}\mbox{\hyperlink{classField_af47e166050f2c100782500c5eda41925}{00700}}\ std::vector<T>\ \mbox{\hyperlink{classField_af47e166050f2c100782500c5eda41925}{Field<T>::get\_slice}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&c,\ \textcolor{keywordtype}{bool}\ bcast)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00701}00701\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ cmin,\ cmax;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00702}00702\ \ \ \ \ foralldir(d)\ \textcolor{keywordflow}{if}\ (c[d]\ <\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00703}00703\ \ \ \ \ \ \ \ \ cmin[d]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00704}00704\ \ \ \ \ \ \ \ \ cmax[d]\ =\ lattice.size(d)\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00705}00705\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00706}00706\ \ \ \ \ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00707}00707\ \ \ \ \ \ \ \ \ cmin[d]\ =\ cmax[d]\ =\ c[d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00708}00708\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00709}00709\ \ \ \ \ \textcolor{keywordflow}{return}\ get\_subvolume(cmin,\ cmax,\ bcast);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00710}00710\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00711}00711\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00712}00712\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00716}00716\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00717}00717\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00718}\mbox{\hyperlink{classField_a48de521e9e9beb5907351e7ee8721b0e}{00718}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_a48de521e9e9beb5907351e7ee8721b0e}{Field<T>::copy\_local\_data}}(std::vector<T>\ \&buffer)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00719}00719\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00720}00720\ \ \ \ \ \textcolor{comment}{//\ copy\ to\ local\ variables\ to\ avoid\ lattice\ ptr}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00721}00721\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nmin\ =\ lattice.mynode.min;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00722}00722\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nmul\ =\ lattice.mynode.size\_factor;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00723}00723\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00724}00724\ \ \ \ \ buffer.resize(lattice.mynode.volume());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00725}00725\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00726}00726\ \ \ \ \ \textcolor{comment}{//\ d\_malloc\ mallocs\ from\ device\ if\ needed}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00727}00727\ \ \ \ \ T\ *data\ =\ (T\ *)d\_malloc(\textcolor{keyword}{sizeof}(T)\ *\ lattice.mynode.volume());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00728}00728\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00729}00729\ \ \ \ \ T\ *data\ =\ buffer.data();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00730}00730\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00731}00731\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00732}00732\ \textcolor{preprocessor}{\#pragma\ hila\ novector\ direct\_access(data)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00733}00733\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00734}00734\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nodec;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00735}00735\ \ \ \ \ \ \ \ \ nodec\ =\ X.coordinates()\ -\/\ nmin;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00736}00736\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00737}00737\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ i\ =\ nodec.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(nmul);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00738}00738\ \ \ \ \ \ \ \ \ data[i]\ =\ (*this)[X];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00739}00739\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00740}00740\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00741}00741\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00742}00742\ \ \ \ \ gpuMemcpy(buffer.data(),\ data,\ \textcolor{keyword}{sizeof}(T)\ *\ lattice.mynode.volume(),\ gpuMemcpyDeviceToHost);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00743}00743\ \ \ \ \ d\_free(data);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00744}00744\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00745}00745\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00746}00746\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00749}00749\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00750}00750\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00751}\mbox{\hyperlink{classField_ada9786ec56558e6d5ba76fc2b7bc062e}{00751}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField_ada9786ec56558e6d5ba76fc2b7bc062e}{Field<T>::set\_local\_data}}(\textcolor{keyword}{const}\ std::vector<T>\ \&buffer)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00752}00752\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00753}00753\ \ \ \ \ \textcolor{comment}{//\ copy\ to\ local\ variables\ to\ avoid\ lattice\ ptr}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00754}00754\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nmin\ =\ lattice.mynode.min;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00755}00755\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nmul\ =\ lattice.mynode.size\_factor;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00756}00756\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00757}00757\ \ \ \ \ assert(buffer.size()\ >=\ lattice.mynode.volume());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00758}00758\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00759}00759\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00760}00760\ \ \ \ \ \textcolor{comment}{//\ d\_malloc\ mallocs\ from\ device\ if\ needed}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00761}00761\ \ \ \ \ T\ *data\ =\ (T\ *)d\_malloc(\textcolor{keyword}{sizeof}(T)\ *\ lattice.mynode.volume());}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00762}00762\ \ \ \ \ gpuMemcpy(data,\ buffer.data(),\ \textcolor{keyword}{sizeof}(T)\ *\ lattice.mynode.volume(),\ gpuMemcpyHostToDevice);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00763}00763\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00764}00764\ \ \ \ \ T\ *data\ =\ buffer.data();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00765}00765\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00766}00766\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00767}00767\ \textcolor{preprocessor}{\#pragma\ hila\ novector\ direct\_access(data)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00768}00768\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00769}00769\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nodec;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00770}00770\ \ \ \ \ \ \ \ \ nodec\ =\ X.coordinates()\ -\/\ nmin;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00771}00771\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00772}00772\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ i\ =\ nodec.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(nmul);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00773}00773\ \ \ \ \ \ \ \ \ (*this)[X]\ =\ data[i];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00774}00774\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00775}00775\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00776}00776\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00777}00777\ \ \ \ \ d\_free(data);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00778}00778\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00779}00779\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00780}00780\ \ \ \ \ this-\/>mark\_changed(ALL);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00781}00781\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00782}00782\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00783}00783\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00786}00786\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00787}00787\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00788}\mbox{\hyperlink{field__comm_8h_a5d4f2e1ce3a2ee1c1a19f8040dbd291e}{00788}}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{field__comm_8h_a5d4f2e1ce3a2ee1c1a19f8040dbd291e}{collect\_field\_halo\_data\_}}(T\ *data,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<T>}}\ \&src,\ \mbox{\hyperlink{classField}{Field<T>}}\ \&dest,}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00789}00789\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ int>}}\ \&dirs,\ \textcolor{keywordtype}{int}\ ndir)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00790}00790\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00791}00791\ \ \ \ \ \textcolor{comment}{//\ get\ the\ coords\ of\ the\ min\ point\ of\ the\ halo\ array}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00792}00792\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nmin\ =\ lattice.mynode.min;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00793}00793\ \ \ \ \ nmin.\mbox{\hyperlink{classMatrix__t_aa79533d7905f5cab945d3a4572b8bda9}{asArray}}()\ -\/=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00794}00794\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00795}00795\ \ \ \ \ \textcolor{comment}{//\ construct\ the\ mult\ vector\ to\ access\ the\ data}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00796}00796\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nmul;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00797}00797\ \ \ \ \ nmul.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(0)\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00798}00798\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ NDIM;\ i++)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00799}00799\ \ \ \ \ \ \ \ \ nmul.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i)\ =\ nmul.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i\ -\/\ 1)\ *\ (lattice.mynode.size[i\ -\/\ 1]\ +\ 2);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00800}00800\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00801}00801\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00802}00802\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ int>}}\ node\_min;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00803}00803\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ int>}}\ node\_max;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00804}00804\ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00805}00805\ \ \ \ \ \ \ \ \ node\_min[d]\ =\ lattice.mynode.min[d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00806}00806\ \ \ \ \ \ \ \ \ node\_max[d]\ =\ lattice.mynode.min[d]\ +\ lattice.mynode.size[d]\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00807}00807\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00808}00808\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00809}00809\ \textcolor{preprocessor}{\#pragma\ hila\ novector\ direct\_access(data)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00810}00810\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00811}00811\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nodec;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00812}00812\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c\ =\ X.coordinates();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00813}00813\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ gotit\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00814}00814\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00815}00815\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ ndir;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00816}00816\ \ \ \ \ \ \ \ \ \ \ \ \ Direction\ d\ =\ (Direction)dirs[i];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00817}00817\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ ==\ node\_min[d])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00818}00818\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ -\/=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00819}\mbox{\hyperlink{classField_ac76a0477380e02532746853d16983c4a}{00819}}\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ ==\ node\_max[d])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00820}\mbox{\hyperlink{classField_ab039d34f2e65c9cd58326fd013efd90c}{00820}}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ +=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00821}00821\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00822}00822\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ gotit\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00823}00823\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00824}00824\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00825}00825\ \ \ \ \ \ \ \ \ Direction\ d\ =\ (Direction)dirs[ndir];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00826}00826\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (gotit\ \&\&\ c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ ==\ node\_min[d])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00827}00827\ \ \ \ \ \ \ \ \ \ \ \ \ c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ -\/=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00828}00828\ \ \ \ \ \ \ \ \ \ \ \ \ nodec\ =\ c\ -\/\ nmin;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00829}00829\ \ \ \ \ \ \ \ \ \ \ \ \ data[nodec.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(nmul)]\ =\ src[X\ -\/\ d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00830}00830\ \ \ \ \ \ \ \ \ \ \ \ \ dest[X]\ =\ src[X\ -\/\ d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00831}00831\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00832}00832\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (gotit\ \&\&\ c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ ==\ node\_max[d])\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00833}00833\ \ \ \ \ \ \ \ \ \ \ \ \ c.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(d)\ +=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00834}00834\ \ \ \ \ \ \ \ \ \ \ \ \ nodec\ =\ c\ -\/\ nmin;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00835}00835\ \ \ \ \ \ \ \ \ \ \ \ \ data[nodec.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(nmul)]\ =\ src[X\ +\ d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00836}00836\ \ \ \ \ \ \ \ \ \ \ \ \ dest[X]\ =\ src[X\ +\ d];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00837}00837\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00838}00838\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00839}00839\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00840}00840\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00841}00841\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00843}00843\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00844}00844\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00845}00845\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classField}{Field<T>::copy\_local\_data\_with\_halo}}(std::vector<T>\ \&buffer)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00846}00846\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00847}00847\ \ \ \ \ \textcolor{comment}{//\ get\ the\ coords\ of\ the\ min\ point\ of\ the\ halo\ array}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00848}00848\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nmin\ =\ lattice.mynode.min;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00849}00849\ \ \ \ \ nmin.\mbox{\hyperlink{classMatrix__t_aa79533d7905f5cab945d3a4572b8bda9}{asArray}}()\ -\/=\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00850}00850\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00851}00851\ \ \ \ \ \textcolor{comment}{//\ construct\ the\ mult\ vector\ to\ access\ the\ data}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00852}00852\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nmul;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00853}00853\ \ \ \ \ nmul.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(0)\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00854}00854\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 1;\ i\ <\ NDIM;\ i++)}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00855}00855\ \ \ \ \ \ \ \ \ nmul.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i)\ =\ nmul.\mbox{\hyperlink{classMatrix__t_a92e24b77dfc45dbc9c67001625006553}{e}}(i\ -\/\ 1)\ *\ (lattice.mynode.size[i\ -\/\ 1]\ +\ 2);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00856}00856\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00857}00857\ \ \ \ \ \textcolor{comment}{//\ full\ size\ of\ the\ buffer}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00858}00858\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ siz\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00859}00859\ \ \ \ \ foralldir(d)\ siz\ *=\ (lattice.mynode.size[d]\ +\ 2);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00860}00860\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00861}00861\ \ \ \ \ buffer.resize(siz);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00862}00862\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00863}00863\ \ \ \ \ \textcolor{comment}{//\ d\_malloc\ mallocs\ from\ device\ if\ needed}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00864}00864\ \ \ \ \ T\ *data\ =\ (T\ *)d\_malloc(\textcolor{keyword}{sizeof}(T)\ *\ siz);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00865}00865\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00866}00866\ \ \ \ \ T\ *data\ =\ buffer.data();}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00867}00867\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00868}00868\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00869}00869\ \ \ \ \ \textcolor{comment}{//\ now\ collect\ bulk}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00870}00870\ \textcolor{preprocessor}{\#pragma\ hila\ novector\ direct\_access(data)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00871}00871\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00872}00872\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ unsigned>}}\ nodec;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00873}00873\ \ \ \ \ \ \ \ \ nodec\ =\ X.coordinates()\ -\/\ nmin;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00874}00874\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00875}00875\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ i\ =\ nodec.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(nmul);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00876}00876\ \ \ \ \ \ \ \ \ data[i]\ =\ (*this)[X];}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00877}00877\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00878}00878\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00879}00879\ \ \ \ \ \textcolor{comment}{//\ collect\ nn-\/halos}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00880}00880\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00881}00881\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ corners\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00882}00882\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ corner2\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00883}00883\ \textcolor{preprocessor}{\#if\ NDIM\ >\ 2}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00884}00884\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ corner3\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00885}00885\ \textcolor{preprocessor}{\#if\ NDIM\ >\ 3}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00886}00886\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ corner4\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00887}00887\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00888}00888\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00889}00889\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00890}00890\ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ int>}}\ dirs;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00891}00891\ \ \ \ \ foralldir(d1)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00892}00892\ \ \ \ \ \ \ \ \ dirs[0]\ =\ d1;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00893}00893\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ gather\ d1\ halo}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00894}00894\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{field__comm_8h_a5d4f2e1ce3a2ee1c1a19f8040dbd291e}{collect\_field\_halo\_data\_}}(data,\ (*\textcolor{keyword}{this}),\ corners,\ dirs,\ 0);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00895}00895\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00896}00896\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d2\ =\ d1\ +\ 1;\ d2\ <\ NDIM;\ ++d2)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00897}00897\ \ \ \ \ \ \ \ \ \ \ \ \ dirs[1]\ =\ d2;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00898}00898\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{field__comm_8h_a5d4f2e1ce3a2ee1c1a19f8040dbd291e}{collect\_field\_halo\_data\_}}(data,\ corners,\ corner2,\ dirs,\ 1);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00899}00899\ \textcolor{preprocessor}{\#if\ NDIM\ >\ 2}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00900}00900\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d3\ =\ d2\ +\ 1;\ d3\ <\ NDIM;\ ++d3)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00901}00901\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dirs[2]\ =\ d3;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00902}00902\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{field__comm_8h_a5d4f2e1ce3a2ee1c1a19f8040dbd291e}{collect\_field\_halo\_data\_}}(data,\ corner2,\ corner3,\ dirs,\ 2);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00903}00903\ \textcolor{preprocessor}{\#if\ NDIM\ >\ 3}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00904}00904\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d4\ =\ d3\ +\ 1;\ d4\ <\ NDIM;\ ++d4)\ \{}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00905}00905\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dirs[3]\ =\ d4;}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00906}00906\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{field__comm_8h_a5d4f2e1ce3a2ee1c1a19f8040dbd291e}{collect\_field\_halo\_data\_}}(data,\ corner3,\ corner4,\ dirs,\ 3);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00907}00907\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00908}00908\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00909}00909\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00910}\mbox{\hyperlink{classField_ae62500759ad146835236688bfca45354}{00910}}\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00911}00911\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00912}00912\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00913}\mbox{\hyperlink{classField_a14250b89ec6fdb483bf70195f7a31124}{00913}}\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00914}00914\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00915}00915\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00916}\mbox{\hyperlink{classField_af47e166050f2c100782500c5eda41925}{00916}}\ \ \ \ \ gpuMemcpy(buffer.data(),\ data,\ \textcolor{keyword}{sizeof}(T)\ *\ siz,\ gpuMemcpyDeviceToHost);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00917}00917\ \ \ \ \ d\_free(data);}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00918}\mbox{\hyperlink{classField_a48de521e9e9beb5907351e7ee8721b0e}{00918}}\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00919}\mbox{\hyperlink{classField_ada9786ec56558e6d5ba76fc2b7bc062e}{00919}}\ \}}
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00920}00920\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00921}00921\ }
+\DoxyCodeLine{\Hypertarget{field__comm_8h_source_l00922}00922\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

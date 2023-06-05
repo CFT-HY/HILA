@@ -1,0 +1,111 @@
+\doxysection{gauge\+\_\+field\+\_\+base\texorpdfstring{$<$}{<} M\texorpdfstring{$<$}{<} N, double \texorpdfstring{$>$}{>} \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4}{}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4}\index{gauge\_field\_base$<$ M$<$ N, double $>$ $>$@{gauge\_field\_base$<$ M$<$ N, double $>$ $>$}}
+
+
+Specialize double precision \doxylink{classSU}{SU(\+N)} matrix types.  
+
+
+
+
+{\ttfamily \#include $<$gauge\+\_\+field.\+h$>$}
+
+
+
+Collaboration diagram for gauge\+\_\+field\+\_\+base\texorpdfstring{$<$}{<} M\texorpdfstring{$<$}{<} N, double \texorpdfstring{$>$}{>} \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=202pt]{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a9b683890d4527dc6e08928169b7cd37e}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a9b683890d4527dc6e08928169b7cd37e} 
+using {\bfseries basetype} = double
+\begin{DoxyCompactList}\small\item\em The basetype is double. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8} 
+using {\bfseries gauge\+\_\+type} = M$<$ N, double $>$
+\begin{DoxyCompactList}\small\item\em The matrix type. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a6049bfd0ee555c1eaa186c6161bc6e99}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a6049bfd0ee555c1eaa186c6161bc6e99} 
+using {\bfseries gauge\+\_\+type\+\_\+flt} = M$<$ N, float $>$
+\begin{DoxyCompactList}\small\item\em This is the single precision type. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac47dbea10a93ee6b2b9a5be98fb6a324}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac47dbea10a93ee6b2b9a5be98fb6a324} 
+virtual void {\bfseries refresh} ()
+\begin{DoxyCompactList}\small\item\em Recalculate represented or smeared field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ad5facd9e7753fb52ba5fcaf6a6fc01be}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ad5facd9e7753fb52ba5fcaf6a6fc01be} 
+virtual void {\bfseries set\+\_\+unity} ()
+\begin{DoxyCompactList}\small\item\em Set the field to unity. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac761b781d5a729449fb04d8fe09ef03d}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac761b781d5a729449fb04d8fe09ef03d} 
+virtual void {\bfseries random} ()
+\begin{DoxyCompactList}\small\item\em Draw a random gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a7a1c86a1e9f1f44eb38af06dd447f5c4}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a7a1c86a1e9f1f44eb38af06dd447f5c4} 
+virtual void {\bfseries add\+\_\+momentum} (\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ N, \mbox{\hyperlink{classComplex}{Complex}}$<$ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a9b683890d4527dc6e08928169b7cd37e}{basetype}} $>$ $>$ $>$ \texorpdfstring{$\ast$}{*}force)
+\begin{DoxyCompactList}\small\item\em Update the momentum by given force. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aa4c6d421ec117ab085cbf58c345a85f9}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aa4c6d421ec117ab085cbf58c345a85f9} 
+virtual void {\bfseries draw\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Draw gaussian random momentum. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aab9bbb563355c6390e7905d22757f68d}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aab9bbb563355c6390e7905d22757f68d} 
+virtual void {\bfseries zero\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Set the momentum to zero. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac7c51f305d5e7e32a0d2ae99a09fa5f5}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac7c51f305d5e7e32a0d2ae99a09fa5f5} 
+virtual void {\bfseries backup} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of the gauge field for HMC. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a4c0b7d8395a35b27ba7c2fe09b964747}{restore\+\_\+backup}} ()
+\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a437ed82503ccd961c1a10463ef5f6d05}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a437ed82503ccd961c1a10463ef5f6d05} 
+\mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$ M$<$ N, float $>$ $>$ {\bfseries get\+\_\+single\+\_\+precision} ()
+\begin{DoxyCompactList}\small\item\em Return a single precision copy of the gauge field. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_acc2c18608b7a836fb5c077dabcd2ca20}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_acc2c18608b7a836fb5c077dabcd2ca20} 
+\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8}{gauge\+\_\+type}} $>$ {\bfseries gauge} \mbox{[}NDIM\mbox{]}
+\begin{DoxyCompactList}\small\item\em A matrix field for each Direction. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8}{gauge\+\_\+type}} $>$ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ab9bb8be076bea59e870cb4b3376ca2aa}{momentum}} \mbox{[}NDIM\mbox{]}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$template$<$ int, typename $>$ class M, int N$>$\newline
+class gauge\+\_\+field\+\_\+base$<$ M$<$ N, double $>$ $>$}
+Specialize double precision \doxylink{classSU}{SU(\+N)} matrix types. 
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00051}{51}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a4c0b7d8395a35b27ba7c2fe09b964747}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a4c0b7d8395a35b27ba7c2fe09b964747} 
+\index{gauge\_field\_base$<$ M$<$ N, double $>$ $>$@{gauge\_field\_base$<$ M$<$ N, double $>$ $>$}!restore\_backup@{restore\_backup}}
+\index{restore\_backup@{restore\_backup}!gauge\_field\_base$<$ M$<$ N, double $>$ $>$@{gauge\_field\_base$<$ M$<$ N, double $>$ $>$}}
+\doxysubsubsection{\texorpdfstring{restore\_backup()}{restore\_backup()}}
+{\footnotesize\ttfamily template$<$template$<$ int, typename $>$ class M, int N$>$ \\
+virtual void \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$ M$<$ N, double $>$ $>$\+::restore\+\_\+backup (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Restore the gauge field from the backup. Used when an HMC trajectory is rejected. 
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00081}{81}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ab9bb8be076bea59e870cb4b3376ca2aa}\label{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ab9bb8be076bea59e870cb4b3376ca2aa} 
+\index{gauge\_field\_base$<$ M$<$ N, double $>$ $>$@{gauge\_field\_base$<$ M$<$ N, double $>$ $>$}!momentum@{momentum}}
+\index{momentum@{momentum}!gauge\_field\_base$<$ M$<$ N, double $>$ $>$@{gauge\_field\_base$<$ M$<$ N, double $>$ $>$}}
+\doxysubsubsection{\texorpdfstring{momentum}{momentum}}
+{\footnotesize\ttfamily template$<$template$<$ int, typename $>$ class M, int N$>$ \\
+\mbox{\hyperlink{classField}{Field}}$<$\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8}{gauge\+\_\+type}}$>$ \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base}}$<$ M$<$ N, double $>$ $>$\+::momentum\mbox{[}NDIM\mbox{]}}
+
+Also create a momentum field. This is only allocated if necessary 
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00062}{62}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+gauge\+\_\+field.\+h\end{DoxyCompactItemize}

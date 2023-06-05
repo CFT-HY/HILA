@@ -1,0 +1,112 @@
+\doxysection{degauss.\+h}
+\hypertarget{degauss_8h_source}{}\label{degauss_8h_source}\index{degauss.h@{degauss.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ DEGAUSS\_H\_}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ DEGAUSS\_H\_}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00012}00012\ \textcolor{comment}{//\ Gauss'\ law\ violation\ is}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00013}00013\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00014}00014\ \textcolor{comment}{//\ \ G\string^a(x)\ =\ D\_i\ E\_i\string^a}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00015}00015\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00016}00016\ \textcolor{comment}{//\ Restoration\ is\ done\ by\ evolving\ the\ fields\ 'downhill'\ towards}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00017}00017\ \textcolor{comment}{//\ G\ ==\ 0}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00020}00020\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ group>}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00021}00021\ \textcolor{keywordtype}{void}\ get\_gauss\_violation(\textcolor{keyword}{const}\ GaugeField<group>\ \&U,}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00022}00022\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ VectorField<\mbox{\hyperlink{classAlgebra}{Algebra<group>}}>\ \&E,}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00023}00023\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classAlgebra}{Algebra<group>}}>\ \&gauss)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00026}00026\ \ \ \ \ \textcolor{comment}{//\ Measure\ Gauss}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00027}00027\ \ \ \ \ gauss\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00028}00028\ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00029}00029\ \ \ \ \ \ \ \ \ gauss[ALL]\ +=}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00030}00030\ \ \ \ \ \ \ \ \ \ \ \ \ E[d][X]\ -\/\ (U[d][X\ -\/\ d].dagger()\ *\ E[d][X\ -\/\ d].expand()\ *\ U[d][X\ -\/\ d])}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00031}00031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .project\_to\_algebra();}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00032}00032\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00033}00033\ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00036}00036\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ group>}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00037}00037\ \textcolor{keywordtype}{void}\ gauss\_fix\_step(\textcolor{keyword}{const}\ GaugeField<group>\ \&U,\ VectorField<\mbox{\hyperlink{classAlgebra}{Algebra<group>}}>\ \&E,}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00038}00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classAlgebra}{Algebra<group>}}>\ \&violation,}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00039}00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ hila::scalar\_type<group>\ mag)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00040}00040\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00041}00041\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00042}00042\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00043}00043\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ get\ violation\ from\ "{}up"{}}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ ta\ =\ (U[dir][X]\ *\ violation[X\ +\ dir].expand()\ *\ U[dir][X].dagger())}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00045}00045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .project\_to\_algebra();}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00046}00046\ \ \ \ \ \ \ \ \ \ \ \ \ E[dir][X]\ -\/=\ mag\ *\ (violation[X]\ -\/\ ta);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00048}00048\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00049}00049\ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00051}00051\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00052}00052\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ group>}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00053}00053\ \textcolor{keyword}{auto}\ degauss\_step(\textcolor{keyword}{const}\ GaugeField<group>\ \&U,\ VectorField<\mbox{\hyperlink{classAlgebra}{Algebra<group>}}>\ \&E)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00055}00055\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Algebra<group>}}>\ violation;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00056}00056\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00057}00057\ \ \ \ \ \textcolor{comment}{//\ \ Use\ here\ the\ trick\ of\ 2\ step\ sizes,\ the\ smaller\ one\ guarantees}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00058}00058\ \ \ \ \ \textcolor{comment}{//\ \ that\ the\ UV\ is\ stable\ and\ the\ larger\ one\ makes\ gradient\ flow}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00059}00059\ \ \ \ \ \textcolor{comment}{//\ \ faster.}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00061}00061\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ aleph\ =\ 1.25;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00062}00062\ \ \ \ \ \textcolor{keyword}{constexpr}\ hila::scalar\_type<group>\ onealeph\ =\ aleph\ /\ 12.0;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00063}00063\ \ \ \ \ \textcolor{keyword}{constexpr}\ hila::scalar\_type<group>\ twoaleph\ =\ 2.0\ *\ onealeph;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00064}00064\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00065}00065\ \ \ \ \ \textcolor{comment}{//\ \ Now\ what's\ the\ initial\ violation}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00066}00066\ \ \ \ \ get\_gauss\_violation(U,\ E,\ violation);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00067}00067\ \ \ \ \ \textcolor{comment}{//\ Apply\ as\ a\ correction}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00068}00068\ \ \ \ \ gauss\_fix\_step(U,\ E,\ violation,\ onealeph);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00069}00069\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00070}00070\ \ \ \ \ \textcolor{comment}{//\ and\ repeat\ with\ twoaleph}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00071}00071\ \ \ \ \ get\_gauss\_violation(U,\ E,\ violation);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00072}00072\ \ \ \ \ gauss\_fix\_step(U,\ E,\ violation,\ twoaleph);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00073}00073\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00074}00074\ \ \ \ \ \textcolor{comment}{//\ we\ return\ not\ the\ last\ violation,\ thus\ the\ real\ violation}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00075}00075\ \ \ \ \ \textcolor{comment}{//\ should\ be\ smaller\ than\ this}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00076}00076\ \ \ \ \ \textcolor{comment}{//\ Return\ violation\ per\ site}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00077}00077\ \ \ \ \ \textcolor{keywordflow}{return}\ violation.squarenorm()\ /\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00078}00078\ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00079}00079\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00084}00084\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ group>}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00085}00085\ \textcolor{keywordtype}{int}\ degauss(\textcolor{keyword}{const}\ GaugeField<group>\ \&U,\ VectorField<\mbox{\hyperlink{classAlgebra}{Algebra<group>}}>\ \&E,}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00086}00086\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ quality)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00087}00087\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00088}00088\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ loop\_max\ =\ 10000;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00089}00089\ \ \ \ \ \textcolor{keywordtype}{double}\ viol;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00090}00090\ \ \ \ \ \textcolor{keywordtype}{int}\ loop;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00091}00091\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00092}00092\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classhila_1_1timer}{hila::timer}}\ degauss\_timer(\textcolor{stringliteral}{"{}Degauss"{}});}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00093}00093\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00094}00094\ \ \ \ \ \textcolor{comment}{/*\ loop\ over\ Degauss\_step\ until\ violation\ small\ enough\ */}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00096}00096\ \ \ \ \ degauss\_timer.start();}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00097}00097\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00098}00098\ \ \ \ \ loop\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00099}00099\ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ loop++;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00101}00101\ \ \ \ \ \ \ \ \ viol\ =\ degauss\_step(U,\ E);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00102}00102\ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (viol\ >\ quality\ \&\&\ loop\ <=\ loop\_max);}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00103}00103\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00104}00104\ \ \ \ \ \textcolor{keywordflow}{if}\ (loop\ >\ loop\_max\ \&\&\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}\ **********\ LOOP\_MAX\ "{}}\ <<\ loop\_max}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00106}00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ reached\ in\ degauss,\ violation/site\ "{}}\ <<\ viol\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00107}00107\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00108}00108\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00109}00109\ \ \ \ \ degauss\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00111}00111\ \ \ \ \ \textcolor{keywordflow}{return}\ loop;}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00112}00112\ \}}
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00114}00114\ }
+\DoxyCodeLine{\Hypertarget{degauss_8h_source_l00115}00115\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}
