@@ -10,3 +10,4 @@ settings.json
 .VSCodeCounter/*
 docs/latex/
 docs/html/*
+!docs/html/.do_not_delete
