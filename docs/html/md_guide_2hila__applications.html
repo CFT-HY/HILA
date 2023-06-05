@@ -16,6 +16,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  extensions: ["tex2jax.js"],
+  jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 <link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
@@ -122,6 +129,13 @@ $(document).ready(function(){initNavTree('md_guide_2hila__applications.html','')
 <p>Lastly the <code>src</code> directory is the directory where the user will define their HILA applications. In here we have two example HILA applications of which we will highlight <code><a class="el" href="hila__simple__example_8cpp_source.html">hila_simple_example.cpp</a></code>.</p>
 <p>This file structure is necessary for the use of the makefile which handles the linking of HILA libraries used by the user.</p>
 <h1><a class="anchor" id="autotoc_md0"></a>
+Table of contents</h1>
+<ol type="1">
+<li><a class="el" href="md_guide_2hila__applications.html#makefile-system">Makefile system</a></li>
+<li><a class="el" href="md_guide_2hila__applications.html#simple-hila-application">Simple HILA application</a></li>
+<li><a class="el" href="md_guide_2hila__applications.html#conclusion">Conclusion</a></li>
+</ol>
+<h1><a class="anchor" id="makefile-system"></a>
 Makefile system</h1>
 <p>Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.</p>
 <p>The following makefile handles the compilation of two seperate hila example applications <code><a class="el" href="hila__example_8cpp_source.html">hila_example.cpp</a></code> and <code><a class="el" href="hila__simple__example_8cpp_source.html">hila_simple_example.cpp</a></code>:</p>
@@ -129,20 +143,31 @@ Makefile system</h1>
 <div class="line"># Can be absolute or relative </div>
 <div class="line">HILA_DIR := ../..</div>
 <div class="line"> </div>
-<div class="line">#A useful definition is to set the default target backend to be used for computing. In our example we set the default target backend to vanilla, which is the pure CPU MPI implementation.</div>
-<div class="line">#This allows one to skip the need of defining ARCH in the make process `make ARCH=vanilla -&gt; make`.</div>
+<div class="line"># A useful definition is to set the default target backend to be used for computing. </div>
+<div class="line"># In our example we set the default target backend to vanilla, which is the pure </div>
+<div class="line"># CPU MPI implementation.</div>
+<div class="line"># This allows one to skip the need of defining ARCH in the make process </div>
+<div class="line"># `make ARCH=vanilla -&gt; make`.</div>
 <div class="line">ifndef ARCH</div>
 <div class="line">ARCH := vanilla</div>
 <div class="line">endif</div>
 <div class="line"> </div>
-<div class="line"># We then include the default makefile for hila applications which handles all the nitty gritty of defining paths for the target architecture and linking all the necessary libraries. This make file also handles use of the hila preprocessor:</div>
+<div class="line"># We then include the default makefile for hila applications which handles all</div>
+<div class="line"># the nitty gritty of defining paths for the target architecture and linking </div>
+<div class="line"># all the necessary libraries. This make file also handles use of the hila preprocessor:</div>
 <div class="line">include $(HILA_DIR)/libraries/main.mk</div>
 <div class="line"> </div>
-<div class="line">#One can also define options for the HILA preprocessor in this makefile by appending to the environment variable HILAPP_OPTS</div>
-<div class="line">#In the example code with add the `-check-init` flag, but for now we will not explain what it&#39;s use is. We will discuss all the hila preprocessor flags later in the documentation.</div>
+<div class="line"># One can also define options for the HILA preprocessor in this makefile by </div>
+<div class="line"># appending to the environment variable HILAPP_OPTS</div>
+<div class="line"> </div>
+<div class="line"># In the example code with add the `-check-init` flag, but for now we will </div>
+<div class="line"># not explain what it&#39;s use is. We will discuss all the hila preprocessor </div>
+<div class="line"># flags later in the documentation.</div>
 <div class="line">HILAPP_OPTS += -check-init</div>
 <div class="line"> </div>
-<div class="line">#Additionally one can add HILA application options in the makefile. For example we set the system dimensions by appending to the `APP_OPTS` environment variable</div>
+<div class="line"># Additionally one can add HILA application options in the makefile. </div>
+<div class="line"># For example we set the system dimensions by appending to the </div>
+<div class="line"># `APP_OPTS` environment variable</div>
 <div class="line">APP_OPTS += -DNDIM=3</div>
 <div class="line"> </div>
 <div class="line"># With multiple targets we want to use &quot;make target&quot;, not &quot;make build/target&quot;.</div>
@@ -159,7 +184,7 @@ Makefile system</h1>
 </div><!-- fragment --><p> TODO: Fix doxygen not understanding makefile syntax highlights and text wrapping</p>
 <p>The only point of note is the definition for the respective object file locations with <code>build/hila_simple_example.o</code>. For an applications this needs to be formatted in the same way as above, otherwise linking of c++ libraries and HILA objects will not be done correctly. The general format would be: </p><pre class="fragment">build/{own application srouce name}: Makefile build/{own application srouce name}.o $(HILA_OBJECTS) $(HEADERS)
     $(LD) -o $@ build/{own application srouce name}.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
-</pre> <h2><a class="anchor" id="autotoc_md1"></a>
+</pre> <h2><a class="anchor" id="autotoc_md3"></a>
 Target backends</h2>
 <p>The target backends are defined in the folder HILA/libraries/target_arch. There are two types of target backends. General ones defined for specific paralellization technologies:</p>
 <table class="markdownTable">
@@ -179,7 +204,7 @@ Target backends</h2>
 <p>And ones which are defined for specific HPC platforms:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
-<th class="markdownTableHeadNone">ARCH   </th><th class="markdownTableHeadNone">Description    </th></tr>
+<th class="markdownTableHeadNone">ARCH=   </th><th class="markdownTableHeadNone">Description    </th></tr>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone"><code>lumi</code>   </td><td class="markdownTableBodyNone">CPU-MPI implementation for LUMI supercomputer    </td></tr>
 <tr class="markdownTableRowEven">
@@ -190,7 +215,7 @@ Target backends</h2>
 <td class="markdownTableBodyNone"><code>mahti-cuda</code>   </td><td class="markdownTableBodyNone">GPU-MPI implementation for MAHTI supercomputer using CUDA   </td></tr>
 </table>
 <p>The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.</p>
-<h1><a class="anchor" id="autotoc_md2"></a>
+<h1><a class="anchor" id="simple-hila-application"></a>
 Simple hila application</h1>
 <p>Now that we have discussed the appropriate makefile we can move on to a simple HILA application.</p>
 <p>We offer a simple HILA application <code><a class="el" href="hila__simple__example_8cpp_source.html">hila_simple_example.cpp</a></code> which computes a random gaussian field (f), it's derivative (g) and the average of the derivative field is given by:</p>
@@ -289,7 +314,27 @@ onsites expansion</summary>
 <div class="ttc" id="anamespacehila_html_acdf775f23790c6c2694313db8643c873"><div class="ttname"><a href="namespacehila.html#acdf775f23790c6c2694313db8643c873">hila::check_that_rng_is_initialized</a></div><div class="ttdeci">void check_that_rng_is_initialized()</div><div class="ttdoc">RNG initialization check - emitted on loops.</div><div class="ttdef"><b>Definition</b> <a href="random_8cpp_source.html#l00212">random.cpp:212</a></div></div>
 </div><!-- fragment --><p> AHHH SCARY PUT IT AWAY!!! </p>
 </details>
-<p>As we can see the expansion is complicated and scary, one can imagine how complicated it get's with different computing platforms. The X variable withing the onsites loop is a reserved variable within HILA applications. This variable is what defines the index of every point within the field. Appropriately the command <code>f[X].gaussian_random()</code> defines a gaussian random number for each point X within the field f. The ALL parameter within the onsites loop defines that we will iterate throughout the whole field. We will discuss variability of this parameter later in the documentation. </p>
+<p>As we can see the expansion is complicated and scary, one can imagine how complicated it get's with different computing platforms. The X variable withing the onsites loop is a reserved variable within HILA applications. This variable is what defines the index of every point within the field. Appropriately the command <code>f[X].gaussian_random()</code> defines a gaussian random number for each point X within the field f. The ALL parameter within the onsites loop defines that we will iterate throughout the whole field. We will discuss variability of this parameter later in the documentation.</p>
+<p>Next we compute \(g(X) = |\nabla^2 f(X)| = \sum_{d \in \hat{e}} |f(X + d) - 2f(X) + f(X-d)| \), where \(\hat{e} = \{e_x,e_y,e_z\}\) being the set of unit vectors that allow us to iterate over all directions. In HILA to iterate over all directions we use the foralldir pragma. The resulting HILA code is:</p>
+<div class="fragment"><div class="line">foralldir(d) {</div>
+<div class="line">    g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>We use a sum reduction assignment operator withing the foralldir pragma to indicate the sum in the laplacian equation. With assignment operators we can use the ALL variable directly to index the field f, which is equivalent to writing:</p>
+<div class="fragment"><div class="line">foralldir(d) {</div>
+<div class="line">    onsites(ALL) g[X] += abs(f[X+d] - 2*f[X] + f[X-d]);</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>We then compute the average of this previously computed norm of the Laplacian of the field f using a similar sum reduction with the assignment operator:</p>
+<div class="fragment"><div class="line"><span class="keywordtype">double</span> average = 0;</div>
+<div class="line">onsites(ALL) {</div>
+<div class="line">    average += g[X];</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>We compute the average of each point with respect to the size of the system, which is give by <code>lattice.volume()</code>, since the lattice holds all the information of the systems structure. To output this value we use the default stream for text which limits the output only to the root node, so that we do not duplicate output from all mpi ranks. This default stream is held within the <code><a class="el" href="namespacehila.html#a7d333681d94db8e9eac675f2a7b5e3e6" title="This writes output only from main process (node 0)">hila::out0</a></code> command contained in the <code>hila</code> namespace. It is of type <code>std::ostream</code> meaning that it is essentially an alias to <code>std::cout</code> of the zeroth node.</p>
+<div class="fragment"><div class="line">average = average/lattice.volume()</div>
+<div class="line"><a class="code hl_variable" href="namespacehila.html#a7d333681d94db8e9eac675f2a7b5e3e6">hila::out0</a> &lt;&lt; <span class="stringliteral">&quot;Average of g is &quot;</span> &lt;&lt; average &lt;&lt; <span class="charliteral">&#39;\n&#39;</span>;</div>
+</div><!-- fragment --><p>Lastly we wrap up the HILA application with the <code><a class="el" href="namespacehila.html#ac4c73fee5aec8618b5c933a67822de1e" title="Normal, controlled exit - all nodes must call this. Prints timing information and information about c...">hila::finishrun</a></code> command which cleans up mpi and performs a safe exit with a memory cleanup step. Additionally it prints out useful timing information coupled with a timestamp.</p>
+<h1><a class="anchor" id="conclusion"></a>
+Conclusion</h1>
+<p>This concludes the section on creating your first HILA application. We have gone through the basic structure of HILA applications, and how they are built and compiled. Additionally we have discussed basic functionality that HILA offers. With this foundational knowledge one can move on to reading the comprehensive guide on <a class="el" href="md_guide_2hila__functionality.html">HILA functionality</a> </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

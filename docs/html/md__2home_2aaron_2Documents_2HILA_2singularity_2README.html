@@ -16,6 +16,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  extensions: ["tex2jax.js"],
+  jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 <link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
@@ -94,24 +101,24 @@ $(document).ready(function(){initNavTree('md__2home_2aaron_2Documents_2HILA_2sin
   <div class="headertitle"><div class="title">Singularity container for HILA pre-processor</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md24"></a> Definition file for HILA pre-processor <a href="https://sylabs.io/singularity/">singularity</a> container. This container is meant to be a portable solution for compiling the first half of HILA code which is the parsing for specific architectures.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md25"></a> Definition file for HILA pre-processor <a href="https://sylabs.io/singularity/">singularity</a> container. This container is meant to be a portable solution for compiling the first half of HILA code which is the parsing for specific architectures.</p>
 <p>Singularity is a tailor made containerizing software often supported by HPC platforms such as CSC supercomputers.</p>
 <p>One can download the singularity container hilapp.sif directly from this github repositories release page or build it from scratch. If downloaded skip directly to <b>Using singulartiy container</b> section:</p>
 <div class="fragment"><div class="line">wget https://github.com/CFT-HY/HILA/releases/download/0.0.1/hilapp.sif</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md25"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md26"></a>
 Building container from scratch</h1>
-<h2><a class="anchor" id="autotoc_md26"></a>
+<h2><a class="anchor" id="autotoc_md27"></a>
 1. Installing singularity</h2>
 <p>Install singularity either from source of via any given package manager which is supported. Documentation can be found on the <a href="https://github.com/sylabs/singularity">GitHub page</a></p>
 <p>You can simply download latest .deb or .rpm from github <a href="https://github.com/sylabs/singularity/releases">release page</a> and install directly with package manager</p>
 <p>Ubuntu: </p><div class="fragment"><div class="line">dpkg -i singularity-ce_$(SINGULARITY_VERSION)-$(UBUNTU_VERSION)_amd64.deb</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md27"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md28"></a>
 2. Building singularity container</h2>
 <p>Note: sudo privileges are necessary for building singularity containers</p>
 <p>For building the container we have two options. One can either build the container using the release version of hilapp from github or one can build using the local hilapp source. Especially in the situation that one is developing the hila preprocessor and would like to test it on a HPC platform then building the singularity container from a local source is the preferred option. There are two different singularity definition files for both cases.</p>
 <p>Building using release version: </p><div class="fragment"><div class="line">sudo singularity build hilapp.sif hilapp_git.def</div>
 </div><!-- fragment --><p>Building using local source </p><div class="fragment"><div class="line">sudo singularity build hilapp.sif hilapp_local.def</div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md28"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md29"></a>
 Using singulartiy container</h1>
 <p>The hilapp.sif file will act as a singularity container and equivalently as the hilapp binary and can be used as such when pre processing HILA code. Thus you can move it to your HILA projects bin folder</p>
 <div class="fragment"><div class="line">mkdir HILA/hilapp/bin</div>

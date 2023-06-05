@@ -16,6 +16,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  extensions: ["tex2jax.js"],
+  jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 <link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
@@ -311,7 +318,7 @@ std::vector&lt; <a class="el" href="classhila_1_1timer.html">timer</a> * &gt;&#1
 <p>The values are read in sequentially, thus, they must be in the file in the order they are read in.</p>
 <p>Class provides user functions open(), close(), get(), get_item(), get_value(), quiet()</p>
 <p>hila::input f("filename"); - initialization with filename opens the file for input </p>
-<h2><a class="anchor" id="autotoc_md18"></a>
+<h2><a class="anchor" id="autotoc_md17"></a>
 hila::input f;</h2>
 <p>open(): open file for reading </p><pre class="fragment">  bool hila::input::open(std::string filename,
                          bool use_cmdline,

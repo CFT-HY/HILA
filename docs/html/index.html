@@ -16,6 +16,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  extensions: ["tex2jax.js"],
+  jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 <link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
@@ -100,7 +107,7 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
 <p>Purpose: make writing applications straightforward and intuitive, while producing optimized executables for different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, etc.). Details of the parallelization and computing architecture are hidden from the user's view, and all applications automatically run on present or future platform. Write once &ndash; run anywhere.</p>
 <p>Hila is based on hila preprocessor "hilapp", which is a C++ source-to-source transformer using the <a href="https://clang.llvm.org/docs/LibTooling.html">libtooling</a> toolbox of the <a href="https://clang.llvm.org/">Clang</a> compiler. It converts application C++ to platform-specific C++ code, which is passed to appropriate compilers for the platforms.</p>
 <p>Behind the scenes hila takes care of MPI layout and communications. It lays out the lattice fields differently for different computing platforms: 'array of structures' (standard), 'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).</p>
-<h1><a class="anchor" id="autotoc_md8"></a>
+<h1><a class="anchor" id="autotoc_md7"></a>
 Table of Contents</h1>
 <ol type="1">
 <li><a class="el" href="index.html#dependencies">Dependencies</a></li>
@@ -109,7 +116,7 @@ Table of Contents</h1>
 </ol>
 <h1><a class="anchor" id="dependencies"></a>
 Dependencies</h1>
-<h2><a class="anchor" id="autotoc_md9"></a>
+<h2><a class="anchor" id="autotoc_md8"></a>
 Hilapp</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -117,7 +124,7 @@ Hilapp</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">Clang   </td><td class="markdownTableBodyNone">8 -   </td><td class="markdownTableBodyNone">Yes   </td></tr>
 </table>
-<h3><a class="anchor" id="autotoc_md10"></a>
+<h3><a class="anchor" id="autotoc_md9"></a>
 Installing dependencies for HILA preprocessor:</h3>
 <p>If one opts to use a singularity container skip to HILA applications dependencies.</p>
 <p>If one opts to use a docker container, skip directly to the <a class="el" href="index.html#installation">installation</a> section.</p>
@@ -125,7 +132,7 @@ Installing dependencies for HILA preprocessor:</h3>
 <div class="fragment"><div class="line">export LLVM_VERSION=15</div>
 <div class="line">sudo apt-get -y install clang-$LLVM_VERSION \</div>
 <div class="line">                   libclang-$LLVM_VERSION-dev</div>
-</div><!-- fragment --><h2><a class="anchor" id="autotoc_md11"></a>
+</div><!-- fragment --><h2><a class="anchor" id="autotoc_md10"></a>
 HILA applications</h2>
 <table class="markdownTable">
 <tr class="markdownTableHead">
@@ -143,7 +150,7 @@ HILA applications</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">HIP   </td><td class="markdownTableBodyNone">x   </td><td class="markdownTableBodyNone">No   </td></tr>
 </table>
-<h3><a class="anchor" id="autotoc_md12"></a>
+<h3><a class="anchor" id="autotoc_md11"></a>
 Installing dependencies for HILA applications:</h3>
 <p>If one opts to use docker, skip directly to the <a class="el" href="index.html#installation">installation</a> section.</p>
 <p>Installing all non GPU dependencies on ubuntu: </p><div class="fragment"><div class="line">sudo apt install build-essential \</div>
@@ -160,20 +167,20 @@ Installation</h1>
 <div class="fragment"><div class="line">git clone https://github.com/CFT-HY/HILA</div>
 </div><!-- fragment --><p>The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source, and both steps have their respective containerization options available. The variety in options is to address differing issues which arise in platform dependencies.</p>
 <p>When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.</p>
-<h3><a class="anchor" id="autotoc_md13"></a>
+<h3><a class="anchor" id="autotoc_md12"></a>
 LINUX</h3>
 <p>HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from <a class="el" href="index.html#hila-preprocessor">source</a> or with the use of a <a class="el" href="index.html#singularity">singualrity</a> container. Additionally one can opt to use the <a class="el" href="index.html#docker">docker</a> container which installs the hila preprocessor directly.</p>
-<h3><a class="anchor" id="autotoc_md14"></a>
+<h3><a class="anchor" id="autotoc_md13"></a>
 MAC</h3>
 <p>On mac the installation of the HILA preprocessor dependencies and HILA application dependencies can be tedious, and in some cases impossible. Availability of clang libtoolbox is open ended. For this reason the best option is to use the available <a class="el" href="index.html#docker">docker</a> container.</p>
-<h3><a class="anchor" id="autotoc_md15"></a>
+<h3><a class="anchor" id="autotoc_md14"></a>
 WINDOWS</h3>
 <p>On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available <a class="el" href="index.html#docker">docker</a> container.</p>
-<h3><a class="anchor" id="autotoc_md16"></a>
+<h3><a class="anchor" id="autotoc_md15"></a>
 HPC</h3>
 <p>On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platfroms the best solution is to opt to use the <a class="el" href="index.html#singularity">singularity</a> container.</p>
 <p><b>After installing the hila preprocessor with one of the above options one can move on to the <a class="el" href="index.html#building-hila-applications">building HILA applications</a> section.</b></p>
-<h2><a class="anchor" id="autotoc_md17"></a>
+<h2><a class="anchor" id="autotoc_md16"></a>
 Containers</h2>
 <p>HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.</p>
 <h3><a class="anchor" id="docker"></a>

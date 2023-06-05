@@ -16,6 +16,13 @@
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  extensions: ["tex2jax.js"],
+  jax: ["input/TeX","output/HTML-CSS"],
+});
+</script>
+<script type="text/javascript" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 <link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 <link href="doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
@@ -94,9 +101,9 @@ $(document).ready(function(){initNavTree('md__2home_2aaron_2Documents_2HILA_2doc
   <div class="headertitle"><div class="title">Docker image for HILA</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md29"></a> Create docker image: </p><pre class="fragment">docker build -t hila -f Dockerfile .
+<div class="textblock"><p><a class="anchor" id="autotoc_md23"></a> Create docker image: </p><pre class="fragment">docker build -t hila -f Dockerfile .
 </pre><p> Launch image interactively with docker compose </p><pre class="fragment">docker compose run --rm hila-applications
-</pre> <h1><a class="anchor" id="autotoc_md30"></a>
+</pre> <h1><a class="anchor" id="autotoc_md24"></a>
 Developing with docker</h1>
 <p>The applications folder is automatically mounted from the local host to the docker image when launching the service hila-applications </p><pre class="fragment">../applications:/HILA/applications
 </pre><p> This allows one to develop HILA applications directly from source and launch them in the docker image with ease.</p>
