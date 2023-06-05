@@ -1,0 +1,33 @@
+\doxysection{hila\+::timer Class Reference}
+\hypertarget{classhila_1_1timer}{}\label{classhila_1_1timer}\index{hila::timer@{hila::timer}}
+
+
+{\ttfamily \#include $<$timing.\+h$>$}
+
+
+
+\doxysubsection{Detailed Description}
+Timers are used to time recurring events. Usage\+: \begin{DoxyVerb}    static timer loop_timer("Loop");
+
+    loop_timer.start();
+       < timed section >
+    loop_timer.stop();
+\end{DoxyVerb}
+ All timer values are automatically reported on program exit (\doxylink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila\+::finishrun} calls report\+\_\+timers())
+
+Timer can be reset with loop\+\_\+timer.\+reset();
+
+Timer value can be inquired with \doxylink{structhila_1_1timer__value}{timer\+\_\+value} tval = loop\+\_\+timer.\+value(); where \doxylink{structhila_1_1timer__value}{timer\+\_\+value} is a struct defined below.
+
+Other time related functions\+: double \doxylink{namespacehila_aa72756504f7ee068ec0b90fedfd07bfc}{gettime()}; -\/ returns the time in seconds from program start void timestamp(\"{}message\"{}); -\/ prints msg + current date+time + time from start
+
+void setup\+\_\+timelimit(long seconds); -\/ sets the cpu time limit (see time\+\_\+to\+\_\+exit()) bool time\+\_\+to\+\_\+exit(); -\/ to be called periodically at a suitable spot in the program; returns true if the program should exit now. 
+
+Definition at line \mbox{\hyperlink{timing_8h_source_l00054}{54}} of file \mbox{\hyperlink{timing_8h_source}{timing.\+h}}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+timing.\+h\item 
+timing.\+cpp\end{DoxyCompactItemize}

@@ -1,0 +1,43 @@
+\doxysection{Wilson.\+h}
+\hypertarget{Wilson_8h_source}{}\label{Wilson_8h_source}\index{Wilson.h@{Wilson.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ WILSON\_H\_}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ WILSON\_H\_}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ <math.h>}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00007}00007\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00008}00008\ \textcolor{preprocessor}{\#define\ PI\ 3.14159265358979323846}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00009}00009\ \textcolor{preprocessor}{\#define\ NDIM\ 4}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00011}00011\ \textcolor{comment}{//\ Include\ the\ lattice\ field\ definition}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00012}00012\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00013}00013\ \textcolor{preprocessor}{\#include\ "{}datatypes/matrix.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00014}00014\ \textcolor{preprocessor}{\#include\ "{}datatypes/sun.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00015}00015\ \textcolor{preprocessor}{\#include\ "{}datatypes/representations.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00016}00016\ \textcolor{preprocessor}{\#include\ "{}datatypes/wilson\_vector.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00017}00017\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{field_8h}{plumbing/field.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00018}00018\ \textcolor{preprocessor}{\#include\ "{}hmc/hmc.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00019}00019\ \textcolor{preprocessor}{\#include\ "{}hmc/gauge\_field.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00020}00020\ \textcolor{preprocessor}{\#include\ "{}dirac/wilson.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00021}00021\ \textcolor{preprocessor}{\#include\ "{}hmc/fermion\_field.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00022}00022\ \textcolor{preprocessor}{\#include\ "{}plumbing/input.h"{}}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00023}00023\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00024}00024\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ N\ =\ 2;}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00026}00026\ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU}{SUN}}\ =\ \mbox{\hyperlink{classSU}{SU<N,\ double>}};}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00027}00027\ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{NMAT}}\ =\ \mbox{\hyperlink{classMatrix}{Matrix<N,\ N,\ Complex<double>}}>;}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00028}00028\ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU__vector}{VEC}}\ =\ \mbox{\hyperlink{classSU__vector}{SU\_vector<N,\ double>}};}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00030}00030\ \textcolor{comment}{//\ Define\ some\ parameters\ for\ the\ simulation}}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00031}00031\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ nd\ =\ \{8,\ 8,\ 8,\ 8\};}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00032}00032\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00033}00033\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{int}\ n\_measurements;}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00034}00034\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{int}\ n\_updates\_per\_measurement;}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00035}00035\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{long}\ seed;}
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00036}00036\ }
+\DoxyCodeLine{\Hypertarget{Wilson_8h_source_l00037}00037\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ STAGGERED\_H\_}}
+
+\end{DoxyCode}

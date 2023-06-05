@@ -1,0 +1,399 @@
+\doxysection{reduction.\+h}
+\hypertarget{reduction_8h_source}{}\label{reduction_8h_source}\index{reduction.h@{reduction.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ REDUCTION\_H\_}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ REDUCTION\_H\_}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00035}00035\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00036}\mbox{\hyperlink{classReduction}{00036}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classReduction}{Reduction}}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00038}00038\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00039}00039\ \ \ \ \ T\ val;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00040}00040\ \ \ \ \ \textcolor{comment}{//\ Value\ is\ derived\ from\ class\ T}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00043}00043\ \ \ \ \ \textcolor{keywordtype}{bool}\ comm\_is\_on\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00044}00044\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00046}00046\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_allreduce\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00047}00047\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_nonblocking\_\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00048}00048\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_delayed\_\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00049}00049\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00050}00050\ \ \ \ \ \textcolor{keywordtype}{bool}\ delay\_is\_on\ =\ \textcolor{keyword}{false};\ \ \ \textcolor{comment}{//\ status\ of\ the\ delayed\ reduction}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00051}00051\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_delayed\_sum\ =\ \textcolor{keyword}{true};\ \textcolor{comment}{//\ sum/product}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00053}00053\ \ \ \ \ MPI\_Request\ request;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00055}00055\ \ \ \ \ \textcolor{comment}{//\ start\ the\ actual\ reduction}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00056}00056\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00057}00057\ \ \ \ \ \textcolor{keywordtype}{void}\ do\_reduce\_operation(MPI\_Op\ operation)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00058}00058\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ if\ for\ some\ reason\ reduction\ is\ going\ on\ unfinished,\ wait.}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00060}00060\ \ \ \ \ \ \ \ \ wait();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00061}00061\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00062}00062\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_nonblocking())}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ \ \ \ \ comm\_is\_on\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00064}00064\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00065}00065\ \ \ \ \ \ \ \ \ MPI\_Datatype\ dtype;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00066}00066\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00067}00067\ \ \ \ \ \ \ \ \ dtype\ =\ get\_MPI\_number\_type<T>();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00069}00069\ \ \ \ \ \ \ \ \ assert(dtype\ !=\ MPI\_BYTE\ \&\&\ \textcolor{stringliteral}{"{}Unknown\ number\_type\ in\ reduction"{}});}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00070}00070\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00071}00071\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ *ptr\ =\ \&val;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00072}00072\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00073}00073\ \ \ \ \ \ \ \ \ reduction\_timer.start();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00074}00074\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_allreduce())\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00075}00075\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_nonblocking())\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Iallreduce(MPI\_IN\_PLACE,\ ptr,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>),\ dtype,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00078}00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ operation,\ lattice.mpi\_comm\_lat,\ \&request);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00079}00079\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Allreduce(MPI\_IN\_PLACE,\ ptr,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>),\ dtype,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00082}00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ operation,\ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00083}00083\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00084}00084\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00085}00085\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00086}00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_nonblocking())\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00087}00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Ireduce(MPI\_IN\_PLACE,\ ptr,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00088}00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>),\ dtype,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00089}00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ operation,\ 0,\ lattice.mpi\_comm\_lat,\ \&request);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00090}00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00091}00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Reduce(MPI\_IN\_PLACE,\ ptr,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00092}00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>),\ dtype,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00093}00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ operation,\ 0,\ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00094}00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00095}00095\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00096}00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_nonblocking())\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00097}00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Ireduce(ptr,\ ptr,\ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>),}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00098}00098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dtype,\ operation,\ 0,\ lattice.mpi\_comm\_lat,\ \&request);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Reduce(ptr,\ ptr,\ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(hila::scalar\_type<T>),}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00101}00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dtype,\ operation,\ 0,\ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00102}00102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00104}00104\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ reduction\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00106}00106\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00107}00107\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00111}00111\ \ \ \ \ \textcolor{keywordtype}{void}\ wait()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00112}00112\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (comm\_is\_on)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00113}00113\ \ \ \ \ \ \ \ \ \ \ \ \ reduction\_wait\_timer.start();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Status\ status;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00115}00115\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Wait(\&request,\ \&status);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ reduction\_wait\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00117}00117\ \ \ \ \ \ \ \ \ \ \ \ \ comm\_is\_on\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00118}00118\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00119}00119\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00120}00120\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00121}00121\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00124}\mbox{\hyperlink{classReduction_ac2047eb1be5f02a1af2ec299b01d507e}{00124}}\ \ \ \ \ \mbox{\hyperlink{classReduction_ac2047eb1be5f02a1af2ec299b01d507e}{Reduction}}()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00125}00125\ \ \ \ \ \ \ \ \ (T\ \&)*\textcolor{keyword}{this}\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00126}00126\ \ \ \ \ \ \ \ \ comm\_is\_on\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00127}00127\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00128}00128\ \ \ \ \ \mbox{\hyperlink{classReduction_ac2047eb1be5f02a1af2ec299b01d507e}{Reduction}}(\textcolor{keyword}{const}\ T\ \&v)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00129}00129\ \ \ \ \ \ \ \ \ (T\ \&)*\textcolor{keyword}{this}\ =\ v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00130}00130\ \ \ \ \ \ \ \ \ comm\_is\_on\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00131}00131\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00132}00132\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00135}\mbox{\hyperlink{classReduction_a3945486d0ca5dc9d61c93046eb0f31b9}{00135}}\ \ \ \ \ \mbox{\hyperlink{classReduction_a3945486d0ca5dc9d61c93046eb0f31b9}{Reduction}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classReduction}{Reduction<T>}}\ \&r)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00136}00136\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00138}\mbox{\hyperlink{classReduction_a1a23856a4d6c0d342f688a8dfba4d814}{00138}}\ \ \ \ \ \mbox{\hyperlink{classReduction_a1a23856a4d6c0d342f688a8dfba4d814}{\string~Reduction}}()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00139}00139\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (comm\_is\_on)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00140}00140\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Cancel(\&request);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00141}00141\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00142}00142\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00143}00143\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00145}\mbox{\hyperlink{classReduction_a4858cffbf7d37203d41887d66466d79e}{00145}}\ \ \ \ \ \mbox{\hyperlink{classReduction}{Reduction}}\ \&\mbox{\hyperlink{classReduction_a4858cffbf7d37203d41887d66466d79e}{allreduce}}(\textcolor{keywordtype}{bool}\ b\ =\ \textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00146}00146\ \ \ \ \ \ \ \ \ is\_allreduce\_\ =\ b;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00147}00147\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00148}00148\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00149}00149\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_allreduce()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00150}00150\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ is\_allreduce\_;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00151}00151\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00152}00152\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00154}\mbox{\hyperlink{classReduction_a7a0bab24e74f3f2f3dc765fff6760232}{00154}}\ \ \ \ \ \mbox{\hyperlink{classReduction}{Reduction}}\ \&\mbox{\hyperlink{classReduction_a7a0bab24e74f3f2f3dc765fff6760232}{nonblocking}}(\textcolor{keywordtype}{bool}\ b\ =\ \textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00155}00155\ \ \ \ \ \ \ \ \ is\_nonblocking\_\ =\ b;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00156}00156\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00157}00157\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00158}00158\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_nonblocking()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00159}00159\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ is\_nonblocking\_;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00160}00160\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00161}00161\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00163}\mbox{\hyperlink{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}{00163}}\ \ \ \ \ \mbox{\hyperlink{classReduction}{Reduction}}\ \&\mbox{\hyperlink{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}{delayed}}(\textcolor{keywordtype}{bool}\ b\ =\ \textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00164}00164\ \ \ \ \ \ \ \ \ is\_delayed\_\ =\ b;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00165}00165\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00166}00166\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00167}00167\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_delayed()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00168}00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ is\_delayed\_;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00169}00169\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00170}00170\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00172}\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{00172}}\ \ \ \ \ \textcolor{keyword}{const}\ T\ \mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{value}}()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00173}00173\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classReduction_aa40a6e389ad4405c0d55b2e1b1d44ea8}{reduce}}();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00174}00174\ \ \ \ \ \ \ \ \ wait();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00175}00175\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00176}00176\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00177}00177\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00178}00178\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00181}00181\ \ \ \ \ template\ <typename\ S,\ std::enable\_if\_t<hila::is\_assignable<T\ \&,\ S>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00182}\mbox{\hyperlink{classReduction_a6697f21d32087a90712c9139c22b5f87}{00182}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classReduction_a6697f21d32087a90712c9139c22b5f87}{set}}(S\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00183}00183\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (comm\_is\_on)}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00184}00184\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Cancel(\&request);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00185}00185\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00186}00186\ \ \ \ \ \ \ \ \ comm\_is\_on\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00187}00187\ \ \ \ \ \ \ \ \ val\ =\ rhs;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00188}00188\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00189}00189\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00191}00191\ \ \ \ \ template\ <typename\ S,\ std::enable\_if\_t<hila::is\_assignable<T\ \&,\ S>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00192}\mbox{\hyperlink{classReduction_a9287f0ed9ed895da02f096b713d62099}{00192}}\ \ \ \ \ T\ \&\mbox{\hyperlink{classReduction_a9287f0ed9ed895da02f096b713d62099}{operator=}}(\textcolor{keyword}{const}\ S\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00193}00193\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classReduction_a6697f21d32087a90712c9139c22b5f87}{set}}(rhs);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00194}00194\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00195}00195\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00196}00196\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00201}00201\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00202}00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<hila::is\_assignable<T\ \&,\ hila::type\_plus<T,\ S>>\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{::value}},}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00203}00203\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00204}\mbox{\hyperlink{classReduction_a2bc09901d21c3bdb1901eac2a69efdde}{00204}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classReduction_a2bc09901d21c3bdb1901eac2a69efdde}{operator+=}}(\textcolor{keyword}{const}\ S\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00205}00205\ \ \ \ \ \ \ \ \ val\ +=\ rhs;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00206}00206\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00207}00207\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00208}00208\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00209}00209\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<hila::is\_assignable<T\ \&,\ hila::type\_minus<T,\ S>>\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{::value}},}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00210}00210\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00211}00211\ \ \ \ \ \textcolor{keywordtype}{void}\ operator-\/=(\textcolor{keyword}{const}\ S\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00212}00212\ \ \ \ \ \ \ \ \ val\ -\/=\ rhs;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00213}00213\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00214}00214\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00215}00215\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00216}00216\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<hila::is\_assignable<T\ \&,\ hila::type\_mul<T,\ S>>\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{::value}},}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00217}00217\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00218}00218\ \ \ \ \ \textcolor{keywordtype}{void}\ operator*=(\textcolor{keyword}{const}\ S\ \&rhs)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00219}00219\ \ \ \ \ \ \ \ \ val\ *=\ rhs;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00220}00220\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00221}00221\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00222}00222\ \ \ \ \ \textcolor{comment}{//\ template\ <typename\ S,}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00223}00223\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<hila::is\_assignable<T\ \&,\ hila::type\_div<T,\ S>>::value,}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00224}00224\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int>\ =\ 0>}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00225}00225\ \ \ \ \ \textcolor{comment}{//\ void\ operator/=(const\ S\ \&rhs)\ \{}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00226}00226\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ val\ /=\ rhs;}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00227}00227\ \ \ \ \ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00228}00228\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00231}\mbox{\hyperlink{classReduction_ae7efb4d3b342430e825981e47990cf70}{00231}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classReduction_ae7efb4d3b342430e825981e47990cf70}{reduce\_sum\_node}}(\textcolor{keyword}{const}\ T\ \&v)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00232}00232\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00233}00233\ \ \ \ \ \ \ \ \ wait();\ \textcolor{comment}{//\ wait\ for\ possible\ ongoing}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00234}00234\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00235}00235\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ add\ the\ node\ values\ to\ reduction\ var}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00236}00236\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0\ ||\ is\_delayed\_)}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00237}00237\ \ \ \ \ \ \ \ \ \ \ \ \ val\ +=\ v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00238}00238\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00239}00239\ \ \ \ \ \ \ \ \ \ \ \ \ val\ =\ v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00240}00240\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00241}00241\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_delayed\_)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00242}00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (delay\_is\_on\ \&\&\ is\_delayed\_sum\ ==\ \textcolor{keyword}{false})\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00243}00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(0\ \&\&\ \textcolor{stringliteral}{"{}Cannot\ mix\ sum\ and\ product\ reductions!"{}});}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00244}00244\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00245}00245\ \ \ \ \ \ \ \ \ \ \ \ \ delay\_is\_on\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00246}00246\ \ \ \ \ \ \ \ \ \ \ \ \ is\_delayed\_sum\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00247}00247\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00248}00248\ \ \ \ \ \ \ \ \ \ \ \ \ do\_reduce\_operation(MPI\_SUM);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00249}00249\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00250}00250\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00251}00251\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00256}\mbox{\hyperlink{classReduction_ab698c4585b18cfd8b515447c1e23a122}{00256}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classReduction_ab698c4585b18cfd8b515447c1e23a122}{reduce\_product\_node}}(\textcolor{keyword}{const}\ T\ \&v)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00257}00257\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00258}00258\ \ \ \ \ \ \ \ \ wait();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00259}00259\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00260}00260\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0\ ||\ is\_delayed\_)}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00261}00261\ \ \ \ \ \ \ \ \ \ \ \ \ val\ *=\ v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00262}00262\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00263}00263\ \ \ \ \ \ \ \ \ \ \ \ \ val\ =\ v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00264}00264\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00265}00265\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_delayed\_)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00266}00266\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (delay\_is\_on\ \&\&\ is\_delayed\_sum\ ==\ \textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00267}00267\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(0\ \&\&\ \textcolor{stringliteral}{"{}Cannot\ mix\ sum\ and\ product\ reductions!"{}});}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00268}00268\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00269}00269\ \ \ \ \ \ \ \ \ \ \ \ \ delay\_is\_on\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00270}00270\ \ \ \ \ \ \ \ \ \ \ \ \ is\_delayed\_sum\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00271}00271\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00272}00272\ \ \ \ \ \ \ \ \ \ \ \ \ do\_reduce\_operation(MPI\_PROD);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00273}00273\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00274}00274\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00275}00275\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00276}00276\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00278}\mbox{\hyperlink{classReduction_aa40a6e389ad4405c0d55b2e1b1d44ea8}{00278}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classReduction_aa40a6e389ad4405c0d55b2e1b1d44ea8}{reduce}}()\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00279}00279\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!comm\_is\_on)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00280}00280\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (delay\_is\_on)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00281}00281\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ delay\_is\_on\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00282}00282\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00283}00283\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_delayed\_sum)}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00284}00284\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ do\_reduce\_operation(MPI\_SUM);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00285}00285\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00286}00286\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ do\_reduce\_operation(MPI\_PROD);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00287}00287\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00288}00288\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00289}00289\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00290}00290\ \};}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00291}00291\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00292}00292\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00294}00294\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00295}00295\ \textcolor{comment}{//\ \#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00296}00296\ \textcolor{comment}{//\ \#include\ "{}backend\_gpu/gpu\_reduction.h"{}}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00297}00297\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00298}00298\ \textcolor{comment}{//\ template\ <typename\ T>}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00299}00299\ \textcolor{comment}{//\ T\ Field<T>::sum(Parity\ par,\ bool\ allreduce)\ const\ \{}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00300}00300\ \textcolor{comment}{//\ \ \ \ \ return\ gpu\_reduce\_sum(allreduce,\ par,\ false);}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00301}00301\ \textcolor{comment}{//\ \}}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00302}00302\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00303}00303\ \textcolor{comment}{//\ \#else}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00304}00304\ \textcolor{comment}{//\ //\ This\ for\ not-\/gpu\ branch}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00305}00305\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00306}00306\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00307}00307\ T\ \mbox{\hyperlink{classField}{Field<T>::sum}}(Parity\ par,\ \textcolor{keywordtype}{bool}\ allreduce)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00308}00308\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00309}00309\ \ \ \ \ \mbox{\hyperlink{classReduction}{Reduction<T>}}\ result;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00310}00310\ \ \ \ \ result.\mbox{\hyperlink{classReduction_a4858cffbf7d37203d41887d66466d79e}{allreduce}}(allreduce);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00311}00311\ \ \ \ \ onsites\ (par)}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00312}00312\ \ \ \ \ \ \ \ \ result\ +=\ (*this)[X];}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00313}00313\ \ \ \ \ \textcolor{keywordflow}{return}\ result.\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{value}}();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00314}00314\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00315}00315\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00316}00316\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00317}00317\ T\ \mbox{\hyperlink{classField}{Field<T>::product}}(Parity\ par,\ \textcolor{keywordtype}{bool}\ allreduce)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00318}00318\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_arithmetic<T>::value,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}.product()\ reduction\ only\ for\ integer\ or\ floating\ point\ types"{}});}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00320}00320\ \ \ \ \ \mbox{\hyperlink{classReduction}{Reduction<T>}}\ result;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00321}00321\ \ \ \ \ result\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00322}00322\ \ \ \ \ result.\mbox{\hyperlink{classReduction_a4858cffbf7d37203d41887d66466d79e}{allreduce}}(allreduce);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00323}00323\ \ \ \ \ onsites\ (par)}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00324}00324\ \ \ \ \ \ \ \ \ result\ *=\ (*this)[X];}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00325}00325\ \ \ \ \ \textcolor{keywordflow}{return}\ result.\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{value}}();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00326}00326\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00327}00327\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00328}00328\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00329}00329\ \textcolor{comment}{//\ get\ global\ minimum/maximums\ -\/\ meant\ to\ be\ used\ through\ .min()\ and\ .max()}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00330}00330\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00331}00331\ \textcolor{preprocessor}{\#ifdef\ OPENMP}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00332}00332\ \textcolor{preprocessor}{\#include\ <omp.h>}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00333}00333\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00334}00334\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00335}00335\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00336}00336\ \textcolor{preprocessor}{\#include\ "{}backend\_gpu/gpu\_reduction.h"{}}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00337}00337\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00338}00338\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00339}00339\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00340}00340\ T\ \mbox{\hyperlink{classField}{Field<T>::minmax}}(\textcolor{keywordtype}{bool}\ is\_min,\ Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00341}00341\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00342}00342\ \ \ \ \ \textcolor{keyword}{static\_assert}(}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00343}00343\ \ \ \ \ \ \ \ \ std::is\_same<T,\ int>::value\ ||\ std::is\_same<T,\ long>::value\ ||}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00344}00344\ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same<T,\ float>::value\ ||\ std::is\_same<T,\ double>::value\ ||}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00345}00345\ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same<T,\ long\ double>::value,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00346}00346\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}In\ Field\ .min()\ and\ .max()\ methods\ the\ Field\ element\ type\ must\ be\ one\ of\ "{}}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00347}00347\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}(int/long/float/double/long\ double)"{}});}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00348}00348\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00349}00349\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00350}00350\ \ \ \ \ T\ val\ =\ gpu\_minmax(is\_min,\ par,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00351}00351\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00352}00352\ \ \ \ \ \textcolor{keywordtype}{int}\ sgn\ =\ is\_min\ ?\ 1\ :\ -\/1;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00353}00353\ \ \ \ \ \textcolor{comment}{//\ get\ suitable\ initial\ value}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00354}00354\ \ \ \ \ T\ val\ =\ is\_min\ ?\ std::numeric\_limits<T>::max()\ :\ \mbox{\hyperlink{namespacestd}{std}}::numeric\_limits<T>::min();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00355}00355\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00356}00356\ \textcolor{comment}{//\ write\ the\ loop\ with\ explicit\ OpenMP\ parallel\ region.\ \ It\ has\ negligible\ effect}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00357}00357\ \textcolor{comment}{//\ on\ non-\/OpenMP\ code,\ and\ the\ pragmas\ are\ ignored.}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00358}00358\ \textcolor{preprocessor}{\#pragma\ omp\ parallel\ shared(val,\ loc,\ sgn,\ is\_min)}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00359}00359\ \ \ \ \ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00360}00360\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ loc\_th(0);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00361}00361\ \ \ \ \ \ \ \ \ T\ val\_th\ =}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00362}00362\ \ \ \ \ \ \ \ \ \ \ \ \ is\_min\ ?\ std::numeric\_limits<T>::max()\ :\ \mbox{\hyperlink{namespacestd}{std}}::numeric\_limits<T>::min();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00363}00363\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00364}00364\ \textcolor{comment}{//\ Pragma\ "{}hila\ omp\_parallel\_region"{}\ is\ necessary\ here,\ because\ this\ is\ within}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00365}00365\ \textcolor{comment}{//\ omp\ parallel}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00366}00366\ \textcolor{preprocessor}{\#pragma\ hila\ novector\ omp\_parallel\_region\ direct\_access(loc\_th,\ val\_th)}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00367}00367\ \ \ \ \ \ \ \ \ onsites\ (par)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00368}00368\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sgn\ *\ (*\textcolor{keyword}{this})[X]\ <\ sgn\ *\ val\_th)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00369}00369\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ val\_th\ =\ (*this)[X];}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00370}00370\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ loc\_th\ =\ X.coordinates();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00371}00371\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00372}00372\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00373}00373\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00374}00374\ \textcolor{preprocessor}{\#pragma\ omp\ critical}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00375}00375\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sgn\ *\ val\_th\ <\ sgn\ *\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00376}00376\ \ \ \ \ \ \ \ \ \ \ \ \ val\ =\ val\_th;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00377}00377\ \ \ \ \ \ \ \ \ \ \ \ \ loc\ =\ loc\_th;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00378}00378\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00379}00379\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00380}00380\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00381}00381\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00382}00382\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{hila::number\_of\_nodes}}()\ >\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00383}00383\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00384}00384\ \ \ \ \ \ \ \ \ MPI\_Datatype\ dtype\ =\ get\_MPI\_number\_type<T>(size,\ \textcolor{keyword}{true});}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00385}00385\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00386}00386\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00387}00387\ \ \ \ \ \ \ \ \ \ \ \ \ T\ v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00388}00388\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rank;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00389}00389\ \ \ \ \ \ \ \ \ \}\ rdata;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00390}00390\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00391}00391\ \ \ \ \ \ \ \ \ rdata.v\ =\ val;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00392}00392\ \ \ \ \ \ \ \ \ rdata.rank\ =\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}();}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00393}00393\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00394}00394\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ after\ allreduce\ rdata\ contains\ the\ min\ value\ and\ rank\ where\ it\ is}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00395}00395\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_min)\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00396}00396\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Allreduce(MPI\_IN\_PLACE,\ \&rdata,\ 1,\ dtype,\ MPI\_MINLOC,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00397}00397\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00398}00398\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00399}00399\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Allreduce(MPI\_IN\_PLACE,\ \&rdata,\ 1,\ dtype,\ MPI\_MAXLOC,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00400}00400\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00401}00401\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00402}00402\ \ \ \ \ \ \ \ \ val\ =\ rdata.v;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00403}00403\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00404}00404\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ send\ the\ coordinatevector\ of\ the\ minloc\ to\ all\ nodes}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00405}00405\ \ \ \ \ \ \ \ \ MPI\_Bcast(\&loc,\ \textcolor{keyword}{sizeof}(\mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}),\ MPI\_BYTE,\ rdata.rank,}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00406}00406\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mpi\_comm\_lat);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00407}00407\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00408}00408\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00409}00409\ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00410}00410\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00411}00411\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00412}00412\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00414}00414\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00415}\mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{00415}}\ T\ \mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{Field<T>::min}}(Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00416}00416\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ loc;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00417}00417\ \ \ \ \ \textcolor{keywordflow}{return}\ minmax(\textcolor{keyword}{true},\ par,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00418}00418\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00419}00419\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00421}00421\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00422}\mbox{\hyperlink{classField_aaff8d7931070925d976bfb359c615bb1}{00422}}\ T\ \mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{Field<T>::min}}(\mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00423}00423\ \ \ \ \ \textcolor{keywordflow}{return}\ minmax(\textcolor{keyword}{true},\ ALL,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00424}00424\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00425}00425\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00427}00427\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00428}\mbox{\hyperlink{classField_a187172f3017c1a6559a2d6d5d0303c9e}{00428}}\ T\ \mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{Field<T>::min}}(Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00429}00429\ \ \ \ \ \textcolor{keywordflow}{return}\ minmax(\textcolor{keyword}{true},\ par,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00430}00430\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00431}00431\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00432}00432\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00434}00434\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00435}\mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{00435}}\ T\ \mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{Field<T>::max}}(Parity\ par)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00436}00436\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ loc;}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00437}00437\ \ \ \ \ \textcolor{keywordflow}{return}\ minmax(\textcolor{keyword}{false},\ par,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00438}00438\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00439}00439\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00441}00441\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00442}\mbox{\hyperlink{classField_a0d0397b02410a4cb430901f448936318}{00442}}\ T\ \mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{Field<T>::max}}(\mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00443}00443\ \ \ \ \ \textcolor{keywordflow}{return}\ minmax(\textcolor{keyword}{false},\ ALL,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00444}00444\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00445}00445\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00447}00447\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00448}\mbox{\hyperlink{classField_a514ecef03120e974a2da2cfcf800f4b8}{00448}}\ T\ \mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{Field<T>::max}}(Parity\ par,\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&loc)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00449}00449\ \ \ \ \ \textcolor{keywordflow}{return}\ minmax(\textcolor{keyword}{false},\ par,\ loc);}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00450}00450\ \}}
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00451}00451\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00452}00452\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00453}00453\ }
+\DoxyCodeLine{\Hypertarget{reduction_8h_source_l00454}00454\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

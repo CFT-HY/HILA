@@ -1,0 +1,494 @@
+\doxysection{hila\+\_\+healthcheck.\+cpp}
+\hypertarget{hila__healthcheck_8cpp_source}{}\label{hila__healthcheck_8cpp_source}\index{hila\_healthcheck.cpp@{hila\_healthcheck.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00002}00002\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00004}00004\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00005}00005\ \textcolor{comment}{//\ report\ the\ result\ of\ the\ test\ -\/-\/\ TODO:\ nicer\ formatting?}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00006}00006\ \textcolor{keywordtype}{bool}\ report\_pass(std::string\ message,\ \textcolor{keywordtype}{double}\ eps,\ \textcolor{keywordtype}{double}\ limit)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00007}00007\ \ \ \ \ \textcolor{keywordflow}{if}\ (eps\ <\ limit)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00008}00008\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}-\/-\/-\/\ "{}}\ <<\ message\ <<\ \textcolor{stringliteral}{"{}\ passed"{}}\ <<\ std::endl;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00009}00009\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00010}00010\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00011}00011\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}***\ "{}}\ <<\ message\ <<\ \textcolor{stringliteral}{"{}\ FAILED:\ eps\ "{}}\ <<\ eps\ <<\ \textcolor{stringliteral}{"{}\ limit\ "{}}\ <<\ limit}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00012}00012\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ std::endl;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00013}00013\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00014}00014\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00015}00015\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00016}00016\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00019}00019\ \textcolor{keywordtype}{void}\ check\_reductions()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00022}00022\ \ \ \ \ \textcolor{comment}{//\ test\ reductions}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00023}00023\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00024}00024\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Complex<double>}}>\ f;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00025}00025\ \ \ \ \ f[ALL]\ =\ expi(2\ *\ M\_PI\ *\ X.coordinate(e\_x)\ /\ lattice.size(e\_x));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00026}00026\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00027}00027\ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<double>}}\ sum\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00028}00028\ \ \ \ \ onsites(ALL)\ sum\ +=\ f[X];}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00030}00030\ \ \ \ \ sum\ /=\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00031}00031\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Complex\ reduction\ value\ "{}}\ +\ hila::prettyprint(sum),\ abs(sum),\ 1e-\/4);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00032}00032\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00033}00033\ \ \ \ \ \mbox{\hyperlink{classReductionVector}{ReductionVector<Complex<double>}}>\ rv(lattice.size(e\_x));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00035}00035\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00036}00036\ \ \ \ \ \ \ \ \ rv[X.coordinate(e\_x)]\ +=\ f[X];}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00037}00037\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00039}00039\ \ \ \ \ sum\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00040}00040\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ lattice.size(e\_x);\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00041}00041\ \ \ \ \ \ \ \ \ sum\ +=}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00042}00042\ \ \ \ \ \ \ \ \ \ \ \ \ expi(2\ *\ M\_PI\ *\ i\ /\ lattice.size(e\_x))\ -\/\ rv[i]\ /\ (lattice.volume()\ /\ lattice.size(e\_x));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00043}00043\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00044}00044\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Vector\ reduction,\ sum\ "{}}\ +\ hila::prettyprint(sum),\ abs(sum),\ 1e-\/4);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00045}00045\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00047}00047\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00048}00048\ \textcolor{comment}{//\ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00049}00049\ \textcolor{comment}{//\ write\ something\ to\ a\ location}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00051}00051\ \textcolor{keywordtype}{void}\ test\_site\_access()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00053}00053\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Complex<double>}}>\ f\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00054}00054\ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<double>}}\ sum;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00055}00055\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00056}00056\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00057}00057\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ 3;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00058}00058\ \ \ \ \ \ \ \ \ foralldir(d)\ c[d]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00059}00059\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(c);\ \textcolor{comment}{//\ need\ to\ broadcast!}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00061}00061\ \ \ \ \ \ \ \ \ f[c]\ =\ 4;\ \ \ \textcolor{comment}{//\ write\ to\ location\ c}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00062}00062\ \ \ \ \ \ \ \ \ sum\ =\ f[c];\ \textcolor{comment}{//\ read\ back\ -\/\ does\ mpi\ comm}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00063}00063\ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Setting\ and\ reading\ a\ value\ at\ "{}}\ +\ hila::prettyprint(c.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()),}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00064}00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ abs(sum\ -\/\ 4),\ 1e-\/10);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00065}00065\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00066}00066\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00067}00067\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00069}00069\ \textcolor{comment}{//\ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00070}00070\ \textcolor{comment}{//\ test\ maxloc\ and\ minloc\ operation}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00072}00072\ \textcolor{keywordtype}{void}\ test\_minmax()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00073}00073\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00074}00074\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c,\ loc;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00075}00075\ \ \ \ \ \mbox{\hyperlink{classField}{Field<double>}}\ n;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00076}00076\ \ \ \ \ n[ALL]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00077}00077\ \ \ \ \ foralldir(d)\ c[d]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00078}00078\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(c);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00079}00079\ \ \ \ \ n[c]\ =\ 2;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00081}00081\ \ \ \ \ \textcolor{keyword}{auto}\ v\ =\ n.\mbox{\hyperlink{classField_a48dd39975c2d78912f567eb45895020e}{max}}(loc);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00082}00082\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Maxloc\ is\ "{}}\ +\ hila::prettyprint(loc.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()),\ (c\ -\/\ loc).norm(),\ 1e-\/8);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00083}00083\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Max\ value\ "{}}\ +\ hila::prettyprint(v),\ v\ -\/\ 2,\ 1e-\/9);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00084}00084\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00085}00085\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00086}00086\ \ \ \ \ foralldir(d)\ c[d]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00087}00087\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(c);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00088}00088\ \ \ \ \ n[c]\ =\ -\/1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00089}00089\ \ \ \ \ v\ =\ n.\mbox{\hyperlink{classField_aece7ce9c8dc5bfb284f81f6b587cf50e}{min}}(loc);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00090}00090\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Minloc\ is\ "{}}\ +\ hila::prettyprint(loc.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()),\ (c\ -\/\ loc).norm(),\ 1e-\/8);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00091}00091\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Min\ value\ "{}}\ +\ hila::prettyprint(v),\ v\ +\ 1,\ 1e-\/9);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00092}00092\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00093}00093\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00094}00094\ \textcolor{comment}{//\ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00095}00095\ \textcolor{comment}{//\ test\ access\ to\ a\ list\ of\ sites}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00096}00096\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00097}00097\ \textcolor{keywordtype}{void}\ test\_set\_elements\_and\_select()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00098}00098\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00099}00099\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Complex<double>}}>\ f\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00100}00100\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00101}00101\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00102}00102\ \ \ \ \ std::vector<CoordinateVector>\ cvec;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00103}00103\ \ \ \ \ std::vector<Complex<double>>\ vals;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00104}00104\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00105}00105\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00106}00106\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00107}00107\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ k\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00108}00108\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <=\ 50;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00109}00109\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(d)\ c[d]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00110}00110\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ found\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00111}00111\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ don't\ overwrite\ previous\ loc}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00113}00113\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&r\ :\ cvec)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (r\ ==\ c)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00115}00115\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\ =\ true;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00116}00116\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00117}00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cvec.push\_back(c);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00118}00118\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ vals.push\_back(\mbox{\hyperlink{classComplex}{Complex<double>}}(k,\ k));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00119}00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ k++;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00120}00120\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00121}00121\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00122}00122\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00123}00123\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00124}00124\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(vals);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00125}00125\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(cvec);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00126}00126\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00127}00127\ \ \ \ \ f.set\_elements(vals,\ cvec);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00128}00128\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00129}00129\ \ \ \ \ vals\ =\ f.\mbox{\hyperlink{classField_ae62500759ad146835236688bfca45354}{get\_elements}}(cvec,\ \textcolor{keyword}{true});}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00131}00131\ \ \ \ \ \mbox{\hyperlink{classComplex}{Complex<double>}}\ sum\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00132}00132\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ vals.size();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00133}00133\ \ \ \ \ \ \ \ \ sum\ +=\ vals[i]\ -\/\ \mbox{\hyperlink{classComplex}{Complex<double>}}(i\ +\ 1,\ i\ +\ 1);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00134}00134\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00135}00135\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00136}00136\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Field\ set\_elements\ and\ get\_elements\ with\ "{}}\ +\ hila::prettyprint(vals.size())\ +}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00137}00137\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}\ coordinates"{}},}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00138}00138\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ abs(sum),\ 1e-\/8);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00139}00139\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00140}00140\ \ \ \ \ \textcolor{comment}{//\ use\ the\ same\ vector\ for\ siteselect}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00141}00141\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00142}00142\ \ \ \ \ SiteSelect\ s;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00143}00143\ \ \ \ \ SiteValueSelect<Complex<double>>\ sv;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00144}00144\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00145}00145\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00146}00146\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (squarenorm(f[X])\ >=\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00147}00147\ \ \ \ \ \ \ \ \ \ \ \ \ s.select(X);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00148}00148\ \ \ \ \ \ \ \ \ \ \ \ \ sv.select(X,\ f[X]);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00149}00149\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00150}00150\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00152}00152\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}SiteSelect\ size\ "{}}\ +\ hila::prettyprint(s.size()),\ s.size()\ -\/\ cvec.size(),\ 1e-\/3);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00153}00153\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}SiteValueSelect\ size\ "{}}\ +\ hila::prettyprint(sv.size()),\ sv.size()\ -\/\ cvec.size(),}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00154}00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 1e-\/3);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00155}00155\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00156}00156\ \ \ \ \ \textcolor{keywordtype}{int}\ ok\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00157}00157\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00158}00158\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&c\ :\ cvec)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00159}00159\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ found\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00160}00160\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ !found\ \&\&\ i\ <\ s.size();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00161}00161\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (s.coordinates(i)\ ==\ c)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00162}00162\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00163}00163\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00164}00164\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00165}00165\ \ \ \ \ \ \ \ \ \ \ \ \ ok\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00166}00166\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00167}00167\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00168}00168\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}SiteSelect\ content"{}},\ 1\ -\/\ ok,\ 1e-\/6);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00169}00169\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00170}00170\ \ \ \ \ ok\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00171}00171\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ k\ =\ 0;\ k\ <\ cvec.size();\ k++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00172}00172\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00173}00173\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ found\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00174}00174\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ !found\ \&\&\ i\ <\ sv.size();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00175}00175\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sv.coordinates(i)\ ==\ cvec[k]\ \&\&\ sv.value(i)\ ==\ vals[k])}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00176}00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00177}00177\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00178}00178\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00179}00179\ \ \ \ \ \ \ \ \ \ \ \ \ ok\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00180}00180\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00181}00181\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00182}00182\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}SiteValueSelect\ content"{}},\ 1\ -\/\ ok,\ 1e-\/6);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00183}00183\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00184}00184\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00185}00185\ \ \ \ \ onsites(ALL)\ \{\}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00186}00186\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00187}00187\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00189}00189\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00190}00190\ \textcolor{keywordtype}{void}\ test\_subvolumes()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00191}00191\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00192}00192\ \ \ \ \ \textcolor{keywordtype}{bool}\ ok\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00193}00193\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ 20;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00194}00194\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00195}00195\ \ \ \ \ \ \ \ \ foralldir(d)\ c[d]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00196}00196\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ si\ =\ \mbox{\hyperlink{classSiteIndex}{SiteIndex}}(c);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00197}00197\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (si.coordinates()\ !=\ c)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00198}00198\ \ \ \ \ \ \ \ \ \ \ \ \ ok\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00199}00199\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00201}00201\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}SiteIndex"{}},\ ok\ ==\ \textcolor{keyword}{false},\ 1e-\/2);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00202}00202\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00203}00203\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00204}00204\ \ \ \ \ \mbox{\hyperlink{classField}{Field<SiteIndex>}}\ f;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00205}00205\ \ \ \ \ f[ALL]\ =\ \mbox{\hyperlink{classSiteIndex}{SiteIndex}}(X.coordinates());}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00206}00206\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00207}00207\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ c;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00208}00208\ \ \ \ \ c.\mbox{\hyperlink{classMatrix__t_afd76c41aaeb324852fa52b7edb5a14e3}{fill}}(-\/1);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00209}00209\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ vol\ =\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00210}00210\ \ \ \ \ foralldir(d)\ \textcolor{keywordflow}{if}\ (d\ <\ NDIM\ -\/\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00211}00211\ \ \ \ \ \ \ \ \ c[d]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00212}00212\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(c);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00213}00213\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00214}00214\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ slice\ =\ f.\mbox{\hyperlink{classField_af47e166050f2c100782500c5eda41925}{get\_slice}}(c);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00215}00215\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00216}00216\ \ \ \ \ \ \ \ \ vol\ /=\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00217}00217\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00218}00218\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ report\_pass(hila::prettyprint(NDIM\ -\/\ (\textcolor{keywordtype}{int})d\ -\/\ 1)\ +\ \textcolor{stringliteral}{"{}-\/dimensional\ slice\ size\ "{}}\ +}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00220}00220\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ hila::prettyprint(vol),}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00221}00221\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ slice.size()\ -\/\ vol,\ 1e-\/3);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00222}00222\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00223}00223\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00224}00224\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ pass\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00225}00225\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00226}00226\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ mycoord\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00227}00227\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(d2)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00228}00228\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c[d2]\ >=\ 0)}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00229}00229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mycoord[d2]\ =\ c[d2];}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00230}00230\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00231}00231\ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(d2)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00232}00232\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c[d2]\ <\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00233}00233\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mycoord[d2]\ =\ -\/1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00234}00234\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00235}00235\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00236}00236\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00237}00237\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00238}00238\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ s\ :\ slice)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00239}00239\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00240}00240\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ get\ the\ coordinate\ which\ should\ be\ here}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00241}00241\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ add\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00242}00242\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ foralldir(d2)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00243}00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (add\ \&\&\ c[d2]\ <\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00244}00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mycoord[d2]++;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00245}00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (mycoord[d2]\ <\ lattice.size(d2))\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00246}00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ add\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00247}00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00248}00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mycoord[d2]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00249}00249\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00250}00250\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00251}00251\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00252}00252\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00253}00253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pass\ \&\&\ mycoord\ !=\ s.coordinates())\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00254}00254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Slice\ coord\ error,\ should\ be\ "{}}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00255}00255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ hila::prettyprint(mycoord.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}())\ <<\ \textcolor{stringliteral}{"{}\ is\ "{}}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00256}00256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ hila::prettyprint(s.coordinates().transpose())\ <<\ \textcolor{stringliteral}{"{}\ slice\ is\ "{}}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00257}00257\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ hila::prettyprint(c.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}())\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00258}00258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pass\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00259}00259\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00260}00260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00261}00261\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00262}00262\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00263}00263\ \ \ \ \ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}slice\ content"{}},\ pass\ ==\ \textcolor{keyword}{false},\ 1e-\/2);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00264}00264\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00265}00265\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00266}00266\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00267}00267\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00269}00269\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00270}00270\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00271}00271\ \textcolor{keywordtype}{void}\ fft\_test()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00272}00272\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00273}00273\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00274}00274\ \ \ \ \ \textcolor{keyword}{using\ }T\ =\ \mbox{\hyperlink{classComplex}{Complex<double>}};}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00275}00275\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00276}00276\ \ \ \ \ \mbox{\hyperlink{classField}{Field<T>}}\ f,\ p,\ p2;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00277}00277\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00278}00278\ \ \ \ \ \textcolor{comment}{//\ Start\ with\ unit\ field}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00279}00279\ \ \ \ \ f\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00280}00280\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00281}00281\ \ \ \ \ \textcolor{comment}{//\ After\ one\ FFT\ the\ field\ is\ 0\ except\ at\ coord\ 0}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00282}00282\ \ \ \ \ p2\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00283}00283\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00284}00284\ \ \ \ \ p2[\{0,\ 0,\ 0\}]\ =\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00285}00285\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00286}00286\ \ \ \ \ FFT\_field(f,\ p);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00287}00287\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00288}00288\ \ \ \ \ \textcolor{keywordtype}{double}\ eps\ =\ squarenorm\_relative(p,\ p2);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00289}00289\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00290}00290\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}FFT\ constant\ field"{}},\ eps,\ 1e-\/13\ *\ sqrt(lattice.volume()));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00291}00291\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00292}00292\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00293}00293\ \ \ \ \ \textcolor{comment}{//\ After\ two\ applications\ the\ field\ should\ be\ back\ to\ a\ constant\ *\ volume}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00294}00294\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00295}00295\ \ \ \ \ FFT\_field(p,\ f,\ fft\_direction::back);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00296}00296\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00297}00297\ \ \ \ \ \textcolor{keywordtype}{double}\ sum\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00298}00298\ \ \ \ \ \textcolor{keywordtype}{double}\ tnorm\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00299}00299\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00300}00300\ \ \ \ \ \ \ \ \ sum\ +=\ (f[X]\ -\/\ lattice.volume()).squarenorm();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00301}00301\ \ \ \ \ \ \ \ \ tnorm\ +=\ f[X].squarenorm();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00302}00302\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00303}00303\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00304}00304\ \ \ \ \ eps\ =\ fabs(sum\ /\ tnorm);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00305}00305\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00306}00306\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}FFT\ inverse\ transform"{}},\ eps,\ 1e-\/10);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00307}00307\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00308}00308\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00309}00309\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ iter\ =\ 0;\ iter\ <\ 5;\ iter++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00310}00310\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ double>}}\ kv;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00311}00311\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ kx;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00312}00312\ \ \ \ \ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00313}00313\ \ \ \ \ \ \ \ \ \ \ \ \ kx[d]\ =\ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(\mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}())\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00314}00314\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00315}00315\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00316}00316\ \ \ \ \ \ \ \ \ kv\ =\ convert\_to\_k(kx);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00317}00317\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00318}00318\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00319}00319\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ d\ =\ kv.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(X.coordinates());}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00320}00320\ \ \ \ \ \ \ \ \ \ \ \ \ f[X]\ =\ expi(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00321}00321\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00322}00322\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00323}00323\ \ \ \ \ \ \ \ \ FFT\_field(f,\ p);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00324}00324\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00325}00325\ \ \ \ \ \ \ \ \ p2\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00326}00326\ \ \ \ \ \ \ \ \ p2[kx]\ =\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00327}00327\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00328}00328\ \ \ \ \ \ \ \ \ eps\ =\ squarenorm\_relative(p,\ p2);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00329}00329\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00330}00330\ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}FFT\ of\ wave\ vector\ "{}}\ +\ hila::prettyprint(kx.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()),\ eps,}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00331}00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 1e-\/13\ *\ sqrt(lattice.volume()));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00332}00332\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00333}00333\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00334}00334\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00335}00335\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00336}00336\ \ \ \ \ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00337}00337\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<double>}}\ r;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00338}00338\ \ \ \ \ \ \ \ \ onsites(ALL)\ r[X]\ =\ \mbox{\hyperlink{namespacehila_a61c7a1986bda1135c33fd13d0274a353}{hila::gaussrand}}();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00339}00339\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00340}00340\ \ \ \ \ \ \ \ \ f\ =\ r.\mbox{\hyperlink{classField_ab6d7704bd2de4fdfff86808f7cb27f04}{FFT\_real\_to\_complex}}();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00341}00341\ \ \ \ \ \ \ \ \ p\ =\ f.FFT(fft\_direction::back)\ /\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00342}00342\ \ \ \ \ \ \ \ \ eps\ =\ squarenorm\_relative(r,\ p);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00343}00343\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00344}00344\ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}FFT\ real\ to\ complex"{}},\ eps,\ 1e-\/13\ *\ sqrt(lattice.volume()));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00345}00345\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00346}00346\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ r2\ =\ f.FFT\_complex\_to\_real(fft\_direction::back)\ /\ lattice.volume();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00347}00347\ \ \ \ \ \ \ \ \ eps\ =\ squarenorm\_relative(r,\ r2);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00348}00348\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00349}00349\ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}FFT\ complex\ to\ real"{}},\ eps,\ 1e-\/13\ *\ sqrt(lattice.volume()));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00350}00350\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00351}00351\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00352}00352\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00353}00353\ \ \ \ \ \textcolor{comment}{//\ Check\ fft\ norm}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00354}00354\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00355}00355\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00356}00356\ \ \ \ \ \ \ \ \ p[X]\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ *\ exp(-\/convert\_to\_k(X.coordinates()).squarenorm());}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00357}00357\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00358}00358\ \ \ \ \ f\ =\ p.FFT(fft\_direction::back)\ /\ sqrt(lattice.volume());}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00359}00359\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00360}00360\ \ \ \ \ \textcolor{keywordtype}{double}\ nf\ =\ f.squarenorm();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00361}00361\ \ \ \ \ \textcolor{keywordtype}{double}\ np\ =\ p.squarenorm();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00362}00362\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Norm\ of\ field\ =\ "{}}\ +\ hila::prettyprint(nf)\ +\ \textcolor{stringliteral}{"{}\ and\ FFT\ =\ "{}}\ +\ hila::prettyprint(np),}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00363}00363\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (nf\ -\/\ np)\ /\ nf,\ 1e-\/10);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00364}00364\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00365}00365\ \ \ \ \ \mbox{\hyperlink{classhila_1_1k__binning}{hila::k\_binning}}\ b;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00366}00366\ \ \ \ \ b.\mbox{\hyperlink{classhila_1_1k__binning_a3a5a5714b2b41dabb3dcfe70da433cda}{k\_max}}(M\_PI\ *\ sqrt(3.0));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00367}00367\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00368}00368\ \ \ \ \ \textcolor{keyword}{auto}\ bf\ =\ b.\mbox{\hyperlink{classhila_1_1k__binning_a86acdba01d2aa76f743b7c5360c53889}{bin\_k\_field}}(p.conj()\ *\ p);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00369}00369\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00370}00370\ \ \ \ \ \textcolor{keywordtype}{double}\ s\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00371}00371\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ b\ :\ bf)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00372}00372\ \ \ \ \ \ \ \ \ s\ +=\ abs(b);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00373}00373\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00374}00374\ \ \ \ \ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(s);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00375}00375\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00376}00376\ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Norm\ of\ binned\ FFT\ =\ "{}}\ +\ hila::prettyprint(s),\ (s\ -\/\ np)\ /\ np,\ 1e-\/10);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00377}00377\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00378}00378\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00379}00379\ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00380}00380\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00381}00381\ \textcolor{keywordtype}{void}\ spectraldensity\_test()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00382}00382\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00383}00383\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00384}00384\ \ \ \ \ \textcolor{comment}{//\ test\ spectral\ density\ for\ single\ waves}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00385}00385\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00386}00386\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Complex<double>}}>\ f,\ p;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00387}00387\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00388}00388\ \ \ \ \ \mbox{\hyperlink{classhila_1_1k__binning}{hila::k\_binning}}\ b;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00389}00389\ \ \ \ \ b.\mbox{\hyperlink{classhila_1_1k__binning_a3a5a5714b2b41dabb3dcfe70da433cda}{k\_max}}(M\_PI\ *\ sqrt(3.0));}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00390}00390\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00391}00391\ \ \ \ \ \textcolor{comment}{//\ test\ std\ binning\ first}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00392}00392\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00393}00393\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ iter\ =\ 0;\ iter\ <\ 3;\ iter++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00394}00394\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classMatrix}{Vector<NDIM,\ double>}}\ kv;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00395}00395\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ kx;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00396}00396\ \ \ \ \ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00397}00397\ \ \ \ \ \ \ \ \ \ \ \ \ kx[d]\ =\ \mbox{\hyperlink{namespacehila_a926a1a1b5ae779ab700819db5e2afb1f}{hila::broadcast}}(\mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}())\ *\ lattice.size(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00398}00398\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00399}00399\ \ \ \ \ \ \ \ \ kv\ =\ convert\_to\_k(kx);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00400}00400\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ absk\ =\ kv.\mbox{\hyperlink{classMatrix__t_a7bea1cd49423897dc243005154020c4d}{norm}}();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00401}00401\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00402}00402\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ test\ first\ std.\ binning\ (normally\ )}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00403}00403\ \ \ \ \ \ \ \ \ f\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00404}00404\ \ \ \ \ \ \ \ \ f[kx]\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00405}00405\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00406}00406\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ fb\ =\ b.\mbox{\hyperlink{classhila_1_1k__binning_a86acdba01d2aa76f743b7c5360c53889}{bin\_k\_field}}(f);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00407}00407\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00408}00408\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ sum\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00409}00409\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ b.\mbox{\hyperlink{classhila_1_1k__binning_ac06dad930f9f5085739fd499080891df}{bins}}();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00410}00410\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (b.\mbox{\hyperlink{classhila_1_1k__binning_a7ebf9f887401e952a1deadab9d6be750}{bin\_min}}(i)\ <=\ absk\ \&\&\ b.bin\_max(i)\ >\ absk)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00411}00411\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ should\ be\ one\ hit\ here}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00412}00412\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sum\ +=\ squarenorm(fb[i]\ -\/\ 1);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00413}00413\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00414}00414\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sum\ +=\ squarenorm(fb[i]);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00415}00415\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00416}00416\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00417}00417\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00418}00418\ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Binning\ test\ at\ vector\ "{}}\ +\ hila::prettyprint(kx.\mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}}()),\ sum,\ 1e-\/10);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00419}00419\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00420}00420\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ then\ test\ the\ spectral\ density\ extraction}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00421}00421\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ set\ single\ wave}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00422}00422\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00423}00423\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ d\ =\ kv.\mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}}(X.coordinates());}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00424}00424\ \ \ \ \ \ \ \ \ \ \ \ \ f[X]\ =\ expi(d);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00425}00425\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00426}00426\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00427}00427\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ fsd\ =\ b.\mbox{\hyperlink{classhila_1_1k__binning_a0672572649ba03173ec71af9ed9f92ff}{spectraldensity}}(f);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00428}00428\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00429}00429\ \ \ \ \ \ \ \ \ sum\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00430}00430\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ b.\mbox{\hyperlink{classhila_1_1k__binning_ac06dad930f9f5085739fd499080891df}{bins}}();\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00431}00431\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (b.\mbox{\hyperlink{classhila_1_1k__binning_a7ebf9f887401e952a1deadab9d6be750}{bin\_min}}(i)\ <=\ absk\ \&\&\ b.bin\_max(i)\ >\ absk)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00432}00432\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ should\ be\ one\ hit\ here}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00433}00433\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sum\ +=\ fabs(fsd[i]\ /\ pow(lattice.volume(),\ 2)\ -\/\ 1);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00434}00434\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00435}00435\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sum\ +=\ fabs(fsd[i]);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00436}00436\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00437}00437\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00438}00438\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00439}00439\ \ \ \ \ \ \ \ \ report\_pass(\textcolor{stringliteral}{"{}Spectral\ density\ test\ with\ above\ vector\ "{}},\ sum,\ 1e-\/10);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00440}00440\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00441}00441\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00442}00442\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00443}00443\ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00444}00444\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00445}00445\ \textcolor{keywordtype}{void}\ test\_field\_slices()\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00446}00446\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00447}00447\ \ \ \ \ \mbox{\hyperlink{classField}{Field<SiteIndex>}}\ s;}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00448}00448\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00449}00449\ \ \ \ \ \ \ \ \ s[X]\ =\ \mbox{\hyperlink{classSiteIndex}{SiteIndex}}(X.coordinates());}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00450}00450\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00451}00451\ \}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00452}00452\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00453}00453\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00455}00455\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00456}00456\ \textcolor{keywordtype}{int}\ main(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}\ **argv)\ \{}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00457}00457\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00458}00458\ \ \ \ \ \mbox{\hyperlink{namespacehila_a88d54715010ef67cf2fbea84b00f76bb}{hila::initialize}}(argc,\ argv);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00459}00459\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00460}00460\ \ \ \ \ hila::input\ par(\textcolor{stringliteral}{"{}parameters"{}});}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00461}00461\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00462}00462\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ lsize\ =\ par.get(\textcolor{stringliteral}{"{}lattice\ size"{}});\ \textcolor{comment}{//\ reads\ NDIM\ numbers}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00463}00463\ \ \ \ \ \textcolor{keywordtype}{long}\ seed\ =\ par.get(\textcolor{stringliteral}{"{}random\ seed"{}});}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00464}00464\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00465}00465\ \ \ \ \ par.close();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00466}00466\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00467}00467\ \ \ \ \ \textcolor{comment}{//\ setting\ up\ the\ lattice\ is\ convenient\ to\ do\ after\ reading}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00468}00468\ \ \ \ \ \textcolor{comment}{//\ the\ parameters}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00469}00469\ \ \ \ \ lattice.\mbox{\hyperlink{classlattice__struct_a12f6b6a0c725399c8aa00740274b34b0}{setup}}(lsize);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00470}00470\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00471}00471\ \ \ \ \ \textcolor{comment}{//\ We\ need\ random\ number\ here}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00472}00472\ \ \ \ \ \mbox{\hyperlink{namespacehila_a90e5e5f9365383ef279039371798f09b}{hila::seed\_random}}(seed);}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00473}00473\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00474}00474\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00476}00476\ \ \ \ \ \textcolor{comment}{//\ start\ tests}}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00477}00477\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00478}00478\ \ \ \ \ check\_reductions();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00479}00479\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00480}00480\ \ \ \ \ test\_site\_access();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00481}00481\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00482}00482\ \ \ \ \ test\_minmax();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00483}00483\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00484}00484\ \ \ \ \ test\_set\_elements\_and\_select();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00485}00485\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00486}00486\ \ \ \ \ test\_subvolumes();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00487}00487\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00488}00488\ \ \ \ \ fft\_test();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00489}00489\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00490}00490\ \ \ \ \ spectraldensity\_test();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00491}00491\ }
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00492}00492\ \ \ \ \ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{hila::finishrun}}();}
+\DoxyCodeLine{\Hypertarget{hila__healthcheck_8cpp_source_l00493}00493\ \}}
+
+\end{DoxyCode}

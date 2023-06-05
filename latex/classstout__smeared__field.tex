@@ -1,0 +1,129 @@
+\doxysection{stout\+\_\+smeared\+\_\+field\texorpdfstring{$<$}{<} sun \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classstout__smeared__field}{}\label{classstout__smeared__field}\index{stout\_smeared\_field$<$ sun $>$@{stout\_smeared\_field$<$ sun $>$}}
+
+
+{\ttfamily \#include $<$smearing.\+h$>$}
+
+
+
+Inheritance diagram for stout\+\_\+smeared\+\_\+field\texorpdfstring{$<$}{<} sun \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=221pt]{classstout__smeared__field__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for stout\+\_\+smeared\+\_\+field\texorpdfstring{$<$}{<} sun \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=323pt]{classstout__smeared__field__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38}\label{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38} 
+void {\bfseries refresh} ()
+\begin{DoxyCompactList}\small\item\em Recalculate represented or smeared field. \end{DoxyCompactList}\item 
+\Hypertarget{classstout__smeared__field_a8a13ab9832465a512bb9eb323f05747b}\label{classstout__smeared__field_a8a13ab9832465a512bb9eb323f05747b} 
+void {\bfseries set\+\_\+unity} ()
+\begin{DoxyCompactList}\small\item\em Set the field to unity. \end{DoxyCompactList}\item 
+\Hypertarget{classstout__smeared__field_a2be823e434dbde3f1e950b19b70cc26f}\label{classstout__smeared__field_a2be823e434dbde3f1e950b19b70cc26f} 
+void {\bfseries random} ()
+\begin{DoxyCompactList}\small\item\em Draw a random gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classstout__smeared__field_ad230c99c5b59d72fa77d1e339331e319}\label{classstout__smeared__field_ad230c99c5b59d72fa77d1e339331e319} 
+void {\bfseries add\+\_\+momentum} (\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ N, \mbox{\hyperlink{classComplex}{Complex}}$<$ basetype $>$ $>$ $>$ \texorpdfstring{$\ast$}{*}force)
+\begin{DoxyCompactList}\small\item\em Update the momentum by given force. \end{DoxyCompactList}\item 
+\Hypertarget{classstout__smeared__field_a854af3214e5869ddb89698e02d236dfb}\label{classstout__smeared__field_a854af3214e5869ddb89698e02d236dfb} 
+void {\bfseries draw\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Draw gaussian random momentum. \end{DoxyCompactList}\item 
+\Hypertarget{classstout__smeared__field_aafeee9db3df5e90244ef91eb63d7d1b0}\label{classstout__smeared__field_aafeee9db3df5e90244ef91eb63d7d1b0} 
+void {\bfseries zero\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Set the momentum to zero. \end{DoxyCompactList}\item 
+\Hypertarget{classstout__smeared__field_adbefe78929accaa0aea4cdbd53e624be}\label{classstout__smeared__field_adbefe78929accaa0aea4cdbd53e624be} 
+void {\bfseries backup} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of the gauge field for HMC. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classstout__smeared__field_a1e2df56a708d217fc9e2e6d7abb0d94e}{restore\+\_\+backup}} ()
+\end{DoxyCompactItemize}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea}\label{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea} 
+virtual void {\bfseries refresh} ()
+\begin{DoxyCompactList}\small\item\em Recalculate represented or smeared field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_abb3b1c2368af04e06b39e819698a44e7}\label{classgauge__field__base_abb3b1c2368af04e06b39e819698a44e7} 
+virtual void {\bfseries set\+\_\+unity} ()
+\begin{DoxyCompactList}\small\item\em Set the field to unity. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_a6c68959f87cc42285e219923272a1626}\label{classgauge__field__base_a6c68959f87cc42285e219923272a1626} 
+virtual void {\bfseries random} ()
+\begin{DoxyCompactList}\small\item\em Draw a random gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_ae03bb8db75c725bd5d04a027ca06d6f0}\label{classgauge__field__base_ae03bb8db75c725bd5d04a027ca06d6f0} 
+virtual void {\bfseries add\+\_\+momentum} (\mbox{\hyperlink{classField}{Field}}$<$ \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ \mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{N}}, \mbox{\hyperlink{classComplex}{Complex}}$<$ \mbox{\hyperlink{classgauge__field__base_a727a4fad505a5d7dc1b045d895f8e80e}{basetype}} $>$ $>$ $>$ \texorpdfstring{$\ast$}{*}force)
+\begin{DoxyCompactList}\small\item\em Update the momentum by given force. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_a2f83670dc7790b2e08e683780cf0b66a}\label{classgauge__field__base_a2f83670dc7790b2e08e683780cf0b66a} 
+virtual void {\bfseries draw\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Draw gaussian random momentum. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_ae76527abf82a1fcd4734a1dd4eb4011a}\label{classgauge__field__base_ae76527abf82a1fcd4734a1dd4eb4011a} 
+virtual void {\bfseries zero\+\_\+momentum} ()
+\begin{DoxyCompactList}\small\item\em Set the momentum to zero. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__field__base_addc9c94369482f532e9d89f663a2341c}\label{classgauge__field__base_addc9c94369482f532e9d89f663a2341c} 
+virtual void {\bfseries backup} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of the gauge field for HMC. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classgauge__field__base_a116c7b6e1c1cd51711e8ed3036ec4e18}{restore\+\_\+backup}} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Public Types inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ sun $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+using {\bfseries basetype} = hila\+::scalar\+\_\+type$<$ sun $>$
+\begin{DoxyCompactList}\small\item\em The base type of the matrix (double, int,...) \end{DoxyCompactList}\item 
+using {\bfseries gauge\+\_\+type} = sun
+\begin{DoxyCompactList}\small\item\em The matrix type. \end{DoxyCompactList}\item 
+using \mbox{\hyperlink{classgauge__field__base_a33da644f6d068c0879e45ec9dd78cf89}{gauge\+\_\+type\+\_\+flt}} = sun
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ sun $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classField}{Field}}$<$ sun $>$ {\bfseries gauge} \mbox{[}NDIM\mbox{]}
+\begin{DoxyCompactList}\small\item\em A matrix field for each Direction. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classField}{Field}}$<$ sun $>$ \mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}} \mbox{[}NDIM\mbox{]}
+\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Attributes inherited from \mbox{\hyperlink{classgauge__field__base}{gauge\+\_\+field\+\_\+base$<$ sun $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+static constexpr int {\bfseries N} = sun\+::size
+\begin{DoxyCompactList}\small\item\em The size of the matrix. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename sun$>$\newline
+class stout\+\_\+smeared\+\_\+field$<$ sun $>$}
+A stout smeared gauge field built of a standard gauge field. The structure is the same as for the standard and represented gauge fields. \doxylink{classstout__smeared__field_ae76dd114b16b224b30ab736cdc802b38}{refresh()}\+: recalculates the smeared field from the underlying gauge field. \doxylink{classstout__smeared__field_ad230c99c5b59d72fa77d1e339331e319}{add\+\_\+momentum()}\+: transforms a derivative with respect to this field to a derivative with respect to the underlying gauge field and add to the momentum of the gauge field. 
+
+Definition at line \mbox{\hyperlink{smearing_8h_source_l00076}{76}} of file \mbox{\hyperlink{smearing_8h_source}{smearing.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classstout__smeared__field_a1e2df56a708d217fc9e2e6d7abb0d94e}\label{classstout__smeared__field_a1e2df56a708d217fc9e2e6d7abb0d94e} 
+\index{stout\_smeared\_field$<$ sun $>$@{stout\_smeared\_field$<$ sun $>$}!restore\_backup@{restore\_backup}}
+\index{restore\_backup@{restore\_backup}!stout\_smeared\_field$<$ sun $>$@{stout\_smeared\_field$<$ sun $>$}}
+\doxysubsubsection{\texorpdfstring{restore\_backup()}{restore\_backup()}}
+{\footnotesize\ttfamily template$<$typename sun $>$ \\
+void \mbox{\hyperlink{classstout__smeared__field}{stout\+\_\+smeared\+\_\+field}}$<$ sun $>$\+::restore\+\_\+backup (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Restore the gauge field from the backup. Used when an HMC trajectory is rejected. 
+
+Reimplemented from \mbox{\hyperlink{classgauge__field__base_a116c7b6e1c1cd51711e8ed3036ec4e18}{gauge\+\_\+field\+\_\+base$<$ sun $>$}}.
+
+
+
+Definition at line \mbox{\hyperlink{smearing_8h_source_l00232}{232}} of file \mbox{\hyperlink{smearing_8h_source}{smearing.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+smearing.\+h\end{DoxyCompactItemize}

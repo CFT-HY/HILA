@@ -1,0 +1,118 @@
+\doxysection{vector\+\_\+types.\+h}
+\hypertarget{vector__types_8h_source}{}\label{vector__types_8h_source}\index{vector\_types.h@{vector\_types.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ VECTOR\_TYPES\_H}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ VECTOR\_TYPES\_H}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00004}00004\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacehila}{hila}}\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00005}00005\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00007}00007\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ A\ =\ \textcolor{keywordtype}{void}>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00008}\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{00008}}\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{is\_vectorizable\_type}}\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00009}00009\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00010}00010\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00012}00012\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00015}00015\ \textcolor{comment}{//\ template\ <typename\ T>}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00016}00016\ \textcolor{comment}{//\ struct\ is\_vectorizable\_type<T,\ typename\ std::enable\_if\_t<std::is\_arithmetic<}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00017}00017\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ typename\ hila::base\_type\_struct<T>::type>::value>>\ \{}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00018}00018\ \textcolor{comment}{//\ \ \ \ \ static\ constexpr\ bool\ value\ =\ true;}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00019}00019\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00021}00021\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00022}00022\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structhila_1_1is__vectorizable__type}{is\_vectorizable\_type}}<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<std::is\_same<hila::scalar\_type<T>,\ int>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00023}00023\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00024}00024\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00025}00025\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00026}00026\ \textcolor{keyword}{struct\ }is\_vectorizable\_type<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<std::is\_same<hila::scalar\_type<T>,\ unsigned\ int>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00027}00027\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00028}00028\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00029}00029\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00030}00030\ \textcolor{keyword}{struct\ }is\_vectorizable\_type<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<std::is\_same<hila::scalar\_type<T>,\ int64\_t>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00031}00031\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00032}00032\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00033}00033\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00034}00034\ \textcolor{keyword}{struct\ }is\_vectorizable\_type<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<std::is\_same<hila::scalar\_type<T>,\ uint64\_t>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00035}00035\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00036}00036\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00037}00037\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00038}00038\ \textcolor{keyword}{struct\ }is\_vectorizable\_type<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<std::is\_same<hila::scalar\_type<T>,\ float>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00039}00039\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00040}00040\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00041}00041\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00042}00042\ \textcolor{keyword}{struct\ }is\_vectorizable\_type<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<std::is\_same<hila::scalar\_type<T>,\ double>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00043}00043\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ value\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00044}00044\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00048}00048\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ vector\_size>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00049}00049\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structvectorized__lattice__struct}{vectorized\_lattice\_struct}};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00051}00051\ \textcolor{comment}{//\ clang-\/format\ off}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00053}00053\ \textcolor{comment}{}\textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keywordtype}{int}\ vector\_len>\ \textcolor{keyword}{struct\ }vector\_base\_type\ \{\};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00055}00055\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<int,4>\ \ \{\ \textcolor{keyword}{using\ }type\ =\ \mbox{\hyperlink{classVec4i}{Vec4i}};\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00056}00056\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<double,\ 4>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec4d;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00057}00057\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<double,\ 8>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec8d;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00058}00058\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<float,\ 8>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec8f;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00059}00059\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<float,\ 16>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec16f;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00060}00060\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<int,\ 8>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec8i;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00061}00061\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<unsigned\ int,\ 8>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec8ui;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00062}00062\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<int,\ 16>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec16i;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00063}00063\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<unsigned\ int,\ 16>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec16ui;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00064}00064\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<int64\_t,\ 4>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec4q;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00065}00065\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<uint64\_t,\ 4>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec4uq;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00066}00066\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<int64\_t,\ 8>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec8q;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00067}00067\ \textcolor{keyword}{template}\ <>\ \textcolor{keyword}{struct\ }vector\_base\_type<uint64\_t,\ 8>\ \{\ \textcolor{keyword}{using\ }type\ =\ Vec8uq;\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00068}00068\ \textcolor{comment}{//\ clang-\/format\ on}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00069}00069\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00070}00070\ \textcolor{comment}{//\ template<>}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00071}00071\ \textcolor{comment}{//\ struct\ vector\_base\_type<CoordinateVector,\ 4>\ \{}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00072}00072\ \textcolor{comment}{//\ \ \ using\ type\ =\ Vec4i;}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00073}00073\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00075}00075\ \textcolor{comment}{//\ template<>}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00076}00076\ \textcolor{comment}{//\ struct\ vector\_base\_type<CoordinateVector,\ 8>\ \{}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00077}00077\ \textcolor{comment}{//\ \ \ using\ type\ =\ Vec8i;}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00078}00078\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00079}00079\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00080}00080\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00081}00081\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00084}00084\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ A\ =\ \textcolor{keywordtype}{void}>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00085}\mbox{\hyperlink{structhila_1_1vector__info}{00085}}\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structhila_1_1vector__info}{vector\_info}}\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00086}00086\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ is\_vectorizable\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00087}00087\ \ \ \ \ \textcolor{keyword}{using\ }base\_type\ =\ T;}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00088}00088\ \ \ \ \ \textcolor{comment}{//\ Find\ vector\ length}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00089}00089\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ vector\_size\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00090}00090\ \ \ \ \ \textcolor{comment}{//\ Find\ the\ vector\ type\ from\ above}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00091}00091\ \ \ \ \ \textcolor{keyword}{using\ }type\ =\ void;}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00092}00092\ \ \ \ \ \textcolor{comment}{//\ Number\ of\ elements\ in\ the\ full\ type}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00093}00093\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ elements\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00094}00094\ \ \ \ \ \textcolor{comment}{//\ Size\ of\ the\ base\ type}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00095}00095\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ base\_type\_size\ =\ \textcolor{keyword}{sizeof}(base\_type);}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00096}00096\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00097}00097\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00098}00098\ \textcolor{preprocessor}{\#ifdef\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00099}00099\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00101}00101\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00102}00102\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structhila_1_1vector__info}{vector\_info}}<T,\ typename\ \mbox{\hyperlink{namespacestd}{std}}::enable\_if\_t<hila::is\_vectorizable\_type<T>::value>>\ \{}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00103}00103\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ is\_vectorizable\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00104}00104\ \ \ \ \ \textcolor{comment}{//\ Get\ base\ type\ first}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00105}00105\ \ \ \ \ \textcolor{keyword}{using\ }base\_type\ =\ hila::scalar\_type<T>;}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00106}00106\ \ \ \ \ \textcolor{comment}{//\ Find\ vector\ length}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00107}00107\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ vector\_size\ =\ VECTOR\_SIZE\ /\ \textcolor{keyword}{sizeof}(base\_type);}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00108}00108\ \ \ \ \ \textcolor{comment}{//\ Find\ the\ vector\ type\ from\ above}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00109}00109\ \ \ \ \ \textcolor{keyword}{using\ }type\ =\ \textcolor{keyword}{typename}\ vector\_base\_type<base\_type,\ vector\_size>::type;}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00110}00110\ \ \ \ \ \textcolor{comment}{//\ Number\ of\ elements\ in\ the\ full\ type}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00111}00111\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ elements\ =\ \textcolor{keyword}{sizeof}(T)\ /\ \textcolor{keyword}{sizeof}(base\_type);}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00112}00112\ \ \ \ \ \textcolor{comment}{//\ Size\ of\ the\ base\ type}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00113}00113\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ base\_type\_size\ =\ \textcolor{keyword}{sizeof}(base\_type);}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00114}00114\ \};}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00115}00115\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00116}00116\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ VECTORIZED}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00117}00117\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00118}00118\ \}\ \textcolor{comment}{//\ namespace\ hila}}
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00119}00119\ }
+\DoxyCodeLine{\Hypertarget{vector__types_8h_source_l00120}00120\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

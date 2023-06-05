@@ -1,0 +1,90 @@
+\doxysection{test\+\_\+gathers.\+cpp}
+\hypertarget{test__gathers_8cpp_source}{}\label{test__gathers_8cpp_source}\index{test\_gathers.cpp@{test\_gathers.cpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00004}00004\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00007}00007\ \textcolor{keywordtype}{void}\ gather\_test()\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00009}00009\ \ \ \ \ int64\_t\ s\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00010}00010\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00011}00011\ \ \ \ \ \ \ \ \ s\ +=\ 1;}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00012}00012\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00014}00014\ \ \ \ \ \textcolor{keywordflow}{if}\ (s\ !=\ lattice.volume())\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00015}00015\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ Reduction\ test\ error!\ \ Sum\ "{}}\ <<\ s\ <<\ \textcolor{stringliteral}{"{}\ should\ be\ "{}}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00016}00016\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ lattice.volume()\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00017}00017\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00018}00018\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00021}00021\ \ \ \ \ foralldir\ (d)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00022}00022\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00023}00023\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ dif1\ =\ 0,\ dif2\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00024}00024\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<CoordinateVector>}}\ f1,\ f2;}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00025}00025\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00026}00026\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00027}00027\ \ \ \ \ \ \ \ \ \ \ \ \ f1[X]\ =\ X.coordinates();}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00028}00028\ \ \ \ \ \ \ \ \ \ \ \ \ f2[X]\ =\ (X.coordinates()\ +\ d).mod(lattice.size());}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00029}00029\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00031}00031\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00032}00032\ \ \ \ \ \ \ \ \ \ \ \ \ dif1\ +=\ abs(f1[X\ +\ d]\ -\/\ f2[X]);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00033}00033\ \ \ \ \ \ \ \ \ \ \ \ \ dif2\ +=\ abs(f1[X]\ -\/\ f2[X\ -\/\ d]);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00034}00034\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00036}00036\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dif1.\mbox{\hyperlink{classMatrix__t_a2107bddb57dfc38917601e5978931a8c}{squarenorm}}()\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00037}00037\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ Std\ up-\/gather\ test\ error!\ Node\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00038}00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ direction\ "{}}\ <<\ (unsigned)d\ <<\ \textcolor{stringliteral}{"{}\ dif1\ "{}}\ <<\ dif1\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00039}00039\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00040}00040\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00042}00042\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dif2.squarenorm()\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00043}00043\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ Std\ down-\/gather\ test\ error!\ Node\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00044}00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ direction\ "{}}\ <<\ (unsigned)d\ <<\ \textcolor{stringliteral}{"{}\ dif2\ "{}}\ <<\ dif2\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00045}00045\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00046}00046\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00047}00047\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00048}00048\ \textcolor{preprocessor}{\#if\ 0\ \&\&\ defined(SPECIAL\_BOUNDARY\_CONDITIONS)}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00049}00049\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ test\ antiperiodic\ b.c.\ to\ one\ direction}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00050}00050\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (next\_direction(d)\ ==\ NDIM)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00051}00051\ \ \ \ \ \ \ \ \ \ \ \ \ f2.\mbox{\hyperlink{classField_a2344d33fe247023dd759e2d232a5d04e}{set\_boundary\_condition}}(d,\ hila::bc::ANTIPERIODIC);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00053}00053\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00054}00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (X.coordinate(d)\ ==\ lattice.size(d)\ -\/\ 1)}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00055}00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ f2[X]\ =\ -\/f1[X];}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ f2[X]\ =\ f1[X];}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00058}00058\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00059}00059\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00060}00060\ \ \ \ \ \ \ \ \ \ \ \ \ dif1\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00061}00061\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{\ dif1\ +=\ f1[X]\ -\/\ f2[X\ -\/\ d];\ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00062}00062\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00063}00063\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dif1\ !=\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00064}00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}\ Antiperiodic\ up-\/gather\ test\ error!\ Node\ "{}}\ <<\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00065}00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ direction\ "{}}\ <<\ (unsigned)d\ <<\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00066}00066\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00067}00067\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00068}00068\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00069}00069\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00070}00070\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00071}00071\ \}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00072}00072\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00073}00073\ \textcolor{keywordtype}{void}\ test\_std\_gathers()\ \{}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00074}00074\ \ \ \ \ \textcolor{comment}{//\ gather\_test<int>();}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00075}00075\ \ \ \ \ gather\_test();}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00076}00076\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00077}00077\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00078}00078\ \ \ \ \ gpuMemPoolPurge();}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00079}00079\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00081}00081\ \ \ \ \ hila::timestamp(\textcolor{stringliteral}{"{}Communication\ tests\ done"{}});}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00082}00082\ \ \ \ \ print\_dashed\_line();}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00083}00083\ }
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00084}00084\ \ \ \ \ \textcolor{keywordflow}{if}\ (\mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}()\ ==\ 0)}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00085}00085\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}.flush();}
+\DoxyCodeLine{\Hypertarget{test__gathers_8cpp_source_l00086}00086\ \}}
+
+\end{DoxyCode}

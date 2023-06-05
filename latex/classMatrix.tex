@@ -1,0 +1,208 @@
+\doxysection{Matrix\texorpdfstring{$<$}{<} n, m, T \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classMatrix}{}\label{classMatrix}\index{Matrix$<$ n, m, T $>$@{Matrix$<$ n, m, T $>$}}
+
+
+Generic \doxylink{classMatrix}{Matrix} class fwd definition.  
+
+
+
+
+{\ttfamily \#include $<$matrix.\+h$>$}
+
+
+
+Inheritance diagram for Matrix\texorpdfstring{$<$}{<} n, m, T \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classMatrix__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Matrix\texorpdfstring{$<$}{<} n, m, T \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=199pt]{classMatrix__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classMatrix_a7769ae56ac54d26ef8ea7e2164fa0bde}\label{classMatrix_a7769ae56ac54d26ef8ea7e2164fa0bde} 
+using {\bfseries base\+\_\+type} = hila\+::scalar\+\_\+type$<$ T $>$
+\begin{DoxyCompactList}\small\item\em std incantation for field types \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Types inherited from \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t$<$ n, m, T, Matrix$<$ n, m, T $>$ $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+using {\bfseries base\+\_\+type} = hila\+::scalar\+\_\+type$<$ T $>$
+\begin{DoxyCompactList}\small\item\em std incantation for field types \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classMatrix_ab4ffdd1754da4e5f32172085fa984d04}\label{classMatrix_ab4ffdd1754da4e5f32172085fa984d04} 
+{\bfseries Matrix} ()=default
+\begin{DoxyCompactList}\small\item\em define default constructors to ensure std\+::is\+\_\+trivial \end{DoxyCompactList}\item 
+\Hypertarget{classMatrix_afb96d974ef4a7881e04a21da78b24026}\label{classMatrix_afb96d974ef4a7881e04a21da78b24026} 
+{\footnotesize template$<$typename S , int nn = n, int mm = m, std\+::enable\+\_\+if\+\_\+t$<$(hila\+::is\+\_\+assignable$<$ T \&, S $>$\+::value \&\&nn==mm), int $>$  = 0$>$ }\\{\bfseries Matrix} (const S rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em constructor from scalar -- keep it explicit! Not good for auto use \end{DoxyCompactList}\item 
+\Hypertarget{classMatrix_a0f5929ce9b8bf2bbf6d07dd53b947393}\label{classMatrix_a0f5929ce9b8bf2bbf6d07dd53b947393} 
+{\footnotesize template$<$typename S , typename MT , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\+::value, int $>$  = 0$>$ }\\{\bfseries Matrix} (const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ n, m, S, MT $>$ \&rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em Construct from a different type matrix. \end{DoxyCompactList}\item 
+\Hypertarget{classMatrix_a0c47d66a7c90f08c69649f3a7b40ebf9}\label{classMatrix_a0c47d66a7c90f08c69649f3a7b40ebf9} 
+{\bfseries Matrix} (const std\+::nullptr\+\_\+t \&z) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em construct from 0 \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\+::value, int $>$  = 0$>$ }\\\mbox{\hyperlink{classMatrix_a92e72bcaf8a3f393ed0a7d34d8a03769}{Matrix}} (std\+::initializer\+\_\+list$<$ S $>$ rhs)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t$<$ n, m, T, Matrix$<$ n, m, T $>$ $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+{\bfseries Matrix\+\_\+t} ()=default
+\begin{DoxyCompactList}\small\item\em define default constructors to ensure std\+::is\+\_\+trivial \end{DoxyCompactList}\item 
+{\bfseries Matrix\+\_\+t} (const S rhs)
+\begin{DoxyCompactList}\small\item\em constructor from scalar -- keep it explicit! Not good for auto use \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix__t_a3fd6613b4aedd38f75906632319c41f6}{Matrix\+\_\+t}} (const std\+::nullptr\+\_\+t \&z)
+\begin{DoxyCompactList}\small\item\em Construct from a different type matrix. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix__t_ac7e628f05e160a1e08caef612bdda5a9}{Matrix\+\_\+t}} (std\+::initializer\+\_\+list$<$ S $>$ rhs)
+\item 
+{\bfseries operator Matrix$<$ n, m, T $>$ \&} ()
+\begin{DoxyCompactList}\small\item\em automatically cast to generic matrix \end{DoxyCompactList}\item 
+T {\bfseries e} (const int i, const int j) const
+\begin{DoxyCompactList}\small\item\em standard access ops m.\+e(i,j) -\/ assume T is small, as it should \end{DoxyCompactList}\item 
+T \& {\bfseries e} (const int i, const int j) const \+\_\+function
+\begin{DoxyCompactList}\small\item\em standard access ops m.\+e(i,j) -\/ assume T is small, as it should \end{DoxyCompactList}\item 
+T \mbox{\hyperlink{classMatrix__t_a663fc4fc31421c967d5d916a8cc8fa08}{e}} (const int i) const
+\item 
+T \mbox{\hyperlink{classMatrix__t_ab8686604f4c6cabbaf5d6f148dcad0f6}{operator\mbox{[}$\,$\mbox{]}}} (const int i) const
+\item 
+const \mbox{\hyperlink{classMatrix}{Horizontal\+Vector}}$<$ m, T $>$ \& {\bfseries row} (int r) const
+\begin{DoxyCompactList}\small\item\em return reference to row in a matrix \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Horizontal\+Vector}}$<$ m, T $>$ \& {\bfseries row} (int r)
+\begin{DoxyCompactList}\small\item\em return reference to row in a matrix \end{DoxyCompactList}\item 
+void {\bfseries set\+\_\+row} (int r, const \mbox{\hyperlink{classMatrix}{Horizontal\+Vector}}$<$ m, S $>$ \&v)
+\begin{DoxyCompactList}\small\item\em return reference to row in a matrix \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{classMatrix}{Vector}}$<$ n, T $>$ {\bfseries column} (int \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}) const
+\begin{DoxyCompactList}\small\item\em get column of a matrix \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classMatrix__t_a005a417b5e28c689f4a2270bf4f6d992}{set\+\_\+column}} (int \mbox{\hyperlink{classMatrix__t_a8aefe1544bc5c4c0c91461da88a830fb}{c}}, const \mbox{\hyperlink{classMatrix}{Vector}}$<$ n, S $>$ \&v)
+\begin{DoxyCompactList}\small\item\em get column of a matrix \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Vector}}$<$ n, T $>$ {\bfseries diagonal} ()
+\begin{DoxyCompactList}\small\item\em return diagonal of a square matrix as a vector \end{DoxyCompactList}\item 
+void {\bfseries set\+\_\+diagonal} (const \mbox{\hyperlink{classMatrix}{Vector}}$<$ n, S $>$ \&v)
+\begin{DoxyCompactList}\small\item\em return diagonal of a square matrix as a vector \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classArray}{Array}}$<$ n, m, T $>$ \& {\bfseries as\+Array} () const \+\_\+function
+\begin{DoxyCompactList}\small\item\em interpret \doxylink{classMatrix}{Matrix} as \doxylink{classArray}{Array} -\/ for array ops \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \mbox{\hyperlink{classMatrix__t_af29c866a88228e5ff0312d4c27a084ab}{operator-\/}} () const
+\begin{DoxyCompactList}\small\item\em unary -\/ \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator+} () const
+\begin{DoxyCompactList}\small\item\em unary + -\/ there\textquotesingle{}s an automatic cast here \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator=} (const std\+::nullptr\+\_\+t \&z) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em assign from 0 \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator=} (const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ n, m, S, MT $>$ \&rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em Assign from different type matrix. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator=} (const S rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em Assign from \"{}scalar\"{} for square matrix. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator=} (std\+::initializer\+\_\+list$<$ S $>$ rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em Assign from initializer list. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator+=} (const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ n, m, S, MT $>$ \&rhs)
+\begin{DoxyCompactList}\small\item\em add assign a \doxylink{classMatrix}{Matrix} \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator+=} (const S \&rhs)
+\begin{DoxyCompactList}\small\item\em add assign a scalar to square matrix \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator-\/=} (const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ n, m, S, MT $>$ \&rhs)
+\begin{DoxyCompactList}\small\item\em subtract assign a \doxylink{classMatrix__t}{Matrix\+\_\+t} \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator-\/=} (const S rhs)
+\begin{DoxyCompactList}\small\item\em subtract assign type T and convertible \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator\texorpdfstring{$\ast$}{*}=} (const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ m, p, S, MT $>$ \&rhs)
+\begin{DoxyCompactList}\small\item\em multiply assign with matrix \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator\texorpdfstring{$\ast$}{*}=} (const S rhs)
+\begin{DoxyCompactList}\small\item\em multiply assign with scalar \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries operator/=} (const S rhs)
+\begin{DoxyCompactList}\small\item\em divide assign with scalar \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries fill} (const S rhs) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em numpy style matrix fill \end{DoxyCompactList}\item 
+const Rtype \mbox{\hyperlink{classMatrix__t_aff57285edd54fefbda17d4276c818f03}{transpose}} () const
+\item 
+const \mbox{\hyperlink{classMatrix}{Horizontal\+Vector}}$<$ n, T $>$ \& {\bfseries transpose} () const
+\begin{DoxyCompactList}\small\item\em Transpose of a vector\+: just return a ref. \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ {\bfseries conj} () const
+\begin{DoxyCompactList}\small\item\em and complex conjugate -\/ same type \end{DoxyCompactList}\item 
+const Rtype \mbox{\hyperlink{classMatrix__t_a2086db2ed25450f6c884542ff3d9d747}{dagger}} () const
+\item 
+Rtype {\bfseries adjoint} () const
+\begin{DoxyCompactList}\small\item\em alias \doxylink{classMatrix__t_a2086db2ed25450f6c884542ff3d9d747}{dagger()} to \doxylink{classMatrix__t_af6b8555883c5ba97083a06bf3bdc0959}{adjoint()} \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \mbox{\hyperlink{classMatrix__t_a328c3d3dc96b96c3bfe697ec72e82c9d}{abs}} () const
+\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, hila\+::scalar\+\_\+type$<$ T $>$ $>$ {\bfseries real} () const
+\begin{DoxyCompactList}\small\item\em return real part \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, hila\+::scalar\+\_\+type$<$ T $>$ $>$ {\bfseries imag} () const
+\begin{DoxyCompactList}\small\item\em return imaginary part \end{DoxyCompactList}\item 
+T {\bfseries trace} () const
+\begin{DoxyCompactList}\small\item\em matrix trace (return type T) \end{DoxyCompactList}\item 
+hila\+::type\+\_\+mul$<$ T, S $>$ \mbox{\hyperlink{classMatrix__t_ab689726ff007737f273310ce3a53721f}{mul\+\_\+trace}} (const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ p, q, S, MT $>$ \&rm) const
+\item 
+hila\+::scalar\+\_\+type$<$ T $>$ {\bfseries squarenorm} () const
+\begin{DoxyCompactList}\small\item\em calculate square norm -\/ sum of squared elements \end{DoxyCompactList}\item 
+hila\+::scalar\+\_\+type$<$ T $>$ {\bfseries norm} () const
+\begin{DoxyCompactList}\small\item\em calculate vector norm -\/ sqrt of squarenorm \end{DoxyCompactList}\item 
+R \mbox{\hyperlink{classMatrix__t_ae0a9dc1fc74d4fe4769f4f42ba8447b5}{dot}} (const \mbox{\hyperlink{classMatrix}{Matrix}}$<$ p, q, S $>$ \&rhs) const
+\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, p, R $>$ \mbox{\hyperlink{classMatrix__t_a5e702be21531332dc987431a20158698}{outer\+\_\+product}} (const \mbox{\hyperlink{classMatrix}{Matrix}}$<$ p, q, S $>$ \&rhs) const
+\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& \mbox{\hyperlink{classMatrix__t_ae8cc4870752fdec40d0e1207cd19f45f}{random}} () out\+\_\+only
+\begin{DoxyCompactList}\small\item\em dot with matrix -\/ matrix \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \& {\bfseries gaussian\+\_\+random} (double width=1.\+0) out\+\_\+only
+\begin{DoxyCompactList}\small\item\em Generate gaussian random elements. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \mbox{\hyperlink{classMatrix__t_afbf3c164d1d5ec0220479e5dfcfc82da}{reorder\+\_\+columns}} (const \mbox{\hyperlink{classMatrix}{Vector}}$<$ m, int $>$ \&permutation) const
+\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ {\bfseries reorder} (const \mbox{\hyperlink{classMatrix}{Vector}}$<$ N, int $>$ \&permutation) const
+\begin{DoxyCompactList}\small\item\em implement also bare reorder for vectors \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$ \mbox{\hyperlink{classMatrix__t_a2abf17e787cfe4a6f199861664d986ef}{sort}} (\mbox{\hyperlink{classMatrix}{Vector}}$<$ N, int $>$ \&permutation, hila\+::sort order=hila\+::sort\+::ascending) const
+\item 
+void \mbox{\hyperlink{classMatrix__t_a0167cb9b823e409ea2c9f72cef944175}{mult\+\_\+by\+\_\+2x2\+\_\+left}} (int p, int q, const \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ 2, 2, R, Mt $>$ \&M)
+\item 
+int \mbox{\hyperlink{classMatrix__t_a7e9e2c4b387391c032f70c317af648c0}{eigen\+\_\+jacobi}} (out\+\_\+only \mbox{\hyperlink{classMatrix}{Vector}}$<$ n, Et $>$ \&eigenvaluevec, out\+\_\+only \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t}}$<$ n, n, Mt, MT $>$ \&eigenvectors, enum hila\+::sort sorted=hila\+::sort\+::nonsorted) const
+\item 
+std\+::string \mbox{\hyperlink{classMatrix__t_af4ac1c889f1614ab42c371823f54eb20}{str}} (int prec=8, char separator=\textquotesingle{} \textquotesingle{}) const
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Static Public Member Functions inherited from \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t$<$ n, m, T, Matrix$<$ n, m, T $>$ $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+static constexpr int {\bfseries rows} ()
+\begin{DoxyCompactList}\small\item\em Define constant methods \doxylink{classMatrix__t_a13f2d788c3600c586c0343e6308f3e1d}{rows()}, columns() -\/ may be useful in template code. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes inherited from \mbox{\hyperlink{classMatrix__t}{Matrix\+\_\+t$<$ n, m, T, Matrix$<$ n, m, T $>$ $>$}}}
+\begin{DoxyCompactItemize}
+\item 
+T {\bfseries c} \mbox{[}n \texorpdfstring{$\ast$}{*}m\mbox{]}
+\begin{DoxyCompactList}\small\item\em The data as a one dimensional array. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$int n, int m, typename T$>$\newline
+class Matrix$<$ n, m, T $>$}
+Generic \doxylink{classMatrix}{Matrix} class fwd definition. 
+
+The matrix class definition here. 
+
+Definition at line \mbox{\hyperlink{matrix_8h_source_l00976}{976}} of file \mbox{\hyperlink{matrix_8h_source}{matrix.\+h}}.
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classMatrix_a92e72bcaf8a3f393ed0a7d34d8a03769}\label{classMatrix_a92e72bcaf8a3f393ed0a7d34d8a03769} 
+\index{Matrix$<$ n, m, T $>$@{Matrix$<$ n, m, T $>$}!Matrix@{Matrix}}
+\index{Matrix@{Matrix}!Matrix$<$ n, m, T $>$@{Matrix$<$ n, m, T $>$}}
+\doxysubsubsection{\texorpdfstring{Matrix()}{Matrix()}}
+{\footnotesize\ttfamily template$<$int n, int m, typename T $>$ \\
+template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\+::value, int $>$  = 0$>$ \\
+\mbox{\hyperlink{classMatrix}{Matrix}}$<$ n, m, T $>$\mbox{\hyperlink{classMatrix}{\+::\+Matrix}} (\begin{DoxyParamCaption}\item[{std\+::initializer\+\_\+list$<$ S $>$}]{rhs }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Construct matrix automatically from right-\/size initializer list This does not seem to be dangerous, so keep non-\/explicit 
+
+Definition at line \mbox{\hyperlink{matrix_8h_source_l01022}{1022}} of file \mbox{\hyperlink{matrix_8h_source}{matrix.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+matrix.\+h\end{DoxyCompactItemize}

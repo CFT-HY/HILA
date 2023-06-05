@@ -1,0 +1,137 @@
+\doxysection{action\+\_\+term\+\_\+integrator Class Reference}
+\hypertarget{classaction__term__integrator}{}\label{classaction__term__integrator}\index{action\_term\_integrator@{action\_term\_integrator}}
+
+
+{\ttfamily \#include $<$integrator.\+h$>$}
+
+
+
+Inheritance diagram for action\+\_\+term\+\_\+integrator\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=292pt]{classaction__term__integrator__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for action\+\_\+term\+\_\+integrator\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=297pt]{classaction__term__integrator__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classaction__term__integrator_aa6f27038095e47d036ca5902ec591558}{action\+\_\+term\+\_\+integrator}} (\mbox{\hyperlink{classaction__base}{action\+\_\+base}} \&a, \mbox{\hyperlink{classintegrator__base}{integrator\+\_\+base}} \&i)
+\item 
+double \mbox{\hyperlink{classaction__term__integrator_a466bbd2f51d6ea5eb4f3137e76311970}{action}} ()
+\item 
+void \mbox{\hyperlink{classaction__term__integrator_a24f0c2f6a9c5cdbb7e20ad076127f29e}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+\Hypertarget{classaction__term__integrator_aed19597b48b09fa6888cd8e6ff05fc84}\label{classaction__term__integrator_aed19597b48b09fa6888cd8e6ff05fc84} 
+void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+\Hypertarget{classaction__term__integrator_ac813723ec8c7b7ceb1213acd7d09a55c}\label{classaction__term__integrator_ac813723ec8c7b7ceb1213acd7d09a55c} 
+void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\item 
+\Hypertarget{classaction__term__integrator_a478d03d03ccd4fca22557fff56e22aaf}\label{classaction__term__integrator_a478d03d03ccd4fca22557fff56e22aaf} 
+void {\bfseries force\+\_\+step} (double eps)
+\begin{DoxyCompactList}\small\item\em Update the momentum with the gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classaction__term__integrator_ac508f849068429a8b940497eb4f595d8}\label{classaction__term__integrator_ac508f849068429a8b940497eb4f595d8} 
+void {\bfseries momentum\+\_\+step} (double eps)
+\begin{DoxyCompactList}\small\item\em Update the gauge field with momentum. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classintegrator__base}{integrator\+\_\+base}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual double \mbox{\hyperlink{classintegrator__base_a8cf19a265130c977cb0e4ab96b3bad9d}{action}} ()
+\item 
+virtual void \mbox{\hyperlink{classintegrator__base_af26c85b1cefa8ce00047442066fd6154}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+virtual void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+virtual void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\item 
+virtual void {\bfseries force\+\_\+step} (double eps)
+\begin{DoxyCompactList}\small\item\em Update the momentum with the gauge field. \end{DoxyCompactList}\item 
+virtual void {\bfseries step} (double eps)
+\begin{DoxyCompactList}\small\item\em Run a lower level integrator step. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classaction__base}{action\+\_\+base}} \& \mbox{\hyperlink{classaction__term__integrator_a51d5b18439ec0314a2c2c63fa320eb66}{action\+\_\+term}}
+\item 
+\Hypertarget{classaction__term__integrator_a34c2b3c370986307c0a38b6ee07470a0}\label{classaction__term__integrator_a34c2b3c370986307c0a38b6ee07470a0} 
+\mbox{\hyperlink{classintegrator__base}{integrator\+\_\+base}} \& {\bfseries lower\+\_\+integrator}
+\begin{DoxyCompactList}\small\item\em Lower level integrator, updates the momentum. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Build integrator hierarchically by adding a force step on top of an existing integrator 
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00108}{108}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classaction__term__integrator_aa6f27038095e47d036ca5902ec591558}\label{classaction__term__integrator_aa6f27038095e47d036ca5902ec591558} 
+\index{action\_term\_integrator@{action\_term\_integrator}!action\_term\_integrator@{action\_term\_integrator}}
+\index{action\_term\_integrator@{action\_term\_integrator}!action\_term\_integrator@{action\_term\_integrator}}
+\doxysubsubsection{\texorpdfstring{action\_term\_integrator()}{action\_term\_integrator()}}
+{\footnotesize\ttfamily action\+\_\+term\+\_\+integrator\+::action\+\_\+term\+\_\+integrator (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classaction__base}{action\+\_\+base}} \&}]{a,  }\item[{\mbox{\hyperlink{classintegrator__base}{integrator\+\_\+base}} \&}]{i }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Constructor from action and lower level integrator. also works with momentum actions as long as it inherits the \doxylink{classintegrator__base}{integrator\+\_\+base}. 
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00119}{119}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classaction__term__integrator_a466bbd2f51d6ea5eb4f3137e76311970}\label{classaction__term__integrator_a466bbd2f51d6ea5eb4f3137e76311970} 
+\index{action\_term\_integrator@{action\_term\_integrator}!action@{action}}
+\index{action@{action}!action\_term\_integrator@{action\_term\_integrator}}
+\doxysubsubsection{\texorpdfstring{action()}{action()}}
+{\footnotesize\ttfamily double action\+\_\+term\+\_\+integrator\+::action (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+The current total action of fields updated by this integrator. This is kept constant up to order eps\texorpdfstring{$^\wedge$}{\string^}3. 
+
+Reimplemented from \mbox{\hyperlink{classintegrator__base_a8cf19a265130c977cb0e4ab96b3bad9d}{integrator\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00124}{124}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+\Hypertarget{classaction__term__integrator_a24f0c2f6a9c5cdbb7e20ad076127f29e}\label{classaction__term__integrator_a24f0c2f6a9c5cdbb7e20ad076127f29e} 
+\index{action\_term\_integrator@{action\_term\_integrator}!draw\_gaussian\_fields@{draw\_gaussian\_fields}}
+\index{draw\_gaussian\_fields@{draw\_gaussian\_fields}!action\_term\_integrator@{action\_term\_integrator}}
+\doxysubsubsection{\texorpdfstring{draw\_gaussian\_fields()}{draw\_gaussian\_fields()}}
+{\footnotesize\ttfamily void action\+\_\+term\+\_\+integrator\+::draw\+\_\+gaussian\+\_\+fields (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Refresh fields that can be drawn from a gaussian distribution This is needed at the beginning of a trajectory 
+
+Reimplemented from \mbox{\hyperlink{classintegrator__base_af26c85b1cefa8ce00047442066fd6154}{integrator\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00128}{128}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classaction__term__integrator_a51d5b18439ec0314a2c2c63fa320eb66}\label{classaction__term__integrator_a51d5b18439ec0314a2c2c63fa320eb66} 
+\index{action\_term\_integrator@{action\_term\_integrator}!action\_term@{action\_term}}
+\index{action\_term@{action\_term}!action\_term\_integrator@{action\_term\_integrator}}
+\doxysubsubsection{\texorpdfstring{action\_term}{action\_term}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classaction__base}{action\+\_\+base}}\& action\+\_\+term\+\_\+integrator\+::action\+\_\+term}
+
+The action term used to update the momentum on this level 
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00112}{112}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+integrator.\+h\end{DoxyCompactItemize}

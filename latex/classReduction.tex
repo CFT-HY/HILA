@@ -1,0 +1,138 @@
+\doxysection{Reduction\texorpdfstring{$<$}{<} T \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classReduction}{}\label{classReduction}\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+
+
+{\ttfamily \#include $<$reduction.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classReduction_ac2047eb1be5f02a1af2ec299b01d507e}{Reduction}} ()
+\item 
+\mbox{\hyperlink{classReduction_a3945486d0ca5dc9d61c93046eb0f31b9}{Reduction}} (const \mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$ \&r)=delete
+\item 
+\Hypertarget{classReduction_a1a23856a4d6c0d342f688a8dfba4d814}\label{classReduction_a1a23856a4d6c0d342f688a8dfba4d814} 
+{\bfseries \texorpdfstring{$\sim$}{\string~}\+Reduction} ()
+\begin{DoxyCompactList}\small\item\em Destructor cleans up communications if they are in progress. \end{DoxyCompactList}\item 
+\Hypertarget{classReduction_a4858cffbf7d37203d41887d66466d79e}\label{classReduction_a4858cffbf7d37203d41887d66466d79e} 
+\mbox{\hyperlink{classReduction}{Reduction}} \& {\bfseries allreduce} (bool b=true)
+\begin{DoxyCompactList}\small\item\em \doxylink{classReduction_a4858cffbf7d37203d41887d66466d79e}{allreduce(bool)} turns allreduce on or off. By default on. \end{DoxyCompactList}\item 
+\Hypertarget{classReduction_a7a0bab24e74f3f2f3dc765fff6760232}\label{classReduction_a7a0bab24e74f3f2f3dc765fff6760232} 
+\mbox{\hyperlink{classReduction}{Reduction}} \& {\bfseries nonblocking} (bool b=true)
+\begin{DoxyCompactList}\small\item\em \doxylink{classReduction_a7a0bab24e74f3f2f3dc765fff6760232}{nonblocking(bool)} turns allreduce on or off. By default on. \end{DoxyCompactList}\item 
+\Hypertarget{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}\label{classReduction_a8d1d196a25e2bd63d3d10789e1754b75} 
+\mbox{\hyperlink{classReduction}{Reduction}} \& {\bfseries delayed} (bool b=true)
+\begin{DoxyCompactList}\small\item\em deferred(bool) turns deferred on or off. By default turns on. \end{DoxyCompactList}\item 
+\Hypertarget{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}\label{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2} 
+const T {\bfseries value} ()
+\begin{DoxyCompactList}\small\item\em Return value of the reduction variable. Wait for the comms if needed. \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{\+::value}}, int $>$  = 0$>$ }\\void \mbox{\hyperlink{classReduction_a6697f21d32087a90712c9139c22b5f87}{set}} (S \&rhs)
+\item 
+\Hypertarget{classReduction_a9287f0ed9ed895da02f096b713d62099}\label{classReduction_a9287f0ed9ed895da02f096b713d62099} 
+{\footnotesize template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{\+::value}}, int $>$  = 0$>$ }\\T \& {\bfseries operator=} (const S \&rhs)
+\begin{DoxyCompactList}\small\item\em Assignment is used only outside site loops -\/ drop comms if on, no need to wait. \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, \mbox{\hyperlink{namespacehila_adf272b5e8b834ba16564fd7bfff5adef}{hila\+::type\+\_\+plus}}$<$ T, S $>$ $>$\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{\+::value}}, int $>$  = 0$>$ }\\void \mbox{\hyperlink{classReduction_a2bc09901d21c3bdb1901eac2a69efdde}{operator+=}} (const S \&rhs)
+\item 
+void \mbox{\hyperlink{classReduction_ae7efb4d3b342430e825981e47990cf70}{reduce\+\_\+sum\+\_\+node}} (const T \&v)
+\item 
+void \mbox{\hyperlink{classReduction_ab698c4585b18cfd8b515447c1e23a122}{reduce\+\_\+product\+\_\+node}} (const T \&v)
+\item 
+\Hypertarget{classReduction_aa40a6e389ad4405c0d55b2e1b1d44ea8}\label{classReduction_aa40a6e389ad4405c0d55b2e1b1d44ea8} 
+void {\bfseries reduce} ()
+\begin{DoxyCompactList}\small\item\em For delayed reduction, reduce starts or completes the reduction operation. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename T$>$\newline
+class Reduction$<$ T $>$}
+Special reduction class\+: declare a reduction variable which can be used in site loops Example\+: Reduction$<$\+Complex$<$double$>$$>$ rv = 0; onsites(\+ALL) rv += fv\mbox{[}X\mbox{]};
+
+... // possibly do something not involving rv
+
+\doxylink{classReduction}{Reduction} can be modified to on/off\+: \doxylink{classReduction_a4858cffbf7d37203d41887d66466d79e}{allreduce()}, \doxylink{classReduction_a7a0bab24e74f3f2f3dc765fff6760232}{nonblocking()}, \doxylink{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}{delayed()} Example\+: rv.\+allreduce(false).\doxylink{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}{delayed()};
+
+Delayed reduction can be used e.\+g. in expressions like
+
+Reduction$<$double$>$ rv = 0; rv.\+allreduce(false).\doxylink{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}{delayed()}; foralldir(d) \{ onsites(\+ALL) rv += a\mbox{[}X+d\mbox{]}\texorpdfstring{$\ast$}{*}a\mbox{[}X\mbox{]}; \} rv.\+reduce();
+
+This does only one reduction operation, not for every onsites() -\/loop. Result is the same
+
+\doxylink{classReduction}{Reduction} variable can be used again 
+
+Definition at line \mbox{\hyperlink{reduction_8h_source_l00036}{36}} of file \mbox{\hyperlink{reduction_8h_source}{reduction.\+h}}.
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{classReduction_ac2047eb1be5f02a1af2ec299b01d507e}\label{classReduction_ac2047eb1be5f02a1af2ec299b01d507e} 
+\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}!Reduction@{Reduction}}
+\index{Reduction@{Reduction}!Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{Reduction()}{Reduction()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+\mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$\mbox{\hyperlink{classReduction}{\+::\+Reduction}} (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Initialize to zero by default (? exception to other variables) allreduce = true by default 
+
+Definition at line \mbox{\hyperlink{reduction_8h_source_l00124}{124}} of file \mbox{\hyperlink{reduction_8h_source}{reduction.\+h}}.
+
+\Hypertarget{classReduction_a3945486d0ca5dc9d61c93046eb0f31b9}\label{classReduction_a3945486d0ca5dc9d61c93046eb0f31b9} 
+\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}!Reduction@{Reduction}}
+\index{Reduction@{Reduction}!Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{Reduction()}{Reduction()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+\mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$\mbox{\hyperlink{classReduction}{\+::\+Reduction}} (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$ \&}]{r }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+Delete copy construct from another reduction just in case don\textquotesingle{}t make \doxylink{classReduction}{Reduction} temporaries 
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classReduction_a2bc09901d21c3bdb1901eac2a69efdde}\label{classReduction_a2bc09901d21c3bdb1901eac2a69efdde} 
+\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}!operator+=@{operator+=}}
+\index{operator+=@{operator+=}!Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{operator+=()}{operator+=()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, \mbox{\hyperlink{namespacehila_adf272b5e8b834ba16564fd7bfff5adef}{hila\+::type\+\_\+plus}}$<$ T, S $>$ $>$\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{\+::value}}, int $>$  = 0$>$ \\
+void \mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$\+::operator+= (\begin{DoxyParamCaption}\item[{const S \&}]{rhs }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Make compound ops return void, unconventionally\+: these are used within site loops but their value is not well-\/defined. Thus a = (r += b); is disallowed Within site loops hilapp will change operations 
+
+Definition at line \mbox{\hyperlink{reduction_8h_source_l00204}{204}} of file \mbox{\hyperlink{reduction_8h_source}{reduction.\+h}}.
+
+\Hypertarget{classReduction_ab698c4585b18cfd8b515447c1e23a122}\label{classReduction_ab698c4585b18cfd8b515447c1e23a122} 
+\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}!reduce\_product\_node@{reduce\_product\_node}}
+\index{reduce\_product\_node@{reduce\_product\_node}!Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{reduce\_product\_node()}{reduce\_product\_node()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$\+::reduce\+\_\+product\+\_\+node (\begin{DoxyParamCaption}\item[{const T \&}]{v }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Product reduction -- currently works only for scalar data types. For \doxylink{classComplex}{Complex}, \doxylink{classMatrix}{Matrix} and Vector data product is not element-\/wise. TODO\+: \doxylink{classArray}{Array} or std\+::array ? TODO\+: implement using custom MPI ops (if needed) 
+
+Definition at line \mbox{\hyperlink{reduction_8h_source_l00256}{256}} of file \mbox{\hyperlink{reduction_8h_source}{reduction.\+h}}.
+
+\Hypertarget{classReduction_ae7efb4d3b342430e825981e47990cf70}\label{classReduction_ae7efb4d3b342430e825981e47990cf70} 
+\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}!reduce\_sum\_node@{reduce\_sum\_node}}
+\index{reduce\_sum\_node@{reduce\_sum\_node}!Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{reduce\_sum\_node()}{reduce\_sum\_node()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+void \mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$\+::reduce\+\_\+sum\+\_\+node (\begin{DoxyParamCaption}\item[{const T \&}]{v }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Start sum reduction -- works only if the type T addition == element-\/wise addition. This is true for all hila predefined data types 
+
+Definition at line \mbox{\hyperlink{reduction_8h_source_l00231}{231}} of file \mbox{\hyperlink{reduction_8h_source}{reduction.\+h}}.
+
+\Hypertarget{classReduction_a6697f21d32087a90712c9139c22b5f87}\label{classReduction_a6697f21d32087a90712c9139c22b5f87} 
+\index{Reduction$<$ T $>$@{Reduction$<$ T $>$}!set@{set}}
+\index{set@{set}!Reduction$<$ T $>$@{Reduction$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{set()}{set()}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+template$<$typename S , std\+::enable\+\_\+if\+\_\+t$<$ hila\+::is\+\_\+assignable$<$ T \&, S $>$\mbox{\hyperlink{classReduction_a17bb8d951eb5b7646bfadc1c02e80ad2}{\+::value}}, int $>$  = 0$>$ \\
+void \mbox{\hyperlink{classReduction}{Reduction}}$<$ T $>$\+::set (\begin{DoxyParamCaption}\item[{S \&}]{rhs }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Method set is the same as assignment, but without return value No need to complete comms if going on 
+
+Definition at line \mbox{\hyperlink{reduction_8h_source_l00182}{182}} of file \mbox{\hyperlink{reduction_8h_source}{reduction.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+reduction.\+h\end{DoxyCompactItemize}

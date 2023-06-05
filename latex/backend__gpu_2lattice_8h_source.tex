@@ -1,0 +1,59 @@
+\doxysection{backend\+\_\+gpu/lattice.h}
+\hypertarget{backend__gpu_2lattice_8h_source}{}\label{backend__gpu_2lattice_8h_source}\index{lattice.h@{lattice.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ \_BACKEND\_LATTICE\_H\_}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ \_BACKEND\_LATTICE\_H\_}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00006}00006\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structbackend__lattice__struct}{backend\_lattice\_struct}}\ \{}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00008}\mbox{\hyperlink{structbackend__lattice__struct_ae4dff93a090b31c38998b0bfe06ad5bb}{00008}}\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ *\mbox{\hyperlink{structbackend__lattice__struct_ae4dff93a090b31c38998b0bfe06ad5bb}{d\_neighb}}[NDIRS];}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00010}00010\ \textcolor{preprocessor}{\#ifdef\ SPECIAL\_BOUNDARY\_CONDITIONS}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00012}00012\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ *d\_neighb\_special[NDIRS];}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00013}00013\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00017}\mbox{\hyperlink{structbackend__lattice__struct_aed3c652da161bc5b9114ed1f979b630d}{00017}}\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \mbox{\hyperlink{structbackend__lattice__struct_aed3c652da161bc5b9114ed1f979b630d}{field\_alloc\_size}};}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00020}\mbox{\hyperlink{structbackend__lattice__struct_a9ab2becb7199fa88c43b3e2ea7c9db95}{00020}}\ \ \ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{structbackend__lattice__struct_a9ab2becb7199fa88c43b3e2ea7c9db95}{loop\_begin}},\ loop\_end;}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00022}00022\ \textcolor{preprocessor}{\#ifdef\ EVEN\_SITES\_FIRST}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00024}00024\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ *d\_coordinates;}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00026}00026\ \textcolor{comment}{//\#if\ defined(\_\_CUDACC\_\_)\ ||\ defined(\_\_HIPCC\_\_)}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00027}00027\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00030}00030\ \ \ \ \ \_\_host\_\_\ \_\_device\_\_\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ \&coordinates(\textcolor{keywordtype}{unsigned}\ idx)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00031}00031\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ d\_coordinates[idx];}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00032}00032\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00033}00033\ \ \ \ \ \_\_host\_\_\ \_\_device\_\_\ \textcolor{keywordtype}{int}\ coordinate(\textcolor{keywordtype}{unsigned}\ idx,\ Direction\ dir)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00034}00034\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ d\_coordinates[idx][dir];}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00035}00035\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00036}00036\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00037}00037\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00039}00039\ \textcolor{preprocessor}{\#else\ \ }}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00040}00040\ \ \ \ \ \textcolor{comment}{//\ Now\ not\ EVEN\_SITES\_FIRST}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00042}00042\ \ \ \ \ \textcolor{comment}{//\ these\ defined\ in\ hila\_gpu.cpp}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00043}00043\ \ \ \ \ \_\_device\_\_\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ coordinates(\textcolor{keywordtype}{unsigned}\ idx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00044}00044\ \ \ \ \ \_\_device\_\_\ \textcolor{keywordtype}{int}\ coordinate(\textcolor{keywordtype}{unsigned}\ idx,\ Direction\ dir)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00045}00045\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00046}00046\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00047}00047\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00049}00049\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{structbackend__lattice__struct_a7e115bccebd1b450b7233ff944b9cf80}{setup}}(\mbox{\hyperlink{classlattice__struct}{lattice\_struct}}\ \&lattice);}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00051}00051\ \};}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00053}00053\ \textcolor{comment}{//\#if\ defined(\_\_CUDACC\_\_)\ ||\ defined(\_\_HIPCC\_\_)}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00054}00054\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00055}00055\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00056}00056\ \textcolor{comment}{//\ define\ also\ loop\_lattice\_size()\ and\ \_volume()\ methods\ for\ cuda}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00057}00057\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00058}00058\ \_\_host\_\_\ \_\_device\_\_\ \textcolor{keywordtype}{int}\ loop\_lattice\_size(Direction\ d);}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00059}00059\ \_\_host\_\_\ \_\_device\_\_\ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ loop\_lattice\_size(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00060}00060\ \_\_host\_\_\ \_\_device\_\_\ int64\_t\ loop\_lattice\_volume(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00061}00061\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00062}00062\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{backend__gpu_2lattice_8h_source_l00064}00064\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

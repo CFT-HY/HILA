@@ -1,0 +1,86 @@
+\doxysection{real\+\_\+var\+\_\+ops.\+h}
+\hypertarget{real__var__ops_8h_source}{}\label{real__var__ops_8h_source}\index{real\_var\_ops.h@{real\_var\_ops.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ REAL\_VAR\_OPS\_H\_}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ REAL\_VAR\_OPS\_H\_}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}plumbing/random.h"{}}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00007}00007\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00010}00010\ \textcolor{comment}{//\ define\ abs()\ -\/function\ for\ floating\ point}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00011}00011\ template\ <typename\ T,\ std::enable\_if\_t<std::is\_floating\_point<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00012}00012\ \textcolor{keyword}{inline}\ T\ abs(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00013}00013\ \ \ \ \ \textcolor{keywordflow}{return}\ std::abs(val);}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00014}00014\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00016}00016\ \textcolor{comment}{//\ also\ def\ min\ and\ max,\ for\ all\ arith\ types}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00017}00017\ template\ <typename\ T,\ std::enable\_if\_t<std::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00018}00018\ \textcolor{keyword}{inline}\ T\ min(T\ val1,\ T\ val2)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00019}00019\ \ \ \ \ \textcolor{keywordflow}{return}\ std::min(val1,\ val2);}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00020}00020\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00021}00021\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00022}00022\ \textcolor{comment}{//\ also\ def\ min\ and\ max}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00023}00023\ template\ <typename\ T,\ std::enable\_if\_t<std::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00024}00024\ \textcolor{keyword}{inline}\ T\ max(T\ val1,\ T\ val2)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00025}00025\ \ \ \ \ \textcolor{keywordflow}{return}\ std::max(val1,\ val2);}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00026}00026\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00028}00028\ \textcolor{comment}{//\ define\ real(),\ imag(),\ conj()\ -\/functions\ for\ basic\ arithmetic\ types}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00029}00029\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00030}00030\ \textcolor{keyword}{inline}\ T\ real(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00031}00031\ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00032}00032\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00033}00033\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00034}00034\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00035}00035\ \textcolor{keyword}{inline}\ T\ imag(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00036}00036\ \ \ \ \ \textcolor{keywordflow}{return}\ (T)0;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00037}00037\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00039}00039\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00040}00040\ \textcolor{keyword}{inline}\ T\ conj(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00041}00041\ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00042}00042\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00044}00044\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00045}00045\ \textcolor{keyword}{inline}\ T\ dagger(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00046}00046\ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00047}00047\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00049}00049\ \textcolor{comment}{//\ define\ squarenorm\ and\ norm}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00050}00050\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00051}00051\ \textcolor{keyword}{inline}\ T\ squarenorm(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00052}00052\ \ \ \ \ \textcolor{keywordflow}{return}\ val\ *\ val;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00053}00053\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00055}00055\ \textcolor{comment}{//\ for\ integral\ types,\ sqrt\ -\/>\ double,\ so\ auto\ here\ makes\ sens}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00056}00056\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00057}00057\ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ norm(T\ val)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00058}00058\ \ \ \ \ \textcolor{keywordflow}{return}\ sqrt(val\ *\ val);}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00059}00059\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00061}00061\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacehila}{hila}}\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00062}00062\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00066}00066\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00067}\mbox{\hyperlink{namespacehila_a532dfa5f086c9d157a00bf7e3465b003}{00067}}\ std::string\ to\_string(\textcolor{keyword}{const}\ T\ v,\ \textcolor{keywordtype}{int}\ prec\ =\ 8,\ \textcolor{keywordtype}{char}\ separator\ =\ \textcolor{charliteral}{'\ '})\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00068}00068\ \ \ \ \ std::stringstream\ ss;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00069}00069\ \ \ \ \ ss.precision(prec);}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00070}00070\ \ \ \ \ ss\ <<\ v;}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00071}00071\ \ \ \ \ \textcolor{keywordflow}{return}\ ss.str();}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00072}00072\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00073}00073\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00074}00074\ template\ <typename\ T,\ std::enable\_if\_t<hila::is\_arithmetic<T>::value,\ \textcolor{keywordtype}{int}>\ =\ 0>}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00075}00075\ std::string\ prettyprint(\textcolor{keyword}{const}\ T\ v,\ \textcolor{keywordtype}{int}\ prec\ =\ 8)\ \{}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00076}00076\ \ \ \ \ \textcolor{keywordflow}{return}\ to\_string(v,\ prec);}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00077}00077\ \}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00078}00078\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00079}00079\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00080}00080\ \}\ \textcolor{comment}{//\ namespace\ hila}}
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00081}00081\ }
+\DoxyCodeLine{\Hypertarget{real__var__ops_8h_source_l00082}00082\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

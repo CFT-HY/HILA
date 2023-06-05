@@ -1,0 +1,150 @@
+\doxysection{fermion\+\_\+action\texorpdfstring{$<$}{<} gauge\+\_\+field, DIRAC\+\_\+\+OP \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classfermion__action}{}\label{classfermion__action}\index{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}}
+
+
+{\ttfamily \#include $<$fermion\+\_\+field.\+h$>$}
+
+
+
+Inheritance diagram for fermion\+\_\+action\texorpdfstring{$<$}{<} gauge\+\_\+field, DIRAC\+\_\+\+OP \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=211pt]{classfermion__action__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for fermion\+\_\+action\texorpdfstring{$<$}{<} gauge\+\_\+field, DIRAC\+\_\+\+OP \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classfermion__action__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classfermion__action_aa9a90a96b17c6268dcbd64684389e143}{initial\+\_\+guess}} (\mbox{\hyperlink{classField}{Field}}$<$ vector\+\_\+type $>$ \&chi, \mbox{\hyperlink{classField}{Field}}$<$ vector\+\_\+type $>$ \&psi)
+\item 
+double \mbox{\hyperlink{classfermion__action_a63fdd43e808e0dd2c6b73a9744f9d351}{action}} ()
+\item 
+\Hypertarget{classfermion__action_a55e2bf06de708343c55386a4f9ac1e47}\label{classfermion__action_a55e2bf06de708343c55386a4f9ac1e47} 
+void {\bfseries action} (\mbox{\hyperlink{classField}{Field}}$<$ double $>$ \&S)
+\begin{DoxyCompactList}\small\item\em Calculate the action as a field of double precision numbers. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classfermion__action_a11f327ea0dc444b1c1fc821662a16572}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+\Hypertarget{classfermion__action_a87cf1c6cebac13538543c1ea1d0d38d3}\label{classfermion__action_a87cf1c6cebac13538543c1ea1d0d38d3} 
+void {\bfseries save\+\_\+new\+\_\+solution} (\mbox{\hyperlink{classField}{Field}}$<$ vector\+\_\+type $>$ \&psi)
+\begin{DoxyCompactList}\small\item\em Add new solution to the list for MRE. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classfermion__action_a8cda18c9eecdbf2a52141f8d0a9c408e}{force\+\_\+step}} (double eps)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classaction__base}{action\+\_\+base}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual double {\bfseries action} ()
+\begin{DoxyCompactList}\small\item\em Calculate and return the action. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+virtual void \mbox{\hyperlink{classaction__base_a478cf7430fc29604379676676cb8f656}{force\+\_\+step}} (double eps)
+\item 
+virtual void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+virtual void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int \mbox{\hyperlink{classfermion__action_a3f1ced54041afff70f8d950280194c8c}{MRE\+\_\+size}} = 0
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, typename DIRAC\+\_\+\+OP$>$\newline
+class fermion\+\_\+action$<$ gauge\+\_\+field, DIRAC\+\_\+\+OP $>$}
+Define the action of a pseudofermion for HMC
+
+Implements methods for calculating the current action and the force (derivative with respect to the gauge field).
+
+Includes an implementation of the MRE initial guess, which is calculated in the base of a few previous solutions. Using this requires a higher accuracy, since the initial guess is not time reversible. 
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00022}{22}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classfermion__action_a63fdd43e808e0dd2c6b73a9744f9d351}\label{classfermion__action_a63fdd43e808e0dd2c6b73a9744f9d351} 
+\index{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}!action@{action}}
+\index{action@{action}!fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{action()}{action()}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+double \mbox{\hyperlink{classfermion__action}{fermion\+\_\+action}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::action (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Return the value of the action with the current field configuration 
+
+Reimplemented from \mbox{\hyperlink{classaction__base_a215dbd8038b0b5d9a67a4c4dcf83cc00}{action\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00090}{90}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+\Hypertarget{classfermion__action_a11f327ea0dc444b1c1fc821662a16572}\label{classfermion__action_a11f327ea0dc444b1c1fc821662a16572} 
+\index{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}!draw\_gaussian\_fields@{draw\_gaussian\_fields}}
+\index{draw\_gaussian\_fields@{draw\_gaussian\_fields}!fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{draw\_gaussian\_fields()}{draw\_gaussian\_fields()}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+void \mbox{\hyperlink{classfermion__action}{fermion\+\_\+action}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::draw\+\_\+gaussian\+\_\+fields (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Generate a pseudofermion field with a distribution given by the action chi 1/(D\+\_\+dagger D) chi 
+
+Reimplemented from \mbox{\hyperlink{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}{action\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00123}{123}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+\Hypertarget{classfermion__action_a8cda18c9eecdbf2a52141f8d0a9c408e}\label{classfermion__action_a8cda18c9eecdbf2a52141f8d0a9c408e} 
+\index{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}!force\_step@{force\_step}}
+\index{force\_step@{force\_step}!fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{force\_step()}{force\_step()}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+void \mbox{\hyperlink{classfermion__action}{fermion\+\_\+action}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::force\+\_\+step (\begin{DoxyParamCaption}\item[{double}]{eps }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Update the momentum with the derivative of the fermion action 
+
+Reimplemented from \mbox{\hyperlink{classaction__base_a478cf7430fc29604379676676cb8f656}{action\+\_\+base}}.
+
+
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00146}{146}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+\Hypertarget{classfermion__action_aa9a90a96b17c6268dcbd64684389e143}\label{classfermion__action_aa9a90a96b17c6268dcbd64684389e143} 
+\index{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}!initial\_guess@{initial\_guess}}
+\index{initial\_guess@{initial\_guess}!fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{initial\_guess()}{initial\_guess()}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+void \mbox{\hyperlink{classfermion__action}{fermion\+\_\+action}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::initial\+\_\+guess (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classField}{Field}}$<$ vector\+\_\+type $>$ \&}]{chi,  }\item[{\mbox{\hyperlink{classField}{Field}}$<$ vector\+\_\+type $>$ \&}]{psi }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Build an initial guess for the fermion matrix inversion by inverting first in the limited space of a few previous solutions. These are saved in old\+\_\+chi. 
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00065}{65}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+
+
+\doxysubsection{Member Data Documentation}
+\Hypertarget{classfermion__action_a3f1ced54041afff70f8d950280194c8c}\label{classfermion__action_a3f1ced54041afff70f8d950280194c8c} 
+\index{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}!MRE\_size@{MRE\_size}}
+\index{MRE\_size@{MRE\_size}!fermion\_action$<$ gauge\_field, DIRAC\_OP $>$@{fermion\_action$<$ gauge\_field, DIRAC\_OP $>$}}
+\doxysubsubsection{\texorpdfstring{MRE\_size}{MRE\_size}}
+{\footnotesize\ttfamily template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} , typename DIRAC\+\_\+\+OP $>$ \\
+int \mbox{\hyperlink{classfermion__action}{fermion\+\_\+action}}$<$ \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}, DIRAC\+\_\+\+OP $>$\+::\+MRE\+\_\+size = 0}
+
+We save a few previous invertions to build an initial guess. old\+\_\+chi contains a list of these 
+
+Definition at line \mbox{\hyperlink{fermion__field_8h_source_l00032}{32}} of file \mbox{\hyperlink{fermion__field_8h_source}{fermion\+\_\+field.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+fermion\+\_\+field.\+h\end{DoxyCompactItemize}

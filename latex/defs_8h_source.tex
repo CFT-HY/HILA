@@ -1,0 +1,196 @@
+\doxysection{defs.\+h}
+\hypertarget{defs_8h_source}{}\label{defs_8h_source}\index{defs.h@{defs.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ DEFS\_H\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ DEFS\_H\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00004}00004\ \textcolor{comment}{//\ This\ gives\ us\ math\ constants,\ e.g.\ M\_PI\ etc.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00005}00005\ \textcolor{preprocessor}{\#define\ \_USE\_MATH\_DEFINES}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00007}00007\ \textcolor{comment}{//\ Useful\ global\ definitions\ here\ -\/-\/\ this\ file\ should\ be\ included\ by\ (almost)\ all\ others}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00009}00009\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00010}00010\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00011}00011\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00012}00012\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00013}00013\ \textcolor{comment}{//\ \#include\ <math.h>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00014}00014\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00015}00015\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00016}00016\ \textcolor{preprocessor}{\#include\ <iomanip>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00019}00019\ \textcolor{preprocessor}{\#ifdef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00020}00020\ \textcolor{preprocessor}{\#include\ "{}hilapp\_mpi.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00021}00021\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00022}00022\ \textcolor{preprocessor}{\#include\ <mpi.h>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00023}00023\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00025}00025\ \textcolor{comment}{//\ Read\ in\ Makefile\ tunable\ parameters\ first\ }}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00026}00026\ \textcolor{comment}{//\ NDEBUG\ is\ defined\ (or\ not)\ in\ params,\ so\ assert.h\ comes\ after}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00027}00027\ \textcolor{preprocessor}{\#include\ "{}params.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00028}00028\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00029}00029\ \textcolor{preprocessor}{\#include\ <assert.h>}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00031}00031\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00032}00032\ \textcolor{preprocessor}{\#ifdef\ HILAPP}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00033}00033\ \textcolor{comment}{//\ The\ compiler\ is\ hilapp}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00034}00034\ \textcolor{preprocessor}{\#define\ \_\_device\_\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00035}00035\ \textcolor{preprocessor}{\#define\ \_\_host\_\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00036}00036\ \textcolor{preprocessor}{\#define\ \_\_global\_\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00037}00037\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00038}00038\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00039}00039\ \textcolor{comment}{//\ \#include\ "{}plumbing/mersenne.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00040}00040\ \textcolor{preprocessor}{\#include\ "{}plumbing/memalloc.h"{}}\ \textcolor{comment}{//\ memory\ allocator}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00041}00041\ \textcolor{preprocessor}{\#include\ "{}plumbing/timing.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00042}00042\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00046}00046\ \textcolor{preprocessor}{\#define\ RESTRICT\ \_\_restrict\_\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00047}00047\ \textcolor{comment}{//\ \#ifndef\ CUDA}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00048}00048\ \textcolor{comment}{//\ \#define\ RESTRICT\ \_\_restrict\_\_}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00049}00049\ \textcolor{comment}{//\ \#else}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00050}00050\ \textcolor{comment}{//\ \#define\ RESTRICT\ //\ disabled\ here}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00051}00051\ \textcolor{comment}{//\ \#endif}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00052}00052\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00053}00053\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00054}00054\ \textcolor{comment}{//\ This\ below\ declares\ "{}out\_only"{}\ -\/qualifier.\ \ It\ is\ empty\ on\ purpose.\ Do\ not\ remove!}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00055}00055\ \textcolor{preprocessor}{\#define\ out\_only}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00056}00056\ \textcolor{comment}{//\ out\_only\ indicates\ that\ the\ function\ does\ not\ use\ the\ original\ value\ of\ the\ argument:}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00057}00057\ \textcolor{comment}{//\ \ \ \ double\ func(\ out\_only\ double\ \&\ p,\ ..)\ \{\ ...\ \}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00058}00058\ \textcolor{comment}{//\ \ \ \ func(a);}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00059}00059\ \textcolor{comment}{//\ This\ helps\ hilapp\ to\ optimize\ memory\ access.\ \ It\ is\ not\ a\ bug\ to\ leave\ out\ out\_only,}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00060}00060\ \textcolor{comment}{//\ but\ it\ is\ a\ bug\ to\ "{}lie"{},\ i.e.\ use\ the\ original\ value\ of\ the\ variable\ if\ out\_only\ is}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00061}00061\ \textcolor{comment}{//\ used.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00062}00062\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00063}00063\ \textcolor{comment}{//\ out\_only\ for\ class\ methods\ tells\ hilapp\ that\ the\ base\ variable\ original\ value\ is\ not}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00064}00064\ \textcolor{comment}{//\ needed:}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00065}00065\ \textcolor{comment}{//\ class\ C\ \{}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00066}00066\ \textcolor{comment}{//\ \ \ \ int\ set()\ out\_only\ \{\ ..\ \}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00067}00067\ \textcolor{comment}{//\ \};}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00068}00068\ \textcolor{comment}{//\ indicates\ that\ a.set();\ does\ not\ need\ original\ value\ of\ a.\ e\ qualifier.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00069}00069\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00070}00070\ \textcolor{comment}{//\ Defined\ empty\ on\ purpose,\ same\ as\ above!}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00071}00071\ \textcolor{preprocessor}{\#define\ const\_function}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00072}00072\ \textcolor{comment}{//\ const\_function\ does\ not\ change\ the\ base\ variable,\ but\ can\ return\ a\ (non-\/const)}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00073}00073\ \textcolor{comment}{//\ reference.\ Needed\ typically\ for\ access\ operators\ for\ loop\ extern\ variables:}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00074}00074\ \textcolor{comment}{//\ \ \ \ \ class\ v\ \{}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00075}00075\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ double\ c[N];}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00076}00076\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ double\ \&\ e(const\ int\ i)\ const\_function\ \{\ return\ c[i];\ \}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00077}00077\ \textcolor{comment}{//\ \ \ \ \ \};}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00078}00078\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00079}00079\ \textcolor{comment}{//\ \ \ \ \ v\ vv;}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00080}00080\ \textcolor{comment}{//\ \ \ \ \ Field<v>\ \ f;}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00081}00081\ \textcolor{comment}{//\ \ \ \ \ onsites(ALL)\ \{\ f[X].e(0)\ +=\ vv.e(0);\ \}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00082}00082\ \textcolor{comment}{//\ This\ would\ not\ work\ without\ const\_function,\ because\ vv.e(0)\ might\ modify\ loop}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00083}00083\ \textcolor{comment}{//\ extern\ variable\ vv,\ which\ is\ not\ allowed.\ \ If\ method\ is\ marked\ "{}const"{},}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00084}00084\ \textcolor{comment}{//\ then\ the\ assignment\ would\ not\ work.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00085}00085\ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00086}00086\ \textcolor{comment}{//\ const\_function\ is\ weaker\ than\ const.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00087}00087\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00089}00089\ \textcolor{comment}{//\ text\ output\ section\ -\/-\/\ defines\ also\ hila::out0,\ which\ writes\ from\ node\ 0\ only}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00090}00090\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00091}00091\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacehila}{hila}}\ \{}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00092}00092\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00094}00094\ \textcolor{keyword}{extern}\ std::ostream\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00097}00097\ \textcolor{keyword}{extern}\ std::ostream\ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{out0}};}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00098}00098\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00100}00100\ \textcolor{keyword}{extern}\ std::ofstream\ \mbox{\hyperlink{namespacehila_a82f4528a917b77019a48210412749c48}{output\_file}};}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00101}00101\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00102}00102\ \textcolor{comment}{//\ about\_to\_finish\ becomes\ true\ at\ the\ end.\ \ Signals\ that}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00103}00103\ \textcolor{comment}{//\ better\ not\ rely\ on\ MPI\ or\ existence\ of\ objects\ any\ more.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00104}00104\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{bool}\ about\_to\_finish;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00105}00105\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00106}00106\ \textcolor{comment}{//\ check\_input\ is\ used\ to\ notify\ that\ we're\ just\ checking\ the}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00107}00107\ \textcolor{comment}{//\ input\ values\ and\ will\ exit\ before\ fields\ are\ allocated.}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00108}00108\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{bool}\ check\_input;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00109}00109\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{int}\ check\_with\_nodes;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00111}00111\ \textcolor{comment}{//\ optional\ input\ filename}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00112}00112\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *input\_file;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00114}00114\ \textcolor{keyword}{enum}\ sort\ \{\ nonsorted,\ ascending,\ descending\ \};}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00115}00115\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00116}00116\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_a88d54715010ef67cf2fbea84b00f76bb}{initialize}}(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}\ **argv);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00117}00117\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_ac4c73fee5aec8618b5c933a67822de1e}{finishrun}}();}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00118}00118\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{terminate}}(\textcolor{keywordtype}{int}\ status);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00119}00119\ \textcolor{keywordtype}{void}\ error(\textcolor{keyword}{const}\ std::string\ \&msg);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00120}00120\ \textcolor{keywordtype}{void}\ error(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *msg);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00121}00121\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00122}00122\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00124}00124\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{myrank}}();}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00126}00126\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{namespacehila_a46617d8162267096e14c8b0046a15fa6}{number\_of\_nodes}}();}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00128}00128\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{namespacehila_a4d1231fee312acb58bf9805b92114aa9}{synchronize}}();}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00129}00129\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00131}00131\ \}\ \textcolor{comment}{//\ namespace\ hila}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00132}00132\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00133}00133\ \textcolor{comment}{//\ The\ logger\ uses\ hila::myrank,\ so\ it\ cannot\ be\ included\ on\ top}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00134}00134\ \textcolor{preprocessor}{\#include\ "{}plumbing/logger.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00135}00135\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacehila}{hila}}\ \{}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00137}00137\ \textcolor{keyword}{extern}\ \mbox{\hyperlink{classlogger__class}{logger\_class}}\ \mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{log}};}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00138}00138\ \}\ \textcolor{comment}{//\ namespace\ hila}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00139}00139\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00141}00141\ \textcolor{keyword}{enum\ class}\ fft\_direction\ \{\ forward,\ back\ \};}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00142}00142\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00144}00144\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00145}00145\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ T\ sqr(\textcolor{keyword}{const}\ T\ \&arg)\ \{}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00146}00146\ \ \ \ \ \textcolor{keywordflow}{return}\ arg\ *\ arg;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00147}00147\ \}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00148}00148\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00149}00149\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespacehila}{hila}}\ \{}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00150}00150\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00151}00151\ \textcolor{comment}{//\ define\ hila::swap(),\ because\ std::swap\ cannot\ be\ used\ in\ gpu\ code}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00152}00152\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00153}00153\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ swap(T\ \&a,\ T\ \&b)\ \{}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00154}00154\ \ \ \ \ T\ c\ =\ a;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00155}00155\ \ \ \ \ a\ =\ b;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00156}00156\ \ \ \ \ b\ =\ c;}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00157}00157\ \}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00158}00158\ \}\ \textcolor{comment}{//\ namespace\ hila}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00159}00159\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00160}00160\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00161}00161\ \textcolor{comment}{//\ Backend\ defs-\/headers}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00162}00162\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00163}00163\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00164}00164\ \textcolor{preprocessor}{\#include\ "{}plumbing/backend\_gpu/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00165}00165\ \textcolor{preprocessor}{\#elif\ defined(AVX)}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00166}00166\ \textcolor{preprocessor}{\#include\ "{}plumbing/backend\_vector/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00167}00167\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00168}00168\ \textcolor{preprocessor}{\#include\ "{}plumbing/backend\_cpu/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00169}00169\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00170}00170\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00171}00171\ \textcolor{comment}{//\ this\ include\ has\ to\ be\ after\ the\ backend\ defs,\ because\ those\ define\ hila::random()}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00172}00172\ \textcolor{preprocessor}{\#include\ "{}plumbing/random.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00173}00173\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00174}00174\ \textcolor{comment}{//\ This\ contains\ useful\ template\ tools}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00175}00175\ \textcolor{preprocessor}{\#include\ "{}plumbing/type\_tools.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00176}00176\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00177}00177\ \textcolor{preprocessor}{\#include\ "{}plumbing/has\_unary\_minus.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00178}00178\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00179}00179\ \textcolor{preprocessor}{\#if\ defined(CUDA)\ ||\ defined(HIP)}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00180}00180\ \textcolor{preprocessor}{\#include\ "{}plumbing/backend\_gpu/gpu\_templated\_ops.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00181}00181\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00182}00182\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00183}00183\ \textcolor{comment}{//\ Include\ some\ basic\ functions\ for\ real\ (non-\/class)\ vars,}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00184}00184\ \textcolor{comment}{//\ to\ help\ with\ generic\ code}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00185}00185\ \textcolor{preprocessor}{\#include\ "{}plumbing/real\_var\_ops.h"{}}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00186}00186\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00187}00187\ \textcolor{comment}{//\ MPI\ Related\ functions\ and\ definitions}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00188}00188\ \textcolor{preprocessor}{\#define\ MAX\_GATHERS\ 1000}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00189}00189\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00190}00190\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00191}00191\ \textcolor{keywordtype}{void}\ initialize\_communications(\textcolor{keywordtype}{int}\ \&argc,\ \textcolor{keywordtype}{char}\ ***argv);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00192}00192\ \textcolor{keywordtype}{void}\ split\_into\_partitions(\textcolor{keywordtype}{int}\ rank);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00193}00193\ \textcolor{keywordtype}{bool}\ is\_comm\_initialized(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00194}00194\ \textcolor{keywordtype}{void}\ finish\_communications();}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00195}00195\ \textcolor{keywordtype}{void}\ abort\_communications(\textcolor{keywordtype}{int}\ status);}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00196}00196\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00197}00197\ \textcolor{comment}{//\ and\ print\ a\ dashed\ line}}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00198}00198\ \textcolor{keywordtype}{void}\ print\_dashed\_line(\textcolor{keyword}{const}\ std::string\ \&txt\ =\ \{\});}
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00199}00199\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{defs_8h_source_l00201}00201\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

@@ -1,0 +1,81 @@
+\doxysection{Kennedy\+Pendleton.\+h}
+\hypertarget{KennedyPendleton_8h_source}{}\label{KennedyPendleton_8h_source}\index{KennedyPendleton.h@{KennedyPendleton.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ KENNEDY\_PENDLETON\_H}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ KENNEDY\_PENDLETON\_H}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}plumbing/hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}datatypes/su2.h"{}}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00006}00006\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00007}00007\ \textcolor{comment}{/*************************************************************}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00008}00008\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00009}00009\ \textcolor{comment}{\ *\ \ \ \ \ Kennedy-\/Pendleton\ su2\ heatbath\ code\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00010}00010\ \textcolor{comment}{\ *\ \ \ \ \ p\ contains\ the\ 'staple'\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00011}00011\ \textcolor{comment}{\ *\ \ \ \ \ act\ contains\ the\ resulting\ action\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00012}00012\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00013}00013\ \textcolor{comment}{\ *\ \ \ \ \ act\ =\ u*p',\ weight\ exp[-\/u*p']\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00014}00014\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00015}00015\ \textcolor{comment}{\ ************************************************************/}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00016}00016\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00017}00017\ \textcolor{preprocessor}{\#define\ looplim\ 100}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00018}00018\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00019}00019\ \textcolor{comment}{//\ this\ is\ might\ be\ too\ much\ to\ have\ in\ a\ single\ kernel}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00021}00021\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00022}00022\ \mbox{\hyperlink{classSU2}{SU2<T>}}\ KennedyPendleton(\mbox{\hyperlink{classSU2}{SU2<T>}}\ \&staple)\ \{}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00023}00023\ \ \ \ \ \textcolor{keywordtype}{int}\ nloops;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00024}00024\ \ \ \ \ \mbox{\hyperlink{classSU2}{SU2<T>}}\ a,\ ua;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00025}00025\ \ \ \ \ \textcolor{keywordtype}{double}\ e,\ f,\ r1,\ r2,\ r3,\ rd,\ theta;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00026}00026\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{double}\ pi2\ =\ M\_PI\ *\ 2.0;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00028}00028\ \ \ \ \ \textcolor{comment}{/*\ first,\ normalize\ and\ move\ to\ u\ [-\/]\ because\ want\ exp[up]\ */}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00030}00030\ \ \ \ \ ua\ =\ staple\ /\ (-\/sqrt(det(staple)));}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00031}00031\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00032}00032\ \ \ \ \ \textcolor{comment}{/*\ \ \ \ \ generate\ random\ su2\ variable\ according\ to\ Pendleton}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00033}00033\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ and\ Kennedy,\ PL\ 156B(1985)393}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00034}00034\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00036}00036\ \ \ \ \ nloops\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00037}00037\ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00038}00038\ \ \ \ \ \ \ \ \ r1\ =\ \mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{log}}(1.0\ -\/\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}());}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00039}00039\ \ \ \ \ \ \ \ \ r2\ =\ \mbox{\hyperlink{namespacehila_a1aa9c123a15978119a29c53f30f6fa09}{log}}(1.0\ -\/\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}());}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00040}00040\ \ \ \ \ \ \ \ \ r3\ =\ cos(pi2\ *\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}());}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00041}00041\ \ \ \ \ \ \ \ \ r3\ *=\ r3;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00042}00042\ \ \ \ \ \ \ \ \ e\ =\ 1.0\ +\ (r1\ +\ r2\ *\ r3)\ *\ b;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00043}00043\ \ \ \ \ \ \ \ \ r3\ =\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}();}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ f\ =\ e\ -\/\ 2.0\ *\ sqr(r3)\ +\ 1.0;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00045}00045\ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (nloops++\ <\ looplim\ \&\&\ (f\ <=\ 0.0));}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00046}00046\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00047}00047\ \ \ \ \ \textcolor{keywordflow}{if}\ (nloops\ >=\ looplim)\ \{}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ printf("{}\ -\/-\/-\/>\ K-\/P\ loop\ limit\ \%d\ exceeded!\(\backslash\)n"{},looplim);}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00049}00049\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ printf("{}\ -\/-\/-\/>\ staple\ magnitude\ \%g\(\backslash\)n"{},1/b);}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00050}00050\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ exit(1);\ */}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ e\ =\ 1e-\/9;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00052}00052\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00053}00053\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00054}00054\ \ \ \ \ \textcolor{comment}{/*\ generate\ random\ vector\ on\ s2,\ radius\ sqrt(1.0-\/a.d**2)\ */}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00055}00055\ \ \ \ \ a.d\ =\ e;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00056}00056\ \ \ \ \ rd\ =\ 1.0\ -\/\ sqr(e);}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00057}00057\ \ \ \ \ \textcolor{keywordflow}{if}\ (rd\ <=\ 0.0)\ \{}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ printf("{}\ -\/-\/-\/>\ neg.\ K-\/P\ sqrt,\ val\ \%g\(\backslash\)n"{},rd);}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ rd\ =\ 0.0;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00060}00060\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ fflush(stdout);}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00061}00061\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00062}00062\ \ \ \ \ r3\ =\ 2.0\ *\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}()\ -\/\ 1.0;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00063}00063\ \ \ \ \ a.c\ =\ sqrt(rd)\ *\ r3;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00064}00064\ \ \ \ \ theta\ =\ pi2\ *\ \mbox{\hyperlink{namespacehila_a619e441d1ebadab1a5d1d3f08b88fb42}{hila::random}}();}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00065}00065\ \ \ \ \ rd\ =\ sqrt(rd\ *\ (1.0\ -\/\ sqr(r3)));}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00066}00066\ \ \ \ \ a.b\ =\ rd\ *\ cos(theta);}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00067}00067\ \ \ \ \ a.a\ =\ rd\ *\ sin(theta);}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00069}00069\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00070}00070\ \ \ \ \ \textcolor{comment}{/*\ a\ =\ -\/u*p'\ =>\ u\ =\ -\/a*p\ =\ a*ua\ */}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00071}00071\ \ \ \ \ \textcolor{keywordflow}{return}\ a\ *\ ua;}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00072}00072\ \}}
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00073}00073\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{KennedyPendleton_8h_source_l00075}00075\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

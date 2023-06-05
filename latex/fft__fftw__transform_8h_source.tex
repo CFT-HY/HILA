@@ -1,0 +1,276 @@
+\doxysection{fft\+\_\+fftw\+\_\+transform.\+h}
+\hypertarget{fft__fftw__transform_8h_source}{}\label{fft__fftw__transform_8h_source}\index{fft\_fftw\_transform.h@{fft\_fftw\_transform.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ FFTW\_TRANSFORM\_H}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ FFTW\_TRANSFORM\_H}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00011}00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ cmplx\_t>}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00012}00012\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classhila__fft_a8c4cc4bf2a138da9471063fddd95477d}{hila\_fft<cmplx\_t>::transform}}()\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00013}00013\ \ \ \ \ assert(0\ \&\&\ \textcolor{stringliteral}{"{}Don't\ call\ this!"{}});}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00014}00014\ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00015}00015\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00016}00016\ \textcolor{keyword}{template}\ <>}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00017}00017\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classhila__fft}{hila\_fft<Complex<double>}}>::transform()\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00018}00018\ \ \ \ \ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{unsigned}\ hila\_fft\_my\_columns[NDIM];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00019}00019\ \ \ \ \ \textcolor{keyword}{extern}\ \mbox{\hyperlink{classhila_1_1timer}{hila::timer}}\ fft\_plan\_timer,\ fft\_buffer\_timer,\ fft\_execute\_timer;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00020}00020\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00021}00021\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_fft\ =\ hila\_fft\_my\_columns[dir]\ *\ elements;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00022}00022\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00023}00023\ \ \ \ \ \textcolor{keywordtype}{int}\ transform\_dir\ =}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00024}00024\ \ \ \ \ \ \ \ \ (fftdir\ ==\ fft\_direction::forward)\ ?\ FFTW\_FORWARD\ :\ FFTW\_BACKWARD;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00026}00026\ \ \ \ \ fft\_plan\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00028}00028\ \ \ \ \ \textcolor{comment}{//\ allocate\ here\ fftw\ plans.\ \ TODO:\ perhaps\ store,\ if\ plans\ take\ appreciable\ time?}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00029}00029\ \ \ \ \ \textcolor{comment}{//\ Timer\ will\ tell\ the\ proportional\ timing}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00030}00030\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00031}00031\ \ \ \ \ fftw\_complex\ *fftwbuf\ =}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00032}00032\ \ \ \ \ \ \ \ \ (fftw\_complex\ *)fftw\_malloc(\textcolor{keyword}{sizeof}(fftw\_complex)\ *\ lattice.size(dir));}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00033}00033\ \ \ \ \ fftw\_plan\ fftwplan\ =\ fftw\_plan\_dft\_1d(lattice.size(dir),\ fftwbuf,\ fftwbuf,}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00034}00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ transform\_dir,\ FFTW\_ESTIMATE);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00035}00035\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00036}00036\ \ \ \ \ fft\_plan\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00038}00038\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ n\_fft;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00039}00039\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ collect\ stuff\ from\ buffers}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00040}00040\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00041}00041\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00042}00042\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00043}00043\ \ \ \ \ \ \ \ \ fftw\_complex\ *cp\ =\ fftwbuf;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ rec\_p.size();\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00045}00045\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(cp,\ rec\_p[j]\ +\ i\ *\ rec\_size[j],\ \textcolor{keyword}{sizeof}(fftw\_complex)\ *\ rec\_size[j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00046}00046\ \ \ \ \ \ \ \ \ \ \ \ \ cp\ +=\ rec\_size[j];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00048}00048\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00049}00049\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00050}00050\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ do\ the\ fft}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ fft\_execute\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00053}00053\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00054}00054\ \ \ \ \ \ \ \ \ fftw\_execute(fftwplan);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00055}00055\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ fft\_execute\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00057}00057\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00059}00059\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00060}00060\ \ \ \ \ \ \ \ \ cp\ =\ fftwbuf;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00061}00061\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ rec\_p.size();\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00062}00062\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(rec\_p[j]\ +\ i\ *\ rec\_size[j],\ cp,\ \textcolor{keyword}{sizeof}(fftw\_complex)\ *\ rec\_size[j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ \ \ \ \ cp\ +=\ rec\_size[j];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00064}00064\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00066}00066\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00067}00067\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00068}00068\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00069}00069\ \ \ \ \ fftw\_destroy\_plan(fftwplan);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00070}00070\ \ \ \ \ fftw\_free(fftwbuf);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00071}00071\ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00072}00072\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00073}00073\ \textcolor{keyword}{template}\ <>}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00074}00074\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classhila__fft}{hila\_fft<Complex<float>}}>::transform()\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00075}00075\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00076}00076\ \ \ \ \ \textcolor{keyword}{extern}\ \mbox{\hyperlink{classhila_1_1timer}{hila::timer}}\ fft\_plan\_timer,\ fft\_buffer\_timer,\ fft\_execute\_timer;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00077}00077\ \ \ \ \ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{unsigned}\ hila\_fft\_my\_columns[NDIM];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00078}00078\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00079}00079\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_fft\ =\ hila\_fft\_my\_columns[dir]\ *\ elements;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00081}00081\ \ \ \ \ \textcolor{keywordtype}{int}\ transform\_dir\ =}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00082}00082\ \ \ \ \ \ \ \ \ (fftdir\ ==\ fft\_direction::forward)\ ?\ FFTW\_FORWARD\ :\ FFTW\_BACKWARD;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00083}00083\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00084}00084\ \ \ \ \ fft\_plan\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00085}00085\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00086}00086\ \ \ \ \ \textcolor{comment}{//\ allocate\ here\ fftw\ plans.\ \ TODO:\ perhaps\ store,\ if\ plans\ take\ appreciable\ time?}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00087}00087\ \ \ \ \ \textcolor{comment}{//\ Timer\ will\ tell\ the\ proportional\ timing}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00088}00088\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00089}00089\ \ \ \ \ fftwf\_complex\ *fftwbuf\ =}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00090}00090\ \ \ \ \ \ \ \ \ (fftwf\_complex\ *)fftwf\_malloc(\textcolor{keyword}{sizeof}(fftwf\_complex)\ *\ lattice.size(dir));}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00091}00091\ \ \ \ \ fftwf\_plan\ fftwplan\ =\ fftwf\_plan\_dft\_1d(lattice.size(dir),\ fftwbuf,\ fftwbuf,}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00092}00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ transform\_dir,\ FFTW\_ESTIMATE);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00093}00093\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00094}00094\ \ \ \ \ fft\_plan\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00095}00095\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00096}00096\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ n\_fft;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00097}00097\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ collect\ stuff\ from\ buffers}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00098}00098\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00100}00100\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00101}00101\ \ \ \ \ \ \ \ \ fftwf\_complex\ *cp\ =\ fftwbuf;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00102}00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ rec\_p.size();\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(cp,\ rec\_p[j]\ +\ i\ *\ rec\_size[j],\ \textcolor{keyword}{sizeof}(fftwf\_complex)\ *\ rec\_size[j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00104}00104\ \ \ \ \ \ \ \ \ \ \ \ \ cp\ +=\ rec\_size[j];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00106}00106\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00107}00107\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00108}00108\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00109}00109\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ do\ the\ fft}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00110}00110\ \ \ \ \ \ \ \ \ fft\_execute\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00111}00111\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00112}00112\ \ \ \ \ \ \ \ \ fftwf\_execute(fftwplan);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00114}00114\ \ \ \ \ \ \ \ \ fft\_execute\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00115}00115\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00117}00117\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00118}00118\ \ \ \ \ \ \ \ \ cp\ =\ fftwbuf;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00119}00119\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ rec\_p.size();\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00120}00120\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(rec\_p[j]\ +\ i\ *\ rec\_size[j],\ cp,\ \textcolor{keyword}{sizeof}(fftwf\_complex)\ *\ rec\_size[j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00121}00121\ \ \ \ \ \ \ \ \ \ \ \ \ cp\ +=\ rec\_size[j];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00122}00122\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00123}00123\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00124}00124\ \ \ \ \ \ \ \ \ fft\_buffer\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00125}00125\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00126}00126\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00127}00127\ \ \ \ \ fftwf\_destroy\_plan(fftwplan);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00128}00128\ \ \ \ \ fftwf\_free(fftwbuf);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00129}00129\ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00130}00130\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00133}00133\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00134}00134\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ cmplx\_t>}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00135}00135\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classhila__fft_a19f14b15bc222c1cfa5ae3a7cf68d6ae}{hila\_fft<cmplx\_t>::gather\_data}}()\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00136}00136\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00137}00137\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00138}00138\ \ \ \ \ \textcolor{keyword}{extern}\ \mbox{\hyperlink{classhila_1_1timer}{hila::timer}}\ pencil\_MPI\_timer;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00139}00139\ \ \ \ \ pencil\_MPI\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00140}00140\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00141}00141\ \ \ \ \ \textcolor{comment}{//\ post\ receive\ and\ send}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00142}00142\ \ \ \ \ \textcolor{keywordtype}{int}\ n\_comms\ =\ hila\_pencil\_comms[dir].size()\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00143}00143\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00144}00144\ \ \ \ \ MPI\_Request\ sendreq[n\_comms],\ recreq[n\_comms];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00145}00145\ \ \ \ \ MPI\_Status\ stat[n\_comms];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00146}00146\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00147}00147\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00148}00148\ \ \ \ \ \textcolor{keywordtype}{int}\ j\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00149}00149\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&fn\ :\ hila\_pencil\_comms[dir])\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00150}00150\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fn.node\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00151}00151\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00152}00152\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ siz\ =\ fn.recv\_buf\_size\ *\ elements\ *\ \textcolor{keyword}{sizeof}(cmplx\_t);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00153}00153\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (siz\ >=\ (1ULL\ <<\ 31))\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00154}00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{hila::out}}\ <<\ \textcolor{stringliteral}{"{}Too\ large\ MPI\ message\ in\ pencils!\ Size\ "{}}\ <<\ siz}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00155}00155\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\ bytes\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00156}00156\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_adf07345c02b82159a0e7d0ee91f0cf34}{hila::terminate}}(1);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00157}00157\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00158}00158\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00159}00159\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Irecv(rec\_p[j],\ (\textcolor{keywordtype}{int})siz,\ MPI\_BYTE,\ fn.node,\ WRK\_GATHER\_TAG,}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00160}00160\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mpi\_comm\_lat,\ \&recreq[i]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00161}00161\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00162}00162\ \ \ \ \ \ \ \ \ \ \ \ \ i++;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00163}00163\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00164}00164\ \ \ \ \ \ \ \ \ j++;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00165}00165\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00167}00167\ \ \ \ \ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00168}00168\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&fn\ :\ hila\_pencil\_comms[dir])\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00169}00169\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fn.node\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00170}00170\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00171}00171\ \ \ \ \ \ \ \ \ \ \ \ \ cmplx\_t\ *p\ =\ send\_buf\ +\ fn.column\_offset\ *\ elements;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00172}00172\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\ =\ fn.column\_number\ *\ elements\ *\ lattice.mynode.size[dir]\ *}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00173}00173\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(cmplx\_t);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00174}00174\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00175}00175\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Isend(p,\ n,\ MPI\_BYTE,\ fn.node,\ WRK\_GATHER\_TAG,\ lattice.mpi\_comm\_lat,}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00176}00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&sendreq[i]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00177}00177\ \ \ \ \ \ \ \ \ \ \ \ \ i++;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00178}00178\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00179}00179\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00180}00180\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00181}00181\ \ \ \ \ \textcolor{comment}{//\ and\ wait\ for\ the\ send\ and\ receive\ to\ complete}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00182}00182\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_comms\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00183}00183\ \ \ \ \ \ \ \ \ MPI\_Waitall(n\_comms,\ recreq,\ stat);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00184}00184\ \ \ \ \ \ \ \ \ MPI\_Waitall(n\_comms,\ sendreq,\ stat);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00185}00185\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00186}00186\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00187}00187\ \ \ \ \ pencil\_MPI\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00188}00188\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00189}00189\ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00190}00190\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00193}00193\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00194}00194\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ cmplx\_t>}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00195}00195\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classhila__fft_a60487bb33acd328fcb8b6de93024acdd}{hila\_fft<cmplx\_t>::scatter\_data}}()\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00196}00196\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00197}00197\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00198}00198\ \ \ \ \ \textcolor{keyword}{extern}\ \mbox{\hyperlink{classhila_1_1timer}{hila::timer}}\ pencil\_MPI\_timer;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00199}00199\ \ \ \ \ pencil\_MPI\_timer.start();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00201}00201\ \ \ \ \ \textcolor{keywordtype}{int}\ n\_comms\ =\ hila\_pencil\_comms[dir].size()\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00202}00202\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00203}00203\ \ \ \ \ MPI\_Request\ sendreq[n\_comms],\ recreq[n\_comms];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00204}00204\ \ \ \ \ MPI\_Status\ stat[n\_comms];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00205}00205\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00206}00206\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00207}00207\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00208}00208\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&fn\ :\ hila\_pencil\_comms[dir])\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00209}00209\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fn.node\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00210}00210\ \ \ \ \ \ \ \ \ \ \ \ \ cmplx\_t\ *p\ =\ send\_buf\ +\ fn.column\_offset\ *\ elements;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00211}00211\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\ =\ fn.column\_number\ *\ elements\ *\ lattice.mynode.size[dir]\ *\ \textcolor{keyword}{sizeof}(cmplx\_t);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00212}00212\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00213}00213\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Irecv(p,\ n,\ MPI\_BYTE,\ fn.node,\ WRK\_SCATTER\_TAG,}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00214}00214\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lattice.mpi\_comm\_lat,\ \&recreq[i]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00215}00215\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00216}00216\ \ \ \ \ \ \ \ \ \ \ \ \ i++;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00217}00217\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00218}00218\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00219}00219\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00220}00220\ \ \ \ \ i\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00221}00221\ \ \ \ \ \textcolor{keywordtype}{int}\ j\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00222}00222\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ \&fn\ :\ hila\_pencil\_comms[dir])\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00223}00223\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fn.node\ !=\ \mbox{\hyperlink{namespacehila_a342d541c70e0e4756dfdd9dbf4c2b9c5}{hila::myrank}}())\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00224}00224\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00225}00225\ \ \ \ \ \ \ \ \ \ \ \ \ MPI\_Isend(rec\_p[j],\ (\textcolor{keywordtype}{int})(fn.recv\_buf\_size\ *\ elements\ *\ \textcolor{keyword}{sizeof}(cmplx\_t)),\ MPI\_BYTE,\ fn.node,}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00226}00226\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRK\_SCATTER\_TAG,\ lattice.mpi\_comm\_lat,\ \&sendreq[i]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00227}00227\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00228}00228\ \ \ \ \ \ \ \ \ \ \ \ \ i++;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00229}00229\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00230}00230\ \ \ \ \ \ \ \ \ j++;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00231}00231\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00232}00232\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00233}00233\ \ \ \ \ \textcolor{comment}{//\ and\ wait\ for\ the\ send\ and\ receive\ to\ complete}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00234}00234\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_comms\ >\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00235}00235\ \ \ \ \ \ \ \ \ MPI\_Waitall(n\_comms,\ recreq,\ stat);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00236}00236\ \ \ \ \ \ \ \ \ MPI\_Waitall(n\_comms,\ sendreq,\ stat);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00237}00237\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00238}00238\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00239}00239\ \ \ \ \ pencil\_MPI\_timer.stop();}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00240}00240\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00241}00241\ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00242}00242\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00250}00250\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00251}00251\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ cmplx\_t>}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00252}00252\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classhila__fft_af98811e2e5161aac38260a78597ea267}{hila\_fft<cmplx\_t>::reflect}}()\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00253}00253\ \ \ \ \ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{unsigned}\ hila\_fft\_my\_columns[NDIM];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00254}00254\ \ \ \ \ \textcolor{keyword}{extern}\ \mbox{\hyperlink{classhila_1_1timer}{hila::timer}}\ fft\_plan\_timer,\ fft\_buffer\_timer,\ fft\_execute\_timer;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00255}00255\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00256}00256\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ ncols\ =\ hila\_fft\_my\_columns[dir]\ *\ elements;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00257}00257\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00258}00258\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ length\ =\ lattice.size(dir);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00259}00259\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00260}00260\ \ \ \ \ cmplx\_t\ *buf\ =\ (cmplx\_t\ *)memalloc(\textcolor{keyword}{sizeof}(cmplx\_t)\ *\ length);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00261}00261\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00262}00262\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ ncols;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00263}00263\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ collect\ stuff\ from\ buffers}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00264}00264\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00265}00265\ \ \ \ \ \ \ \ \ cmplx\_t\ *cp\ =\ buf;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00266}00266\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ rec\_p.size();\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00267}00267\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(cp,\ rec\_p[j]\ +\ i\ *\ rec\_size[j],\ \textcolor{keyword}{sizeof}(cmplx\_t)\ *\ rec\_size[j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00268}00268\ \ \ \ \ \ \ \ \ \ \ \ \ cp\ +=\ rec\_size[j];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00269}00269\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00270}00270\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00271}00271\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ reflect}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00272}00272\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 1;\ j\ <\ length\ /\ 2;\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00273}00273\ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(buf[j],\ buf[length\ -\/\ j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00274}00274\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00275}00275\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00276}00276\ \ \ \ \ \ \ \ \ cp\ =\ buf;}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00277}00277\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ j\ =\ 0;\ j\ <\ rec\_p.size();\ j++)\ \{}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00278}00278\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(rec\_p[j]\ +\ i\ *\ rec\_size[j],\ cp,\ \textcolor{keyword}{sizeof}(cmplx\_t)\ *\ rec\_size[j]);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00279}00279\ \ \ \ \ \ \ \ \ \ \ \ \ cp\ +=\ rec\_size[j];}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00280}00280\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00281}00281\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00282}00282\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00283}00283\ \ \ \ \ free(buf);}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00284}00284\ \}}
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00285}00285\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00286}00286\ }
+\DoxyCodeLine{\Hypertarget{fft__fftw__transform_8h_source_l00287}00287\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

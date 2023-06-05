@@ -1,0 +1,260 @@
+\doxysection{wilson.\+h}
+\hypertarget{wilson_8h_source}{}\label{wilson_8h_source}\index{wilson.h@{wilson.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ \_\_DIRAC\_WILSON\_H\_\_}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ \_\_DIRAC\_WILSON\_H\_\_}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}datatypes/cmplx.h"{}}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}datatypes/matrix.h"{}}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00007}00007\ \textcolor{preprocessor}{\#include\ "{}datatypes/wilson\_vector.h"{}}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00008}00008\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{field_8h}{plumbing/field.h}}"{}}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00009}00009\ \textcolor{preprocessor}{\#include\ "{}hmc/gauge\_field.h"{}}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00011}00011\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00012}00012\ \mbox{\hyperlink{classField}{Field<half\_Wilson\_vector<N,\ radix>}}>\ wilson\_dirac\_temp\_vector[2\ *\ NDIM];}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00013}00013\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00015}00015\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix,\ \textcolor{keyword}{typename}\ matrix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00016}00016\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Dirac\_Wilson\_hop(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<matrix>}}\ *gauge,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{double}\ kappa,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00017}00017\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v\_in,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00018}00018\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v\_out,\ Parity\ par,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00019}00019\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00020}00020\ \ \ \ \ \mbox{\hyperlink{classField}{Field<half\_Wilson\_vector<N,\ radix>}}>(\&vtemp)[2\ *\ NDIM]\ =}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00021}00021\ \ \ \ \ \ \ \ \ wilson\_dirac\_temp\_vector<N,\ radix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00022}00022\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ dir\ =\ 0;\ dir\ <\ 2\ *\ NDIM;\ dir++)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00023}00023\ \ \ \ \ \ \ \ \ vtemp[dir].\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(v\_in);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00024}00024\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00026}00026\ \ \ \ \ \textcolor{comment}{//\ Run\ neighbour\ gathers\ and\ multiplications}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00027}00027\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00028}00028\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ multiply\ the\ by\ conjugate\ before\ communicating}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00029}00029\ \ \ \ \ \ \ \ \ onsites(opp\_parity(par))\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00030}00030\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ h(v\_in[X],\ dir,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00031}00031\ \ \ \ \ \ \ \ \ \ \ \ \ vtemp[-\/dir][X]\ =\ gauge[dir][X].adjoint()\ *\ h;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00032}00032\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00033}00033\ \ \ \ \ \ \ \ \ onsites(opp\_parity(par))\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00034}00034\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ h(v\_in[X],\ dir,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00035}00035\ \ \ \ \ \ \ \ \ \ \ \ \ vtemp[dir][X]\ =\ h;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00036}00036\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00037}00037\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00038}00038\ \ \ \ \ \ \ \ \ vtemp[dir].start\_gather(dir,\ par);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00039}00039\ \ \ \ \ \ \ \ \ vtemp[-\/dir].start\_gather(-\/dir,\ par);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00040}00040\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00042}00042\ \ \ \ \ \textcolor{comment}{//\ Calculate\ the\ derivatives.\ This}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00043}00043\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00044}00044\ \ \ \ \ \ \ \ \ onsites(par)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00045}00045\ \ \ \ \ \ \ \ \ \ \ \ \ v\_out[X]\ =\ v\_out[X]\ -\/}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00046}00046\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (kappa\ *\ gauge[dir][X]\ *\ vtemp[dir][X\ +\ dir]).expand(dir,\ sign)\ -\/}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (kappa\ *\ vtemp[dir][X\ +\ dir]).expand(dir,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00049}00049\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00050}00050\ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00051}00051\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00053}00053\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix,\ \textcolor{keyword}{typename}\ matrix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00054}00054\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Dirac\_Wilson\_hop\_set(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<matrix>}}\ *gauge,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{double}\ kappa,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00055}00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v\_in,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v\_out,\ Parity\ par,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00058}00058\ \ \ \ \ \mbox{\hyperlink{classField}{Field<half\_Wilson\_vector<N,\ radix>}}>(\&vtemp)[2\ *\ NDIM]\ =}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ wilson\_dirac\_temp\_vector<N,\ radix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00060}00060\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ dir\ =\ 0;\ dir\ <\ 2\ *\ NDIM;\ dir++)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00061}00061\ \ \ \ \ \ \ \ \ vtemp[dir].\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(v\_in);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00062}00062\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00064}00064\ \ \ \ \ \textcolor{comment}{//\ Run\ neighbour\ gathers\ and\ multiplications}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00065}00065\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00066}00066\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ multiply\ the\ by\ conjugate\ before\ communicating}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00067}00067\ \ \ \ \ \ \ \ \ onsites(opp\_parity(par))\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00068}00068\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ h(v\_in[X],\ dir,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00069}00069\ \ \ \ \ \ \ \ \ \ \ \ \ vtemp[-\/dir][X]\ =\ gauge[dir][X].adjoint()\ *\ h;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00070}00070\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00071}00071\ \ \ \ \ \ \ \ \ onsites(opp\_parity(par))\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ h(v\_in[X],\ dir,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00073}00073\ \ \ \ \ \ \ \ \ \ \ \ \ vtemp[dir][X]\ =\ h;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00074}00074\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00075}00075\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ vtemp[dir].start\_gather(dir,\ par);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00077}00077\ \ \ \ \ \ \ \ \ vtemp[-\/dir].start\_gather(-\/dir,\ par);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00078}00078\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00079}00079\ \ \ \ \ \textcolor{comment}{//\ Set\ on\ first\ Direction}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00080}00080\ \ \ \ \ Direction\ dir\ =\ Direction(0);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00081}00081\ \ \ \ \ onsites(par)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00082}00082\ \ \ \ \ \ \ \ \ v\_out[X]\ =\ -\/(kappa\ *\ gauge[dir][X]\ *\ vtemp[dir][X\ +\ dir]).expand(dir,\ sign)\ -\/}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00083}00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (kappa\ *\ vtemp[dir][X\ +\ dir]).expand(dir,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00084}00084\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00085}00085\ \ \ \ \ \textcolor{comment}{//\ Add\ for\ all\ other\ directions}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00086}00086\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d\ =\ 1;\ d\ <\ NDIM;\ d++)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00087}00087\ \ \ \ \ \ \ \ \ Direction\ dir\ =\ Direction(d);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00088}00088\ \ \ \ \ \ \ \ \ onsites(par)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00089}00089\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ h1(v\_in[X\ +\ dir],\ dir,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00090}00090\ \ \ \ \ \ \ \ \ \ \ \ \ v\_out[X]\ =\ v\_out[X]\ -\/}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00091}00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (kappa\ *\ gauge[dir][X]\ *\ vtemp[dir][X\ +\ dir]).expand(dir,\ sign)\ -\/}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00092}00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (kappa\ *\ vtemp[dir][X\ +\ dir]).expand(dir,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00093}00093\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00094}00094\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00095}00095\ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00096}00096\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00098}00098\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00099}00099\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Dirac\_Wilson\_diag(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v\_in,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v\_out,\ Parity\ par)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00101}00101\ \ \ \ \ v\_out[par]\ =\ v\_in[X];}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00102}00102\ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00103}00103\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00105}00105\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00106}00106\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Dirac\_Wilson\_diag\_inverse(\mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&v,\ Parity\ par)\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00107}00107\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00110}00110\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix,\ \textcolor{keyword}{typename}\ gaugetype,\ \textcolor{keyword}{typename}\ momtype>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00111}00111\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Dirac\_Wilson\_calc\_force(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<gaugetype>}}\ *gauge,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{double}\ kappa,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&chi,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00113}00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&psi,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00114}00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ (\&out)[NDIM],\ Parity\ par,\ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00115}00115\ \ \ \ \ \mbox{\hyperlink{classField}{Field<half\_Wilson\_vector<N,\ radix>}}>(\&vtemp)[2\ *\ NDIM]\ =}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ wilson\_dirac\_temp\_vector<N,\ radix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00117}00117\ \ \ \ \ vtemp[0].\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(chi);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00118}00118\ \ \ \ \ vtemp[1].copy\_boundary\_condition(chi);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00119}00119\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00120}00120\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00121}00121\ \ \ \ \ \ \ \ \ onsites(opp\_parity(par))\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00122}00122\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ hw(chi[X],\ dir,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00123}00123\ \ \ \ \ \ \ \ \ \ \ \ \ vtemp[0][X]\ =\ hw;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00124}00124\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00125}00125\ \ \ \ \ \ \ \ \ onsites(par)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00126}00126\ \ \ \ \ \ \ \ \ \ \ \ \ half\_Wilson\_vector<N,\ radix>\ hw(psi[X],\ dir,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00127}00127\ \ \ \ \ \ \ \ \ \ \ \ \ vtemp[1][X]\ =\ hw;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00128}00128\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00129}00129\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00130}00130\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00131}00131\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][par]\ =}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00132}00132\ \ \ \ \ \ \ \ \ \ \ \ \ -\/kappa\ *\ ((vtemp[0][X\ +\ dir].expand(dir,\ -\/sign)).outer\_product(psi[X]));}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00133}00133\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][opp\_parity(par)]\ =}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00134}00134\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][X]\ -\/}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00135}00135\ \ \ \ \ \ \ \ \ \ \ \ \ kappa\ *\ ((vtemp[1][X\ +\ dir].expand(dir,\ sign)).outer\_product(chi[X]));}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00136}00136\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00137}00137\ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00138}00138\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00146}\mbox{\hyperlink{classDirac__Wilson}{00146}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ matrix>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classDirac__Wilson}{Dirac\_Wilson}}\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00147}00147\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00149}00149\ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&gauge)[NDIM];}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00150}00150\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00151}00151\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00153}\mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{00153}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00155}\mbox{\hyperlink{classDirac__Wilson_a0362bf1de4c296c3f5234da0cfc9e908}{00155}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classDirac__Wilson_a0362bf1de4c296c3f5234da0cfc9e908}{N}}\ =\ matrix::size;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00156}00156\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00157}00157\ \ \ \ \ \textcolor{keyword}{using\ }radix\ =\ hila::scalar\_type<matrix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00159}\mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{00159}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classDirac__Wilson_ae45e58f191d091a91a7f58e4b95f9811}{vector\_type}}\ =\ Wilson\_vector<N,\ radix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00161}\mbox{\hyperlink{classDirac__Wilson_ae29f507bdc789da374c734b828f38100}{00161}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classDirac__Wilson_ae29f507bdc789da374c734b828f38100}{matrix\_type}}\ =\ matrix;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00162}00162\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00165}\mbox{\hyperlink{classDirac__Wilson_ae3d7fc9d83ea2edc0a0dfa1a36fa7045}{00165}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classDirac__Wilson}{type\_flt}}\ =\ \mbox{\hyperlink{classDirac__Wilson}{Dirac\_Wilson<typename\ gauge\_field\_base<matrix>::gauge\_type\_flt}}>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00168}\mbox{\hyperlink{classDirac__Wilson_a4280c12c11919d7a24e6edf5484ea908}{00168}}\ \ \ \ \ Parity\ \mbox{\hyperlink{classDirac__Wilson_a4280c12c11919d7a24e6edf5484ea908}{par}}\ =\ ALL;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00169}00169\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00171}\mbox{\hyperlink{classDirac__Wilson_acdd1495e4665f8c119584a9518f3619e}{00171}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson_acdd1495e4665f8c119584a9518f3619e}{Dirac\_Wilson}}(\mbox{\hyperlink{classDirac__Wilson}{Dirac\_Wilson}}\ \&d)\ :\ gauge(d.gauge),\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}}(d.\mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}})\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00173}\mbox{\hyperlink{classDirac__Wilson_ad63da3c622e0bec2150e30db8a9e4ae7}{00173}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson_ad63da3c622e0bec2150e30db8a9e4ae7}{Dirac\_Wilson}}(\textcolor{keywordtype}{double}\ k,\ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&U)[NDIM])\ :\ gauge(U),\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}}(k)\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00175}\mbox{\hyperlink{classDirac__Wilson_a92caff112a91ffaacfe44b466f7764ab}{00175}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson_a92caff112a91ffaacfe44b466f7764ab}{Dirac\_Wilson}}(\textcolor{keywordtype}{double}\ k,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)\ :\ gauge(g.gauge),\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}}(k)\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00176}00176\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00178}00178\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ M>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00179}\mbox{\hyperlink{classDirac__Wilson_a6e6f2144cf5a0968563a34c9873f203a}{00179}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson_a6e6f2144cf5a0968563a34c9873f203a}{Dirac\_Wilson}}(\mbox{\hyperlink{classDirac__Wilson}{Dirac\_Wilson<M>}}\ \&d,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00180}00180\ \ \ \ \ \ \ \ \ :\ gauge(g.gauge),\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}}(d.\mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}})\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00181}00181\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00183}\mbox{\hyperlink{classDirac__Wilson_a21434d2cfc0344354f7834cca32cf11f}{00183}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classDirac__Wilson_a21434d2cfc0344354f7834cca32cf11f}{apply}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00184}00184\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag(in,\ out,\ ALL);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00185}00185\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop(gauge,\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}},\ in,\ out,\ ALL,\ 1);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00186}00186\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00187}00187\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00189}\mbox{\hyperlink{classDirac__Wilson_a4f796c1c8619129e5788d0c57ebf88ad}{00189}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classDirac__Wilson_a4f796c1c8619129e5788d0c57ebf88ad}{dagger}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00190}00190\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag(in,\ out,\ ALL);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00191}00191\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop(gauge,\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}},\ in,\ out,\ ALL,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00192}00192\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00193}00193\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00196}00196\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ momtype>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00197}\mbox{\hyperlink{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869}{00197}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869}{force}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&chi,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&psi,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00198}00198\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ (\&\mbox{\hyperlink{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869}{force}})[NDIM],\ \textcolor{keywordtype}{int}\ sign\ =\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00199}00199\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_calc\_force(gauge,\ \mbox{\hyperlink{classDirac__Wilson_ad712d7ff118e12d3999ffeac9026e597}{kappa}},\ chi,\ psi,\ \mbox{\hyperlink{classDirac__Wilson_a9e27cb52f7ffcf570aac4ca4a2480869}{force}},\ ALL,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00200}00200\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00201}00201\ \};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00202}00202\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00204}00204\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix,\ \textcolor{keyword}{typename}\ matrix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00205}00205\ \mbox{\hyperlink{classField}{Field<Wilson\_vector<N,\ radix>}}>\ operator*(\mbox{\hyperlink{classDirac__Wilson}{Dirac\_Wilson<matrix>}}\ D,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00206}00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&in)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00207}00207\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Wilson\_vector<N,\ radix>}}>\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00208}00208\ \ \ \ \ D.\mbox{\hyperlink{classDirac__Wilson_a21434d2cfc0344354f7834cca32cf11f}{apply}}(in,\ out);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00209}00209\ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00210}00210\ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00211}00211\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00213}00213\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix,\ \textcolor{keyword}{typename}\ matrix>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00214}00214\ \mbox{\hyperlink{classField}{Field<Wilson\_vector<N,\ radix>}}>\ operator*(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field}}<Wilson\_vector<N,\ radix>>\ \&in,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00215}00215\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson}{Dirac\_Wilson<matrix>}}\ D)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00216}00216\ \ \ \ \ \mbox{\hyperlink{classField}{Field<Wilson\_vector<N,\ radix>}}>\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00217}00217\ \ \ \ \ D.\mbox{\hyperlink{classDirac__Wilson_a4f796c1c8619129e5788d0c57ebf88ad}{dagger}}(in,\ out);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00218}00218\ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00219}00219\ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00220}00220\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00234}\mbox{\hyperlink{classDirac__Wilson__evenodd}{00234}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ matrix>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classDirac__Wilson__evenodd}{Dirac\_Wilson\_evenodd}}\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00235}00235\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00237}00237\ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&gauge)[NDIM];}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00238}00238\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00239}00239\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00241}\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{00241}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00243}\mbox{\hyperlink{classDirac__Wilson__evenodd_ad9643465b5e2e4ff71473af9ad9157db}{00243}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classDirac__Wilson__evenodd_ad9643465b5e2e4ff71473af9ad9157db}{N}}\ =\ matrix::size;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00245}\mbox{\hyperlink{classDirac__Wilson__evenodd_ae02702ff79141d4a6a60ad55330693ac}{00245}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classDirac__Wilson__evenodd_ae02702ff79141d4a6a60ad55330693ac}{radix}}\ =\ hila::scalar\_type<matrix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00246}00246\ \ \ \ \ \textcolor{keyword}{using\ }vector\_type\ =\ Wilson\_vector<N,\ radix>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00248}\mbox{\hyperlink{classDirac__Wilson__evenodd_a2956416bb066f4f77aa2ad1dbf84ac76}{00248}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classDirac__Wilson__evenodd_a2956416bb066f4f77aa2ad1dbf84ac76}{matrix\_type}}\ =\ matrix;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00249}00249\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00252}\mbox{\hyperlink{classDirac__Wilson__evenodd_a16dac7684a43f3c054dee3fbebbe2f3a}{00252}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classDirac__Wilson__evenodd}{type\_flt}}\ =}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00253}00253\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson__evenodd}{Dirac\_Wilson\_evenodd<typename\ gauge\_field\_base<matrix>::gauge\_type\_flt}}>;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00254}00254\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00256}\mbox{\hyperlink{classDirac__Wilson__evenodd_a42833038de6b17eab076aa2ba41302af}{00256}}\ \ \ \ \ Parity\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a42833038de6b17eab076aa2ba41302af}{par}}\ =\ EVEN;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00257}00257\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00259}\mbox{\hyperlink{classDirac__Wilson__evenodd_a411fc07bc6b2d28cdd1f4630c836db83}{00259}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson__evenodd_a411fc07bc6b2d28cdd1f4630c836db83}{Dirac\_Wilson\_evenodd}}(\mbox{\hyperlink{classDirac__Wilson__evenodd}{Dirac\_Wilson\_evenodd}}\ \&d)\ :\ gauge(d.gauge),\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}}(d.\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}})\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00261}\mbox{\hyperlink{classDirac__Wilson__evenodd_ac394da4de43fcb7cc6ae9d84433eb025}{00261}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson__evenodd_ac394da4de43fcb7cc6ae9d84433eb025}{Dirac\_Wilson\_evenodd}}(\textcolor{keywordtype}{double}\ k,\ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&U)[NDIM])\ :\ gauge(U),\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}}(k)\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00263}\mbox{\hyperlink{classDirac__Wilson__evenodd_ac52b818268c6b0b93aee2f252716a32f}{00263}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson__evenodd_ac52b818268c6b0b93aee2f252716a32f}{Dirac\_Wilson\_evenodd}}(\textcolor{keywordtype}{double}\ k,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00264}00264\ \ \ \ \ \ \ \ \ :\ gauge(g.gauge),\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}}(k)\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00265}00265\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00267}00267\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ M>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00268}\mbox{\hyperlink{classDirac__Wilson__evenodd_afa99f2391c0eac9707fb407bc25d25c7}{00268}}\ \ \ \ \ \mbox{\hyperlink{classDirac__Wilson__evenodd_afa99f2391c0eac9707fb407bc25d25c7}{Dirac\_Wilson\_evenodd}}(\mbox{\hyperlink{classDirac__Wilson__evenodd}{Dirac\_Wilson\_evenodd<M>}}\ \&d,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00269}00269\ \ \ \ \ \ \ \ \ :\ gauge(g.gauge),\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}}(d.\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}})\ \{\}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00270}00270\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00272}\mbox{\hyperlink{classDirac__Wilson__evenodd_a17ee95443d693bbaa973185ac07c4ecd}{00272}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a17ee95443d693bbaa973185ac07c4ecd}{apply}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00273}00273\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag(in,\ out,\ EVEN);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00274}00274\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00275}00275\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop\_set(gauge,\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ in,\ out,\ ODD,\ 1);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00276}00276\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag\_inverse(out,\ ODD);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00277}00277\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop(gauge,\ -\/\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ out,\ out,\ EVEN,\ 1);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00278}00278\ \ \ \ \ \ \ \ \ out[ODD]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00279}00279\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00280}00280\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00282}\mbox{\hyperlink{classDirac__Wilson__evenodd_a50b46857270350f2d3f7611ef9f6ac49}{00282}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a50b46857270350f2d3f7611ef9f6ac49}{dagger}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00283}00283\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag(in,\ out,\ EVEN);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00284}00284\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00285}00285\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop\_set(gauge,\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ in,\ out,\ ODD,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00286}00286\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag\_inverse(out,\ ODD);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00287}00287\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop(gauge,\ -\/\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ out,\ out,\ EVEN,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00288}00288\ \ \ \ \ \ \ \ \ out[ODD]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00289}00289\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00290}00290\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00293}00293\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ momtype>}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00294}\mbox{\hyperlink{classDirac__Wilson__evenodd_a2093b0d10543a6096c7ae46d0b8d1d51}{00294}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a2093b0d10543a6096c7ae46d0b8d1d51}{force}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&chi,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&psi,}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00295}00295\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ (\&\mbox{\hyperlink{classDirac__Wilson__evenodd_a2093b0d10543a6096c7ae46d0b8d1d51}{force}})[NDIM],\ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00296}00296\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ force2[NDIM];}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00297}00297\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ tmp;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00298}00298\ \ \ \ \ \ \ \ \ tmp.\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(chi);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00299}00299\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00300}00300\ \ \ \ \ \ \ \ \ tmp[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00301}00301\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop\_set(gauge,\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ chi,\ tmp,\ ODD,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00302}00302\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag\_inverse(tmp,\ ODD);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00303}00303\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_calc\_force(gauge,\ -\/\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ tmp,\ psi,\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a2093b0d10543a6096c7ae46d0b8d1d51}{force}},\ EVEN,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00304}00304\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00305}00305\ \ \ \ \ \ \ \ \ tmp[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00306}00306\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_hop\_set(gauge,\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ psi,\ tmp,\ ODD,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00307}00307\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_diag\_inverse(tmp,\ ODD);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00308}00308\ \ \ \ \ \ \ \ \ Dirac\_Wilson\_calc\_force(gauge,\ -\/\mbox{\hyperlink{classDirac__Wilson__evenodd_a53b044c07fd71cb1d539fa70a706a8d5}{kappa}},\ chi,\ tmp,\ force2,\ ODD,\ sign);}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00309}00309\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00310}00310\ \ \ \ \ \ \ \ \ foralldir(dir)\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a2093b0d10543a6096c7ae46d0b8d1d51}{force}}[dir][ALL]\ =\ \mbox{\hyperlink{classDirac__Wilson__evenodd_a2093b0d10543a6096c7ae46d0b8d1d51}{force}}[dir][X]\ +\ force2[dir][X];}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00311}00311\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00312}00312\ \};}
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00313}00313\ }
+\DoxyCodeLine{\Hypertarget{wilson_8h_source_l00314}00314\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

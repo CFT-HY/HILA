@@ -1,0 +1,225 @@
+\doxysection{libraries/dirac/staggered.h}
+\hypertarget{libraries_2dirac_2staggered_8h_source}{}\label{libraries_2dirac_2staggered_8h_source}\index{staggered.h@{staggered.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ \_\_DIRAC\_STAGGERED\_H\_\_}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ \_\_DIRAC\_STAGGERED\_H\_\_}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}../plumbing/defs.h"{}}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}../datatypes/cmplx.h"{}}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}../datatypes/matrix.h"{}}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00007}00007\ \textcolor{preprocessor}{\#include\ "{}../datatypes/sun.h"{}}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00008}00008\ \textcolor{preprocessor}{\#include\ "{}../plumbing/field.h"{}}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00009}00009\ \textcolor{preprocessor}{\#include\ "{}../../libraries/hmc/gauge\_field.h"{}}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00010}00010\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00011}00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vector>\ \mbox{\hyperlink{classField}{Field<vector>}}\ staggered\_dirac\_temp[NDIM];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00012}00012\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00014}00014\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ init\_staggered\_eta(\mbox{\hyperlink{classField}{Field<double>}}\ (\&staggered\_eta)[NDIM])\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00015}00015\ \ \ \ \ \textcolor{comment}{//\ Initialize\ the\ staggered\ eta\ field}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00016}00016\ \ \ \ \ foralldir(d)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00017}00017\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00018}00018\ \ \ \ \ \ \ \ \ \ \ \ \ element<CoordinateVector>\ l\ =\ X.coordinates();}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00019}00019\ \ \ \ \ \ \ \ \ \ \ \ \ element<int>\ sumcoord\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00020}00020\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ d2\ =\ e\_x;\ d2\ <\ d;\ d2++)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00021}00021\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sumcoord\ +=\ l[d2];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00022}00022\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00023}00023\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ +1\ if\ sumcoord\ divisible\ by\ 2,\ -\/1\ otherwise}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00024}00024\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ statements\ not\ yet\ implemented\ for\ vectors}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00025}00025\ \ \ \ \ \ \ \ \ \ \ \ \ staggered\_eta[d][X]\ =\ (sumcoord\ \%\ 2)\ *\ 2\ -\/\ 1;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00026}00026\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00027}00027\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00028}00028\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00031}00031\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vtype>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00032}00032\ \textcolor{keywordtype}{void}\ dirac\_staggered\_diag(\textcolor{keyword}{const}\ \textcolor{keywordtype}{double}\ mass,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&v\_in,}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00033}00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&v\_out,\ Parity\ par)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00034}00034\ \ \ \ \ v\_out[par]\ =\ v\_out[X]\ +\ mass\ *\ v\_in[X];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00035}00035\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00036}00036\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00039}00039\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vtype>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00040}00040\ \textcolor{keywordtype}{void}\ dirac\_staggered\_diag\_inverse(\textcolor{keyword}{const}\ \textcolor{keywordtype}{double}\ mass,\ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&v\_out,\ Parity\ par)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00041}00041\ \ \ \ \ v\_out[par]\ =\ (1.0\ /\ mass)\ *\ v\_out[X];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00042}00042\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00043}00043\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00045}00045\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ mtype,\ \textcolor{keyword}{typename}\ vtype>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00046}00046\ \textcolor{keywordtype}{void}\ dirac\_staggered\_hop(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<mtype>}}\ *gauge,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&v\_in,}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&v\_out,\ \mbox{\hyperlink{classField}{Field<double>}}\ (\&staggered\_eta)[NDIM],}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Parity\ par,\ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00049}00049\ \ \ \ \ \mbox{\hyperlink{classField}{Field<vtype>}}(\&vtemp)[NDIM]\ =\ staggered\_dirac\_temp<vtype>;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00050}00050\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ vtemp[dir].copy\_boundary\_condition(v\_in);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ v\_in.\mbox{\hyperlink{classField_ac76a0477380e02532746853d16983c4a}{start\_gather}}(dir,\ par);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00053}00053\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00054}00054\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00055}00055\ \ \ \ \ \textcolor{comment}{//\ First\ multiply\ the\ by\ conjugate\ before\ communicating\ the\ vector}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00056}00056\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ vtemp[dir][opp\_parity(par)]\ =\ gauge[dir][X].adjoint()\ *\ v\_in[X];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00058}00058\ \ \ \ \ \ \ \ \ vtemp[dir].\mbox{\hyperlink{classField_ac76a0477380e02532746853d16983c4a}{start\_gather}}(-\/dir,\ par);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00059}00059\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00061}00061\ \ \ \ \ \textcolor{comment}{//\ Run\ neighbour\ gathers\ and\ multiplications}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00062}00062\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ v\_out[par]\ =\ v\_out[X]\ +\ 0.5\ *\ sign\ *\ staggered\_eta[dir][X]\ *}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00064}00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (gauge[dir][X]\ *\ v\_in[X\ +\ dir]\ -\/\ vtemp[dir][X\ -\/\ dir]);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00065}00065\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00066}00066\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00067}00067\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00070}00070\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ gaugetype,\ \textcolor{keyword}{typename}\ momtype,\ \textcolor{keyword}{typename}\ vtype>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00071}00071\ \textcolor{keywordtype}{void}\ dirac\_staggered\_calc\_force(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<gaugetype>}}\ *gauge,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&chi,}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00072}00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vtype>}}\ \&psi,\ \mbox{\hyperlink{classField}{Field<momtype>}}\ (\&out)[NDIM],}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00073}00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<double>}}\ (\&staggered\_eta)[NDIM],\ \textcolor{keywordtype}{int}\ sign,}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00074}00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Parity\ par)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00075}00075\ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00077}00077\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][par]\ =}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00078}00078\ \ \ \ \ \ \ \ \ \ \ \ \ -\/sign\ *\ 0.5\ *\ staggered\_eta[dir][X]\ *\ chi[X\ +\ dir].outer\_product(psi[X]);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00079}00079\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][opp\_parity(par)]\ =\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}[dir][X]\ +\ sign\ *\ 0.5\ *}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00080}00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ staggered\_eta[dir][X\ +\ dir]\ *}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ psi[X\ +\ dir].outer\_product(chi[X]);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00082}00082\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00083}00083\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00084}00084\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00092}\mbox{\hyperlink{classdirac__staggered}{00092}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ matrix>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classdirac__staggered}{dirac\_staggered}}\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00093}00093\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00095}00095\ \ \ \ \ \mbox{\hyperlink{classField}{Field<double>}}\ staggered\_eta[NDIM];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00096}00096\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00097}00097\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00099}\mbox{\hyperlink{classdirac__staggered_a10fb0ded1b6b0d37519d6aed43fcbff9}{00099}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00101}\mbox{\hyperlink{classdirac__staggered_a305f3f787d01835ef25ca1de61bd1440}{00101}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU__vector}{vector\_type}}\ =\ \mbox{\hyperlink{classSU__vector}{SU\_vector<matrix::size,\ hila::scalar\_type<matrix>}}>;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00103}\mbox{\hyperlink{classdirac__staggered_a82751f5cd50ee46c0a25b314b519b4a0}{00103}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classdirac__staggered_a82751f5cd50ee46c0a25b314b519b4a0}{matrix\_type}}\ =\ matrix;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00105}00105\ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&gauge)[NDIM];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00106}00106\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00109}\mbox{\hyperlink{classdirac__staggered_a4372af0e2cf1dfae3fafd8828f538488}{00109}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classdirac__staggered}{type\_flt}}\ =\ \mbox{\hyperlink{classdirac__staggered}{dirac\_staggered<typename\ gauge\_field\_base<matrix>::gauge\_type\_flt}}>;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00112}\mbox{\hyperlink{classdirac__staggered_a930e6803b2f5384ef2608ffc4327d4c2}{00112}}\ \ \ \ \ Parity\ \mbox{\hyperlink{classdirac__staggered_a930e6803b2f5384ef2608ffc4327d4c2}{par}}\ =\ ALL;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00113}00113\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00114}00114\ \ \ \ \ \textcolor{comment}{//\ Constructor:\ initialize\ mass,\ gauge\ and\ eta}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00115}00115\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered}{dirac\_staggered}}(\mbox{\hyperlink{classdirac__staggered}{dirac\_staggered}}\ \&d)\ :\ gauge(d.gauge),\ \mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}}(d.\mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}})\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00116}00116\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Initialize\ the\ eta\ field\ (Share\ this?)}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00117}00117\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00118}00118\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00119}00119\ \ \ \ \ \textcolor{comment}{//\ Constructor:\ initialize\ mass,\ gauge\ and\ eta}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00120}00120\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered}{dirac\_staggered}}(\textcolor{keywordtype}{double}\ m,\ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&g)[NDIM])\ :\ gauge(g),\ \mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}}(m)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00121}00121\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00122}00122\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00123}00123\ \ \ \ \ \textcolor{comment}{//\ Constructor:\ initialize\ mass,\ gauge\ and\ eta}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00124}00124\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered}{dirac\_staggered}}(\textcolor{keywordtype}{double}\ m,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)\ :\ gauge(g.gauge),\ \mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}}(m)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00125}00125\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00126}00126\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00127}00127\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00129}00129\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ M>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00130}\mbox{\hyperlink{classdirac__staggered_acc30927ce0f4ef970af1bf6cbf2f4a9b}{00130}}\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered_acc30927ce0f4ef970af1bf6cbf2f4a9b}{dirac\_staggered}}(\mbox{\hyperlink{classdirac__staggered}{dirac\_staggered<M>}}\ \&d,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00131}00131\ \ \ \ \ \ \ \ \ :\ gauge(g.gauge),\ \mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}}(d.\mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}})\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00132}00132\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00133}00133\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00134}00134\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00136}\mbox{\hyperlink{classdirac__staggered_aaf20a5d12aff9cafe149f1088aa391a5}{00136}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classdirac__staggered_aaf20a5d12aff9cafe149f1088aa391a5}{apply}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00137}00137\ \ \ \ \ \ \ \ \ out[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00138}00138\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag(\mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}},\ in,\ out,\ ALL);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00139}00139\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ in,\ out,\ staggered\_eta,\ ALL,\ 1);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00140}00140\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00141}00141\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00143}\mbox{\hyperlink{classdirac__staggered_ad00d97785793450b10a4eaefdc5a07f5}{00143}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classdirac__staggered_ad00d97785793450b10a4eaefdc5a07f5}{dagger}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00144}00144\ \ \ \ \ \ \ \ \ out[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00145}00145\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag(\mbox{\hyperlink{classdirac__staggered_abff48b8690318da00d36cf1fdae12973}{mass}},\ in,\ out,\ ALL);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00146}00146\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ in,\ out,\ staggered\_eta,\ ALL,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00147}00147\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00148}00148\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00151}00151\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ momtype>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00152}\mbox{\hyperlink{classdirac__staggered_aa2108f994ad7007b46538bb0558898f7}{00152}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classdirac__staggered_aa2108f994ad7007b46538bb0558898f7}{force}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&chi,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&psi,}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00153}00153\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ (\&\mbox{\hyperlink{classdirac__staggered_aa2108f994ad7007b46538bb0558898f7}{force}})[NDIM],\ \textcolor{keywordtype}{int}\ sign\ =\ 1)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00154}00154\ \ \ \ \ \ \ \ \ dirac\_staggered\_calc\_force(gauge,\ chi,\ psi,\ \mbox{\hyperlink{classdirac__staggered_aa2108f994ad7007b46538bb0558898f7}{force}},\ staggered\_eta,\ sign,\ ALL);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00155}00155\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00156}00156\ \};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00157}00157\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00159}00159\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vector,\ \textcolor{keyword}{typename}\ matrix>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00160}00160\ \mbox{\hyperlink{classField}{Field<vector>}}\ operator*(\mbox{\hyperlink{classdirac__staggered}{dirac\_staggered<matrix>}}\ D,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector>}}\ \&in)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00161}00161\ \ \ \ \ \mbox{\hyperlink{classField}{Field<vector>}}\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00162}00162\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}.copy\_boundary\_condition(in);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00163}00163\ \ \ \ \ D.\mbox{\hyperlink{classdirac__staggered_aaf20a5d12aff9cafe149f1088aa391a5}{apply}}(in,\ out);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00164}00164\ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00165}00165\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00166}00166\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00168}00168\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ vector,\ \textcolor{keyword}{typename}\ matrix>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00169}00169\ \mbox{\hyperlink{classField}{Field<vector>}}\ operator*(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector>}}\ \&in,\ \mbox{\hyperlink{classdirac__staggered}{dirac\_staggered<vector>}}\ D)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00170}00170\ \ \ \ \ \mbox{\hyperlink{classField}{Field<vector>}}\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00171}00171\ \ \ \ \ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}}.copy\_boundary\_condition(in);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00172}00172\ \ \ \ \ D.\mbox{\hyperlink{classdirac__staggered_ad00d97785793450b10a4eaefdc5a07f5}{dagger}}(in,\ out);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00173}00173\ \ \ \ \ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{namespacehila_a5332679ab5ee4d7c673c633eb5b0f8c2}{out}};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00174}00174\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00175}00175\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00193}\mbox{\hyperlink{classdirac__staggered__evenodd}{00193}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ matrix>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classdirac__staggered__evenodd}{dirac\_staggered\_evenodd}}\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00194}00194\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00196}00196\ \ \ \ \ \mbox{\hyperlink{classField}{Field<double>}}\ staggered\_eta[NDIM];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00197}00197\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00199}00199\ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&gauge)[NDIM];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00200}00200\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00201}00201\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00203}\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{00203}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00205}\mbox{\hyperlink{classdirac__staggered__evenodd_a54dba86ca2742963da99496ef48948ba}{00205}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classSU__vector}{vector\_type}}\ =\ \mbox{\hyperlink{classSU__vector}{SU\_vector<matrix::size,\ hila::scalar\_type<matrix>}}>;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00207}\mbox{\hyperlink{classdirac__staggered__evenodd_a10f3c4ef9302a5f63e688134c5a26bac}{00207}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classdirac__staggered__evenodd_a10f3c4ef9302a5f63e688134c5a26bac}{matrix\_type}}\ =\ matrix;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00208}00208\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00211}\mbox{\hyperlink{classdirac__staggered__evenodd_a30e8c069a0264ee5f3d83609937dc1d1}{00211}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classdirac__staggered__evenodd}{type\_flt}}\ =}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00212}00212\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classdirac__staggered__evenodd}{dirac\_staggered\_evenodd<typename\ gauge\_field\_base<matrix>::gauge\_type\_flt}}>;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00213}00213\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00215}\mbox{\hyperlink{classdirac__staggered__evenodd_ae0558087d768b417eaaaebfe70785c03}{00215}}\ \ \ \ \ Parity\ \mbox{\hyperlink{classdirac__staggered__evenodd_ae0558087d768b417eaaaebfe70785c03}{par}}\ =\ EVEN;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00216}00216\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00218}\mbox{\hyperlink{classdirac__staggered__evenodd_a952d19dbfe8cf01c405c50aabcde920b}{00218}}\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered__evenodd_a952d19dbfe8cf01c405c50aabcde920b}{dirac\_staggered\_evenodd}}(\mbox{\hyperlink{classdirac__staggered__evenodd}{dirac\_staggered\_evenodd}}\ \&d)\ :\ gauge(d.gauge),\ \mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}}(d.\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}})\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00219}00219\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00220}00220\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00222}\mbox{\hyperlink{classdirac__staggered__evenodd_acf81fffe7841a5a48cfdab816035b8c2}{00222}}\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered__evenodd_acf81fffe7841a5a48cfdab816035b8c2}{dirac\_staggered\_evenodd}}(\textcolor{keywordtype}{double}\ m,\ \mbox{\hyperlink{classField}{Field<matrix>}}\ (\&U)[NDIM])\ :\ gauge(U),\ \mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}}(m)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00223}00223\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00224}00224\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00226}\mbox{\hyperlink{classdirac__staggered__evenodd_a2f724c18c706c1e8d8ebf4b615c8d070}{00226}}\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered__evenodd_a2f724c18c706c1e8d8ebf4b615c8d070}{dirac\_staggered\_evenodd}}(\textcolor{keywordtype}{double}\ m,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00227}00227\ \ \ \ \ \ \ \ \ :\ gauge(g.gauge),\ \mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}}(m)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00228}00228\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00229}00229\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00230}00230\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00232}00232\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ M>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00233}\mbox{\hyperlink{classdirac__staggered__evenodd_affe303c9c63450bc3f5d99f50c8ebc31}{00233}}\ \ \ \ \ \mbox{\hyperlink{classdirac__staggered__evenodd_affe303c9c63450bc3f5d99f50c8ebc31}{dirac\_staggered\_evenodd}}(\mbox{\hyperlink{classdirac__staggered__evenodd}{dirac\_staggered\_evenodd<M>}}\ \&d,\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<matrix>}}\ \&g)}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00234}00234\ \ \ \ \ \ \ \ \ :\ gauge(g.gauge),\ \mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}}(d.\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}})\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00235}00235\ \ \ \ \ \ \ \ \ init\_staggered\_eta(staggered\_eta);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00236}00236\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00237}00237\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00239}\mbox{\hyperlink{classdirac__staggered__evenodd_aed3b4267cf45dfde06bfd6e33728f028}{00239}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classdirac__staggered__evenodd_aed3b4267cf45dfde06bfd6e33728f028}{apply}}(\mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00240}00240\ \ \ \ \ \ \ \ \ out[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00241}00241\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag(\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}},\ in,\ out,\ EVEN);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00242}00242\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00243}00243\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ in,\ out,\ staggered\_eta,\ ODD,\ 1);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00244}00244\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag\_inverse(\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}},\ out,\ ODD);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00245}00245\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ out,\ out,\ staggered\_eta,\ EVEN,\ 1);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00246}00246\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00247}00247\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00249}\mbox{\hyperlink{classdirac__staggered__evenodd_a2112ae9fd9719138fe26fff14c795e7a}{00249}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classdirac__staggered__evenodd_a2112ae9fd9719138fe26fff14c795e7a}{dagger}}(\mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00250}00250\ \ \ \ \ \ \ \ \ out[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00251}00251\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag(\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}},\ in,\ out,\ EVEN);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00252}00252\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00253}00253\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ in,\ out,\ staggered\_eta,\ ODD,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00254}00254\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag\_inverse(\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}},\ out,\ ODD);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00255}00255\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ out,\ out,\ staggered\_eta,\ EVEN,\ -\/1);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00256}00256\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00257}00257\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00260}00260\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ momtype>}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00261}\mbox{\hyperlink{classdirac__staggered__evenodd_a9d5888763b66d02a7e3eb13574d9264d}{00261}}\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classdirac__staggered__evenodd_a9d5888763b66d02a7e3eb13574d9264d}{force}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&chi,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&psi,}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00262}00262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ (\&\mbox{\hyperlink{classdirac__staggered__evenodd_a9d5888763b66d02a7e3eb13574d9264d}{force}})[NDIM],\ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00263}00263\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ force2[NDIM];}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00264}00264\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ tmp;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00265}00265\ \ \ \ \ \ \ \ \ tmp.\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(chi);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00266}00266\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00267}00267\ \ \ \ \ \ \ \ \ tmp[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00268}00268\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ chi,\ tmp,\ staggered\_eta,\ ODD,\ -\/sign);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00269}00269\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag\_inverse(\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}},\ tmp,\ ODD);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00270}00270\ \ \ \ \ \ \ \ \ dirac\_staggered\_calc\_force(gauge,\ tmp,\ psi,\ \mbox{\hyperlink{classdirac__staggered__evenodd_a9d5888763b66d02a7e3eb13574d9264d}{force}},\ staggered\_eta,\ sign,\ EVEN);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00271}00271\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00272}00272\ \ \ \ \ \ \ \ \ tmp[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00273}00273\ \ \ \ \ \ \ \ \ dirac\_staggered\_hop(gauge,\ psi,\ tmp,\ staggered\_eta,\ ODD,\ sign);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00274}00274\ \ \ \ \ \ \ \ \ dirac\_staggered\_diag\_inverse(\mbox{\hyperlink{classdirac__staggered__evenodd_a6b798b6e570f7cd35d314e016326814d}{mass}},\ tmp,\ ODD);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00275}00275\ \ \ \ \ \ \ \ \ dirac\_staggered\_calc\_force(gauge,\ chi,\ tmp,\ force2,\ staggered\_eta,\ sign,\ ODD);}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00276}00276\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00277}00277\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ \mbox{\hyperlink{classdirac__staggered__evenodd_a9d5888763b66d02a7e3eb13574d9264d}{force}}[dir][ALL]\ =\ \mbox{\hyperlink{classdirac__staggered__evenodd_a9d5888763b66d02a7e3eb13574d9264d}{force}}[dir][X]\ +\ force2[dir][X];\ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00278}00278\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00279}00279\ \};}
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00280}00280\ }
+\DoxyCodeLine{\Hypertarget{libraries_2dirac_2staggered_8h_source_l00281}00281\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

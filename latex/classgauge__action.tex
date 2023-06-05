@@ -1,0 +1,93 @@
+\doxysection{gauge\+\_\+action\texorpdfstring{$<$}{<} gauge\+\_\+field \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{classgauge__action}{}\label{classgauge__action}\index{gauge\_action$<$ gauge\_field $>$@{gauge\_action$<$ gauge\_field $>$}}
+
+
+{\ttfamily \#include $<$gauge\+\_\+field.\+h$>$}
+
+
+
+Inheritance diagram for gauge\+\_\+action\texorpdfstring{$<$}{<} gauge\+\_\+field \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=203pt]{classgauge__action__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for gauge\+\_\+action\texorpdfstring{$<$}{<} gauge\+\_\+field \texorpdfstring{$>$}{>}\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classgauge__action__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__action_ae4a9d005daad7081e7b4e9cb2283b6b6}\label{classgauge__action_ae4a9d005daad7081e7b4e9cb2283b6b6} 
+using {\bfseries gauge\+\_\+field\+\_\+type} = \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}
+\begin{DoxyCompactList}\small\item\em The underlying gauge field type. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__action_a0697a454bd9eee43bbe120ea02c422a3}\label{classgauge__action_a0697a454bd9eee43bbe120ea02c422a3} 
+using {\bfseries gauge\+\_\+mat} = typename \mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{gauge\+\_\+field\+::gauge\+\_\+type}}
+\begin{DoxyCompactList}\small\item\em The gauge matrix type. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__action_a1686b27bc1924bdaee259f6be71faaca}\label{classgauge__action_a1686b27bc1924bdaee259f6be71faaca} 
+using {\bfseries momtype} = \mbox{\hyperlink{classMatrix}{Square\+Matrix}}$<$ \mbox{\hyperlink{classgauge__action_a0fc774ffd4c2e62d1b4dec6838f6ec60}{N}}, \mbox{\hyperlink{classComplex}{Complex}}$<$ hila\+::scalar\+\_\+type$<$ \mbox{\hyperlink{classgauge__action_a0697a454bd9eee43bbe120ea02c422a3}{gauge\+\_\+mat}} $>$ $>$ $>$
+\begin{DoxyCompactList}\small\item\em The type of the momentum field. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__action_a6b29e263e7c8c1242f0c0b5597cbea44}\label{classgauge__action_a6b29e263e7c8c1242f0c0b5597cbea44} 
+{\bfseries gauge\+\_\+action} (\mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} \&g, double b)
+\begin{DoxyCompactList}\small\item\em Construct out of a gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__action_a1843b8ca303a0296e4fa7d0d7964aed4}\label{classgauge__action_a1843b8ca303a0296e4fa7d0d7964aed4} 
+{\bfseries gauge\+\_\+action} (\mbox{\hyperlink{classgauge__action}{gauge\+\_\+action}} \&ga)
+\begin{DoxyCompactList}\small\item\em Construct a copy. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__action_aacbf492b32bea1e1c6f99755fc7e8b32}\label{classgauge__action_aacbf492b32bea1e1c6f99755fc7e8b32} 
+double {\bfseries action} ()
+\begin{DoxyCompactList}\small\item\em The gauge action. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__action_a5e1c0e4e2eddd6ab5a34af23f5924559}\label{classgauge__action_a5e1c0e4e2eddd6ab5a34af23f5924559} 
+void {\bfseries force\+\_\+step} (double eps)
+\begin{DoxyCompactList}\small\item\em Update the momentum with the gauge field force. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{classaction__base}{action\+\_\+base}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual double {\bfseries action} ()
+\begin{DoxyCompactList}\small\item\em Calculate and return the action. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classaction__base_ad9cd2aaa6a4182117ef2ecada3f135e4}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+virtual void \mbox{\hyperlink{classaction__base_a478cf7430fc29604379676676cb8f656}{force\+\_\+step}} (double eps)
+\item 
+virtual void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+virtual void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}\label{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49} 
+\mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}} \& {\bfseries gauge}
+\begin{DoxyCompactList}\small\item\em A reference to the gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}\label{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5} 
+double {\bfseries beta}
+\begin{DoxyCompactList}\small\item\em The coupling. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classgauge__action_a0fc774ffd4c2e62d1b4dec6838f6ec60}\label{classgauge__action_a0fc774ffd4c2e62d1b4dec6838f6ec60} 
+static constexpr int {\bfseries N} = gauge\+\_\+mat\+::size
+\begin{DoxyCompactList}\small\item\em The size of the gauge matrix. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename \mbox{\hyperlink{classgauge__field}{gauge\+\_\+field}}$>$\newline
+class gauge\+\_\+action$<$ gauge\+\_\+field $>$}
+The Wilson plaquette action of a gauge field. Action terms contain a \doxylink{classgauge__action_a5e1c0e4e2eddd6ab5a34af23f5924559}{force\+\_\+step()}-\/function, which updates the momentum of the gauge field. To do this, it needs to have a reference to the momentum field. 
+
+Definition at line \mbox{\hyperlink{gauge__field_8h_source_l00448}{448}} of file \mbox{\hyperlink{gauge__field_8h_source}{gauge\+\_\+field.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+gauge\+\_\+field.\+h\end{DoxyCompactItemize}

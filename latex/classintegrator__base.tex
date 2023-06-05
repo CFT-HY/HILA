@@ -1,0 +1,77 @@
+\doxysection{integrator\+\_\+base Class Reference}
+\hypertarget{classintegrator__base}{}\label{classintegrator__base}\index{integrator\_base@{integrator\_base}}
+
+
+{\ttfamily \#include $<$integrator.\+h$>$}
+
+
+
+Inheritance diagram for integrator\+\_\+base\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classintegrator__base__inherit__graph}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual double \mbox{\hyperlink{classintegrator__base_a8cf19a265130c977cb0e4ab96b3bad9d}{action}} ()
+\item 
+virtual void \mbox{\hyperlink{classintegrator__base_af26c85b1cefa8ce00047442066fd6154}{draw\+\_\+gaussian\+\_\+fields}} ()
+\item 
+\Hypertarget{classintegrator__base_a7e1ad0174169b5d1022a9e5755f79140}\label{classintegrator__base_a7e1ad0174169b5d1022a9e5755f79140} 
+virtual void {\bfseries backup\+\_\+fields} ()
+\begin{DoxyCompactList}\small\item\em Make a copy of fields updated in a trajectory. \end{DoxyCompactList}\item 
+\Hypertarget{classintegrator__base_aef818d7117d8df211e668371fe0e7688}\label{classintegrator__base_aef818d7117d8df211e668371fe0e7688} 
+virtual void {\bfseries restore\+\_\+backup} ()
+\begin{DoxyCompactList}\small\item\em Restore the previous backup. \end{DoxyCompactList}\item 
+\Hypertarget{classintegrator__base_ac9d3e30cc886b132a5740113b2001152}\label{classintegrator__base_ac9d3e30cc886b132a5740113b2001152} 
+virtual void {\bfseries force\+\_\+step} (double eps)
+\begin{DoxyCompactList}\small\item\em Update the momentum with the gauge field. \end{DoxyCompactList}\item 
+\Hypertarget{classintegrator__base_ace1c8ef3dcd20bd587cf537c14fc7bdd}\label{classintegrator__base_ace1c8ef3dcd20bd587cf537c14fc7bdd} 
+virtual void {\bfseries step} (double eps)
+\begin{DoxyCompactList}\small\item\em Run a lower level integrator step. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A base for an integrator. An integrator updates the gauge and momentum fields in the HMC trajectory, approximately conserving the action 
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00083}{83}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classintegrator__base_a8cf19a265130c977cb0e4ab96b3bad9d}\label{classintegrator__base_a8cf19a265130c977cb0e4ab96b3bad9d} 
+\index{integrator\_base@{integrator\_base}!action@{action}}
+\index{action@{action}!integrator\_base@{integrator\_base}}
+\doxysubsubsection{\texorpdfstring{action()}{action()}}
+{\footnotesize\ttfamily virtual double integrator\+\_\+base\+::action (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Return the sum of the action terms at this integrator and all levels below 
+
+Reimplemented in \mbox{\hyperlink{classgauge__momentum__action_a91656fcb73fcdc6541121433015ac5ba}{gauge\+\_\+momentum\+\_\+action$<$ gauge\+\_\+field $>$}}, and \mbox{\hyperlink{classaction__term__integrator_a466bbd2f51d6ea5eb4f3137e76311970}{action\+\_\+term\+\_\+integrator}}.
+
+
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00087}{87}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+\Hypertarget{classintegrator__base_af26c85b1cefa8ce00047442066fd6154}\label{classintegrator__base_af26c85b1cefa8ce00047442066fd6154} 
+\index{integrator\_base@{integrator\_base}!draw\_gaussian\_fields@{draw\_gaussian\_fields}}
+\index{draw\_gaussian\_fields@{draw\_gaussian\_fields}!integrator\_base@{integrator\_base}}
+\doxysubsubsection{\texorpdfstring{draw\_gaussian\_fields()}{draw\_gaussian\_fields()}}
+{\footnotesize\ttfamily virtual void integrator\+\_\+base\+::draw\+\_\+gaussian\+\_\+fields (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}
+
+Refresh fields that can be drawn from a gaussian distribution This is needed at the beginning of a trajectory 
+
+Reimplemented in \mbox{\hyperlink{classgauge__momentum__action_a96f9bc02fff0142b94a9218e29814cca}{gauge\+\_\+momentum\+\_\+action$<$ gauge\+\_\+field $>$}}, and \mbox{\hyperlink{classaction__term__integrator_a24f0c2f6a9c5cdbb7e20ad076127f29e}{action\+\_\+term\+\_\+integrator}}.
+
+
+
+Definition at line \mbox{\hyperlink{integrator_8h_source_l00091}{91}} of file \mbox{\hyperlink{integrator_8h_source}{integrator.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+integrator.\+h\end{DoxyCompactItemize}

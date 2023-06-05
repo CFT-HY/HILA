@@ -1,0 +1,97 @@
+\doxysection{conjugate\+\_\+gradient.\+h}
+\hypertarget{conjugate__gradient_8h_source}{}\label{conjugate__gradient_8h_source}\index{conjugate\_gradient.h@{conjugate\_gradient.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ CG\_ALG}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ CG\_ALG}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00011}00011\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00012}00012\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00013}00013\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00015}00015\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ CG\_DEFAULT\_MAXITERS\ =\ 10000;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00016}00016\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ CG\_DEFAULT\_ACCURACY\ =\ 1e-\/12;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00017}00017\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00019}\mbox{\hyperlink{classCG}{00019}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Op>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classCG}{CG}}\ \{}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00020}00020\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00021}00021\ \ \ \ \ \textcolor{comment}{//\ The\ operator\ to\ invert}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00022}00022\ \ \ \ \ Op\ \&M;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00023}00023\ \ \ \ \ \textcolor{comment}{//\ desired\ relative\ accuracy}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00024}00024\ \ \ \ \ \textcolor{keywordtype}{double}\ accuracy\ =\ CG\_DEFAULT\_ACCURACY;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00025}00025\ \ \ \ \ \textcolor{comment}{//\ maximum\ number\ of\ iterations}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00026}00026\ \ \ \ \ \textcolor{keywordtype}{double}\ maxiters\ =\ CG\_DEFAULT\_MAXITERS;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00027}00027\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00028}00028\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00030}\mbox{\hyperlink{classCG_af00c0380634c80d092b90f86dd325da9}{00030}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classCG_af00c0380634c80d092b90f86dd325da9}{vector\_type}}\ =\ \textcolor{keyword}{typename}\ Op::vector\_type;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00031}00031\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00033}\mbox{\hyperlink{classCG_ad7dffa32c4384d3d9f7a72c112895568}{00033}}\ \ \ \ \ \mbox{\hyperlink{classCG_ad7dffa32c4384d3d9f7a72c112895568}{CG}}(Op\ \&op)\ :\ M(op)\{\};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00035}\mbox{\hyperlink{classCG_a218cd78a66e6c37861eeec3ecacc8b5c}{00035}}\ \ \ \ \ \mbox{\hyperlink{classCG_a218cd78a66e6c37861eeec3ecacc8b5c}{CG}}(Op\ \&op,\ \textcolor{keywordtype}{double}\ \_accuracy)\ :\ M(op)\ \{\ accuracy\ =\ \_accuracy;\ \};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00037}\mbox{\hyperlink{classCG_a324136cf0ee648c6955093f5b8bd6a05}{00037}}\ \ \ \ \ \mbox{\hyperlink{classCG_a324136cf0ee648c6955093f5b8bd6a05}{CG}}(Op\ \&op,\ \textcolor{keywordtype}{double}\ \_accuracy,\ \textcolor{keywordtype}{int}\ \_maxiters)\ :\ M(op)\ \{}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00038}00038\ \ \ \ \ \ \ \ \ accuracy\ =\ \_accuracy;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00039}00039\ \ \ \ \ \ \ \ \ maxiters\ =\ \_maxiters;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00040}00040\ \ \ \ \ \};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00041}00041\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00046}\mbox{\hyperlink{classCG_abb2c252749fa62ef145250641b107930}{00046}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classCG_abb2c252749fa62ef145250641b107930}{apply}}(\mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&in,\ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ \&out)\ \{}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00047}00047\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00048}00048\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }timeval\ start,\ end;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00049}00049\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<vector\_type>}}\ r,\ p,\ Dp,\ DDp;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00050}00050\ \ \ \ \ \ \ \ \ r.\mbox{\hyperlink{classField_ab16c8dfd440b738952c86465f2a53bec}{copy\_boundary\_condition}}(in);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00051}00051\ \ \ \ \ \ \ \ \ p.copy\_boundary\_condition(in);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00052}00052\ \ \ \ \ \ \ \ \ Dp.copy\_boundary\_condition(in);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00053}00053\ \ \ \ \ \ \ \ \ DDp.copy\_boundary\_condition(in);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00054}00054\ \ \ \ \ \ \ \ \ out.copy\_boundary\_condition(in);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00055}00055\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ pDp\ =\ 0,\ rr\ =\ 0,\ rrnew\ =\ 0,\ rr\_start\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00056}00056\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ alpha,\ beta;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00057}00057\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ target\_rr,\ source\_norm\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00058}00058\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00059}00059\ \ \ \ \ \ \ \ \ gettimeofday(\&start,\ NULL);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00060}00060\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00061}00061\ \ \ \ \ \ \ \ \ onsites(M.par)\ \{\ source\_norm\ +=\ squarenorm(in[X]);\ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00062}00062\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00063}00063\ \ \ \ \ \ \ \ \ target\_rr\ =\ accuracy\ *\ accuracy\ *\ source\_norm;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00064}00064\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00065}00065\ \ \ \ \ \ \ \ \ M.apply(out,\ Dp);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00066}00066\ \ \ \ \ \ \ \ \ M.dagger(Dp,\ DDp);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00067}00067\ \ \ \ \ \ \ \ \ onsites(M.par)\ \{}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00068}00068\ \ \ \ \ \ \ \ \ \ \ \ \ r[X]\ =\ in[X]\ -\/\ DDp[X];}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00069}00069\ \ \ \ \ \ \ \ \ \ \ \ \ p[X]\ =\ r[X];}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00070}00070\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00072}00072\ \ \ \ \ \ \ \ \ onsites(M.par)\ \{\ rr\ +=\ squarenorm(r[X]);\ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00073}00073\ \ \ \ \ \ \ \ \ rr\_start\ =\ rr;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00074}00074\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00075}00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ maxiters;\ i++)\ \{}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00076}00076\ \ \ \ \ \ \ \ \ \ \ \ \ pDp\ =\ rrnew\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00077}00077\ \ \ \ \ \ \ \ \ \ \ \ \ M.apply(p,\ Dp);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00078}00078\ \ \ \ \ \ \ \ \ \ \ \ \ M.dagger(Dp,\ DDp);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00079}00079\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(M.par)\ \{\ pDp\ +=\ squarenorm(Dp[X]);\ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00080}00080\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00081}00081\ \ \ \ \ \ \ \ \ \ \ \ \ alpha\ =\ rr\ /\ pDp;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00082}00082\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00083}00083\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(M.par)\ \{}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00084}00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ out[X]\ =\ out[X]\ +\ alpha\ *\ p[X];}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00085}00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r[X]\ =\ r[X]\ -\/\ alpha\ *\ DDp[X];}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00086}00086\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00087}00087\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(M.par)\ \{\ rrnew\ +=\ squarenorm(r[X]);\ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00088}00088\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_CG}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00089}00089\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}CG\ step\ "{}}\ i\ <<\ \textcolor{stringliteral}{"{},\ residue\ "{}}\ <<\ sqrt(rrnew\ /\ target\_rr)\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00090}00090\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00091}00091\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rrnew\ <\ target\_rr)}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00092}00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00093}00093\ \ \ \ \ \ \ \ \ \ \ \ \ beta\ =\ rrnew\ /\ rr;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00094}00094\ \ \ \ \ \ \ \ \ \ \ \ \ p[M.par]\ =\ beta\ *\ p[X]\ +\ r[X];}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00095}00095\ \ \ \ \ \ \ \ \ \ \ \ \ rr\ =\ rrnew;}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00096}00096\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00097}00097\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00098}00098\ \ \ \ \ \ \ \ \ gettimeofday(\&end,\ NULL);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00099}00099\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ timing\ =}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00100}00100\ \ \ \ \ \ \ \ \ \ \ \ \ 1e-\/3\ *\ (end.tv\_usec\ -\/\ start.tv\_usec)\ +\ 1e3\ *\ (end.tv\_sec\ -\/\ start.tv\_sec);}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00101}00101\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00102}00102\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}Conjugate\ Gradient:\ "{}}\ <<\ i\ <<\ \textcolor{stringliteral}{"{}\ steps\ in\ "{}}\ <<\ timing\ <<\ \textcolor{stringliteral}{"{}ms,\ "{}};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{namespacehila_a7d333681d94db8e9eac675f2a7b5e3e6}{hila::out0}}\ <<\ \textcolor{stringliteral}{"{}relative\ residue:"{}}\ <<\ rrnew\ /\ source\_norm\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00104}00104\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00105}00105\ \};}
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00106}00106\ }
+\DoxyCodeLine{\Hypertarget{conjugate__gradient_8h_source_l00107}00107\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

@@ -1,0 +1,361 @@
+\doxysection{gauge\+\_\+field.\+h}
+\hypertarget{gauge__field_8h_source}{}\label{gauge__field_8h_source}\index{gauge\_field.h@{gauge\_field.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00001}00001\ \textcolor{preprocessor}{\#ifndef\ GAUGE\_FIELD\_H}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00002}00002\ \textcolor{preprocessor}{\#define\ GAUGE\_FIELD\_H}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00003}00003\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00004}00004\ \textcolor{preprocessor}{\#include\ "{}hila.h"{}}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00005}00005\ \textcolor{preprocessor}{\#include\ "{}datatypes/sun.h"{}}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00006}00006\ \textcolor{preprocessor}{\#include\ "{}datatypes/representations.h"{}}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00007}00007\ \textcolor{preprocessor}{\#include\ "{}integrator.h"{}}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00008}00008\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00011}\mbox{\hyperlink{classgauge__field__base}{00011}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ sun>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base}}\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00012}00012\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00014}\mbox{\hyperlink{classgauge__field__base_a727a4fad505a5d7dc1b045d895f8e80e}{00014}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field__base_a727a4fad505a5d7dc1b045d895f8e80e}{basetype}}\ =\ hila::scalar\_type<sun>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00016}\mbox{\hyperlink{classgauge__field__base_a9f9f4aa20e8e240e1b2685de130ca7f3}{00016}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field__base_a9f9f4aa20e8e240e1b2685de130ca7f3}{gauge\_type}}\ =\ sun;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00018}\mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{00018}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{N}}\ =\ sun::size;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00021}\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{00021}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ \mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00024}\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{00024}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<sun>}}\ \mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00027}\mbox{\hyperlink{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea}{00027}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a204763ad47ffc900cb75d746ad4898ea}{refresh}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00029}\mbox{\hyperlink{classgauge__field__base_abb3b1c2368af04e06b39e819698a44e7}{00029}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_abb3b1c2368af04e06b39e819698a44e7}{set\_unity}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00031}\mbox{\hyperlink{classgauge__field__base_a6c68959f87cc42285e219923272a1626}{00031}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a6c68959f87cc42285e219923272a1626}{random}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00032}00032\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00034}\mbox{\hyperlink{classgauge__field__base_ae03bb8db75c725bd5d04a027ca06d6f0}{00034}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_ae03bb8db75c725bd5d04a027ca06d6f0}{add\_momentum}}(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{N}},\ \mbox{\hyperlink{classComplex}{Complex<basetype>}}>>\ *force)\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00036}\mbox{\hyperlink{classgauge__field__base_a2f83670dc7790b2e08e683780cf0b66a}{00036}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a2f83670dc7790b2e08e683780cf0b66a}{draw\_momentum}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00038}\mbox{\hyperlink{classgauge__field__base_ae76527abf82a1fcd4734a1dd4eb4011a}{00038}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_ae76527abf82a1fcd4734a1dd4eb4011a}{zero\_momentum}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00040}\mbox{\hyperlink{classgauge__field__base_addc9c94369482f532e9d89f663a2341c}{00040}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_addc9c94369482f532e9d89f663a2341c}{backup}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00043}\mbox{\hyperlink{classgauge__field__base_a116c7b6e1c1cd51711e8ed3036ec4e18}{00043}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_a116c7b6e1c1cd51711e8ed3036ec4e18}{restore\_backup}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00044}00044\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00047}\mbox{\hyperlink{classgauge__field__base_a33da644f6d068c0879e45ec9dd78cf89}{00047}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field__base_a33da644f6d068c0879e45ec9dd78cf89}{gauge\_type\_flt}}\ =\ sun;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00048}00048\ \};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00049}00049\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00051}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4}{00051}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{template}\ <\textcolor{keywordtype}{int},\ \textcolor{keyword}{typename}>\ \textcolor{keyword}{class\ }M,\ \textcolor{keywordtype}{int}\ N>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base}}<M<\mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{N}},\ double>>\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00052}00052\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00054}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a9b683890d4527dc6e08928169b7cd37e}{00054}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a9b683890d4527dc6e08928169b7cd37e}{basetype}}\ =\ double;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00056}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8}{00056}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ae1f32b6fae5531e5834893a69b0b8eb8}{gauge\_type}}\ =\ M<N,\ double>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00057}00057\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00059}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_acc2c18608b7a836fb5c077dabcd2ca20}{00059}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<gauge\_type>}}\ \mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00062}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ab9bb8be076bea59e870cb4b3376ca2aa}{00062}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<gauge\_type>}}\ \mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00063}00063\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00065}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac47dbea10a93ee6b2b9a5be98fb6a324}{00065}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac47dbea10a93ee6b2b9a5be98fb6a324}{refresh}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00067}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ad5facd9e7753fb52ba5fcaf6a6fc01be}{00067}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ad5facd9e7753fb52ba5fcaf6a6fc01be}{set\_unity}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00069}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac761b781d5a729449fb04d8fe09ef03d}{00069}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac761b781d5a729449fb04d8fe09ef03d}{random}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00070}00070\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00072}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a7a1c86a1e9f1f44eb38af06dd447f5c4}{00072}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a7a1c86a1e9f1f44eb38af06dd447f5c4}{add\_momentum}}(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classgauge__field__base_ab624ef4ae0f471aacaad88cc95b3c577}{N}},\ \mbox{\hyperlink{classComplex}{Complex<basetype>}}>>\ *force)\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00074}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aa4c6d421ec117ab085cbf58c345a85f9}{00074}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aa4c6d421ec117ab085cbf58c345a85f9}{draw\_momentum}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00076}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aab9bbb563355c6390e7905d22757f68d}{00076}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_aab9bbb563355c6390e7905d22757f68d}{zero\_momentum}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00078}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac7c51f305d5e7e32a0d2ae99a09fa5f5}{00078}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_ac7c51f305d5e7e32a0d2ae99a09fa5f5}{backup}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00081}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a4c0b7d8395a35b27ba7c2fe09b964747}{00081}}\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a4c0b7d8395a35b27ba7c2fe09b964747}{restore\_backup}}()\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00082}00082\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00084}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a6049bfd0ee555c1eaa186c6161bc6e99}{00084}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a6049bfd0ee555c1eaa186c6161bc6e99}{gauge\_type\_flt}}\ =\ M<N,\ float>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00086}\mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a437ed82503ccd961c1a10463ef5f6d05}{00086}}\ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<M<N,\ float>}}>\ \mbox{\hyperlink{classgauge__field__base_3_01M_3_01N_00_01double_01_4_01_4_a437ed82503ccd961c1a10463ef5f6d05}{get\_single\_precision}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00087}00087\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<M<N,\ float>}}>\ gauge\_flt;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00088}00088\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ gauge\_flt.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir]\ =\ \mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir];\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00089}00089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ gauge\_flt;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00090}00090\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00091}00091\ \};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00092}00092\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00094}00094\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N>\ \textcolor{keywordtype}{double}\ polyakov\_loop(Direction\ dir,\ \mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classSU}{SU<N>}}>\ (\&gauge)[NDIM])\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00095}00095\ \ \ \ \ \textcolor{comment}{//\ This\ implementation\ uses\ the\ onsites()\ to\ cycle\ through\ the}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00096}00096\ \ \ \ \ \textcolor{comment}{//\ NDIM-\/1\ dimensional\ planes.\ This\ is\ probably\ not\ the\ most}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00097}00097\ \ \ \ \ \textcolor{comment}{//\ efficient\ implementation.}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00098}00098\ \ \ \ \ \mbox{\hyperlink{classCoordinateVector__t}{CoordinateVector}}\ vol\ =\ lattice.size();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00099}00099\ \ \ \ \ \mbox{\hyperlink{classField}{Field<SU<N>}}>\ polyakov;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00100}00100\ \ \ \ \ polyakov[ALL]\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00101}00101\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ t\ =\ 0;\ t\ <\ vol[dir];\ t++)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00102}00102\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00103}00103\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (X.coordinate(dir)\ ==\ (t\ +\ 1)\ \%\ vol[dir])\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00104}00104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ polyakov[X]\ =\ polyakov[X]\ *\ gauge[dir][X\ -\/\ dir];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00105}00105\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00106}00106\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00107}00107\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00108}00108\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00109}00109\ \ \ \ \ \textcolor{keywordtype}{double}\ poly\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00110}00110\ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00111}00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (X.coordinates()[dir]\ ==\ 0)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00112}00112\ \ \ \ \ \ \ \ \ \ \ \ \ poly\ +=\ polyakov[X].trace().re;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00113}00113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00114}00114\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00115}00115\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00116}00116\ \ \ \ \ \textcolor{keywordtype}{double}\ v3\ =\ lattice.volume()\ /\ vol[dir];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00117}00117\ \ \ \ \ \textcolor{keywordflow}{return}\ poly\ /\ (N\ *\ v3);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00118}00118\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00119}00119\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00125}00125\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ SUN>}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00126}00126\ \mbox{\hyperlink{classField}{Field<SUN>}}\ calc\_staples(\mbox{\hyperlink{classField}{Field<SUN>}}\ *\mbox{\hyperlink{classU1}{U1}},\ \mbox{\hyperlink{classField}{Field<SUN>}}\ *U2,\ Direction\ dir1,\ Direction\ dir2)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00127}00127\ \ \ \ \ \mbox{\hyperlink{classField}{Field<SUN>}}\ staple\_sum;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00128}00128\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classField}{Field<SUN>}}\ down\_staple;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00129}00129\ \ \ \ \ staple\_sum[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00130}00130\ \ \ \ \ \textcolor{comment}{//\ Calculate\ the\ down\ side\ staple.}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00131}00131\ \ \ \ \ \textcolor{comment}{//\ This\ will\ be\ communicated\ up.}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00132}00132\ \ \ \ \ down\_staple[ALL]\ =\ U2[dir2][X\ +\ dir1].dagger()\ *\ \mbox{\hyperlink{classU1}{U1}}[dir1][X].dagger()\ *\ U2[dir2][X];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00133}00133\ \ \ \ \ \textcolor{comment}{//\ Forward\ staple}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00134}00134\ \ \ \ \ staple\_sum[ALL]\ =\ staple\_sum[X]\ +}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00135}00135\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ U2[dir2][X\ +\ dir1]\ *\ \mbox{\hyperlink{classU1}{U1}}[dir1][X\ +\ dir2].dagger()\ *\ U2[dir2][X].dagger();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00136}00136\ \ \ \ \ \textcolor{comment}{//\ Add\ the\ down\ staple}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00137}00137\ \ \ \ \ staple\_sum[ALL]\ =\ staple\_sum[X]\ +\ down\_staple[X\ -\/\ dir2];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00138}00138\ \ \ \ \ \textcolor{keywordflow}{return}\ staple\_sum;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00139}00139\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00140}00140\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00142}00142\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ SUN>\ \mbox{\hyperlink{classField}{Field<SUN>}}\ calc\_staples(\mbox{\hyperlink{classField}{Field<SUN>}}\ *U,\ Direction\ dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00143}00143\ \ \ \ \ \mbox{\hyperlink{classField}{Field<SUN>}}\ staple\_sum;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00144}00144\ \ \ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{classField}{Field<SUN>}}\ down\_staple;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00145}00145\ \ \ \ \ staple\_sum[ALL]\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00146}00146\ \ \ \ \ foralldir(dir2)\ \textcolor{keywordflow}{if}\ (dir2\ !=\ dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00147}00147\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Calculate\ the\ down\ side\ staple.}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00148}00148\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ will\ be\ communicated\ up.}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00149}00149\ \ \ \ \ \ \ \ \ down\_staple[ALL]\ =\ U[dir2][X\ +\ dir].dagger()\ *\ U[dir][X].dagger()\ *\ U[dir2][X];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00150}00150\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Forward\ staple}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00151}00151\ \ \ \ \ \ \ \ \ staple\_sum[ALL]\ =\ staple\_sum[X]\ +}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00152}00152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ U[dir2][X\ +\ dir]\ *\ U[dir][X\ +\ dir2].dagger()\ *\ U[dir2][X].dagger();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00153}00153\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ the\ down\ staple}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00154}00154\ \ \ \ \ \ \ \ \ staple\_sum[ALL]\ =\ staple\_sum[X]\ +\ down\_staple[X\ -\/\ dir2];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00155}00155\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00156}00156\ \ \ \ \ \textcolor{keywordflow}{return}\ staple\_sum;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00157}00157\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00158}00158\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00160}00160\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>\ \textcolor{keywordtype}{double}\ plaquette\_sum(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classSU}{SU<N,\ radix>}}>\ *U)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00161}00161\ \ \ \ \ \mbox{\hyperlink{classReduction}{Reduction<double>}}\ Plaq\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00162}00162\ \ \ \ \ Plaq.\mbox{\hyperlink{classReduction_a8d1d196a25e2bd63d3d10789e1754b75}{delayed}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00163}00163\ \ \ \ \ foralldir(dir1)\ foralldir(dir2)\ \textcolor{keywordflow}{if}\ (dir2\ <\ dir1)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00164}00164\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00165}00165\ \ \ \ \ \ \ \ \ \ \ \ \ element<SU<N,\ radix>>\ temp;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00166}00166\ \ \ \ \ \ \ \ \ \ \ \ \ temp\ =\ U[dir1][X]\ *\ U[dir2][X\ +\ dir1]\ *\ U[dir1][X\ +\ dir2].dagger()\ *}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00167}00167\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ U[dir2][X].dagger();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00168}00168\ \ \ \ \ \ \ \ \ \ \ \ \ Plaq\ +=\ 1\ -\/\ temp.trace().re\ /\ N;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00169}00169\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00170}00170\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00171}00171\ \ \ \ \ Plaq.\mbox{\hyperlink{classReduction_aa40a6e389ad4405c0d55b2e1b1d44ea8}{reduce}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00172}00172\ \ \ \ \ \textcolor{keywordflow}{return}\ Plaq;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00173}00173\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00174}00174\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00176}00176\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>\ \textcolor{keywordtype}{double}\ plaquette\_sum(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{Matrix<N,\ N,\ radix>}}>\ *U)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00177}00177\ \ \ \ \ \textcolor{keywordtype}{double}\ Plaq\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00178}00178\ \ \ \ \ foralldir(dir1)\ foralldir(dir2)\ \textcolor{keywordflow}{if}\ (dir2\ <\ dir1)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00179}00179\ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00180}00180\ \ \ \ \ \ \ \ \ \ \ \ \ element<SU<N,\ radix>>\ temp;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00181}00181\ \ \ \ \ \ \ \ \ \ \ \ \ temp\ =\ U[dir1][X]\ *\ U[dir2][X\ +\ dir1]\ *\ U[dir1][X\ +\ dir2].dagger()\ *}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00182}00182\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ U[dir2][X].dagger();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00183}00183\ \ \ \ \ \ \ \ \ \ \ \ \ Plaq\ +=\ 1\ -\/\ temp.trace()\ /\ N;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00184}00184\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00185}00185\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00186}00186\ \ \ \ \ \textcolor{keywordflow}{return}\ Plaq;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00187}00187\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00188}00188\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00193}\mbox{\hyperlink{classgauge__field}{00193}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ matrix>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classgauge__field}{gauge\_field}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base}}<matrix>\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00194}00194\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00196}\mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{00196}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{gauge\_type}}\ =\ matrix;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00199}\mbox{\hyperlink{classgauge__field_aa3a20a9bd2c473f7249d070215625323}{00199}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field_aa3a20a9bd2c473f7249d070215625323}{fund\_type}}\ =\ matrix;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00201}\mbox{\hyperlink{classgauge__field_a332b3cd0b42566e71babae8fefcc3372}{00201}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field_a332b3cd0b42566e71babae8fefcc3372}{basetype}}\ =\ hila::scalar\_type<matrix>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00203}\mbox{\hyperlink{classgauge__field_aac0971baaf696f12749268ad1b7c7281}{00203}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classgauge__field_aac0971baaf696f12749268ad1b7c7281}{N}}\ =\ matrix::size;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00205}\mbox{\hyperlink{classgauge__field_a5e911b848f75315ef621de39570fe523}{00205}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<matrix>}}\ \mbox{\hyperlink{classgauge__field_a5e911b848f75315ef621de39570fe523}{gauge\_backup}}[NDIM];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00206}00206\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00208}\mbox{\hyperlink{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0}{00208}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0}{set\_unity}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00209}00209\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00210}00210\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X]\ =\ 1;\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00211}00211\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00212}00212\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00213}00213\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00215}\mbox{\hyperlink{classgauge__field_a56e00674460fe00fc052a3637f00b88e}{00215}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a56e00674460fe00fc052a3637f00b88e}{random}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00216}00216\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00217}00217\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00218}00218\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X].random();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00219}00219\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00220}00220\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00221}00221\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00222}00222\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00224}\mbox{\hyperlink{classgauge__field_a992a5340137630d537be54e1bb452c21}{00224}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a992a5340137630d537be54e1bb452c21}{draw\_momentum}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00225}00225\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00226}00226\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00227}00227\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X].gaussian\_algebra();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00228}00228\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00229}00229\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00230}00230\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00231}00231\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00233}\mbox{\hyperlink{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402}{00233}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402}{zero\_momentum}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00234}00234\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ this-\/>\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][ALL]\ =\ 0;\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00235}00235\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00236}00236\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00238}\mbox{\hyperlink{classgauge__field_a40a5cb2c41bd75e1c24359393317b00c}{00238}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a40a5cb2c41bd75e1c24359393317b00c}{gauge\_update}}(\textcolor{keywordtype}{double}\ eps)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00239}00239\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00240}00240\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00241}00241\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<matrix>\ momexp\ =\ (eps\ *\ this-\/>\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X]).exp();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00242}00242\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X]\ =\ momexp\ *\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00243}00243\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00244}00244\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00245}00245\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00246}00246\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00249}\mbox{\hyperlink{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}{00249}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}{add\_momentum}}(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classgauge__field_aac0971baaf696f12749268ad1b7c7281}{N}},\ \mbox{\hyperlink{classComplex}{Complex<basetype>}}>>\ *force)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00250}00250\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00251}00251\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00252}00252\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ force[dir][X]\ =\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X]\ *\ force[dir][X];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00253}00253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ project\_antihermitean(force[dir][X]);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00254}00254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X]\ =\ this-\/>\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X]\ +\ force[dir][X];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00255}00255\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00256}00256\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00257}00257\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00258}00258\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00260}\mbox{\hyperlink{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}{00260}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}{backup}}()\ \{\ foralldir(dir)\ \mbox{\hyperlink{classgauge__field_a5e911b848f75315ef621de39570fe523}{gauge\_backup}}[dir]\ =\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir];\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00261}00261\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00263}\mbox{\hyperlink{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}{00263}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}{restore\_backup}}()\ \{\ foralldir(dir)\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir]\ =\ \mbox{\hyperlink{classgauge__field_a5e911b848f75315ef621de39570fe523}{gauge\_backup}}[dir];\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00264}00264\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00266}\mbox{\hyperlink{classgauge__field_a826c0db8d7b5e880dc148a4aa799294e}{00266}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_a826c0db8d7b5e880dc148a4aa799294e}{read\_file}}(std::string\ filename)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00267}00267\ \ \ \ \ \ \ \ \ std::ifstream\ inputfile;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00268}00268\ \ \ \ \ \ \ \ \ inputfile.open(filename,\ std::ios::in\ |\ std::ios::binary);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00269}00269\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ read\_fields(inputfile,\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir]);\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00270}00270\ \ \ \ \ \ \ \ \ inputfile.close();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00271}00271\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00272}00272\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00274}\mbox{\hyperlink{classgauge__field_afabc7773b67c334043e42e8ddd6df805}{00274}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__field_afabc7773b67c334043e42e8ddd6df805}{write\_file}}(std::string\ filename)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00275}00275\ \ \ \ \ \ \ \ \ std::ofstream\ outputfile;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00276}00276\ \ \ \ \ \ \ \ \ outputfile.open(filename,\ std::ios::out\ |\ std::ios::trunc\ |\ std::ios::binary);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00277}00277\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{\ write\_fields(outputfile,\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir]);\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00278}00278\ \ \ \ \ \ \ \ \ outputfile.close();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00279}00279\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00280}00280\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00282}\mbox{\hyperlink{classgauge__field_ab9f46c717bdee404f23c544febd3ec90}{00282}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classgauge__field_ab9f46c717bdee404f23c544febd3ec90}{plaquette}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00283}00283\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ plaquette\_sum(this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}})\ /\ (lattice.volume()\ *\ NDIM\ *\ (NDIM\ -\/\ 1)\ /\ 2);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00284}00284\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00285}00285\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00287}\mbox{\hyperlink{classgauge__field_a7e8349e8587014235fe5875bf8a11e0e}{00287}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classgauge__field_a7e8349e8587014235fe5875bf8a11e0e}{polyakov}}(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ polyakov\_loop(dir,\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}});\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00288}00288\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00290}\mbox{\hyperlink{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae}{00290}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<gauge\_type>}}\ \&\mbox{\hyperlink{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae}{get\_momentum}}(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ this-\/>\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir];\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00292}\mbox{\hyperlink{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6}{00292}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<gauge\_type>}}\ \&\mbox{\hyperlink{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6}{get\_gauge}}(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir];\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00293}00293\ \};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00294}00294\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00297}\mbox{\hyperlink{classrepresented__gauge__field}{00297}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ repr>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classrepresented__gauge__field}{represented\_gauge\_field}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base}}<repr>\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00298}00298\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00300}\mbox{\hyperlink{classrepresented__gauge__field_a78e1b4afeda242a10725ebe80a969dd5}{00300}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classrepresented__gauge__field_a78e1b4afeda242a10725ebe80a969dd5}{gauge\_type}}\ =\ repr;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00302}\mbox{\hyperlink{classrepresented__gauge__field_a0e7a45e68b3e6ef8cc92a36d529d5832}{00302}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classrepresented__gauge__field_a0e7a45e68b3e6ef8cc92a36d529d5832}{fund\_type}}\ =\ \textcolor{keyword}{typename}\ repr::sun;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00304}\mbox{\hyperlink{classrepresented__gauge__field_a15cefaa7b3c284489d270f3143d08f63}{00304}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classrepresented__gauge__field_a15cefaa7b3c284489d270f3143d08f63}{basetype}}\ =\ hila::scalar\_type<repr>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00306}\mbox{\hyperlink{classrepresented__gauge__field_a1fd4c099850f7e5fe3d3767b9b793318}{00306}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classrepresented__gauge__field_a1fd4c099850f7e5fe3d3767b9b793318}{Nf}}\ =\ fund\_type::size;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00308}\mbox{\hyperlink{classrepresented__gauge__field_aeece076924c0735dbb8861d874770f0b}{00308}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classrepresented__gauge__field_aeece076924c0735dbb8861d874770f0b}{N}}\ =\ repr::size;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00310}\mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{00310}}\ \ \ \ \ \mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&\mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00311}00311\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00313}\mbox{\hyperlink{classrepresented__gauge__field_ada65f1396979859a029d5291e10700ec}{00313}}\ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_ada65f1396979859a029d5291e10700ec}{represented\_gauge\_field}}(\mbox{\hyperlink{classgauge__field}{gauge\_field<fund\_type>}}\ \&f)\ :\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}(f)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00314}00314\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<repr>}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00315}00315\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00317}\mbox{\hyperlink{classrepresented__gauge__field_ab08d006cad5c82c0175e8a16715f14ee}{00317}}\ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_ab08d006cad5c82c0175e8a16715f14ee}{represented\_gauge\_field}}(\mbox{\hyperlink{classrepresented__gauge__field}{represented\_gauge\_field}}\ \&r)\ :\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}(r.\mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}})\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00318}00318\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__field__base}{gauge\_field\_base<repr>}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00319}00319\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00320}00320\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00322}\mbox{\hyperlink{classrepresented__gauge__field_a77876e1d6ca4978cf73781d3730ea407}{00322}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_a77876e1d6ca4978cf73781d3730ea407}{refresh}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00323}00323\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00324}00324\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir].\mbox{\hyperlink{classField_ab5b73a0d1ca55fb875e39558c721cc81}{check\_alloc}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00325}00325\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00326}00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X].represent(\mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X]);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00327}00327\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00328}00328\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00329}00329\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00330}00330\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00333}\mbox{\hyperlink{classrepresented__gauge__field_a2add98c0580e7be603b2f69fc0842131}{00333}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_a2add98c0580e7be603b2f69fc0842131}{set\_unity}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00334}00334\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a425ddbeeec2c945b3aac949a17dbe3f0}{set\_unity}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00335}00335\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_a77876e1d6ca4978cf73781d3730ea407}{refresh}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00336}00336\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00337}00337\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00340}\mbox{\hyperlink{classrepresented__gauge__field_acdad71d854db2db25da1cf1b14d617a9}{00340}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_acdad71d854db2db25da1cf1b14d617a9}{random}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00341}00341\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a56e00674460fe00fc052a3637f00b88e}{random}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00342}00342\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_a77876e1d6ca4978cf73781d3730ea407}{refresh}}();}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00343}00343\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00344}00344\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00347}\mbox{\hyperlink{classrepresented__gauge__field_a0eb8b7548ecdaf817dad365ab1d7c262}{00347}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_a0eb8b7548ecdaf817dad365ab1d7c262}{add\_momentum}}(\mbox{\hyperlink{classField}{Field}}<\mbox{\hyperlink{classMatrix}{SquareMatrix}}<\mbox{\hyperlink{classrepresented__gauge__field_aeece076924c0735dbb8861d874770f0b}{N}},\ \mbox{\hyperlink{classComplex}{Complex<basetype>}}>>\ (\&force)[NDIM])\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00348}00348\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00349}00349\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00350}00350\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ element<fund\_type>\ fforce;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00351}00351\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fforce\ =\ repr::project\_force(this-\/>\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}}[dir][X]\ *\ force[dir][X]);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00352}00352\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X]\ =\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X]\ +\ fforce;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00353}00353\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00354}00354\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00355}00355\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00356}00356\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00359}\mbox{\hyperlink{classrepresented__gauge__field_a7b204f67106778b4f2591be7d3e1c8fb}{00359}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_a7b204f67106778b4f2591be7d3e1c8fb}{draw\_momentum}}()\ \{\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a992a5340137630d537be54e1bb452c21}{draw\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00360}00360\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00362}\mbox{\hyperlink{classrepresented__gauge__field_aa95829f587ca8e6d98d62f5541939348}{00362}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_aa95829f587ca8e6d98d62f5541939348}{zero\_momentum}}()\ \{\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a3a382f5975cec2c713cb6bb3cd410402}{zero\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00363}00363\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00366}\mbox{\hyperlink{classrepresented__gauge__field_a5df3cf9a664f62370c24081ea507df63}{00366}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_a5df3cf9a664f62370c24081ea507df63}{backup}}()\ \{\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}{backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00367}00367\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00369}\mbox{\hyperlink{classrepresented__gauge__field_a18e3fa6db777540c1bdd72837dc54bd1}{00369}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classrepresented__gauge__field_a18e3fa6db777540c1bdd72837dc54bd1}{restore\_backup}}()\ \{\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}{restore\_backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00370}00370\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00372}\mbox{\hyperlink{classrepresented__gauge__field_ad15ecde5ac0deedbf9d57499e82a0ad1}{00372}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<fund\_type>}}\ \&\mbox{\hyperlink{classrepresented__gauge__field_ad15ecde5ac0deedbf9d57499e82a0ad1}{get\_momentum}}(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_afd8c8de73ce0050c1fa18f14521941ae}{get\_momentum}}(dir);\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00374}\mbox{\hyperlink{classrepresented__gauge__field_a018863dc76891c08d360440081ef723f}{00374}}\ \ \ \ \ \mbox{\hyperlink{classField}{Field<fund\_type>}}\ \&\mbox{\hyperlink{classrepresented__gauge__field_a018863dc76891c08d360440081ef723f}{get\_gauge}}(\textcolor{keywordtype}{int}\ dir)\ \{\ \textcolor{keywordflow}{return}\ \mbox{\hyperlink{classrepresented__gauge__field_a12c4993129ba9936a55fcec3afea4100}{fundamental}}.\mbox{\hyperlink{classgauge__field_a5a777edc74cab3d4ce823aff24ddf3d6}{get\_gauge}}(dir);\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00375}00375\ \};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00376}00376\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00378}00378\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00379}00379\ \textcolor{keyword}{using\ }\mbox{\hyperlink{classrepresented__gauge__field}{symmetric\_gauge\_field}}\ =\ \mbox{\hyperlink{classrepresented__gauge__field}{represented\_gauge\_field<symmetric<N,\ radix>}}>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00381}00381\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00382}00382\ \textcolor{keyword}{using\ }\mbox{\hyperlink{classrepresented__gauge__field}{antisymmetric\_gauge\_field}}\ =\ \mbox{\hyperlink{classrepresented__gauge__field}{represented\_gauge\_field<antisymmetric<N,\ radix>}}>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00384}00384\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ radix>}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00385}00385\ \textcolor{keyword}{using\ }\mbox{\hyperlink{classrepresented__gauge__field}{adjoint\_gauge\_field}}\ =\ \mbox{\hyperlink{classrepresented__gauge__field}{represented\_gauge\_field<adjointRep<N,\ radix>}}>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00386}00386\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00387}00387\ \textcolor{comment}{/*******************}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00388}00388\ \textcolor{comment}{\ *\ Action\ terms}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00389}00389\ \textcolor{comment}{\ *******************/}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00390}00390\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00396}00396\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ gauge\_field>}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00397}\mbox{\hyperlink{classgauge__momentum__action}{00397}}\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classgauge__momentum__action}{gauge\_momentum\_action}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classaction__base}{action\_base}},\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classintegrator__base}{integrator\_base}}\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00398}00398\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00400}\mbox{\hyperlink{classgauge__momentum__action_a4f1b63bb87d7792081232ec3013cb142}{00400}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field}{gauge\_field\_type}}\ =\ \mbox{\hyperlink{classgauge__field}{gauge\_field}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00402}\mbox{\hyperlink{classgauge__momentum__action_af1ae68338b8d29465174c34a0f17602e}{00402}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__momentum__action_af1ae68338b8d29465174c34a0f17602e}{gauge\_mat}}\ =\ \textcolor{keyword}{typename}\ \mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{gauge\_field::gauge\_type}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00404}\mbox{\hyperlink{classgauge__momentum__action_a54933961810132e587c0b9ebd08c30f7}{00404}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classgauge__momentum__action_a54933961810132e587c0b9ebd08c30f7}{N}}\ =\ gauge\_mat::size;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00406}\mbox{\hyperlink{classgauge__momentum__action_af9ab47ea409f3e88cc36c3edc5ee2f7d}{00406}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{momtype}}\ =\ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<hila::scalar\_type<gauge\_mat>}}>>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00407}00407\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00409}\mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{00409}}\ \ \ \ \ \mbox{\hyperlink{classgauge__field}{gauge\_field}}\ \&\mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00410}00410\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00412}\mbox{\hyperlink{classgauge__momentum__action_a4699524ecebddd248659c1a9d1da7ccd}{00412}}\ \ \ \ \ \mbox{\hyperlink{classgauge__momentum__action_a4699524ecebddd248659c1a9d1da7ccd}{gauge\_momentum\_action}}(\mbox{\hyperlink{classgauge__field}{gauge\_field}}\ \&g)\ :\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}(g)\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00414}\mbox{\hyperlink{classgauge__momentum__action_a1970981f15bef85b39d1e82fcd60361c}{00414}}\ \ \ \ \ \mbox{\hyperlink{classgauge__momentum__action_a1970981f15bef85b39d1e82fcd60361c}{gauge\_momentum\_action}}(\mbox{\hyperlink{classgauge__momentum__action}{gauge\_momentum\_action}}\ \&ga)\ :\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}(ga.\mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}})\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00415}00415\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00417}\mbox{\hyperlink{classgauge__momentum__action_a91656fcb73fcdc6541121433015ac5ba}{00417}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classgauge__momentum__action_a91656fcb73fcdc6541121433015ac5ba}{action}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00418}00418\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ Sa\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00419}00419\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00420}00420\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{\ Sa\ +=\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}.\mbox{\hyperlink{classgauge__field__base_a407c95d7c72a9913a6574732a9cef87a}{momentum}}[dir][X].algebra\_norm();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00421}00421\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00422}00422\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Sa;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00423}00423\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00424}00424\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00426}\mbox{\hyperlink{classgauge__momentum__action_a96f9bc02fff0142b94a9218e29814cca}{00426}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__momentum__action_a96f9bc02fff0142b94a9218e29814cca}{draw\_gaussian\_fields}}()\ \{\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}.\mbox{\hyperlink{classgauge__field_a992a5340137630d537be54e1bb452c21}{draw\_momentum}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00427}00427\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00428}00428\ \ \ \ \ \textcolor{comment}{/*\ The\ following\ allow\ using\ a\ gauge\ action\ as\ the\ lowest\ level}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00429}00429\ \textcolor{comment}{\ \ \ \ \ \ \ of\ an\ integrator.\ */}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00431}\mbox{\hyperlink{classgauge__momentum__action_aadab28871bebfd206766153d4bdc0bee}{00431}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__momentum__action_aadab28871bebfd206766153d4bdc0bee}{backup\_fields}}()\ \{\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}.\mbox{\hyperlink{classgauge__field_a5899cc72b1f6e0bada3931a1596f5f82}{backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00432}00432\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00434}\mbox{\hyperlink{classgauge__momentum__action_a345d405edffa9abb9742a9df23ab17e9}{00434}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__momentum__action_a345d405edffa9abb9742a9df23ab17e9}{restore\_backup}}()\ \{\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}.\mbox{\hyperlink{classgauge__field_a31575499f11413aeb2ca929bf7cc81ff}{restore\_backup}}();\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00435}00435\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00439}00439\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00441}\mbox{\hyperlink{classgauge__momentum__action_ae227beacf9d7ec638fbbca2d2a86fa05}{00441}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__momentum__action_ae227beacf9d7ec638fbbca2d2a86fa05}{step}}(\textcolor{keywordtype}{double}\ eps)\ \{\ \mbox{\hyperlink{classgauge__momentum__action_a7a9da7affb43797f0c3579acec8fc913}{gauge}}.\mbox{\hyperlink{classgauge__field_a40a5cb2c41bd75e1c24359393317b00c}{gauge\_update}}(eps);\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00442}00442\ \};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00443}00443\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00448}\mbox{\hyperlink{classgauge__action}{00448}}\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ gauge\_field>\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classgauge__action}{gauge\_action}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{classaction__base}{action\_base}}\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00449}00449\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00451}\mbox{\hyperlink{classgauge__action_ae4a9d005daad7081e7b4e9cb2283b6b6}{00451}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__field}{gauge\_field\_type}}\ =\ \mbox{\hyperlink{classgauge__field}{gauge\_field}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00453}\mbox{\hyperlink{classgauge__action_a0697a454bd9eee43bbe120ea02c422a3}{00453}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classgauge__action_a0697a454bd9eee43bbe120ea02c422a3}{gauge\_mat}}\ =\ \textcolor{keyword}{typename}\ \mbox{\hyperlink{classgauge__field_a4e5de47aa00ea5e9aca7cccb6eedfd6d}{gauge\_field::gauge\_type}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00455}\mbox{\hyperlink{classgauge__action_a0fc774ffd4c2e62d1b4dec6838f6ec60}{00455}}\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{classgauge__action_a0fc774ffd4c2e62d1b4dec6838f6ec60}{N}}\ =\ gauge\_mat::size;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00457}\mbox{\hyperlink{classgauge__action_a1686b27bc1924bdaee259f6be71faaca}{00457}}\ \ \ \ \ \textcolor{keyword}{using\ }\mbox{\hyperlink{classMatrix}{momtype}}\ =\ \mbox{\hyperlink{classMatrix}{SquareMatrix<N,\ Complex<hila::scalar\_type<gauge\_mat>}}>>;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00458}00458\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00460}\mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{00460}}\ \ \ \ \ \mbox{\hyperlink{classgauge__field}{gauge\_field}}\ \&\mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00462}\mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{00462}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{beta}};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00463}00463\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00465}\mbox{\hyperlink{classgauge__action_a6b29e263e7c8c1242f0c0b5597cbea44}{00465}}\ \ \ \ \ \mbox{\hyperlink{classgauge__action_a6b29e263e7c8c1242f0c0b5597cbea44}{gauge\_action}}(\mbox{\hyperlink{classgauge__field}{gauge\_field}}\ \&g,\ \textcolor{keywordtype}{double}\ b)\ :\ \mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}}(g),\ \mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{beta}}(b)\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00467}\mbox{\hyperlink{classgauge__action_a1843b8ca303a0296e4fa7d0d7964aed4}{00467}}\ \ \ \ \ \mbox{\hyperlink{classgauge__action_a1843b8ca303a0296e4fa7d0d7964aed4}{gauge\_action}}(\mbox{\hyperlink{classgauge__action}{gauge\_action}}\ \&ga)\ :\ \mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}}(ga.\mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}}),\ \mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{beta}}(ga.\mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{beta}})\ \{\}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00468}00468\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00470}\mbox{\hyperlink{classgauge__action_aacbf492b32bea1e1c6f99755fc7e8b32}{00470}}\ \ \ \ \ \textcolor{keywordtype}{double}\ \mbox{\hyperlink{classgauge__action_aacbf492b32bea1e1c6f99755fc7e8b32}{action}}()\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00471}00471\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{double}\ Sg\ =\ \mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{beta}}\ *\ plaquette\_sum(\mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}}.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}});}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00472}00472\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Sg;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00473}00473\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00474}00474\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00476}\mbox{\hyperlink{classgauge__action_a5e1c0e4e2eddd6ab5a34af23f5924559}{00476}}\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{classgauge__action_a5e1c0e4e2eddd6ab5a34af23f5924559}{force\_step}}(\textcolor{keywordtype}{double}\ eps)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00477}00477\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<gauge\_mat>}}\ staple;}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00478}00478\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classField}{Field<momtype>}}\ force[NDIM];}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00479}00479\ \ \ \ \ \ \ \ \ foralldir(dir)\ \{}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00480}00480\ \ \ \ \ \ \ \ \ \ \ \ \ staple\ =\ calc\_staples(\mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}}.\mbox{\hyperlink{classgauge__field__base_a4bc7ae2a28e184e2cc3c7c974dea95e9}{gauge}},\ dir);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00481}00481\ \ \ \ \ \ \ \ \ \ \ \ \ onsites(ALL)\ \{\ force[dir][X]\ =\ (-\/\mbox{\hyperlink{classgauge__action_a2dad2ec129fec70185bbfd7d290491f5}{beta}}\ *\ eps\ /\ \mbox{\hyperlink{classgauge__action_a0fc774ffd4c2e62d1b4dec6838f6ec60}{N}})\ *\ staple[X];\ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00482}00482\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00483}00483\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{classgauge__action_ad80e6e0d57f66f0edd85023f8a7cdc49}{gauge}}.\mbox{\hyperlink{classgauge__field_ad5e0a9c4d07c11e867666c2453c05a86}{add\_momentum}}(force);}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00484}00484\ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00485}00485\ \};}
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00486}00486\ }
+\DoxyCodeLine{\Hypertarget{gauge__field_8h_source_l00487}00487\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

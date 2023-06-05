@@ -1,0 +1,96 @@
+\doxysection{logger\+\_\+class Class Reference}
+\hypertarget{classlogger__class}{}\label{classlogger__class}\index{logger\_class@{logger\_class}}
+
+
+Define the logger class here.  
+
+
+
+
+{\ttfamily \#include $<$logger.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{classlogger__class_ab24616ee8f270083e40916d425a44e42}\label{classlogger__class_ab24616ee8f270083e40916d425a44e42} 
+{\bfseries logger\+\_\+class} ()
+\begin{DoxyCompactList}\small\item\em Constructor without parameters, set the logger to std\+::out. \end{DoxyCompactList}\item 
+\Hypertarget{classlogger__class_a39ae32c4855a01e60da923d6758dffec}\label{classlogger__class_a39ae32c4855a01e60da923d6758dffec} 
+{\bfseries logger\+\_\+class} (std\+::string filename)
+\begin{DoxyCompactList}\small\item\em Construct with filename. \end{DoxyCompactList}\item 
+\Hypertarget{classlogger__class_a8dda856ab85cf81961f25bb0be7019c4}\label{classlogger__class_a8dda856ab85cf81961f25bb0be7019c4} 
+{\bfseries logger\+\_\+class} (std\+::ostream stream)
+\begin{DoxyCompactList}\small\item\em Construct with stream. \end{DoxyCompactList}\item 
+\Hypertarget{classlogger__class_af77d77c3bbd6c215564c5e2e52d85dcf}\label{classlogger__class_af77d77c3bbd6c215564c5e2e52d85dcf} 
+{\bfseries \texorpdfstring{$\sim$}{\string~}logger\+\_\+class} ()
+\begin{DoxyCompactList}\small\item\em Close the file in the destructor. \end{DoxyCompactList}\item 
+\Hypertarget{classlogger__class_ad3f567b657adec3cd5055f3e39742a53}\label{classlogger__class_ad3f567b657adec3cd5055f3e39742a53} 
+void {\bfseries set\+\_\+verbosity} (int level)
+\begin{DoxyCompactList}\small\item\em Set logging level. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classlogger__class_ad87b86eab9c9069954601ebdd22fa471}{increase\+\_\+level}} ()
+\item 
+void \mbox{\hyperlink{classlogger__class_a246060678fe6f27294ff6d968fee0b39}{decrease\+\_\+level}} ()
+\item 
+\Hypertarget{classlogger__class_a6d11903b85e47b6b82bcdbdf1b738abe}\label{classlogger__class_a6d11903b85e47b6b82bcdbdf1b738abe} 
+void {\bfseries set\+\_\+output} (std\+::ostream stream)
+\begin{DoxyCompactList}\small\item\em Set the output stream. \end{DoxyCompactList}\item 
+\Hypertarget{classlogger__class_a6836bf53db18463331532fb289c80825}\label{classlogger__class_a6836bf53db18463331532fb289c80825} 
+void {\bfseries set\+\_\+output} (std\+::string filename)
+\begin{DoxyCompactList}\small\item\em Open stream to a file. Interprets strings as filenames. \end{DoxyCompactList}\item 
+\Hypertarget{classlogger__class_a71bbb43695e3ee218ec7a59345552d0a}\label{classlogger__class_a71bbb43695e3ee218ec7a59345552d0a} 
+{\footnotesize template$<$typename T $>$ }\\void {\bfseries log} (T text)
+\begin{DoxyCompactList}\small\item\em Log function. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+{\footnotesize template$<$typename T $>$ }\\\mbox{\hyperlink{classlogger__class}{logger\+\_\+class}} \& \mbox{\hyperlink{classlogger__class_a88ffd44a24c759a3ad1c6a3d8aa5b04e}{operator$<$$<$}} (\mbox{\hyperlink{classlogger__class}{logger\+\_\+class}} \&logger, T rhs)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Define the logger class here. 
+
+Definition at line \mbox{\hyperlink{logger_8h_source_l00008}{8}} of file \mbox{\hyperlink{logger_8h_source}{logger.\+h}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{classlogger__class_a246060678fe6f27294ff6d968fee0b39}\label{classlogger__class_a246060678fe6f27294ff6d968fee0b39} 
+\index{logger\_class@{logger\_class}!decrease\_level@{decrease\_level}}
+\index{decrease\_level@{decrease\_level}!logger\_class@{logger\_class}}
+\doxysubsubsection{\texorpdfstring{decrease\_level()}{decrease\_level()}}
+{\footnotesize\ttfamily void logger\+\_\+class\+::decrease\+\_\+level (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Decrease logging level. Should be called when exiting a specialized area of code. 
+
+Definition at line \mbox{\hyperlink{logger_8h_source_l00044}{44}} of file \mbox{\hyperlink{logger_8h_source}{logger.\+h}}.
+
+\Hypertarget{classlogger__class_ad87b86eab9c9069954601ebdd22fa471}\label{classlogger__class_ad87b86eab9c9069954601ebdd22fa471} 
+\index{logger\_class@{logger\_class}!increase\_level@{increase\_level}}
+\index{increase\_level@{increase\_level}!logger\_class@{logger\_class}}
+\doxysubsubsection{\texorpdfstring{increase\_level()}{increase\_level()}}
+{\footnotesize\ttfamily void logger\+\_\+class\+::increase\+\_\+level (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Increase logging level. Should be called when entering a specialized area of code. 
+
+Definition at line \mbox{\hyperlink{logger_8h_source_l00040}{40}} of file \mbox{\hyperlink{logger_8h_source}{logger.\+h}}.
+
+
+
+\doxysubsection{Friends And Related Symbol Documentation}
+\Hypertarget{classlogger__class_a88ffd44a24c759a3ad1c6a3d8aa5b04e}\label{classlogger__class_a88ffd44a24c759a3ad1c6a3d8aa5b04e} 
+\index{logger\_class@{logger\_class}!operator$<$$<$@{operator$<$$<$}}
+\index{operator$<$$<$@{operator$<$$<$}!logger\_class@{logger\_class}}
+\doxysubsubsection{\texorpdfstring{operator$<$$<$}{operator<<}}
+{\footnotesize\ttfamily template$<$typename T $>$ \\
+\mbox{\hyperlink{classlogger__class}{logger\+\_\+class}} \& operator$<$$<$ (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classlogger__class}{logger\+\_\+class}} \&}]{logger,  }\item[{T}]{rhs }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+Streaming operator for the logger class. Only node 0 prints. This should also accept formatting correctly. 
+
+Definition at line \mbox{\hyperlink{logger_8h_source_l00077}{77}} of file \mbox{\hyperlink{logger_8h_source}{logger.\+h}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+logger.\+h\end{DoxyCompactItemize}
