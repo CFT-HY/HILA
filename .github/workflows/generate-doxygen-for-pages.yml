@@ -4,7 +4,7 @@ name: Deploy Jekyll with GitHub Pages dependencies preinstalled
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["master"]
+    branches: documentation
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -37,12 +37,9 @@ jobs:
           destination: ./_site
       - name: Doxygen generate
         run: |
-          git pull https://github.com/CFT-HY/HILA/tree/documentation
-          cd documentation
           doxygen docs/config
-          zip -r docs/html.zip docs/html
       - name: Upload artifact
-        uses: HILA/docs/html.zip
+        uses: docs/html
 
   # Deployment job
   deploy:
