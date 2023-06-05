@@ -39,7 +39,13 @@ Lastly the `src` directory is the directory where the user will define their HIL
 
 This file structure is necessary for the use of the makefile which handles the linking of HILA libraries used by the user.
 
-## Makefile system
+## Table of contents
+
+1. [Makefile system](#makefile-system)
+2. [Simple HILA application](#simple-hila-application)
+3. [Conclusion](#conclusion)
+
+## Makefile system {#makefile-system}
 
 Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
 
@@ -51,20 +57,31 @@ TODO: Figure out syntax highlighs and wrapping for markdown
 # Can be absolute or relative 
 HILA_DIR := ../..
 
-#A useful definition is to set the default target backend to be used for computing. In our example we set the default target backend to vanilla, which is the pure CPU MPI implementation.
-#This allows one to skip the need of defining ARCH in the make process `make ARCH=vanilla -> make`.
+# A useful definition is to set the default target backend to be used for computing. 
+# In our example we set the default target backend to vanilla, which is the pure 
+# CPU MPI implementation.
+# This allows one to skip the need of defining ARCH in the make process 
+# `make ARCH=vanilla -> make`.
 ifndef ARCH
 ARCH := vanilla
 endif
 
-# We then include the default makefile for hila applications which handles all the nitty gritty of defining paths for the target architecture and linking all the necessary libraries. This make file also handles use of the hila preprocessor:
+# We then include the default makefile for hila applications which handles all
+# the nitty gritty of defining paths for the target architecture and linking 
+# all the necessary libraries. This make file also handles use of the hila preprocessor:
 include $(HILA_DIR)/libraries/main.mk
 
-#One can also define options for the HILA preprocessor in this makefile by appending to the environment variable HILAPP_OPTS
-#In the example code with add the `-check-init` flag, but for now we will not explain what it's use is. We will discuss all the hila preprocessor flags later in the documentation.
+# One can also define options for the HILA preprocessor in this makefile by 
+# appending to the environment variable HILAPP_OPTS
+
+# In the example code with add the `-check-init` flag, but for now we will 
+# not explain what it's use is. We will discuss all the hila preprocessor 
+# flags later in the documentation.
 HILAPP_OPTS += -check-init
 
-#Additionally one can add HILA application options in the makefile. For example we set the system dimensions by appending to the `APP_OPTS` environment variable
+# Additionally one can add HILA application options in the makefile. 
+# For example we set the system dimensions by appending to the 
+# `APP_OPTS` environment variable
 APP_OPTS += -DNDIM=3
 
 # With multiple targets we want to use "make target", not "make build/target".
@@ -100,7 +117,7 @@ The target backends are defined in the folder HILA/libraries/target_arch. There 
 
 And ones which are defined for specific HPC platforms:
 
-| ARCH       | Description                                               |
+| ARCH=       | Description                                               |
 |------------|-----------------------------------------------------------|
 | `lumi      ` | CPU-MPI implementation for LUMI supercomputer             |
 | `lumi-hip  ` | GPU-MPI implementation for LUMI supercomputer using HIP   |
@@ -109,7 +126,7 @@ And ones which are defined for specific HPC platforms:
 
 The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.
 
-## Simple hila application
+## Simple hila application {#simple-hila-application}
 
 Now that we have discussed the appropriate makefile we can move on to a simple HILA application.
 
@@ -224,3 +241,41 @@ AHHH SCARY PUT IT AWAY!!!
 </details>
 
 As we can see the expansion is complicated and scary, one can imagine how complicated it get's with different computing platforms. The X variable withing the onsites loop is a reserved variable within HILA applications. This variable is what defines the index of every point within the field. Appropriately the command `f[X].gaussian_random()` defines a gaussian random number for each point X within the field f. The ALL parameter within the onsites loop defines that we will iterate throughout the whole field. We will discuss variability of this parameter later in the documentation.
+
+Next we compute \f$g(X) = |\nabla^2 f(X)| = \sum_{d \in \hat{e}} |f(X + d) - 2f(X) + f(X-d)| \f$, where \f$\hat{e} = \{e_x,e_y,e_z\}\f$ being the set of unit vectors that allow us to iterate over all directions. In HILA to iterate over all directions we use the foralldir pragma. The resulting HILA code is:
+
+```cpp
+foralldir(d) {
+    g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
+}
+```
+
+We use a sum reduction assignment operator withing the foralldir pragma to indicate the sum in the laplacian equation. With assignment operators we can use the ALL variable directly to index the field f, which is equivalent to writing:
+
+```cpp
+foralldir(d) {
+    onsites(ALL) g[X] += abs(f[X+d] - 2*f[X] + f[X-d]);
+}
+```
+
+We then compute the average of this previously computed norm of the Laplacian of the field f using a similar sum reduction with the assignment operator:
+
+```cpp
+double average = 0;
+onsites(ALL) {
+    average += g[X];
+}
+```
+
+We compute the average of each point with respect to the size of the system, which is give by `lattice.volume()`, since the lattice holds all the information of the systems structure. To output this value we use the default stream for text which limits the output only to the root node, so that we do not duplicate output from all mpi ranks. This default stream is held within the `hila::out0` command contained in the `hila` namespace. It is of type `std::ostream` meaning that it is essentially an alias to `std::cout` of the zeroth node.
+
+```cpp
+average = average/lattice.volume()
+hila::out0 << "Average of g is " << average << '\n';
+```
+
+Lastly we wrap up the HILA application with the `hila::finishrun` command which cleans up mpi and performs a safe exit with a memory cleanup step. Additionally it prints out useful timing information coupled with a timestamp. Like `hila::initialize`, `lattice.setup` and `hila::seed_random`, this is a necessary method to call in any HILA application, especially when running with MPI.
+
+## Conclusion {#conclusion}
+
+This concludes the section on creating your first HILA application. We have gone through the basic structure of HILA applications, and how they are built and compiled. Additionally we have discussed basic functionality that HILA offers. With this foundational knowledge one can move on to reading the comprehensive guide on [HILA functionality](./hila_functionality.md)

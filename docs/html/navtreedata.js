@@ -27,27 +27,29 @@ var NAVTREE =
   [ "HILA", "index.html", [
     [ "Description and Installation", "index.html", "index" ],
     [ "Creating your first HILA application", "md_guide_2hila__applications.html", [
-      [ "Makefile system", "md_guide_2hila__applications.html#autotoc_md0", [
-        [ "Target backends", "md_guide_2hila__applications.html#autotoc_md1", null ]
+      [ "Table of contents", "md_guide_2hila__applications.html#autotoc_md0", null ],
+      [ "Makefile system", "md_guide_2hila__applications.html#makefile-system", [
+        [ "Target backends", "md_guide_2hila__applications.html#autotoc_md3", null ]
       ] ],
-      [ "Simple hila application", "md_guide_2hila__applications.html#autotoc_md2", null ]
+      [ "Simple hila application", "md_guide_2hila__applications.html#simple-hila-application", null ],
+      [ "Conclusion", "md_guide_2hila__applications.html#conclusion", null ]
     ] ],
     [ "HILA Functionality", "md_guide_2hila__functionality.html", [
-      [ "Datatypes", "md_guide_2hila__functionality.html#autotoc_md3", null ],
-      [ "Field access and traversal", "md_guide_2hila__functionality.html#autotoc_md4", null ],
-      [ "Input library", "md_guide_2hila__functionality.html#autotoc_md5", null ],
-      [ "Check input and layout", "md_guide_2hila__functionality.html#autotoc_md6", null ],
-      [ "HILA pre-processor tool", "md_guide_2hila__functionality.html#autotoc_md7", null ]
+      [ "Datatypes", "md_guide_2hila__functionality.html#autotoc_md1", null ],
+      [ "Field access and traversal", "md_guide_2hila__functionality.html#autotoc_md2", null ],
+      [ "Input library", "md_guide_2hila__functionality.html#autotoc_md4", null ],
+      [ "Check input and layout", "md_guide_2hila__functionality.html#autotoc_md5", null ],
+      [ "HILA pre-processor tool", "md_guide_2hila__functionality.html#autotoc_md6", null ]
     ] ],
     [ "Singularity container for HILA pre-processor", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html", [
-      [ "Building container from scratch", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md25", [
-        [ "1. Installing singularity", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md26", null ],
-        [ "2. Building singularity container", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md27", null ]
+      [ "Building container from scratch", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md26", [
+        [ "1. Installing singularity", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md27", null ],
+        [ "2. Building singularity container", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md28", null ]
       ] ],
-      [ "Using singulartiy container", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md28", null ]
+      [ "Using singulartiy container", "md__2home_2aaron_2Documents_2HILA_2singularity_2README.html#autotoc_md29", null ]
     ] ],
     [ "Docker image for HILA", "md__2home_2aaron_2Documents_2HILA_2docker_2README.html", [
-      [ "Developing with docker", "md__2home_2aaron_2Documents_2HILA_2docker_2README.html#autotoc_md30", null ]
+      [ "Developing with docker", "md__2home_2aaron_2Documents_2HILA_2docker_2README.html#autotoc_md24", null ]
     ] ],
     [ "Todo List", "todo.html", null ],
     [ "Namespaces", "namespaces.html", [
