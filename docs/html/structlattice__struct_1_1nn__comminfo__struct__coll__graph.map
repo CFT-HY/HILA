@@ -1,5 +1,0 @@
-<map id="lattice_struct::nn_comminfo_struct" name="lattice_struct::nn_comminfo_struct">
-<area shape="rect" id="Node000001" title="nn&#45;communication has only 1 node to talk to" alt="" coords="14,123,153,163"/>
-<area shape="rect" id="Node000002" href="$structlattice__struct_1_1comm__node__struct.html" title="Information necessary to communicate with a node." alt="" coords="5,5,161,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,59,86,122,81,122,81,59"/>
-</map>

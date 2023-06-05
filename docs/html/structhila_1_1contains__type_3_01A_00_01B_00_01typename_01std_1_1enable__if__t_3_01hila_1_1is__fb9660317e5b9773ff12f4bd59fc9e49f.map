@@ -1,4 +1,0 @@
-<map id="hila::contains_type&lt; A, B, typename std::enable_if_t&lt; hila::is_field_class_type&lt; A &gt;::value &amp;&amp;!std::is_same&lt; A, B &gt;::value &gt; &gt;" name="hila::contains_type&lt; A, B, typename std::enable_if_t&lt; hila::is_field_class_type&lt; A &gt;::value &amp;&amp;!std::is_same&lt; A, B &gt;::value &gt; &gt;">
-<area shape="rect" id="node1" title=" " alt="" coords="228,5,420,105"/>
-<area shape="rect" id="node2" title=" " alt="" coords="5,20,180,91"/>
-</map>
