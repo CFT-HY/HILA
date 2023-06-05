@@ -1,9 +1,0 @@
-<map id="node_info" name="node_info">
-<area shape="rect" id="Node000001" title="useful information about a node" alt="" coords="41,287,128,312"/>
-<area shape="rect" id="Node000002" href="$classCoordinateVector__t.html" title=" " alt="" coords="11,169,158,209"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,223,87,286,82,286,82,223"/>
-<area shape="rect" id="Node000003" href="$classMatrix.html" title="Generic Matrix class fwd definition." alt="" coords="5,95,164,120"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="87,134,87,169,82,169,82,134"/>
-<area shape="rect" id="Node000004" href="$classMatrix__t.html" title=" " alt="" coords="5,5,164,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="87,59,87,94,82,94,82,59"/>
-</map>

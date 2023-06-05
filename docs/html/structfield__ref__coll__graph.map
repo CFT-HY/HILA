@@ -1,5 +1,0 @@
-<map id="field_ref" name="field_ref">
-<area shape="rect" id="node1" title="field_ref contains info about references to field vars within loops" alt="" coords="37,184,112,211"/>
-<area shape="rect" id="node2" href="$structfield__info.html" title=" " alt="" coords="33,95,116,121"/>
-<area shape="rect" id="node3" href="$structvectorization__info.html" title="Stores information about how a field is vectorized." alt="" coords="5,5,144,32"/>
-</map>

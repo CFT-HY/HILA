@@ -1,6 +1,0 @@
-<map id="action_sum" name="action_sum">
-<area shape="rect" id="Node000001" title=" " alt="" coords="7,108,104,133"/>
-<area shape="rect" id="Node000002" href="$classaction__base.html" title=" " alt="" coords="5,5,105,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="56,45,55,55,55,84,57,107,52,108,50,84,50,55,51,44"/>
-<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="58,45,58,108,53,108,53,45"/>
-</map>

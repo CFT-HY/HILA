@@ -1,9 +1,0 @@
-<map id="lattice_struct::allnodes" name="lattice_struct::allnodes">
-<area shape="rect" id="Node000001" title="information about all nodes" alt="" coords="5,287,176,312"/>
-<area shape="rect" id="Node000002" href="$classCoordinateVector__t.html" title=" " alt="" coords="17,169,164,209"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,223,93,286,88,286,88,223"/>
-<area shape="rect" id="Node000003" href="$classMatrix.html" title="Generic Matrix class fwd definition." alt="" coords="11,95,170,120"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="93,134,93,169,88,169,88,134"/>
-<area shape="rect" id="Node000004" href="$classMatrix__t.html" title=" " alt="" coords="11,5,170,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="93,59,93,94,88,94,88,59"/>
-</map>

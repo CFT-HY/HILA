@@ -1,7 +1,0 @@
-\_form#0=274x40:\[ S_{gauge} = \sum_x \beta\left [ 1 - Re \sum_{\mu>\nu} U_{x,\mu} U_{x+\mu,\nu} U^\dagger_{x+\nu, \mu} U^\dagger_{x,\nu} \right ] \]
-\_form#1=274x40:\[ S_{fermion} = e^{-\sum_{x,y} \chi_x^\dagger \left(\frac{1}{D^\dagger D}\right)_{x,y} \chi_y}. \]
-\_form#2=274x40:\[ Z_{fermion} = \int d\chi e^{-S_{fermion}} = det\left( D^\dagger D \right) \]
-\_form#3=274x40:\[ det\left( D^\dagger D \right) = det\left( (D + m)^\dagger (D + m) \right) det\left( \frac{ D^\dagger D }{(D + m)^\dagger (D + m)} \right) \]
-\_form#4=274x40:\[ out = CG(D) in = \frac{1}{D^\dagger D} in. \]
-\_form#5=274x40:$g(X) = |\nabla^2 f(X)| = \sum_{d \in \hat{e}} |f(X + d) - 2f(X) + f(X-d)| $
-\_form#6=274x40:$\hat{e} = \{e_x,e_y,e_z\}$
