@@ -34,8 +34,6 @@ jobs:
         run: |
           sudo apt-get install doxygen -y
           doxygen docs/config
-      - name: Upload artifact
-        uses: ./docs/html
 
   # Deployment job
   deploy:
@@ -45,6 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Upload artifact
+          uses: actions/upload-pages-artifact@v1
+          with:
+            # Upload entire repository
+            path: './docs/html'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
