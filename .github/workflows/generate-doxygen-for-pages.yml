@@ -32,7 +32,7 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Doxygen generate
         run: |
-          sudo apt-get install doxygen -y
+          sudo apt-get install doxygen graphviz -y
           doxygen docs/config
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
