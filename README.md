@@ -38,15 +38,7 @@ lattice fields differently for different computing platforms: 'array of structur
 
 ## Installation and documentation
 
-Installation and user guide can be viewed on the [web documentation](https://cft-hy.github.io/HILA/html/index.html)
-
-To generate the user guide and technical documentation locally one can run:
-
-    doxygen /docs/config 
-
-To open the documentation locally with any browser:
-
-    firefox /docs/html/index.html
+Installation and user guide can be viewed on the [web documentation](https://cft-hy.github.io/HILA)
 
 ## License 
 
