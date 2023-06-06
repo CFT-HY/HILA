@@ -3,13 +3,13 @@ Description and Installation  {#mainpage}
 
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
-Purpose: make writing applications straightforward and intuitive, while producing optimized executables for 
+**Purpose**: make writing applications straightforward and intuitive, while producing optimized executables for 
 different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
 etc.).  Details of the parallelization and computing architecture are hidden from the user's view, and 
 all applications automatically run on present or future platform.
 Write once -- run anywhere.
 
-Hila is based on hila preprocessor "hilapp", which is a C++ source-to-source transformer using the 
+Hila is based on hila preprocessor (hilapp), which is a C++ source-to-source transformer using the 
 [libtooling](https://clang.llvm.org/docs/LibTooling.html) toolbox of the
 [Clang](https://clang.llvm.org/) compiler.
 It converts application C++ to platform-specific C++ code,
@@ -24,6 +24,7 @@ lattice fields differently for different computing platforms: 'array of structur
 2. [Installation](#installation)
 3. [User Guide](#user-guide)
 
+
 ## Dependencies {#dependencies}
 
 ### Hilapp
@@ -34,9 +35,12 @@ lattice fields differently for different computing platforms: 'array of structur
 
 #### Installing dependencies for HILA preprocessor:
 
-If one opts to use a singularity container skip to HILA applications dependencies.
 
-If one opts to use a docker container, skip  directly to the [installation](#installation) section.
+> __NOTE__: 
+>
+> _If one opts to use a singularity container, **skip** to HILA applications dependencies._
+>
+> _If one opts to use a docker container, **skip** to  [installation](#installation) section._
 
 For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 22.04:
 
@@ -59,9 +63,12 @@ sudo apt-get -y install clang-$LLVM_VERSION \
 
 #### Installing dependencies for HILA applications:
 
-If one opts to use docker, skip directly to the [installation](#installation) section.
 
-Installing all non GPU dependencies on ubuntu:
+> __NOTE__: _If one opts to use docker, **skip** directly to the [installation](#installation) section._
+
+
+**Installing non GPU dependencies on ubuntu**:
+
 ~~~bash
 sudo apt install build-essential \
             libopenmpi-dev \
@@ -69,13 +76,16 @@ sudo apt install build-essential \
             libomp-dev
 ~~~
 
+
 **CUDA:**
 
 See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
 
+
 **HIP:**
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
+
 
 ## Installation{#installation}
 
@@ -89,21 +99,26 @@ The installation process is split into two parts. Building the HILA preprocessor
 
 When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.
 
+
 #### LINUX
 
 HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the hila preprocessor directly.
+
 
 #### MAC
 
 On mac the installation of the HILA preprocessor dependencies and HILA application dependencies can be tedious, and in some cases impossible. Availability of clang libtoolbox is open ended. For this reason the best option is to use the available [docker](#docker) container.
 
+
 #### WINDOWS
 
 On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. 
 
+
 #### HPC
 
 On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platfroms the best solution is to opt to use the [singularity](#singularity) container. 
+
 
 **After installing the hila preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
@@ -552,6 +567,7 @@ Additionally we have some ARCH values tuned for specific HPC platforms:
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
 We will discuss the computing platforms more in the creating a hila application guide.
+
 
 ## User guide {#user-guide}
 
