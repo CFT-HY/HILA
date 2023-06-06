@@ -53,39 +53,24 @@ The following makefile handles the compilation of two seperate hila example appl
 
 TODO: Figure out syntax highlighs and wrapping for markdown
 ~~~makefile
-# Give the location of the top level distribution directory wrt. this location.
-# Can be absolute or relative 
+# Give the location of the top level distribution directory wrt. this location. Can be absolute or relative 
 HILA_DIR := ../..
 
-# A useful definition is to set the default target backend to be used for computing. 
-# In our example we set the default target backend to vanilla, which is the pure 
-# CPU MPI implementation.
-# This allows one to skip the need of defining ARCH in the make process 
-# `make ARCH=vanilla -> make`.
+# A useful definition is to set the default target backend to be used for computing. In our example we set the default target backend to vanilla, which is the pure CPU MPI implementation. This allows one to skip the need of defining ARCH in the make process `make ARCH=vanilla -> make`.
 ifndef ARCH
 ARCH := vanilla
 endif
 
-# We then include the default makefile for hila applications which handles all
-# the nitty gritty of defining paths for the target architecture and linking 
-# all the necessary libraries. This make file also handles use of the hila preprocessor:
+# We then include the default makefile for hila applications which handles all the nitty gritty of defining paths for the target architecture and linking all the necessary libraries. This make file also handles use of the hila preprocessor:
 include $(HILA_DIR)/libraries/main.mk
 
-# One can also define options for the HILA preprocessor in this makefile by 
-# appending to the environment variable HILAPP_OPTS
-
-# In the example code with add the `-check-init` flag, but for now we will 
-# not explain what it's use is. We will discuss all the hila preprocessor 
-# flags later in the documentation.
+# One can also define options for the HILA preprocessor in this makefile by appending to the environment variable HILAPP_OPTS. In the example code with add the `-check-init` flag, but for now we will not explain what it's use is. We will discuss all the hila preprocessor flags later in the documentation.
 HILAPP_OPTS += -check-init
 
-# Additionally one can add HILA application options in the makefile. 
-# For example we set the system dimensions by appending to the 
-# `APP_OPTS` environment variable
+# Additionally one can add HILA application options in the makefile. For example we set the system dimensions by appending to the `APP_OPTS` environment variable.
 APP_OPTS += -DNDIM=3
 
-# With multiple targets we want to use "make target", not "make build/target".
-# This is needed to carry the dependencies to build-subdir
+# With multiple targets we want to use "make target", not "make build/target". This is needed to carry the dependencies to build-subdir
 hila_example: build/hila_example ; @:
 hila_simple_example: build/hila_simple_example ; @:
 
