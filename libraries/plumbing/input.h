@@ -1,3 +1,4 @@
+/** @file input.h */
 #ifndef PARAM_INPUT_H
 #define PARAM_INPUT_H
 
@@ -232,8 +233,7 @@ class input {
         open(fname);
     }
 
-    bool open(const std::string &fname, bool use_cmdline = true,
-              bool exit_on_error = true);
+    bool open(const std::string &fname, bool use_cmdline = true, bool exit_on_error = true);
     void close();
 
     // make class quiet (no printouts), quiet(false) returns to normal
@@ -252,11 +252,10 @@ class input {
         /// cast operator does the conversion - disable nullptr_t cast used
         /// in hila types
         /// disable type "char" because then c++ does not know how to initialize strings
-        template <typename T,
-                  std::enable_if_t<(hila::is_complex_or_arithmetic<T>::value &&
-                                    !std::is_same<T, char>::value) ||
-                                       std::is_same<T, std::string>::value,
-                                   int> = 0>
+        template <typename T, std::enable_if_t<(hila::is_complex_or_arithmetic<T>::value &&
+                                                !std::is_same<T, char>::value) ||
+                                                   std::is_same<T, std::string>::value,
+                                               int> = 0>
         operator T() {
             T val;
             if (!parent->get_value(val, label, true))
@@ -280,10 +279,9 @@ class input {
             return val;
         }
 
-        template <typename T,
-                  std::enable_if_t<hila::is_complex_or_arithmetic<T>::value ||
-                                       std::is_same<T, std::string>::value,
-                                   int> = 0>
+        template <typename T, std::enable_if_t<hila::is_complex_or_arithmetic<T>::value ||
+                                                   std::is_same<T, std::string>::value,
+                                               int> = 0>
         operator std::vector<T>() {
             std::vector<T> val;
             if (!parent->get_value(val, label, true))
@@ -316,8 +314,8 @@ class input {
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
-                    hila::out << "Error: expecting a value of type '" << type_id<T>()
-                                 << "' after '" << label << "'\n";
+                    hila::out << "Error: expecting a value of type '" << type_id<T>() << "' after '"
+                              << label << "'\n";
 
                 no_error = false;
             }
@@ -347,12 +345,11 @@ class input {
             std::string tok;
             T re, im;
 
-            no_error = (match_token("(") && get_token(tok) && is_value(tok, re) &&
-                        match_token(",") && get_token(tok) && is_value(tok, im) &&
-                        match_token(")"));
+            no_error =
+                (match_token("(") && get_token(tok) && is_value(tok, re) && match_token(",") &&
+                 get_token(tok) && is_value(tok, im) && match_token(")"));
             if (!no_error && speaking) {
-                hila::out << "Error: expecting complex value '(re,im)' after '"
-                             << label << "'\n";
+                hila::out << "Error: expecting complex value '(re,im)' after '" << label << "'\n";
             }
 
             val = Complex<T>(re, im);
@@ -378,8 +375,8 @@ class input {
             }
 
             if (!no_error && speaking) {
-                hila::out << "Error: expecting " << n << " comma-separated "
-                             << type_id<T>() << "s after '" << label << "'\n";
+                hila::out << "Error: expecting " << n << " comma-separated " << type_id<T>()
+                          << "s after '" << label << "'\n";
             }
         }
 
@@ -416,8 +413,8 @@ class input {
             }
 
             if (!no_error && speaking) {
-                hila::out << "Error: expecting a comma-separated list of "
-                             << type_id<T>() << "s after '" << label << "'\n";
+                hila::out << "Error: expecting a comma-separated list of " << type_id<T>()
+                          << "s after '" << label << "'\n";
             }
         }
 
