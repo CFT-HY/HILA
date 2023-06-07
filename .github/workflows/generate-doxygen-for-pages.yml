@@ -36,10 +36,11 @@ jobs:
           wget https://www.doxygen.nl/files/doxygen-1.9.7.linux.bin.tar.gz
           tar -xf doxygen-1.9.7.linux.bin.tar.gz
           doxygen-1.9.7/bin/doxygen docs/config
+          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: './docs/html' './docs/images'
+          path: './docs/html'
 
   # Deployment job
   deploy:
