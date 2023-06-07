@@ -51,7 +51,6 @@ Each application requires a makefile to link the necessary HILA libraries and to
 
 The following makefile handles the compilation of two seperate hila example applications `hila_example.cpp` and `hila_simple_example.cpp`:
 
-TODO: Figure out syntax highlighs and wrapping for markdown
 ~~~makefile
 # Give the location of the top level distribution directory wrt. this location. Can be absolute or relative 
 HILA_DIR := ../..
@@ -81,7 +80,6 @@ build/hila_example: Makefile build/hila_example.o $(HILA_OBJECTS) $(HEADERS)
 build/hila_simple_example: Makefile build/hila_simple_example.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/hila_simple_example.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 ~~~
-TODO: Fix doxygen not understanding makefile syntax highlights and text wrapping
 
 The only point of note is the definition for the respective object file locations with ` build/hila_simple_example.o`. For an applications this needs to be formatted in the same way as above, otherwise linking of c++ libraries and HILA objects will not be done correctly. The general format would be:
 
@@ -115,7 +113,7 @@ The latter definitions are due to the module systems and non-standard paths defi
 
 Now that we have discussed the appropriate makefile we can move on to a simple HILA application.
 
-We offer a simple HILA application `hila_simple_example.cpp` which computes a random gaussian field (f), it's derivative (g) and the average of the derivative field is given by:
+We offer a simple HILA application `hila_simple_example.cpp` which computes a random gaussian field (f), its laplacian (g) and the average of the laplacian field is given by:
 
 ~~~cpp
 #include "hila.h"

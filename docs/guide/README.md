@@ -99,6 +99,7 @@ The installation process is split into two parts. Building the HILA preprocessor
 
 When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.
 
+### Platforms
 
 #### LINUX
 
@@ -126,7 +127,7 @@ On supercomputing platforms the HILA application dependencies are most likely av
 
 **After installing the hila preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
-### Containers
+### Containers {#containers}
 
 HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
 
@@ -134,15 +135,100 @@ HILA comes with both a singularity and docker container for differing purposes. 
 
 The docker container is meant to develop and produce HILA applications, libraries and _hilapp_ with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
 
-For instructions on using the docker container have a look at the [README.md](../../docker/README.md) in the docker folder
+<details>
+<summary> Docker container instructions </summary>
+
+---
+
+All commands are run in `docker` folder
+
+__Docker image for HILA__
+
+Create docker image:
+
+    docker build -t hila -f Dockerfile .
+
+Launch image interactively with docker compose
+
+    docker compose run --rm hila-applications
+
+__Developing with docker__
+
+The applications folder is automatically mounted from the local host to the docker image when launching the service hila-applications
+
+    ../applications:/HILA/applications
+
+This allows one to develop HILA applications directly from source and launch them in the docker image with ease.
+
+When developing hila libraries and hilapp one can also launch the service hila-source which mounts the HILA/libraries and HILA/hilapp/src folders to the container
+
+    docker compose run --rm hila-source
+
+---
+
+</details>
 
 #### Singularity {#singularity}
 
 The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of _hilapp_. This approach is mainly meant to be used for pre processing applications on an HPC platform.
 
-For instructions on installing singularity and building containers have a look at the [README.md](../../singularity/README.md) in the singularity folder
+<details>
+<summary> Singularity container instructions </summary>
 
-### HILA preprocessor {#hila-preprocessor}
+---
+
+One can download the singularity container hilapp.sif directly from this github repositories release page. If downloaded skip directly to the **Using singulartiy container** section:
+
+```
+wget https://github.com/CFT-HY/HILA/releases/download/Nightly/hilapp.sif
+```
+
+__Installing singularity__
+
+Simplest way to install singularity is by downloading the latest .deb or .rpm from github [release page](https://github.com/sylabs/singularity/releases) and installing directly with ones package manager
+
+Ubuntu:
+```
+dpkg -i singularity-ce_$(SINGULARITY_VERSION)-$(UBUNTU_VERSION)_amd64.deb
+```
+
+__Building singularity container__
+
+> __NOTE__: sudo privileges are required for building a singularity container
+
+For building the container we have two options. One can either build the container using the release version of hilapp from github or one can build using the local hilapp source.  Especially in the situation that one is developing the hila preprocessor and would like to test it on a HPC platform then building the singularity container from a local source is the preferred option. There are two different singularity definition files for both cases.
+
+Building using release version:
+```
+sudo singularity build hilapp.sif hilapp_git.def
+```
+
+Building using local source
+```
+sudo singularity build hilapp.sif hilapp_local.def
+```
+
+
+__Using singulartiy container__
+
+The hilapp.sif file will act as a singularity container and equivalently as the hilapp binary and can be used as such when pre processing HILA code. Thus you can move it to your HILA projects bin folder
+
+```
+mkdir HILA/hilapp/bin
+mv hilapp.sif HILA/hilapp/bin/hilapp
+```
+
+Now one can simply move the singularity container to any give supercomputer.
+
+Note that on supercomputers the default paths aren't the same as on default linux operating systems. Thus one will need to mount their HILA source folder to singularity using the APPTAINER_BIND environment variable. Simple navigate to the base of your HILA source directory and run
+
+    export APPTAINER_BIND=$(pwd)
+
+---
+
+</details>
+
+### Building HILA preprocessor {#hila-preprocessor}
 
 Before building the preprocessor one must first install the dependencies. See the [dependencies](#dependencies)
 
@@ -156,11 +242,7 @@ make install
 
 This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the default location for the program.  Build takes 1-2 min. 
 
-("By default, _hilapp_ Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`." Is this detail too complicated? Should just stick to clang in this part.) 
-
-- *NOTE: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 
-  processors (by far most common), you can use `make static` -command to build statically linked _hilapp_. 
-  Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine. Simpler approach for HPC platforms is use of singularity containers*
+> __NOTE__: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 processors (by far most common), you can use `make static` -command to build statically linked _hilapp_. Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine. Simpler approach for HPC platforms is use of singularity containers
   
 Test that _hilapp_ works:
 
@@ -428,8 +510,6 @@ where ARCH can take the following values:
 | `cuda` | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
 | `hip` | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
 
-TODO: add dependencies to table
-
 For cuda compilation one needs to define their CUDA version and architercure either as environment variables or during the make process:
 
 ~~~bash
@@ -439,7 +519,7 @@ make ARCH=cuda
 or
 make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 ~~~
-*NOTE: Default cuda version is 11.6 and compute architecture is sm_61*
+> __NOTE__: Default cuda version is 11.6 and compute architecture is sm_61*
 
 Now if we execute the cuda version one should expect the following output
 
@@ -578,5 +658,3 @@ We will discuss the computing platforms more in the creating a hila application 
 Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./hila_applications.md)
 
 After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./hila_functionality.md)
-
-#include "./hila_applications.md"
