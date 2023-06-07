@@ -29,9 +29,9 @@ applications/
 
 In the structure HILA offers a directly, aptly named `applications`, where one can create their respective application directories. In here we have created a application directory `hila_example` which we will highlight in this section. Inside the `hila_example` directory we have the following necessary parts, visible in the above directory tree. 
 
-The `build` directory is the location to which the `.o` object files are dumped into. The object files are compiled from the `.cpt` files — these will be discussed later in the documentation — created by the hila preprocessor. The resulting executable after compilation is also compiled into this directory.
+The `build` directory is the location to which the `.o` object files are dumped into. The object files are compiled from the `.cpt` files — these will be discussed later in the documentation — created by the HILA preprocessor. The resulting executable after compilation is also compiled into this directory.
 
-The `Makefile` is self evidently the necessary makefile used by make to compile the hila application.
+The `Makefile` is self evidently the necessary makefile used by make to compile the HILA application.
 
 The `parameters` file is an optional file to define application parameters into. This is not necessary for the use of HILA applications, but is quite useful. This will be discussed later
 
@@ -109,7 +109,7 @@ And ones which are defined for specific HPC platforms:
 
 The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.
 
-## Simple hila application {#simple-hila-application}
+## Simple HILA application {#simple-hila-application}
 
 Now that we have discussed the appropriate makefile we can move on to a simple HILA application.
 
@@ -175,7 +175,7 @@ hila::seed_random(32345);
 
 The first command `hila::initialize(argc,argv)` handles the initialization of mpi and reading in command line arguments and parameter files. This is a vital part of all HILA applications, but it is not too important for the user to understand what happens within it. 
 
-Next we setup the lattice and it's size with the command `lattice.setup({32,32,32})`. The `lattice` object is defined globally within hila and contains all the information on how the lattice is split within MPI. As with initialization, this is also a vital part of any HILA application, but is designed in a way where the user need not worry about it. Note that due to NDIM option above passing for example `{32,32}` to `lattice.setup()` would result in a runtime error. TODO: CATCH THIS ERROR
+Next we setup the lattice and it's size with the command `lattice.setup({32,32,32})`. The `lattice` object is defined globally within HILA and contains all the information on how the lattice is split within MPI. As with initialization, this is also a vital part of any HILA application, but is designed in a way where the user need not worry about it. Note that due to NDIM option above passing for example `{32,32}` to `lattice.setup()` would result in a runtime error. TODO: CATCH THIS ERROR
 
 Lastly for setup we initialize the random number generator with the command `hila::seed_random(32345)`. This will initialise the random number generator with the seed 32345.
 

@@ -1,21 +1,21 @@
 Description and Installation  {#mainpage}
 ========= 
 
-Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
+HILA (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
 **Purpose**: make writing applications straightforward and intuitive, while producing optimized executables for 
-different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
+different (super)computing platforms (parallelization with MPI, GPU computing with CUDA or HIP, AVX vectorization, 
 etc.).  Details of the parallelization and computing architecture are hidden from the user's view, and 
 all applications automatically run on present or future platform.
 Write once -- run anywhere.
 
-Hila is based on hila preprocessor (_hilapp_), which is a C++ source-to-source transformer using the 
+Hila is based on HILA preprocessor (_hilapp_), which is a C++ source-to-source transformer using the 
 [libtooling](https://clang.llvm.org/docs/LibTooling.html) toolbox of the
 [Clang](https://clang.llvm.org/) compiler.
 It converts application C++ to platform-specific C++ code,
 which is passed to appropriate compilers for the platforms.
 
-Behind the scenes hila takes care of MPI layout and communications.  It lays out the 
+Behind the scenes HILA takes care of MPI layout and communications.  It lays out the 
 lattice fields differently for different computing platforms: 'array of structures' (standard),
 'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
 
@@ -103,7 +103,7 @@ When it comes to installing HILA applications there are many avenues one can tak
 
 #### LINUX
 
-HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the hila preprocessor directly.
+HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the HILA preprocessor directly.
 
 > __NOTE__: It is advised to use the docker container only for development purposes, since containerization can add computational overhead. This is especially evident in containerized MPI communication.
 >
@@ -125,7 +125,7 @@ On windows the installation of the HILA preprocessor dependencies and HILA appli
 On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platforms the best solution is to opt to use the [singularity](#singularity) container. 
 
 
-**After installing the hila preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
+**After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
 ### Containers {#containers}
 
@@ -160,7 +160,7 @@ The applications folder is automatically mounted from the local host to the dock
 
 This allows one to develop HILA applications directly from source and launch them in the docker image with ease.
 
-When developing hila libraries and hilapp one can also launch the service hila-source which mounts the HILA/libraries and HILA/hilapp/src folders to the container
+When developing HILA libraries and hilapp one can also launch the service hila-source which mounts the HILA/libraries and HILA/hilapp/src folders to the container
 
     docker compose run --rm hila-source
 
@@ -196,7 +196,7 @@ __Building singularity container__
 
 > __NOTE__: sudo privileges are required for building a singularity container
 
-For building the container we have two options. One can either build the container using the release version of hilapp from github or one can build using the local hilapp source.  Especially in the situation that one is developing the hila preprocessor and would like to test it on a HPC platform then building the singularity container from a local source is the preferred option. There are two different singularity definition files for both cases.
+For building the container we have two options. One can either build the container using the release version of hilapp from github or one can build using the local hilapp source.  Especially in the situation that one is developing the HILA preprocessor and would like to test it on a HPC platform then building the singularity container from a local source is the preferred option. There are two different singularity definition files for both cases.
 
 Building using release version:
 ```
@@ -650,7 +650,7 @@ Additionally we have some ARCH values tuned for specific HPC platforms:
 | `mahti` | CPU-MPI implementation for MAHTI supercomputer            |
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
-We will discuss the computing platforms more in the creating a hila application guide.
+We will discuss the computing platforms more in the creating a HILA application guide.
 
 
 ## User guide {#user-guide}
