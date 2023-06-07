@@ -1,3 +1,5 @@
+name: Deploy singularity container to github release page under nightly release
+
 on:
   push:
     branches:
@@ -22,7 +24,7 @@ jobs:
       #     sudo singularity build hilapp.sif hilapp_local.def
       #     cd ..
       - name: Update nightly release
-        uses: eine/tip@master
+        uses: pyTooling/Actions/releaser@main
         with:
           tag: Nightly
           rm: true
