@@ -15,18 +15,19 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      # - name: build-singularity-container
-      #   run: |
-      #     wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
-      #     sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
-      #     cd singularity
-      #     sudo singularity build hilapp.sif hilapp_local.def
-      #     cd ..
+      #Build singularity container
+      - name: build-singularity-container
+        run: |
+          wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
+          sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
+          cd singularity
+          sudo singularity build hilapp.sif hilapp_local.def
+          cd ..
+      #Publish singularity container
       - name: Update nightly release
         uses: pyTooling/Actions/releaser@main
         with:
           tag: Nightly
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./singularity/hilapp_git.def
+          files: ./singularity/hilapp.sif
