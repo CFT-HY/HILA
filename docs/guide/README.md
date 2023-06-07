@@ -104,7 +104,7 @@ When it comes to installing HILA applications there are many avenues one can tak
 
 HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the hila preprocessor directly.
 
-> __NOTE__: It is advised to use the docker container for development purposes, since containerization can add computational overhead. This is especially evident in containerized MPI communication.
+> __NOTE__: It is advised to use the docker container only for development purposes, since containerization can add computational overhead. This is especially evident in containerized MPI communication.
 >
 > Containerization of the __hilapp__ on the other hand adds no computational overhead, except in the compilation process, thus for production runs one can use the singularity container and reach maximal computational performance.
 
