@@ -23,6 +23,7 @@ jobs:
           cd singularity
           sudo singularity build hilapp.sif hilapp_local.def
           cd ..
+          ls -l --block-size=M ./singularity/hilapp.sif
       #Publish singularity container
       - name: Update nightly release
         uses: pyTooling/Actions/releaser@main
