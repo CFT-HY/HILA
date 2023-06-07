@@ -38,12 +38,9 @@ jobs:
           doxygen-1.9.7/bin/doxygen docs/config
           
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v1
         with:
-          name: website-artifacts
-          path: |
-            ./docs/html
-            ./docs/images
+          path: './docs/html'
 
   # Deployment job
   deploy:

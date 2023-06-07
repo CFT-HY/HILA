@@ -49,7 +49,7 @@ This file structure is necessary for the use of the makefile which handles the l
 
 Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
 
-The following makefile handles the compilation of two seperate hila example applications `hila_example.cpp` and `hila_simple_example.cpp`:
+The following makefile handles the compilation of two seperate HILA example applications `hila_example.cpp` and `hila_simple_example.cpp`:
 
 ~~~makefile
 # Give the location of the top level distribution directory wrt. this location. Can be absolute or relative 
@@ -60,10 +60,10 @@ ifndef ARCH
 ARCH := vanilla
 endif
 
-# We then include the default makefile for hila applications which handles all the nitty gritty of defining paths for the target architecture and linking all the necessary libraries. This make file also handles use of the hila preprocessor:
+# We then include the default makefile for HILA applications which handles all the nitty gritty of defining paths for the target architecture and linking all the necessary libraries. This make file also handles use of the HILA preprocessor:
 include $(HILA_DIR)/libraries/main.mk
 
-# One can also define options for the HILA preprocessor in this makefile by appending to the environment variable HILAPP_OPTS. In the example code with add the `-check-init` flag, but for now we will not explain what it's use is. We will discuss all the hila preprocessor flags later in the documentation.
+# One can also define options for the HILA preprocessor in this makefile by appending to the environment variable HILAPP_OPTS. In the example code with add the `-check-init` flag, but for now we will not explain what it's use is. We will discuss all the HILA preprocessor flags later in the documentation.
 HILAPP_OPTS += -check-init
 
 # Additionally one can add HILA application options in the makefile. For example we set the system dimensions by appending to the `APP_OPTS` environment variable.
