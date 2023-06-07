@@ -9,7 +9,7 @@ etc.).  Details of the parallelization and computing architecture are hidden fro
 all applications automatically run on present or future platform.
 Write once -- run anywhere.
 
-Hila is based on hila preprocessor (hilapp), which is a C++ source-to-source transformer using the 
+Hila is based on hila preprocessor (_hilapp_), which is a C++ source-to-source transformer using the 
 [libtooling](https://clang.llvm.org/docs/LibTooling.html) toolbox of the
 [Clang](https://clang.llvm.org/) compiler.
 It converts application C++ to platform-specific C++ code,
@@ -95,7 +95,7 @@ Begin by cloning HILA repository:
 git clone https://github.com/CFT-HY/HILA
 ~~~
 
-The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source, and both steps have their respective containerization options available. The variety in options is to address differing issues which arise in platform dependencies.
+The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source, and both steps have their respective containerization options available. The variety in options is to address different issues which arise in platform dependencies.
 
 When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.
 
@@ -103,6 +103,10 @@ When it comes to installing HILA applications there are many avenues one can tak
 #### LINUX
 
 HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the hila preprocessor directly.
+
+> __NOTE__: It is advised to use the docker container for development purposes, since containerization can add computational overhead. This is especially evident in containerized MPI communication.
+>
+> Containerization of the __hilapp__ on the other hand adds no computational overhead, except in the compilation process, thus for production runs one can use the singularity container and reach maximal computational performance.
 
 
 #### MAC
@@ -112,12 +116,12 @@ On mac the installation of the HILA preprocessor dependencies and HILA applicati
 
 #### WINDOWS
 
-On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. 
+On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. One can also opt to use WSL, in this case see LINUX installation instructions.
 
 
 #### HPC
 
-On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platfroms the best solution is to opt to use the [singularity](#singularity) container. 
+On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platforms the best solution is to opt to use the [singularity](#singularity) container. 
 
 
 **After installing the hila preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
@@ -128,13 +132,13 @@ HILA comes with both a singularity and docker container for differing purposes. 
 
 #### Docker {#docker}
 
-The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
+The docker container is meant to develop and produce HILA applications, libraries and _hilapp_ with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
 
 For instructions on using the docker container have a look at the [README.md](../../docker/README.md) in the docker folder
 
 #### Singularity {#singularity}
 
-The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
+The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of _hilapp_. This approach is mainly meant to be used for pre processing applications on an HPC platform.
 
 For instructions on installing singularity and building containers have a look at the [README.md](../../singularity/README.md) in the singularity folder
 
@@ -152,13 +156,13 @@ make install
 
 This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the default location for the program.  Build takes 1-2 min. 
 
-("By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`." Is this detail too complicated? Should just stick to clang in this part.) 
+("By default, _hilapp_ Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`." Is this detail too complicated? Should just stick to clang in this part.) 
 
 - *NOTE: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 
-  processors (by far most common), you can use `make static` -command to build statically linked hilapp. 
+  processors (by far most common), you can use `make static` -command to build statically linked _hilapp_. 
   Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine. Simpler approach for HPC platforms is use of singularity containers*
   
-Test that hilapp works:
+Test that _hilapp_ works:
 
     ./bin/hilapp --help
 
