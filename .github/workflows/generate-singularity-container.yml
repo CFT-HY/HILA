@@ -4,26 +4,25 @@ on:
       - documentation
 
 jobs:
-  publish:
+  build_release:
     if: "contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
-    build_release:
-      name: build_nightly_release
-      runs-on: ubuntu-latest
-      steps:
-        - name: checkout
-          uses: actions/checkout@v2
-          with:
-            fetch-depth: 0
+    name: build_nightly_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-        - name: build-singularity-container
-          run: |
-            wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
-            sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
-            sudo singularity build hilapp.sif ./singularity/hilapp_local.def
-        - name: Update nightly release
-          uses: eine/tip@master
-          with:
-            tag: nightly
-            rm: true
-            token: ${{ secrets.GITHUB_TOKEN }}
-            files: ./hilapp.sif
+      - name: build-singularity-container
+        run: |
+          wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
+          sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
+          sudo singularity build hilapp.sif ./singularity/hilapp_local.def
+      - name: Update nightly release
+        uses: eine/tip@master
+        with:
+          tag: nightly
+          rm: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./hilapp.sif
