@@ -21,6 +21,11 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+on:
+  push:
+    branches:
+      - documentation
+
 jobs:
   # Build job
   build:

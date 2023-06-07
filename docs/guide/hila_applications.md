@@ -227,7 +227,12 @@ AHHH SCARY PUT IT AWAY!!!
 
 As we can see the expansion is complicated and scary, one can imagine how complicated it get's with different computing platforms. The X variable withing the onsites loop is a reserved variable within HILA applications. This variable is what defines the index of every point within the field. Appropriately the command `f[X].gaussian_random()` defines a gaussian random number for each point X within the field f. The ALL parameter within the onsites loop defines that we will iterate throughout the whole field. We will discuss variability of this parameter later in the documentation.
 
-Next we compute \f$g(X) = |\nabla^2 f(X)| = \sum_{d \in \hat{e}} |f(X + d) - 2f(X) + f(X-d)| \f$, where \f$\hat{e} = \{e_x,e_y,e_z\}\f$ being the set of unit vectors that allow us to iterate over all directions. In HILA to iterate over all directions we use the foralldir pragma. The resulting HILA code is:
+Next we compute:
+
+ \f{align}{g(X) &= |\nabla^2 f(X)| \\
+         &= \sum_{d \in \hat{e}} |f(X + d) - 2f(X) + f(X-d)|, \f}
+ 
+where \f$\hat{e} = \{e_x,e_y,e_z\}\f$ is the set of unit vectors that allow us to iterate over all directions. In HILA to iterate over all directions we use the foralldir pragma. The resulting HILA code is:
 
 ```cpp
 foralldir(d) {

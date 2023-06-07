@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0
 
       - name: build-singularity-container
-        runs: |
+        run: |
           wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
           sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
           sudo singularity build hilapp.sif ./singularity/hilapp_local.def

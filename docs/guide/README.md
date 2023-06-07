@@ -578,3 +578,5 @@ We will discuss the computing platforms more in the creating a hila application 
 Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./hila_applications.md)
 
 After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./hila_functionality.md)
+
+#include "./hila_applications.md"
