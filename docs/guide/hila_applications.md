@@ -3,6 +3,15 @@ Creating your first HILA application
 
 This section goes over how to get started with HILA and creating your first HILA application
 
+## Table of contents
+
+1. [Application file structure](#application-file-structure)
+2. [Makefile system](#makefile-system)
+3. [Simple HILA application](#simple-hila-application)
+4. [Conclusion](#conclusion)
+
+## Application file structure {#application-file-structure}
+
 Like most c++ applications, HILA applications require two things, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined default application structure is introduced:
 
 ~~~
@@ -27,27 +36,21 @@ applications/
 .
 ~~~
 
-In the structure HILA offers a directly, aptly named `applications`, where one can create their respective application directories. In here we have created a application directory `hila_example` which we will highlight in this section. Inside the `hila_example` directory we have the following necessary parts, visible in the above directory tree. 
+In the structure HILA offers a directory, aptly named `applications`, where one can create their respective application directories. In here we have created an application directory `hila_example` which we will highlight in this section. Inside the `hila_example` directory we have the following necessary parts, visible in the above directory tree. 
 
-The `build` directory is the location to which the `.o` object files are dumped into. The object files are compiled from the `.cpt` files — these will be discussed later in the documentation — created by the HILA preprocessor. The resulting executable after compilation is also compiled into this directory.
+The `build` directory is the location to which the `.o` object files are compiled into. The object files are compiled from the `.cpt` files — these will be discussed later in the documentation — created by the HILA preprocessor. The resulting executable after compilation is also compiled into this directory.
 
 The `Makefile` is self evidently the necessary makefile used by make to compile the HILA application.
 
 The `parameters` file is an optional file to define application parameters into. This is not necessary for the use of HILA applications, but is quite useful. This will be discussed later
 
-Lastly the `src` directory is the directory where the user will define their HILA applications. In here we have two example HILA applications of which we will highlight `hila_simple_example.cpp`.
+Lastly the `src` directory is the directory where the user will define their HILA applications. In here we have two example HILA applications of which we will focus on `hila_simple_example.cpp`.
 
 This file structure is necessary for the use of the makefile which handles the linking of HILA libraries used by the user.
 
-## Table of contents
-
-1. [Makefile system](#makefile-system)
-2. [Simple HILA application](#simple-hila-application)
-3. [Conclusion](#conclusion)
-
 ## Makefile system {#makefile-system}
 
-Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
+Each application requires a makefile to link the necessary HILA libraries, and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
 
 The following makefile handles the compilation of two seperate HILA example applications `hila_example.cpp` and `hila_simple_example.cpp`:
 
@@ -113,7 +116,7 @@ The latter definitions are due to the module systems and non-standard paths defi
 
 Now that we have discussed the appropriate makefile we can move on to a simple HILA application.
 
-We offer a simple HILA application `hila_simple_example.cpp` which computes a random gaussian field (f), its laplacian (g) and the average of the laplacian field is given by:
+We offer a simple HILA application `hila_simple_example.cpp` which computes a random gaussian field (f), its laplacian (g) and the average of the laplacian field. The source of this application:
 
 ~~~cpp
 #include "hila.h"
@@ -173,7 +176,7 @@ lattice.setup({32,32,32});
 hila::seed_random(32345);
 ~~~
 
-The first command `hila::initialize(argc,argv)` handles the initialization of mpi and reading in command line arguments and parameter files. This is a vital part of all HILA applications, but it is not too important for the user to understand what happens within it. 
+The first command `hila::initialize(argc,argv)` handles the initialization of MPI and reading in command line arguments and parameter files. This is a vital part of all HILA applications, but it is not too important for the user to understand what happens within it. 
 
 Next we setup the lattice and it's size with the command `lattice.setup({32,32,32})`. The `lattice` object is defined globally within HILA and contains all the information on how the lattice is split within MPI. As with initialization, this is also a vital part of any HILA application, but is designed in a way where the user need not worry about it. Note that due to NDIM option above passing for example `{32,32}` to `lattice.setup()` would result in a runtime error. TODO: CATCH THIS ERROR
 
@@ -238,7 +241,7 @@ foralldir(d) {
 }
 ```
 
-We use a sum reduction assignment operator withing the foralldir pragma to indicate the sum in the laplacian equation. With assignment operators we can use the ALL variable directly to index the field f, which is equivalent to writing:
+We use a sum reduction assignment operator withing the foralldir pragma to indicate the sum in the laplacian equation. With assignment operators we can use the ALL variable directly to index the field g, which is equivalent to writing:
 
 ```cpp
 foralldir(d) {
@@ -255,14 +258,14 @@ onsites(ALL) {
 }
 ```
 
-We compute the average of each point with respect to the size of the system, which is give by `lattice.volume()`, since the lattice holds all the information of the systems structure. To output this value we use the default stream for text which limits the output only to the root node, so that we do not duplicate output from all mpi ranks. This default stream is held within the `hila::out0` command contained in the `hila` namespace. It is of type `std::ostream` meaning that it is essentially an alias to `std::cout` of the zeroth node.
+We compute the average of each point with respect to the size of the system, which is give by `lattice.volume()`, since the lattice holds all the information of the systems structure. To output this value we use the default stream for text which limits the output only to the root node, so that we do not duplicate output from all mpi ranks. This default stream is held within the `hila::out0` command contained in the `hila` namespace. It is of type `std::ostream`, hence it is essentially an alias to `std::cout` on the zeroth rank.
 
 ```cpp
 average = average/lattice.volume()
 hila::out0 << "Average of g is " << average << '\n';
 ```
 
-Lastly we wrap up the HILA application with the `hila::finishrun` command which cleans up mpi and performs a safe exit with a memory cleanup step. Additionally it prints out useful timing information coupled with a timestamp. Like `hila::initialize`, `lattice.setup` and `hila::seed_random`, this is a necessary method to call in any HILA application, especially when running with MPI.
+Lastly we wrap up the HILA application with the `hila::finishrun` command which cleans up MPI and performs a safe exit with a memory cleanup step. Additionally it prints out useful timing information coupled with a timestamp. Like `hila::initialize`, `lattice.setup` and `hila::seed_random`, this is a necessary method to call in any HILA application, especially when running with MPI.
 
 ## Conclusion {#conclusion}
 
