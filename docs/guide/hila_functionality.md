@@ -1,7 +1,7 @@
 HILA Functionality
 ====================
 
-This section is comprehensive description of the functionality it offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
+This section is comprehensive description of the functionality HILA offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
 
 ## Datatypes
 
