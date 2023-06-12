@@ -68,7 +68,7 @@ __global__ void seed_random_kernel(unsigned long long seed) {
 
 /* Set seed on device and host */
 void hila::initialize_device_rng(uint64_t seed) {
-    unsigned long n_blocks = (lattice.mynode.volume() + N_threads - 1)/ N_threads;
+    unsigned long n_blocks = (lattice.mynode.volume() + N_threads - 1) / N_threads;
 
 #if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS > 0
     // If we have limited rng block number
@@ -77,12 +77,14 @@ void hila::initialize_device_rng(uint64_t seed) {
     }
 
     hila::out0 << "GPU random number generator initialized\n";
-    hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads << " threads\n";
+    hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads
+               << " threads\n";
 #elif defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS < 0
     hila::out0 << "GPU RANDOM NUMBERS DISABLED, GPU_RNG_THREAD_BLOCKS < 0\n";
 #else
     hila::out0 << "GPU random number generator initialized\n";
-    hila::out0 << "GPU random numbers: using on generator/site (GPU_RNG_THREAD_BLOCKS = 0 or undefined)\n";
+    hila::out0
+        << "GPU random numbers: using on generator/site (GPU_RNG_THREAD_BLOCKS = 0 or undefined)\n";
 #endif
 
     unsigned long long n_sites = n_blocks * N_threads;
@@ -233,19 +235,31 @@ void backend_lattice_struct::setup(lattice_struct &lattice) {
 #endif
 }
 
-void initialize_gpu(int rank) {
+void initialize_gpu(int rank, int device) {
     int n_devices, my_device;
 
     gpuGetDeviceCount(&n_devices);
     check_device_error("Could not get device count");
     // This assumes that each node has the same number of mpi ranks and GPUs
-    my_device = rank % n_devices;
+    // TODO:generalize (if needed)
+    if (device > 0 && hila::number_of_nodes() == 1) {
+        if (device >= n_devices) {
+            hila::out0 << "-device " << device << ": too large device number, maximum "
+                       << n_devices - 1 << " on this machine\n";
+            hila::terminate(0);
+        }
+
+        my_device = device;
+    } else {
+        my_device = rank % n_devices;
+    }
+
 
     hila::out0 << "GPU devices accessible from node 0: " << n_devices << '\n';
 
     // TODO: this only for node 0?
     if (n_devices > 1 && rank < 6) {
-        hila::out << "GPU: MPI rank " << rank << " choosing device " << my_device << '\n';
+        hila::out << "GPU: MPI rank " << rank << " choosing device " << my_device << std::endl;
         if (hila::number_of_nodes() > 6) {
             hila::out0 << "  + " << hila::number_of_nodes() - 6 << " more nodes\n";
         }

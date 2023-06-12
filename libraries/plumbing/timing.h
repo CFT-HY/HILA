@@ -89,6 +89,7 @@ bool time_to_exit();
 void setup_timelimit(long seconds);
 
 void timestamp(const char *msg);
+void timestamp(const std::string &msg);
 
 
 } // namespace hila

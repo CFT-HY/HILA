@@ -199,7 +199,7 @@ inline void synchronize_threads() {}
 #endif
 ////////////////////////////////////////////////////////////////////////////////////
 
-void initialize_gpu(int rank);
+void initialize_gpu(int rank,int device);
 void gpu_device_info();
 
 // This is not the CUDA compiler

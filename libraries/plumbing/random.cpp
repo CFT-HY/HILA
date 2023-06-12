@@ -46,8 +46,6 @@ static bool rng_is_initialized = false;
 namespace hila {
 uint64_t shuffle_rng_seed(uint64_t seed) {
 
-    rng_is_initialized = true;
-
     uint64_t n = hila::myrank();
     if (hila::partitions.number() > 1)
         n += hila::partitions.mylattice() * hila::number_of_nodes();
@@ -203,6 +201,14 @@ double hila::gaussrand() {
 }
 
 #endif
+
+///////////////////////////////////////////////////////////////
+/// Check if RNG is seeded already
+///////////////////////////////////////////////////////////////
+
+bool hila::is_rng_seeded() {
+    return rng_is_initialized;
+}
 
 
 ///////////////////////////////////////////////////////////////

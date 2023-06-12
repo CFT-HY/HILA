@@ -749,9 +749,6 @@ int main(int argc, char **argv) {
     // the parameter
     lattice.setup(lsize);
 
-    // We need random number here
-    hila::seed_random(seed);
-
     // Alloc gauge field
     GaugeField<mygroup> U;
 
@@ -764,6 +761,10 @@ int main(int argc, char **argv) {
     hila::timer measure_timer("Measurements");
 
     restore_checkpoint(U, start_traj, p);
+
+    // We need random number here
+    if (!hila::is_rng_seeded())
+        hila::seed_random(seed);
 
     double p_now = measure_polyakov(U).real();
 
