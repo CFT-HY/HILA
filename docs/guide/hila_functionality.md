@@ -22,7 +22,7 @@ number of dimensions, values 2,3,4  (TODO: NDIM=1?).  Typically set in applicati
 
 Standard types: `int`, `int64_t`, `float`, `double` (`long double`?)
 
-- Hila provided basic types: `Complex\<S\>`, `Vector\<n,T\>`, `Matrix\<n,m,T\>`, `SquareMatrix\<n,T\>`, `Array\<n,m,T\>`
+- Hila provided basic types: `Complex<S>`, `Vector<n,T>`, `Matrix<n,m,T>`, `SquareMatrix<n,T>`, `Array<n,m,T>`
 
   Here S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not
   AVX vectorizable).   See docs for functions/methods (TODO Doxygen docs)
