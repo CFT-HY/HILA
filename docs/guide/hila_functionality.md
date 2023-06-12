@@ -3,11 +3,24 @@ HILA Functionality
 
 This section is comprehensive description of the functionality HILA offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
 
+## Makefile
+
+The Makefile defines variables that allow control of the make compilation process and HILA applications. All the variables and example use are listed below, with the default options given as `VAR=default_option`:
+
+`CXX=clang++`:
+
+&ensp; &ensp; Chosen application compiler. `clang++`, `g++`
+
+`APP_OPTS`: 
+
+The makefile offers triggers that are defined in the application during compilation using -D opts. The options are control by the use of the `APP_OPTS` variable
+
 ## Datatypes
 
-- NDIM: number of dimensions, values 2,3,4  (TODO: NDIM=1?).  Typically set in application Makefile
+### NDIM: 
+number of dimensions, values 2,3,4  (TODO: NDIM=1?).  Typically set in application Makefile
 
-- Standard types: `int`, `int64_t`, `float`, `double` (`long double`?)
+Standard types: `int`, `int64_t`, `float`, `double` (`long double`?)
 
 - Hila provided basic types: `Complex\<S\>`, `Vector\<n,T\>`, `Matrix\<n,m,T\>`, `SquareMatrix\<n,T\>`, `Array\<n,m,T\>`
 
