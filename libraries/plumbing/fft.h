@@ -1,3 +1,4 @@
+/** @file fft.h */
 #ifndef HILA_FFT_H
 #define HILA_FFT_H
 
@@ -24,7 +25,7 @@
 
 inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     Vector<NDIM, double> k;
-    foralldir (d) {
+    foralldir(d) {
         int n = pmod(cv.e(d), lattice.size(d));
         if (n > lattice.size(d) / 2)
             n -= lattice.size(d);
@@ -99,11 +100,10 @@ class hila_fft {
         local_volume = lattice.mynode.volume();
 
         // init dirs here at one go
-        foralldir (d)
-            init_pencil_direction(d);
+        foralldir(d) init_pencil_direction(d);
 
         buf_size = 1;
-        foralldir (d) {
+        foralldir(d) {
             if (pencil_recv_buf_size[d] > buf_size)
                 buf_size = pencil_recv_buf_size[d];
         }
@@ -251,10 +251,8 @@ class hila_fft {
 
         CoordinateVector offset_in, offset_out, nmin;
 
-        const size_t e_offset_in =
-            pencil_get_buffer_offsets(prev_dir, elements, offset_in, nmin);
-        const size_t e_offset_out =
-            pencil_get_buffer_offsets(dir, elements, offset_out, nmin);
+        const size_t e_offset_in = pencil_get_buffer_offsets(prev_dir, elements, offset_in, nmin);
+        const size_t e_offset_out = pencil_get_buffer_offsets(dir, elements, offset_out, nmin);
 
         cmplx_t *sb = send_buf;
         cmplx_t *rb = receive_buf;
@@ -299,7 +297,7 @@ class hila_fft {
         bool first_dir = true;
         Direction prev_dir;
 
-        foralldir (dir) {
+        foralldir(dir) {
             if (directions[dir]) {
 
                 setup_direction(dir);
@@ -312,14 +310,14 @@ class hila_fft {
                 }
 
                 gather_data();
-                
+
                 if (!only_reflect)
                     transform();
                 else
                     reflect();
 
                 scatter_data();
-                
+
                 cleanup();
 
                 // fft_save_result( result, dir, receive_buf );
@@ -329,10 +327,9 @@ class hila_fft {
 
                 // swap the pointers
                 swap_buffers();
-                
             }
         }
-        
+
         save_result(result);
 
         result.mark_changed(ALL);
@@ -370,8 +367,7 @@ void FFT_delete_plans();
 /////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline void FFT_field(const Field<T> &input, Field<T> &result,
-                      const CoordinateVector &directions,
+inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateVector &directions,
                       fft_direction fftdir = fft_direction::forward) {
 
     static_assert(hila::contains_complex<T>::value,
@@ -441,8 +437,7 @@ Field<T> Field<T>::FFT(fft_direction fftdir) const {
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-Field<Complex<hila::scalar_type<T>>>
-Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
+Field<Complex<hila::scalar_type<T>>> Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
 
     static_assert(hila::is_arithmetic<T>::value,
                   "FFT_real_to_complex can be applied only to Field<real-type> variable");
@@ -482,7 +477,7 @@ Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
 inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
 
     // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
-    foralldir (d) {
+    foralldir(d) {
         if (cv[d] > 0 && cv[d] < lattice.size(d) / 2)
             return 1;
         if (cv[d] > lattice.size(d) / 2)
@@ -496,9 +491,8 @@ inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
 template <typename T>
 Field<hila::scalar_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
 
-    static_assert(
-        hila::is_complex<T>::value,
-        "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
+    static_assert(hila::is_complex<T>::value,
+                  "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
 
     // first, do a full reflection of the field, giving rf(x) = f(L-x) = "f(-x)"
     auto rf = this->reflect();

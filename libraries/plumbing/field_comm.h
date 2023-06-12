@@ -1,3 +1,5 @@
+/** @file field_comm.h */
+
 #ifndef FIELD_COMM_H
 #define FIELD_COMM_H
 
@@ -155,11 +157,6 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
-
-/// Definition of shift - this is currently OK only for short moves,
-/// very inefficient for longer moves
-/// TODO: make more advanced, switching to "global" move for long shifts
-/// Returns a reference to parameter "res"
 
 template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
@@ -364,7 +361,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         size_t n = sites * size / size_type;
 #ifdef GPU_AWARE_MPI
         gpuStreamSynchronize(0);
-        //gpuDeviceSynchronize();
+        // gpuDeviceSynchronize();
 #endif
 
         start_send_timer.start();
@@ -373,7 +370,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
                   &fs->send_request[par_i][d]);
 
         start_send_timer.stop();
-
     }
 
     // and do the boundary shuffle here, after MPI has started
@@ -643,9 +639,6 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
     }
 }
 
-
-/// Set an array of elements. Assuming that each node calls this with the same value, it is
-/// sufficient to set the elements locally
 template <typename T>
 void Field<T>::set_elements(const std::vector<T> &elements,
                             const std::vector<CoordinateVector> &coord_list) {
