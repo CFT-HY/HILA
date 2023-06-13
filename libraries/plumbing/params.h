@@ -28,7 +28,7 @@
 /**
  * @def NDIM
  * @brief HILA system dimensionality
- * @details Set's HILA dimensionality of which 4 is default. Options are 2,3,4
+ * @details Set's HILA dimensionality for which 4 is default. Options are 2,3,4
  */
 #ifndef NDIM
 #define NDIM 4

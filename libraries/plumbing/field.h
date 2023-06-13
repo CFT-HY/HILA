@@ -30,32 +30,26 @@ void ensure_field_operators_exist();
 
 #include "plumbing/ensure_loop_functions.h"
 
-/// The field class implements the standard methods for accessing fields
-/// Hilapp replaces the parity access patterns, Field[par] with a loop over
-/// the appropriate sites.
-///
-/// The Field class also contains member functions used by hilapp, as well
-/// as members that may be useful for application developers.
-///
-/// The Field mainly implements the interface to the Field and not the
-/// content.
-///
-/// The Field contains a pointer to Field::field_struct, which implements
-/// MPI communication of the Field boundaries.
-///
-/// The Field::field_struct points to a field_storage, which is defined
-/// by each backend. It implements storing and accessing the Field data,
-/// including buffers for storing haloes returned from MPI communication.
-/// Field.set_elements(): set elements in the Field
-/// Field.set_element(): set an element in the Field
-///
-
-
 /**
  * @class Field
- * @brief something
+ * @brief The field class implements the standard methods for accessing fields
+ *  Hilapp replaces the parity access patterns, Field[par] with a loop over
+ *  the appropriate sites.
  *
- * @tparam T double, complex
+ * @details The Field class also contains member functions used by hilapp, as well
+ *  as members that may be useful for application developers.
+ *
+ *  The Field mainly implements the interface to the Field and not the
+ *  content.
+ *
+ *  The Field contains a pointer to Field::field_struct, which implements
+ *  MPI communication of the Field boundaries.
+ *
+ *  The Field::field_struct points to a field_storage, which is defined
+ *  by each backend. It implements storing and accessing the Field data,
+ *  including buffers for storing haloes returned from MPI communication.
+ *
+ * @tparam T
  */
 template <typename T>
 class Field {
@@ -200,8 +194,8 @@ class Field {
 
     /**
      * @name Constructor
+     @{
      */
-    //@{
     /**
      * @brief Default construct a new Field object
      *
@@ -275,7 +269,7 @@ class Field {
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
-    //@}
+    /** @} */
 
     ~Field() {
         free();
@@ -644,12 +638,6 @@ class Field {
     }
 #endif
 
-    /////////////////////////////////////////////////////////////////
-    /// Standard arithmetic ops which fields should implement
-    /// Not all are always callable, e.g. division may not be
-    /// implemented by all field types
-    /////////////////////////////////////////////////////////////////
-
     /**
      * @name Standard
      * @brief Standard arithmetic ops which fields should implement
@@ -661,14 +649,20 @@ class Field {
      * @brief Basic assignment operator
      *
      * @param rhs
-     * @return Field<T>&
+     * @return Field<T>& Assigned field
      */
     Field<T> &operator=(const Field<T> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
     }
 
-    // More general = - possible only if T = A is OK
+    /**
+     * @brief More general assignment operation if A can be casted into T
+     * 
+     * @tparam A Type of element to be assigned
+     * @param rhs Field to assign from
+     * @return Field<T>& Assigned field
+     */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
@@ -677,7 +671,13 @@ class Field {
         return *this;
     }
 
-    // Assign from element
+    /**
+     * @brief Assginment from element
+     * 
+     * @tparam A Type of element to be assigned
+     * @param d element to assign to Field
+     * @return Field<T>& Assigned Field
+     */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
@@ -686,7 +686,12 @@ class Field {
         return *this;
     }
 
-    // assignment of 0 - nullptr, zeroes field
+    /**
+     * @brief assignment of 0 - nullptr, zeroes field
+     * 
+     * @param z nullptr
+     * @return Field<T>& Zero Field
+     */
     Field<T> &operator=(const std::nullptr_t &z) {
         (*this)[ALL] = 0;
         return *this;
@@ -829,7 +834,8 @@ class Field {
      * @details  this is currently OK only for short moves, very inefficient for longer moves
      * @param v
      * @{
-     *  /
+     */
+
     /**
      * @todo make more advanced, switching to "global" move for long shifts
      * @param par
@@ -837,11 +843,7 @@ class Field {
      * @return Field<T>& returns a reference to res
      */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
-    /**
-     * @remark Overload of @ref shift(const CoordinateVector &v, Field<T> &r, Parity par) with
-     * par=ALL
-     * @param r
-     */
+
     Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
         return shift(v, r, ALL);
     }
@@ -1458,9 +1460,6 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
 }
 
 
-/**
- * @todo Add remark in comparison to other version of shift
- */
 template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> res;
