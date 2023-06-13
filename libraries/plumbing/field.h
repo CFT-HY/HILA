@@ -275,6 +275,7 @@ class Field {
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
+    //@}
 
     ~Field() {
         free();
@@ -286,7 +287,6 @@ class Field {
         ensure_field_operators_exist<T>();
 #endif
     }
-    //@}
 
     /**
      * @brief  Sets up memory for field content and communication.
