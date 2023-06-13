@@ -23,6 +23,7 @@ class Matrix;
 /// Define Vector and HorizontalVector as a special case of Matrix
 ///////////////////////////////////////////////////////////////
 
+
 template <int n, typename T>
 using Vector = Matrix<n, 1, T>;
 
@@ -171,8 +172,8 @@ class Matrix_t {
 
     // define also method size() for vectors and square matrices only!
     /**
-     * 
-    */
+     *
+     */
 
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     static constexpr int size() {
@@ -402,7 +403,7 @@ class Matrix_t {
     }
 
     /// subtract assign a Matrix_t
-//#pragma hila loop_function
+    //#pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) {
@@ -413,7 +414,7 @@ class Matrix_t {
     }
 
     /// add assign a scalar to square matrix
-//#pragma hila loop_function
+    //#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) {
@@ -427,7 +428,7 @@ class Matrix_t {
     }
 
     /// subtract assign type T and convertible
-//#pragma hila loop_function
+    //#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) {

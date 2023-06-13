@@ -1,29 +1,43 @@
+/**
+ * @file params.h
+ * @brief This file contains #defined constants
+ * @details
+ * These can be overruled in app Makefile, with APP_OPTS := -DPARAMETER=value.
+ *
+ * There are two types of #define variables, True/False switches or parameter variables.
+ *
+ * True/False statements can be set with either 0 (False) or 1 (True) as -DPARAMETER=0.
+ *
+ * Parameter variables are set similary with -DPARAMETER=var where var is the chosen variable
+ */
+
 #ifndef PARAMS_H_
 #define PARAMS_H_
 
-///////////////////////////////////////////////////////////////////////////
-///  This file contains #defined constants
-///  These can be overruled in app Makefile, with
-///  APP_OPTS := -DPARAMETER=value
-///  On switches which are by default on, "-DPARAMETER=0" undefines them
-///
-///  These can be set on the make command line with
-///  make OPTS="-DPARAMETER=value -DPARAMETER2=value2"
-///////////////////////////////////////////////////////////////////////////
-
-/// Assertions on by default? Turn them off by defining NDEBUG or RELEASE
 #ifdef RELEASE
+/**
+ * @def NDEBUG
+ * @brief Turn off static assert which are on by default.
+ * @details By defining either RELEASE or NDEBUG (No debug) static asserts will be turned off
+ */
 #ifndef NDEBUG
 #define NDEBUG
 #endif
 #endif
 
-/// Dimensionality
+/**
+ * @def NDIM
+ * @brief HILA system dimensionality
+ * @details Set's HILA dimensionality of which 4 is default. Options are 2,3,4
+ */
 #ifndef NDIM
 #define NDIM 4
 #endif
 
-/// output file name
+/**
+ * @def DEFAULT_OUTPUT_NAME
+ * @brief Default output file name
+ */
 #ifndef DEFAULT_OUTPUT_NAME
 #define DEFAULT_OUTPUT_NAME "output"
 #endif
@@ -75,20 +89,19 @@
 #endif
 
 // GPU_RNG_THREAD_BLOCKS
-// Number of thread blocks (of N_threads threads) to use in onsites()-loops containing random numbers.
-// GPU_RNG_THREAD_BLOCKS=0 or undefined means use one RNG on each lattice site, and the thread block
-// number is not restricted.  RNG takes about 48 B/generator (with XORWOW).
-// When GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS)
-// generators are in use, which reduces the memory footprint substantially (and bandwidth demand)
-// Too small number slows down onsites()-loops containing RNGs, because less threads are active.
-// Example:
+// Number of thread blocks (of N_threads threads) to use in onsites()-loops containing random
+// numbers. GPU_RNG_THREAD_BLOCKS=0 or undefined means use one RNG on each lattice site, and the
+// thread block number is not restricted.  RNG takes about 48 B/generator (with XORWOW). When
+// GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS) generators are in use, which
+// reduces the memory footprint substantially (and bandwidth demand) Too small number slows down
+// onsites()-loops containing RNGs, because less threads are active. Example:
 //     Field<Vector<4,double>> vfield;
 //     onsites(ALL) {
 //        vfield[X].gaussian_random();      // there's RNG here, so this onsites() is handled by
 //                                          // GPU_RNG_THREAD_BLOCKS thread blocks
 //     }
-// GPU_RNG_THREAD_BLOCKS<0 disables GPU random numbers entirely, and loops like above will crash if executed.
-// hilapp will emit a warning, but program is compiled
+// GPU_RNG_THREAD_BLOCKS<0 disables GPU random numbers entirely, and loops like above will crash if
+// executed. hilapp will emit a warning, but program is compiled
 
 #ifndef GPU_RNG_THREAD_BLOCKS
 #define GPU_RNG_THREAD_BLOCKS 32
@@ -98,11 +111,10 @@
 // # of thread blocks (of N_threads threads) used in ReductionVector (weighted histogram) ops.
 // A value > 0 for GPU_VECTOR_REDUCTION_THREAD_BLOCKS means that the onsites-loop where the
 // reduction is done is handled by GPU_VECTOR_REDUCTION_THREAD_BLOCKS thread blocks of N_threads
-// threads.  Each thread handles its own histogram, thus there are 
+// threads.  Each thread handles its own histogram, thus there are
 // (GPU_VECTOR_REDUCTION_THREAD_BLOCKS*N_threads) working copies of the histogram which are then
-// combined. Too small value slows the loop where this happens computation, too large uses (temporarily)
-// more memory.
-// Example:
+// combined. Too small value slows the loop where this happens computation, too large uses
+// (temporarily) more memory. Example:
 //      ReductionVector<double> rv(100);
 //      Field<int> index;
 //      ...
@@ -112,9 +124,9 @@
 //      }
 //
 // GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 or undefined means that the thread block number is not
-// restricted and only a single histogram is used with atomic operations (atomicAdd).  This 
+// restricted and only a single histogram is used with atomic operations (atomicAdd).  This
 // can slow down tight loops, but in many cases this turns out to be actually faster.
-// 
+//
 // Default: leave it off.  Otherwise 32 is currently OK compromise (32 thread blocks)
 
 // #define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
