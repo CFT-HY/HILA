@@ -1,10 +1,16 @@
+/**
+ * @file coordinates.h
+ * @brief This header file defines:
+ *   - enum Direction
+ *   - enum class Parity
+ *   - class CoordinateVector
+ * 
+ * These are used to traverse the lattice coordinate systems
+ * 
+ */
+
 #ifndef COORDINATES_H_
 #define COORDINATES_H_
-/// This header file defines:
-///   enum Direction
-///   enum class Parity
-///   class CoordinateVector
-/// These are used to traverse the lattice coordinate systems
 
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
@@ -156,17 +162,26 @@ inline std::ostream &operator<<(std::ostream &os, const Direction d) {
     return os;
 }
 
-////////////////////////////////////////////////////////////////////
-/// enum class Parity type definition - stronger protection than std enum
-///
-////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Parity enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
+ * @enum
+ */
 enum class Parity : unsigned { none = 0, even, odd, all };
-//
+
 // should use here #define instead of const Parity? Makes EVEN a protected symbol
-constexpr Parity EVEN = Parity::even; // bit pattern:  001
-constexpr Parity ODD = Parity::odd;   //               010
-constexpr Parity ALL = Parity::all;   //               011
+
+/** 
+ * @name Partiy constexpr aliases for @enum Parity 
+ */
+/** @{ */
+/** @brief bit pattern:  001*/
+constexpr Parity EVEN = Parity::even; 
+/** @brief bit pattern:  010*/
+constexpr Parity ODD = Parity::odd;
+/** @brief bit pattern:  011*/
+constexpr Parity ALL = Parity::all;
+/** @} */
 
 // this is used in diagnostics - make static inline so can be defd here
 namespace hila {

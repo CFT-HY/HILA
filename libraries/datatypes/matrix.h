@@ -1,3 +1,12 @@
+/**
+ * @file matrix.h
+ * @brief Definition of Matrix types
+ * @details This file contains base matrix type Matrix_t which defines all general matrix type opirations
+    Matrix types are Matrix, #Vector, #HorizontalVector, #SquareMatrix of which Matrix is defined as a class and the rest are special cases of the Matrix class.
+ * 
+ * 
+ */
+
 #ifndef MATRIX_H_
 #define MATRIX_H_
 
@@ -12,28 +21,33 @@ class Matrix_t;
 template <const int n, const int m, typename T = double>
 class Array;
 
-///////////////////////////////////////////////////////////////
-/// Generic Matrix class fwd definition
-///////////////////////////////////////////////////////////////
-
 template <int n, int m, typename T>
 class Matrix;
 
-///////////////////////////////////////////////////////////////
-/// Define Vector and HorizontalVector as a special case of Matrix
-///////////////////////////////////////////////////////////////
-
-
+/**
+ * @brief Vertical Vector is defined as Matrix with width 1, which consequently defines vector operations
+ * 
+ * @tparam n Length of Vector
+ * @tparam T Vector type
+ */
 template <int n, typename T>
 using Vector = Matrix<n, 1, T>;
 
+/**
+ * @brief Horizontal Vector is defined as Matrix with height 1, which consequently defines vector operations
+ * 
+ * @tparam n Length of Vector
+ * @tparam T Vector type
+ */
 template <int n, typename T>
 using HorizontalVector = Matrix<1, n, T>;
 
-///////////////////////////////////////////////////////////////
-/// Define SquareMatrix as an alias
-///////////////////////////////////////////////////////////////
-
+/**
+ * @brief Square matrix is defined as alias with special case of Matrix<n,n,T>
+ * 
+ * @tparam n 
+ * @tparam T 
+ */
 template <int n, typename T>
 using SquareMatrix = Matrix<n, n, T>;
 
