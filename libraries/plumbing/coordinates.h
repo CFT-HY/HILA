@@ -20,15 +20,15 @@
  * @brief Enumerator for direction that assigns integer to direction to be interpreted as unit
  * vector.
  * @details Positive directions are defined as \f$ e_i = i \f$ where \f$ i \in
- * \{0,..., \f$ ::NDIM \f$\}\f$
+ * \{0,..., \f$ NDIM \f$\}\f$
  *
- * Negative directions are defined as \f$ e_{-i} = \f$ hila::NDIM \f$\cdot2 - 1 - e_i\f$
+ * Negative directions are defined as \f$ e_{-i} = \f$ NDIM \f$\cdot2 - 1 - e_i\f$
  *
  * Defined as unsigned, but note that Direction + int is not defined.
  *
  * Direction can be used as an array index (interchangably with int)
  */
-#if NDIM == 4
+#if NDIM == 4 || defined(DOXYGEN)
 enum Direction : unsigned {
     e_x = 0,
     e_y,
