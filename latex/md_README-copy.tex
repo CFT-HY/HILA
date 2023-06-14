@@ -1,0 +1,459 @@
+\chapter{Description and Installation}
+\hypertarget{md_README-copy}{}\label{md_README-copy}\index{Description and Installation@{Description and Installation}}
+Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations. ~\newline
+
+
+Purpose\+: make writing applications straightforward and intuitive, while producing optimized executables for different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, etc.). Details of the parallelization and computing architecture are hidden from the user\textquotesingle{}s view, and all applications automatically run on present or future platform. Write once -- run anywhere.
+
+Hila is based on hila preprocessor \"{}hilapp\"{}, which is a C++ source-\/to-\/source transformer using the \href{https://clang.llvm.org/docs/LibTooling.html}{\texttt{ libtooling}} toolbox of the \href{https://clang.llvm.org/}{\texttt{ Clang}} compiler. It converts application C++ to platform-\/specific C++ code, which is passed to appropriate compilers for the platforms.
+
+Behind the scenes hila takes care of MPI layout and communications. It lays out the lattice fields differently for different computing platforms\+: \textquotesingle{}array of structures\textquotesingle{} (standard), \textquotesingle{}array of structures of vectors\textquotesingle{} (AVX-\/type), or \textquotesingle{}structure of arrays\textquotesingle{} (GPU-\/type).\hypertarget{md_README-copy_autotoc_md0}{}\doxysection{\texorpdfstring{Table of Contents}{Table of Contents}}\label{md_README-copy_autotoc_md0}
+
+\begin{DoxyEnumerate}
+\item Dependencies
+\item Installation
+\item User Guide
+\end{DoxyEnumerate}\hypertarget{md_README-copy_autotoc_md1}{}\doxysection{\texorpdfstring{$<$a id=\"{}dependencies\"{}$>$$<$/a$>$\+Dependencies}{<a id="dependencies"></a>Dependencies}}\label{md_README-copy_autotoc_md1}
+\hypertarget{md_README-copy_autotoc_md2}{}\doxysubsection{\texorpdfstring{Hilapp}{Hilapp}}\label{md_README-copy_autotoc_md2}
+\tabulinesep=1mm
+\begin{longtabu}spread 0pt [c]{*{3}{|X[-1]}|}
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Dependencies   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Minimum Version   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Required    }\\\cline{1-3}
+\endfirsthead
+\hline
+\endfoot
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Dependencies   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Minimum Version   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Required    }\\\cline{1-3}
+\endhead
+Clang   &8 -\/   &Yes   \\\cline{1-3}
+\end{longtabu}
+\hypertarget{md_README-copy_autotoc_md3}{}\doxysubsubsection{\texorpdfstring{Installing dependencies for HILA preprocessor\+:}{Installing dependencies for HILA preprocessor:}}\label{md_README-copy_autotoc_md3}
+If one opts to use a docker or singularity container, skip directly to the installation section.
+
+For building {\itshape hilapp}, you need \href{https://clang.llvm.org/}{\texttt{ clang}} development tools (actually, only include files). These can be found in most Linux distribution repos, e.\+g. in Ubuntu 22.\+04\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{export\ LLVM\_VERSION=15}
+\DoxyCodeLine{sudo\ apt-\/get\ -\/y\ install\ clang-\/\$LLVM\_VERSION\ \(\backslash\)}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ libclang-\/\$LLVM\_VERSION-\/dev}
+
+\end{DoxyCode}
+\hypertarget{md_README-copy_autotoc_md4}{}\doxysubsection{\texorpdfstring{HILA applications}{HILA applications}}\label{md_README-copy_autotoc_md4}
+\tabulinesep=1mm
+\begin{longtabu}spread 0pt [c]{*{3}{|X[-1]}|}
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Dependencies   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Minimum Version   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Required    }\\\cline{1-3}
+\endfirsthead
+\hline
+\endfoot
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Dependencies   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Minimum Version   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Required    }\\\cline{1-3}
+\endhead
+Clang / GCC   &8 -\/ / x   &Yes    \\\cline{1-3}
+FFTW3   &x   &Yes    \\\cline{1-3}
+MPI   &x   &Yes    \\\cline{1-3}
+Open\+MP   &x   &No    \\\cline{1-3}
+CUDA   &x   &No    \\\cline{1-3}
+HIP   &x   &No   \\\cline{1-3}
+\end{longtabu}
+\hypertarget{md_README-copy_autotoc_md5}{}\doxysubsubsection{\texorpdfstring{Installing dependencies for HILA applications\+:}{Installing dependencies for HILA applications:}}\label{md_README-copy_autotoc_md5}
+If one opts to use docker, skip directly to the installation section.
+
+Installing all non GPU dependencies on ubuntu\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ apt\ install\ build-\/essential\ \(\backslash\)}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ libopenmpi-\/dev\ \(\backslash\)}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ libfftw3-\/dev\ \(\backslash\)}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ libomp-\/dev}
+
+\end{DoxyCode}
+
+
+{\bfseries{CUDA\+:}}
+
+See NVIDIA drivers and CUDA documentation\+: \href{https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html}{\texttt{ https\+://docs.\+nvidia.\+com/cuda/cuda-\/installation-\/guide-\/microsoft-\/windows/index.\+html}}
+
+{\bfseries{HIP\+:}}
+
+See ROCm and HIP documentation\+: \href{https://docs.amd.com/}{\texttt{ https\+://docs.\+amd.\+com/}}, \href{https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html}{\texttt{ https\+://rocmdocs.\+amd.\+com/en/latest/\+Installation\+\_\+\+Guide/\+HIP-\/\+Installation.\+html}}\hypertarget{md_README-copy_autotoc_md6}{}\doxysection{\texorpdfstring{$<$a id=\"{}installation\"{}$>$$<$/a$>$\+Installation}{<a id="installation"></a>Installation}}\label{md_README-copy_autotoc_md6}
+Begin by cloning HILA repository\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{git\ clone\ https://github.com/CFT-\/HY/HILA}
+
+\end{DoxyCode}
+
+
+The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source, and both steps have their respective containerization options available. The variety in options is to address differing issues which arise in platform dependencies.
+
+When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.\hypertarget{md_README-copy_autotoc_md7}{}\doxysubsubsection{\texorpdfstring{LINUX}{LINUX}}\label{md_README-copy_autotoc_md7}
+HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from source or with the use of a singualrity container. Additionally one can opt to use the docker container which installs the hila preprocessor directly.\hypertarget{md_README-copy_autotoc_md8}{}\doxysubsubsection{\texorpdfstring{MAC}{MAC}}\label{md_README-copy_autotoc_md8}
+On mac the installation of the HILA preprocessor dependencies and HILA application dependencies can be tedious, and in some cases impossible. Availability of clang libtoolbox is open ended. For this reason the best option is to use the available docker container.\hypertarget{md_README-copy_autotoc_md9}{}\doxysubsubsection{\texorpdfstring{WINDOWS}{WINDOWS}}\label{md_README-copy_autotoc_md9}
+On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available docker container.\hypertarget{md_README-copy_autotoc_md10}{}\doxysubsubsection{\texorpdfstring{HPC}{HPC}}\label{md_README-copy_autotoc_md10}
+On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platfroms the best solution is to opt to use the singularity container.
+
+{\bfseries{After installing the hila preprocessor with one of the above options one can move on to the building HILA applications section.}}\hypertarget{md_README-copy_autotoc_md11}{}\doxysubsection{\texorpdfstring{Containers}{Containers}}\label{md_README-copy_autotoc_md11}
+HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.\hypertarget{md_README-copy_autotoc_md12}{}\doxysubsubsection{\texorpdfstring{$<$a id=\"{}docker\"{}$>$$<$/a$>$\+Docker}{<a id="docker"></a>Docker}}\label{md_README-copy_autotoc_md12}
+The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
+
+For instructions on using the docker container have a look at the README.md in the docker folder\hypertarget{md_README-copy_autotoc_md13}{}\doxysubsubsection{\texorpdfstring{$<$a id=\"{}singularity\"{}$>$$<$/a$>$\+Singularity}{<a id="singularity"></a>Singularity}}\label{md_README-copy_autotoc_md13}
+The singularity container offers a more packaged approach where one doesn\textquotesingle{}t need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
+
+For instructions on installing singularity and building containers have a look at the README.md in the singularity folder\hypertarget{md_README-copy_autotoc_md14}{}\doxysubsection{\texorpdfstring{$<$a id=\"{}hila-\/preprocessor\"{}$>$$<$/a$>$\+HILA preprocessor}{<a id="hila-preprocessor"></a>HILA preprocessor}}\label{md_README-copy_autotoc_md14}
+Before building the preprocessor one must first install the dependencies. See the dependencies
+
+Compile {\itshape hilapp}\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ hila/hilapp}
+\DoxyCodeLine{make\ [-\/j4]}
+\DoxyCodeLine{make\ install}
+
+\end{DoxyCode}
+
+
+This builds {\itshape hilapp} in hila/hilapp/build, and {\ttfamily make install} moves it to hila/hilapp/bin, which is the default location for the program. Build takes 1-\/2 min.
+
+(\"{}\+By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with \`{}make CXX=g++\`{}.\"{} Is this detail too complicated? Should just stick to clang in this part.)
+
+
+\begin{DoxyItemize}
+\item {\itshape NOTE\+: clang dev libraries are not installed in most supercomputer systems. However, if the system has x86\+\_\+64 processors (by far most common), you can use {\ttfamily make static} -\/command to build statically linked hilapp. Copy {\ttfamily hila/hilapp/build/hilapp} to directory {\ttfamily hila/hilapp/bin} on the target machine. Simpler approach for HPC platforms is use of singularity containers}
+\end{DoxyItemize}
+
+Test that hilapp works\+: \begin{DoxyVerb}./bin/hilapp --help
+\end{DoxyVerb}
+ 
+
+{\bfseries{Expected output }}\begin{adjustwidth}{1em}{0em}
+
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\$\ ./bin/hilapp\ -\/-\/help}
+\DoxyCodeLine{USAGE:\ hilapp\ [options]\ <source\ files>}
+\DoxyCodeLine{}
+\DoxyCodeLine{OPTIONS:}
+\DoxyCodeLine{}
+\DoxyCodeLine{Generic\ Options:}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ -\/-\/help\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Display\ available\ options\ (-\/-\/help-\/hidden\ for\ more)}
+\DoxyCodeLine{\ \ -\/-\/help-\/list\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Display\ list\ of\ available\ options\ (-\/-\/help-\/list-\/hidden\ for\ more)}
+\DoxyCodeLine{\ \ -\/-\/version\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Display\ the\ version\ of\ this\ program}
+\DoxyCodeLine{}
+\DoxyCodeLine{hilapp:}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ -\/-\/AVXinfo=<int>\ \ \ \ \ \ \ \ \ \ \ -\/\ AVX\ vectorization\ information\ level\ 0-\/2.\ 0\ quiet,\ 1\ not\ vectorizable\ loops,\ 2\ all\ loops}
+\DoxyCodeLine{\ \ -\/D\ <macro[=value]>\ \ \ \ \ \ \ \ -\/\ Define\ name/macro\ for\ preprocessor}
+\DoxyCodeLine{\ \ -\/I\ <directory>\ \ \ \ \ \ \ \ \ \ \ \ -\/\ Directory\ for\ include\ file\ search}
+\DoxyCodeLine{\ \ -\/-\/allow-\/func-\/globals\ \ \ \ \ \ -\/\ Allow\ using\ global\ or\ extern\ variables\ in\ functions\ called\ from\ site\ loops.}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ This\ will\ not\ work\ in\ kernelized\ code\ (for\ example\ GPUs)}
+\DoxyCodeLine{\ \ -\/-\/check-\/init\ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Insert\ checks\ that\ Field\ variables\ are\ appropriately\ initialized\ before\ use}
+\DoxyCodeLine{\ \ -\/-\/comment-\/pragmas\ \ \ \ \ \ \ \ \ -\/\ Comment\ out\ '\#pragma\ hila'\ -\/pragmas\ in\ output}
+\DoxyCodeLine{\ \ -\/-\/dump-\/ast\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Dump\ AST\ tree}
+\DoxyCodeLine{\ \ -\/-\/function-\/spec-\/no-\/inline\ -\/\ Do\ not\ mark\ generated\ function\ specializations\ "{}inline"{}}
+\DoxyCodeLine{\ \ -\/-\/gpu-\/slow-\/reduce\ \ \ \ \ \ \ \ \ -\/\ Use\ slow\ (but\ memory\ economical)\ reduction\ on\ gpus}
+\DoxyCodeLine{\ \ -\/-\/ident-\/functions\ \ \ \ \ \ \ \ \ -\/\ Comment\ function\ call\ types\ in\ output}
+\DoxyCodeLine{\ \ -\/-\/insert-\/includes\ \ \ \ \ \ \ \ \ -\/\ Insert\ all\ project\ \#include\ files\ in\ .cpt\ -\/files\ (portable)}
+\DoxyCodeLine{\ \ -\/-\/method-\/spec-\/no-\/inline\ \ \ -\/\ Do\ not\ mark\ generated\ method\ specializations\ "{}inline"{}}
+\DoxyCodeLine{\ \ -\/-\/no-\/include\ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Do\ not\ insert\ any\ '\#include'-\/files\ (for\ debug,\ may\ not\ compile)}
+\DoxyCodeLine{\ \ -\/-\/no-\/interleave\ \ \ \ \ \ \ \ \ \ \ -\/\ Do\ not\ interleave\ communications\ with\ computation}
+\DoxyCodeLine{\ \ -\/-\/no-\/output\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ No\ output\ file,\ for\ syntax\ check}
+\DoxyCodeLine{\ \ -\/o\ <filename>\ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Output\ file\ (default:\ <file>.cpt,\ write\ to\ stdout:\ -\/o\ -\/\ }
+\DoxyCodeLine{\ \ -\/-\/syntax-\/only\ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Same\ as\ no-\/output}
+\DoxyCodeLine{\ \ -\/-\/target:AVX\ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Generate\ AVX\ vectorized\ loops}
+\DoxyCodeLine{\ \ -\/-\/target:AVX512\ \ \ \ \ \ \ \ \ \ \ -\/\ Generate\ AVX512\ vectorized\ loops}
+\DoxyCodeLine{\ \ -\/-\/target:CUDA\ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Generate\ CUDA\ kernels}
+\DoxyCodeLine{\ \ -\/-\/target:HIP\ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/\ Generate\ HIP\ kernels}
+\DoxyCodeLine{\ \ -\/-\/target:openacc\ \ \ \ \ \ \ \ \ \ -\/\ Offload\ to\ GPU\ using\ openACC}
+\DoxyCodeLine{\ \ -\/-\/target:openmp\ \ \ \ \ \ \ \ \ \ \ -\/\ Hybrid\ OpenMP\ -\/\ MPI}
+\DoxyCodeLine{\ \ -\/-\/target:vanilla\ \ \ \ \ \ \ \ \ \ -\/\ Generate\ loops\ in\ place}
+\DoxyCodeLine{\ \ -\/-\/target:vectorize=<int>\ \ -\/\ Generate\ vectorized\ loops\ with\ given\ vector\ size\ }
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ For\ example\ -\/target:vectorize=32\ is\ equivalent\ to\ -\/target:AVX}
+\DoxyCodeLine{\ \ -\/-\/verbosity=<int>\ \ \ \ \ \ \ \ \ -\/\ Verbosity\ level\ 0-\/2.\ \ Default\ 0\ (quiet)}
+
+\end{DoxyCode}
+
+
+\end{adjustwidth}
+\hypertarget{md_README-copy_autotoc_md15}{}\doxysubsection{\texorpdfstring{$<$a id=\"{}building-\/hila-\/applications\"{}$>$$<$/a$>$\+Building HILA applications}{<a id="building-hila-applications"></a>Building HILA applications}}\label{md_README-copy_autotoc_md15}
+The second part is building HILA applications. Here we will go over an example with a health check test application. All applications should lie in the applications folder.
+
+
+\begin{DoxyItemize}
+\item {\itshape NOTE\+: that at this point one will need to install the FFTW3 and Open\+MPI development libraries, see dependencies section}
+\end{DoxyItemize}
+
+Build an application\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd\ hila/applications/hila\_healthcheck}
+\DoxyCodeLine{make\ [-\/j4]}
+\DoxyCodeLine{./build/hila\_healthcheck}
+
+\end{DoxyCode}
+
+
+
+
+{\bfseries{Expected output }}\begin{adjustwidth}{1em}{0em}
+
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\$\ ./build/hila\_healthcheck\ }
+\DoxyCodeLine{-\/-\/-\/-\/-\/\ HILA\ ⩩\ lattice\ framework\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Running\ program\ ./build/hila\_healthcheck}
+\DoxyCodeLine{with\ command\ line\ arguments\ ''}
+\DoxyCodeLine{Code\ version:\ git\ SHA\ d0222bca}
+\DoxyCodeLine{Compiled\ Jun\ \ 1\ 2023\ at\ 11:13:10}
+\DoxyCodeLine{with\ options:\ EVEN\_SITES\_FIRST\ SPECIAL\_BOUNDARY\_CONDITIONS}
+\DoxyCodeLine{Starting\ -\/-\/\ date\ Thu\ Jun\ \ 1\ 11:13:28\ 2023\ \ run\ time\ 8.328e-\/05s}
+\DoxyCodeLine{No\ runtime\ limit\ given}
+\DoxyCodeLine{GNU\ c-\/library\ performance:\ not\ returning\ allocated\ memory}
+\DoxyCodeLine{-\/-\/-\/-\/-\/\ Reading\ file\ parameters\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{lattice\ size\ \ \ \ \ \ \ \ \ 256,256,256}
+\DoxyCodeLine{random\ seed\ \ \ \ \ \ \ \ \ \ 0}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{LAYOUT:\ lattice\ size\ \ 256\ x\ 256\ x\ 256\ \ =\ \ 16777216\ sites}
+\DoxyCodeLine{Dividing\ to\ 1\ nodes}
+\DoxyCodeLine{}
+\DoxyCodeLine{Sites\ on\ node:\ 256\ x\ 256\ x\ 256\ \ =\ \ 16777216}
+\DoxyCodeLine{Processor\ layout:\ 1\ x\ 1\ x\ 1\ \ =\ \ 1\ nodes}
+\DoxyCodeLine{Node\ remapping:\ NODE\_LAYOUT\_BLOCK\ with\ blocksize\ 4}
+\DoxyCodeLine{Node\ block\ size\ 1\ 1\ 1\ \ block\ division\ 1\ 1\ 1}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Communication\ tests\ done\ -\/-\/\ date\ Thu\ Jun\ \ 1\ 11:13:31\ 2023\ \ run\ time\ 3.11s}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Random\ seed\ from\ time:\ 3871436182438}
+\DoxyCodeLine{Using\ node\ random\ numbers,\ seed\ for\ node\ 0:\ 3871436182438}
+\DoxyCodeLine{-\/-\/-\/\ Complex\ reduction\ value\ (\ -\/2.7647453e-\/17,\ 5.5294928e-\/17\ )\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Vector\ reduction,\ sum\ (\ -\/7.1331829e-\/15,\ -\/1.4328816e-\/15\ )\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Setting\ and\ reading\ a\ value\ at\ [\ 37\ 211\ 27\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Setting\ and\ reading\ a\ value\ at\ [\ 251\ 220\ 47\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Setting\ and\ reading\ a\ value\ at\ [\ 250\ 249\ 134\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Maxloc\ is\ [\ 112\ 117\ 164\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Max\ value\ 2\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Minloc\ is\ [\ 192\ 135\ 27\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Min\ value\ -\/1\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Field\ set\_elements\ and\ get\_elements\ with\ 51\ coordinates\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteSelect\ size\ 51\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteValueSelect\ size\ 51\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteSelect\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteValueSelect\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteIndex\ passed}
+\DoxyCodeLine{-\/-\/-\/\ 2-\/dimensional\ slice\ size\ 65536\ passed}
+\DoxyCodeLine{-\/-\/-\/\ slice\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ 1-\/dimensional\ slice\ size\ 256\ passed}
+\DoxyCodeLine{-\/-\/-\/\ slice\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ constant\ field\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ inverse\ transform\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 132\ 159\ 243\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 167\ 161\ 208\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 152\ 87\ 255\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 156\ 86\ 229\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 78\ 246\ 141\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ real\ to\ complex\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ complex\ to\ real\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Norm\ of\ field\ =\ 44434.862\ and\ FFT\ =\ 44434.862\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Norm\ of\ binned\ FFT\ =\ 44434.862\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Binning\ test\ at\ vector\ [\ 100\ 220\ 7\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Spectral\ density\ test\ with\ above\ vector\ \ passed}
+\DoxyCodeLine{-\/-\/-\/\ Binning\ test\ at\ vector\ [\ 193\ 10\ 49\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Spectral\ density\ test\ with\ above\ vector\ \ passed}
+\DoxyCodeLine{-\/-\/-\/\ Binning\ test\ at\ vector\ [\ 235\ 241\ 96\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Spectral\ density\ test\ with\ above\ vector\ \ passed}
+\DoxyCodeLine{TIMER\ REPORT:\ \ \ \ \ \ \ \ \ \ \ \ \ total(sec)\ \ \ \ \ \ \ \ \ \ calls\ \ \ \ \ time/call\ \ fraction}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{MPI\ broadcast\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.000\ \ \ \ \ \ \ \ \ \ \ \ \ 40\ \ \ \ \ \ 0.263\ μs\ \ \ 0.0000}
+\DoxyCodeLine{MPI\ reduction\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.000\ \ \ \ \ \ \ \ \ \ \ \ \ 34\ \ \ \ \ \ 2.003\ μs\ \ \ 0.0000}
+\DoxyCodeLine{FFT\ total\ time\ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ 44.544\ \ \ \ \ \ \ \ \ \ \ \ \ 14\ \ \ \ \ \ 3.182\ s\ \ \ \ 0.6449}
+\DoxyCodeLine{\ copy\ pencils\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 3.261\ \ \ \ \ \ \ \ \ \ \ \ \ 15\ \ \ \ \ \ 0.217\ s\ \ \ \ 0.0472}
+\DoxyCodeLine{\ MPI\ for\ pencils\ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.000\ \ \ \ \ \ \ \ \ \ \ \ \ 90\ \ \ \ \ \ 1.298\ μs\ \ \ 0.0000}
+\DoxyCodeLine{\ FFT\ plan\ \ \ \ \ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.003\ \ \ \ \ \ \ \ \ \ \ \ \ 42\ \ \ \ \ 73.150\ μs\ \ \ 0.0000}
+\DoxyCodeLine{\ copy\ fft\ buffers\ \ \ :\ \ \ \ \ \ \ \ \ \ 2.412\ \ \ \ \ \ \ \ 5505024\ \ \ \ \ \ 0.438\ μs\ \ \ 0.0349}
+\DoxyCodeLine{\ FFT\ execute\ \ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 2.356\ \ \ \ \ \ \ \ 2752512\ \ \ \ \ \ 0.856\ μs\ \ \ 0.0341}
+\DoxyCodeLine{\ pencil\ reshuffle\ \ \ :\ \ \ \ \ \ \ \ \ 12.967\ \ \ \ \ \ \ \ \ \ \ \ \ 30\ \ \ \ \ \ 0.432\ s\ \ \ \ 0.1878}
+\DoxyCodeLine{\ save\ pencils\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ 26.043\ \ \ \ \ \ \ \ \ \ \ \ \ 15\ \ \ \ \ \ 1.736\ s\ \ \ \ 0.3771}
+\DoxyCodeLine{bin\ field\ time\ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 9.014\ \ \ \ \ \ \ \ \ \ \ \ \ \ 7\ \ \ \ \ \ 1.288\ s\ \ \ \ 0.1305}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{\ No\ communications\ done\ from\ node\ 0}
+\DoxyCodeLine{Finishing\ -\/-\/\ date\ Thu\ Jun\ \ 1\ 11:14:37\ 2023\ \ run\ time\ 69.07s}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+
+\end{DoxyCode}
+
+
+{\bfseries{NOTE\+: Naturally the run time depends on your system}}
+
+\end{adjustwidth}
+
+
+By default all HILA applications are built using MPI so one can run\+: \begin{DoxyVerb}mpirun -n 4 ./build/hila_healthcheck
+\end{DoxyVerb}
+ 
+
+{\bfseries{Expected output }}\begin{adjustwidth}{1em}{0em}
+
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\$\ mpirun\ -\/n\ 4\ ./build/hila\_healthcheck}
+\DoxyCodeLine{-\/-\/-\/-\/-\/\ HILA\ ⩩\ lattice\ framework\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Running\ program\ ./build/hila\_healthcheck}
+\DoxyCodeLine{with\ command\ line\ arguments\ ''}
+\DoxyCodeLine{Code\ version:\ git\ SHA\ d0222bca}
+\DoxyCodeLine{Compiled\ Jun\ \ 1\ 2023\ at\ 11:13:10}
+\DoxyCodeLine{with\ options:\ EVEN\_SITES\_FIRST\ SPECIAL\_BOUNDARY\_CONDITIONS}
+\DoxyCodeLine{Starting\ -\/-\/\ date\ Thu\ Jun\ \ 1\ 11:18:22\ 2023\ \ run\ time\ 0.0001745s}
+\DoxyCodeLine{No\ runtime\ limit\ given}
+\DoxyCodeLine{GNU\ c-\/library\ performance:\ not\ returning\ allocated\ memory}
+\DoxyCodeLine{-\/-\/-\/-\/-\/\ Reading\ file\ parameters\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{lattice\ size\ \ \ \ \ \ \ \ \ 256,256,256}
+\DoxyCodeLine{random\ seed\ \ \ \ \ \ \ \ \ \ 0}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{LAYOUT:\ lattice\ size\ \ 256\ x\ 256\ x\ 256\ \ =\ \ 16777216\ sites}
+\DoxyCodeLine{Dividing\ to\ 4\ nodes}
+\DoxyCodeLine{}
+\DoxyCodeLine{Sites\ on\ node:\ 256\ x\ 128\ x\ 128\ \ =\ \ 4194304}
+\DoxyCodeLine{Processor\ layout:\ 1\ x\ 2\ x\ 2\ \ =\ \ 4\ nodes}
+\DoxyCodeLine{Node\ remapping:\ NODE\_LAYOUT\_BLOCK\ with\ blocksize\ 4}
+\DoxyCodeLine{Node\ block\ size\ 1\ 2\ 2\ \ block\ division\ 1\ 1\ 1}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Communication\ tests\ done\ -\/-\/\ date\ Thu\ Jun\ \ 1\ 11:18:23\ 2023\ \ run\ time\ 1.046s}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{Random\ seed\ from\ time:\ 4184648360436}
+\DoxyCodeLine{Using\ node\ random\ numbers,\ seed\ for\ node\ 0:\ 4184648360436}
+\DoxyCodeLine{-\/-\/-\/\ Complex\ reduction\ value\ (\ -\/2.7539926e-\/17,\ 5.5079939e-\/17\ )\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Vector\ reduction,\ sum\ (\ 1.4328816e-\/15,\ -\/7.4627804e-\/15\ )\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Setting\ and\ reading\ a\ value\ at\ [\ 139\ 215\ 41\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Setting\ and\ reading\ a\ value\ at\ [\ 231\ 44\ 102\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Setting\ and\ reading\ a\ value\ at\ [\ 238\ 201\ 150\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Maxloc\ is\ [\ 80\ 69\ 74\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Max\ value\ 2\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Minloc\ is\ [\ 219\ 105\ 178\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Min\ value\ -\/1\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Field\ set\_elements\ and\ get\_elements\ with\ 51\ coordinates\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteSelect\ size\ 51\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteValueSelect\ size\ 51\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteSelect\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteValueSelect\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ SiteIndex\ passed}
+\DoxyCodeLine{-\/-\/-\/\ 2-\/dimensional\ slice\ size\ 65536\ passed}
+\DoxyCodeLine{-\/-\/-\/\ slice\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ 1-\/dimensional\ slice\ size\ 256\ passed}
+\DoxyCodeLine{-\/-\/-\/\ slice\ content\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ constant\ field\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ inverse\ transform\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 239\ 139\ 86\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 218\ 12\ 247\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 94\ 206\ 99\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 34\ 78\ 96\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ of\ wave\ vector\ [\ 221\ 224\ 199\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ real\ to\ complex\ passed}
+\DoxyCodeLine{-\/-\/-\/\ FFT\ complex\ to\ real\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Norm\ of\ field\ =\ 44418.915\ and\ FFT\ =\ 44418.915\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Norm\ of\ binned\ FFT\ =\ 44418.915\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Binning\ test\ at\ vector\ [\ 106\ 69\ 123\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Spectral\ density\ test\ with\ above\ vector\ \ passed}
+\DoxyCodeLine{-\/-\/-\/\ Binning\ test\ at\ vector\ [\ 240\ 142\ 174\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Spectral\ density\ test\ with\ above\ vector\ \ passed}
+\DoxyCodeLine{-\/-\/-\/\ Binning\ test\ at\ vector\ [\ 226\ 28\ 118\ ]\ passed}
+\DoxyCodeLine{-\/-\/-\/\ Spectral\ density\ test\ with\ above\ vector\ \ passed}
+\DoxyCodeLine{TIMER\ REPORT:\ \ \ \ \ \ \ \ \ \ \ \ \ total(sec)\ \ \ \ \ \ \ \ \ \ calls\ \ \ \ \ time/call\ \ fraction}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{MPI\ broadcast\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.002\ \ \ \ \ \ \ \ \ \ \ \ \ 40\ \ \ \ \ 49.358\ μs\ \ \ 0.0001}
+\DoxyCodeLine{MPI\ reduction\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.289\ \ \ \ \ \ \ \ \ \ \ \ \ 34\ \ \ \ \ \ 8.508\ ms\ \ \ 0.0120}
+\DoxyCodeLine{MPI\ post\ receive\ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.000\ \ \ \ \ \ \ \ \ \ \ \ \ \ 4\ \ \ \ \ \ 1.782\ μs\ \ \ 0.0000}
+\DoxyCodeLine{MPI\ start\ send\ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.000\ \ \ \ \ \ \ \ \ \ \ \ \ \ 4\ \ \ \ \ \ 3.923\ μs\ \ \ 0.0000}
+\DoxyCodeLine{MPI\ wait\ receive\ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.001\ \ \ \ \ \ \ \ \ \ \ \ \ \ 4\ \ \ \ \ \ 0.277\ ms\ \ \ 0.0000}
+\DoxyCodeLine{MPI\ wait\ send\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.002\ \ \ \ \ \ \ \ \ \ \ \ \ \ 4\ \ \ \ \ \ 0.404\ ms\ \ \ 0.0001}
+\DoxyCodeLine{MPI\ send\ field\ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.001\ \ \ \ \ \ \ \ \ \ \ \ \ 15\ \ \ \ \ 67.812\ μs\ \ \ 0.0000}
+\DoxyCodeLine{FFT\ total\ time\ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ 14.922\ \ \ \ \ \ \ \ \ \ \ \ \ 14\ \ \ \ \ \ 1.066\ s\ \ \ \ 0.6182}
+\DoxyCodeLine{\ copy\ pencils\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 1.941\ \ \ \ \ \ \ \ \ \ \ \ \ 15\ \ \ \ \ \ 0.129\ s\ \ \ \ 0.0804}
+\DoxyCodeLine{\ MPI\ for\ pencils\ \ \ \ :\ \ \ \ \ \ \ \ \ \ 1.644\ \ \ \ \ \ \ \ \ \ \ \ \ 90\ \ \ \ \ 18.263\ ms\ \ \ 0.0681}
+\DoxyCodeLine{\ FFT\ plan\ \ \ \ \ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.006\ \ \ \ \ \ \ \ \ \ \ \ \ 42\ \ \ \ \ \ 0.140\ ms\ \ \ 0.0002}
+\DoxyCodeLine{\ copy\ fft\ buffers\ \ \ :\ \ \ \ \ \ \ \ \ \ 1.164\ \ \ \ \ \ \ \ 1376256\ \ \ \ \ \ 0.846\ μs\ \ \ 0.0482}
+\DoxyCodeLine{\ FFT\ execute\ \ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 0.933\ \ \ \ \ \ \ \ \ 688128\ \ \ \ \ \ 1.355\ μs\ \ \ 0.0386}
+\DoxyCodeLine{\ pencil\ reshuffle\ \ \ :\ \ \ \ \ \ \ \ \ \ 7.246\ \ \ \ \ \ \ \ \ \ \ \ \ 30\ \ \ \ \ \ 0.242\ s\ \ \ \ 0.3002}
+\DoxyCodeLine{\ save\ pencils\ \ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 2.994\ \ \ \ \ \ \ \ \ \ \ \ \ 15\ \ \ \ \ \ 0.200\ s\ \ \ \ 0.1240}
+\DoxyCodeLine{bin\ field\ time\ \ \ \ \ \ :\ \ \ \ \ \ \ \ \ \ 2.792\ \ \ \ \ \ \ \ \ \ \ \ \ \ 7\ \ \ \ \ \ 0.399\ s\ \ \ \ 0.1157}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+\DoxyCodeLine{\ COMMS\ from\ node\ 0:\ 4\ done,\ 0(0\%)\ optimized\ away}
+\DoxyCodeLine{Finishing\ -\/-\/\ date\ Thu\ Jun\ \ 1\ 11:18:46\ 2023\ \ run\ time\ 24.14s}
+\DoxyCodeLine{-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}
+
+\end{DoxyCode}
+ {\bfseries{NOTE\+: Naturally the run time depends on your system}}
+
+\end{adjustwidth}
+
+
+Computing platform is chosen by \begin{DoxyVerb}make ARCH=<platform>
+\end{DoxyVerb}
+ {\bfseries{List of computing platforms\+:}}
+
+\tabulinesep=1mm
+\begin{longtabu}spread 0pt [c]{*{2}{|X[-1]}|}
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ ARCH=   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Description    }\\\cline{1-2}
+\endfirsthead
+\hline
+\endfoot
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ ARCH=   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Description    }\\\cline{1-2}
+\endhead
+{\ttfamily vanilla}   &default CPU implementation    \\\cline{1-2}
+{\ttfamily AVX2}   &AVX vectorization optimized program using \href{https://github.com/vectorclass}{\texttt{ {\itshape vectorclass}}}    \\\cline{1-2}
+{\ttfamily openmp}   &Open\+MP parallelized program    \\\cline{1-2}
+{\ttfamily cuda}   &Parallel \href{https://developer.nvidia.com/cuda-toolkit}{\texttt{ CUDA}} program    \\\cline{1-2}
+{\ttfamily hip}   &Parallel \href{https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html}{\texttt{ HIP}}   \\\cline{1-2}
+\end{longtabu}
+
+
+For cuda compilation one needs to define their CUDA version and architercure either as environment variables or during the make process\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{export\ CUDA\_VERSION=11.6}
+\DoxyCodeLine{export\ CUDA\_ARCH=61}
+\DoxyCodeLine{make\ ARCH=cuda}
+\DoxyCodeLine{or}
+\DoxyCodeLine{make\ ARCH=cuda\ CUDA\_VERSION=11.6\ CUDA\_ARCH=61}
+
+\end{DoxyCode}
+ {\itshape NOTE\+: Default cuda version is 11.\+6 and compute architecture is sm\+\_\+61}
+
+{\bfseries{HPC platforms}}\+:
+
+\tabulinesep=1mm
+\begin{longtabu}spread 0pt [c]{*{2}{|X[-1]}|}
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ ARCH   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Description    }\\\cline{1-2}
+\endfirsthead
+\hline
+\endfoot
+\hline
+\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ ARCH   }&\PBS\centering \cellcolor{\tableheadbgcolor}\textbf{ Description    }\\\cline{1-2}
+\endhead
+{\ttfamily lumi}   &CPU-\/\+MPI implementation for LUMI supercomputer    \\\cline{1-2}
+{\ttfamily lumi-\/hip}   &GPU-\/\+MPI implementation for LUMI supercomputer using HIP    \\\cline{1-2}
+{\ttfamily mahti}   &CPU-\/\+MPI implementation for MAHTI supercomputer    \\\cline{1-2}
+{\ttfamily mahti-\/cuda}   &GPU-\/\+MPI implementation for MAHTI supercomputer using CUDA   \\\cline{1-2}
+\end{longtabu}
+\hypertarget{md_README-copy_autotoc_md16}{}\doxysection{\texorpdfstring{$<$a id=\"{}user-\/guide\"{}$>$$<$/a$>$\+User guide}{<a id="user-guide"></a>User guide}}\label{md_README-copy_autotoc_md16}
+Now that HILA has been built successfully, the next step is to build your first HILA application\+: hila application guide
+
+After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer\+: comprehensive guide
+
+Both of these resources can be viewed on the web guide hosted on\+: TODO\+: add link to github pages or hosted guide somewhere
+
+To generate the user guide and technical documentation locally one can run\+: \begin{DoxyVerb}doxygen /docs/config 
+\end{DoxyVerb}
+ To open the documentation locally with any browser\+: \begin{DoxyVerb}firefox /docs/html/index.html
+\end{DoxyVerb}
+ 
