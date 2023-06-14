@@ -2,7 +2,7 @@
  * @file params.h
  * @brief This file contains #defined constants
  * @details
- * These can be overruled in app Makefile, with APP_OPTS := -DPARAMETER=value.
+ * These can be overruled in application Makefile, with APP_OPTS := -DPARAMETER=value.
  *
  * There are two types of #define variables, True/False switches or parameter variables.
  *
@@ -14,9 +14,8 @@
 #ifndef PARAMS_H_
 #define PARAMS_H_
 
-#ifdef RELEASE
+#ifdef RELEASE || defined(DOXYGEN)
 /**
- * @def NDEBUG
  * @brief Turn off static assert which are on by default.
  * @details By defining either RELEASE or NDEBUG (No debug) static asserts will be turned off
  */
@@ -26,24 +25,26 @@
 #endif
 
 /**
- * @def NDIM
  * @brief HILA system dimensionality
  * @details Set's HILA dimensionality for which 4 is default. Options are 2,3,4
  */
-#ifndef NDIM
+#ifndef NDIM || defined(DOXYGEN)
 #define NDIM 4
 #endif
 
+
+#ifndef DEFAULT_OUTPUT_NAME
 /**
  * @def DEFAULT_OUTPUT_NAME
  * @brief Default output file name
  */
-#ifndef DEFAULT_OUTPUT_NAME
 #define DEFAULT_OUTPUT_NAME "output"
 #endif
 
-// EVEN_SITES_FIRST is the default
-#ifndef EVEN_SITES_FIRST
+#ifndef EVEN_SITES_FIRST || defined(DOXYGEN)
+/**
+ * @brief  EVEN_SITES_FIRST is default. To traverse odd sites first set -DEVEN_SITES_FIRST=0
+ */
 #define EVEN_SITES_FIRST
 #elif EVEN_SITES_FIRST == 0
 #undef EVEN_SITES_FIRST

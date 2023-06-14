@@ -85,14 +85,14 @@ List of datatypes offered by HILA. Description of datatype and usage is
 - #SquareMatrix\<n,T\>
 - Array\<n,m,T\>
 
-Here S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not
+Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not
 AVX vectorizable). See respective links for documented functions/methods.
 
-> __NOTE__: #Vector, #HorizontalVector and #SquareMatrix are special cases of Matrix Class, so all methods are inherited.
+> __NOTE__: #Vector, #HorizontalVector and #SquareMatrix are special cases of Matrix Class, so all methods are inherited. Additionally all Matrix operations are defined in Matrix_t
 
 ### Special types
 
-\a Parity:
+::Parity :
 
 > enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
 

@@ -1,12 +1,12 @@
 /**
  * @file coordinates.h
  * @brief This header file defines:
- *   - enum Direction
- *   - enum class Parity
+ *   - enum ::Direction
+ *   - enum class ::Parity
  *   - class CoordinateVector
- * 
+ *
  * These are used to traverse the lattice coordinate systems
- * 
+ *
  */
 
 #ifndef COORDINATES_H_
@@ -15,13 +15,19 @@
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
 
-///////////////////////////////////////////////////////////////////////////
-/// enum Direction - includes the opposite Direction
-/// defined as unsigned, but note that Direction + int is not defined
-/// Direction can be used as an array index (interchangably with int)
-///////////////////////////////////////////////////////////////////////////
-
-// clang-format off
+/**
+ * @enum Direction
+ * @brief Enumerator for direction that assigns integer to direction to be interpreted as unit
+ * vector.
+ * @details Positive directions are defined as \f$ e_i = i \f$ where \f$ i \in
+ * \{0,..., \f$ ::NDIM \f$\}\f$
+ *
+ * Negative directions are defined as \f$ e_{-i} = \f$ hila::NDIM \f$\cdot2 - 1 - e_i\f$
+ *
+ * Defined as unsigned, but note that Direction + int is not defined.
+ *
+ * Direction can be used as an array index (interchangably with int)
+ */
 #if NDIM == 4
 enum Direction : unsigned {
     e_x = 0,
@@ -35,30 +41,13 @@ enum Direction : unsigned {
     NDIRECTIONS
 };
 #elif NDIM == 3
-enum Direction : unsigned { 
-    e_x = 0,
-    e_y,
-    e_z,
-    e_z_down,
-    e_y_down,
-    e_x_down, 
-    NDIRECTIONS 
-};
+enum Direction : unsigned { e_x = 0, e_y, e_z, e_z_down, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM == 2
-enum Direction : unsigned { 
-    e_x = 0,
-    e_y,
-    e_y_down,
-    e_x_down,
-    NDIRECTIONS
-};
+enum Direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM == 1
-enum Direction : unsigned { 
-    e_x = 0,
-    e_x_down,
-    NDIRECTIONS
-};
+enum Direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
 #endif
+
 // clang-format on
 
 constexpr unsigned NDIRS = NDIRECTIONS; //
@@ -78,7 +67,10 @@ static inline Direction operator++(Direction &dir, int) {
     return d;
 }
 
-/// Basic Direction looper, which defines the Direction as you go.
+/**
+ * @brief Macro to loop over (all) ::Direction(s)
+ *
+ */
 #define foralldir(d) for (Direction d = e_x; d < NDIM; ++d)
 
 inline Direction opp_dir(const Direction d) {
@@ -164,19 +156,20 @@ inline std::ostream &operator<<(std::ostream &os, const Direction d) {
 
 
 /**
- * @brief Parity enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
- * @enum
+ * @brief Parity enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site
+ * (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
  */
 enum class Parity : unsigned { none = 0, even, odd, all };
 
 // should use here #define instead of const Parity? Makes EVEN a protected symbol
 
-/** 
- * @name Partiy constexpr aliases for @enum Parity 
+/**
+ * @name Parity constexpr aliases
+ * @brief Aliases for contents of ::Parity
  */
 /** @{ */
 /** @brief bit pattern:  001*/
-constexpr Parity EVEN = Parity::even; 
+constexpr Parity EVEN = Parity::even;
 /** @brief bit pattern:  010*/
 constexpr Parity ODD = Parity::odd;
 /** @brief bit pattern:  011*/
