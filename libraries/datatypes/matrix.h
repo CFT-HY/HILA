@@ -1,3 +1,4 @@
+/** @file matrix.h */
 #ifndef MATRIX_H_
 #define MATRIX_H_
 
@@ -19,15 +20,20 @@ class Array;
 template <int n, int m, typename T>
 class Matrix;
 
-///////////////////////////////////////////////////////////////
-/// Define Vector and HorizontalVector as a special case of Matrix
-///////////////////////////////////////////////////////////////
-
+/**
+ * @var Vector is defined as 1-column Matrix
+ */
 template <int n, typename T>
 using Vector = Matrix<n, 1, T>;
 
+/**
+ * @brief RowVector is a 1-row Matrix
+ * 
+ * @tparam n 
+ * @tparam T 
+ */
 template <int n, typename T>
-using HorizontalVector = Matrix<1, n, T>;
+using RowVector = Matrix<1, n, T>;
 
 ///////////////////////////////////////////////////////////////
 /// Define SquareMatrix as an alias
@@ -225,26 +231,26 @@ class Matrix_t {
     }
 
     // /// get row of a matrix
-    // HorizontalVector<m, T> row(int r) const {
-    //     HorizontalVector<m, T> v;
+    // RowVector<m, T> row(int r) const {
+    //     RowVector<m, T> v;
     //     for (int i = 0; i < m; i++)
     //         v[i] = e(r, i);
     //     return v;
     // }
 
     /// return reference to row in a matrix
-    const HorizontalVector<m, T> &row(int r) const {
-        return *(reinterpret_cast<const HorizontalVector<m, T> *>(this) + r);
+    const RowVector<m, T> &row(int r) const {
+        return *(reinterpret_cast<const RowVector<m, T> *>(this) + r);
     }
 
     /// return reference to row in a matrix
-    HorizontalVector<m, T> &row(int r) {
-        return *(reinterpret_cast<HorizontalVector<m, T> *>(this) + r);
+    RowVector<m, T> &row(int r) {
+        return *(reinterpret_cast<RowVector<m, T> *>(this) + r);
     }
 
     /// return reference to row in a matrix
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    void set_row(int r, const HorizontalVector<m, S> &v) {
+    void set_row(int r, const RowVector<m, S> &v) {
         for (int i = 0; i < m; i++)
             e(r, i) = v[i];
     }
@@ -497,8 +503,8 @@ class Matrix_t {
 
     /// Transpose of a vector: just return a ref
     template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
-    inline const HorizontalVector<n, T> &transpose() const {
-        return *reinterpret_cast<const HorizontalVector<n, T> *>(this);
+    inline const RowVector<n, T> &transpose() const {
+        return *reinterpret_cast<const RowVector<n, T> *>(this);
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -805,7 +811,7 @@ class Matrix_t {
         static_assert(hila::contains_complex<T>::value || !hila::contains_complex<R>::value,
                       "Cannot multiply real matrix with complex 2x2 block matrix");
 
-        HorizontalVector<2, T> a;
+        RowVector<2, T> a;
         for (int i = 0; i < n; i++) {
             a.e(0) = this->e(i, p);
             a.e(1) = this->e(i, q);
