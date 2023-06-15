@@ -1,3 +1,5 @@
+#ifndef PARAMS_H_
+#define PARAMS_H_
 /**
  * @file params.h
  * @brief This file contains #defined constants
@@ -11,10 +13,7 @@
  * Parameter variables are set similary with -DPARAMETER=var where var is the chosen variable
  */
 
-#ifndef PARAMS_H_
-#define PARAMS_H_
-
-#ifdef RELEASE || defined(DOXYGEN)
+#ifdef RELEASE
 /**
  * @brief Turn off static assert which are on by default.
  * @details By defining either RELEASE or NDEBUG (No debug) static asserts will be turned off
@@ -24,11 +23,11 @@
 #endif
 #endif
 
+#ifndef NDIM
 /**
  * @brief HILA system dimensionality
  * @details Set's HILA dimensionality for which 4 is default. Options are 2,3,4
  */
-#ifndef NDIM || defined(DOXYGEN)
 #define NDIM 4
 #endif
 
@@ -41,7 +40,7 @@
 #define DEFAULT_OUTPUT_NAME "output"
 #endif
 
-#ifndef EVEN_SITES_FIRST || defined(DOXYGEN)
+#ifndef EVEN_SITES_FIRST
 /**
  * @brief  EVEN_SITES_FIRST is default. To traverse odd sites first set -DEVEN_SITES_FIRST=0
  */

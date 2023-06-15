@@ -66,9 +66,9 @@ The Makefile defines variables that allow control of the make compilation proces
 
 ## Datatypes
 
-List of datatypes offered by HILA. Description of datatype and usage is
+List of datatypes offered by HILA
 
-### Standard types \<S\>`:
+### Standard types \<S\>: {#standard}
 
 - `int`
 - `int64_t`
@@ -76,7 +76,7 @@ List of datatypes offered by HILA. Description of datatype and usage is
 - `double`
 - (`long double`?)
 
-### Hila provided basic types:
+### Basic types: {#basic}
 
 - Complex\<S\>
 - #Vector\<n,T\>
@@ -84,11 +84,12 @@ List of datatypes offered by HILA. Description of datatype and usage is
 - Matrix\<n,m,T\>
 - #SquareMatrix\<n,T\>
 - Array\<n,m,T\>
+- SU\<n,T>
 
 Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not
 AVX vectorizable). See respective links for documented functions/methods.
 
-> __NOTE__: #Vector, #HorizontalVector and #SquareMatrix are special cases of Matrix Class, so all methods are inherited. Additionally all Matrix operations are defined in Matrix_t
+> __NOTE__: Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #HorizontalVector and #SquareMatrix are special alias cases of Matrix Class, so all methods are inherited.
 
 ### Special types
 
@@ -96,29 +97,66 @@ AVX vectorizable). See respective links for documented functions/methods.
 
 > enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
 
-    - `Direction`: conceptually unit vector with values `±e_x, ±e_y, ±e_z, ±e_t`  (if NDIM==4).
-       Implemented as an enum class.  Can be used to index arrays of size NDIM.
+::Direction: 
 
-    - `CoordinateVector`: derived from Vector<NDIM,int>. 
-            
-       Direction variable acts as an unit vector in vector algebra:
-       (assume below NDIM=4)
+> Conceptually a unit vector with values `±e_x, ±e_y, ±e_z, ±e_t`  (if NDIM==4). Implemented as an enum class.  Can be used to index arrays of size NDIM.
+
+#CoordinateVector:
+
+> Acts as a Coordinate Vector for indexing Field. All Vector algebra is well defined, since CoordinateVector inherits from #Vector which inherits from Matrix 
+>
+> __NOTE__: See CoordinateVector_t
+
+#### Example of CoordinateVector and Direction usage:
+
+Defining a CoordinateVector and Direction:
+
+~~~cpp
+CoordinateVector v
+Direction d = e_x
+~~~
+
+Direction objects act as unit vectors when cast to CoordinateVector.
+Additionally algebra acts as defined according to vector algebra:
 
 ~~~cpp       
-     CoordinateVector v;
-     Direction d = e_x;
-     v = d;             // v = [1,0,0,0]
-     v += e_y - 3*d;    // v = [-2,1,0,0]
-     v = {0,1,-1,0};    // v = [0,1,-1,0] equivalent v = e_y - e_z;
-     hila::out0 << v.dot({1,2,3,4});  // dot product of 2 vectors, prints -1
-     int j = d;         // ok
-     d = j;             // ERROR: cannot assign int to Direction
-     ++d;               // e_x -> e_y
-     is_up_dir(d);      // true if d is along positive x,y,z,t -dir.
-     
-~~~            
+v = d;             // v = [1,0,0,0]
+v += e_y - 3*d;    // v = [-2,1,0,0] 
+~~~
 
-## Field access and traversal
+CoordinateVectors can be assigned with initializer list, where indices of list are aligned with CoordinateVector dimensions. Unit vector form with Direction's is also given:
+
+~~~cpp
+v = {0,1,-1,0};    // v = [0,1,-1,0]
+v = e_y - e_z;     // equivalent to {0,1,-1,0}
+~~~
+
+Simple operations like a dot product are defined:
+
+~~~cpp
+int i = v.dot({1,2,3,4});  // dot product of 2 vectors, evaluates to -1
+~~~
+
+Since Direction is an enum it can be casted to int, but int cannot be assigned to it
+~~~cpp
+int j = d;         // ok
+d = j;             // ERROR: cannot assign int to Direction
+~~~
+
+The ++d operator is also defined for Direction where it increase the direction in order \f$ \{e_x,e_y,e_z,e_t\} \f$. While --d operator is not defined
+
+~~~cpp
+++d;               // e_x -> e_y
+is_up_dir(d);      // true if d is along positive x,y,z,t-dir. 
+~~~
+
+These are only some of the examples of what the CoordinateVector and Direction objects are capable of. For all definitions see coordinates.h, CoordinateVector and Direction pages.
+
+## Field
+
+Field is the most important Datatype offered by HILA. The Field defines the lattice system and is the general object we evolve and iterate over. The Field and be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
+
+### Access and Traversal
 
 The principal traversal of the lattice is with *site loops* `onsites(Parity)`, and a
 special location identifier `X` (effectively a new keyword).  

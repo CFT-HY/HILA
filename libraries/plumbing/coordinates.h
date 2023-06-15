@@ -15,20 +15,22 @@
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
 
+#if NDIM == 4
 /**
  * @enum Direction
  * @brief Enumerator for direction that assigns integer to direction to be interpreted as unit
  * vector.
- * @details Positive directions are defined as \f$ e_i = i \f$ where \f$ i \in
- * \{0,..., \f$ NDIM \f$\}\f$
+ * @details In NDIM\f$=4\f$ (max dimensionality) we have:
+ *
+ * \f$\{e_x = 0, e_y = 1, e_z = 2, e_t = 3\}\f$
  *
  * Negative directions are defined as \f$ e_{-i} = \f$ NDIM \f$\cdot2 - 1 - e_i\f$
  *
- * Defined as unsigned, but note that Direction + int is not defined.
+ * Defined as unsigned, but note that Direction + int is not defined. To operate with int, Direction
+ * must be first cast to int
  *
  * Direction can be used as an array index (interchangably with int)
  */
-#if NDIM == 4 || defined(DOXYGEN)
 enum Direction : unsigned {
     e_x = 0,
     e_y,
@@ -48,9 +50,11 @@ enum Direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
 enum Direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
 #endif
 
-// clang-format on
-
-constexpr unsigned NDIRS = NDIRECTIONS; //
+/**
+ * @brief Number of directions
+ *
+ */
+constexpr unsigned NDIRS = NDIRECTIONS;
 
 // Increment for directions:  ++dir,  dir++  does the obvious
 // dir-- not defined, should we?
@@ -239,10 +243,13 @@ inline int pmod(const int a, const int b) {
 
 // class SiteIndex;
 
-//////////////////////////////////////////////////////////////////////
-/// CoordinateVector type
-//////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Class for coordinate vector useful in indexing lattice
+ *
+ * @details Defined as Vector<NDIM, int> meaning that all operations from Matrix class are inherited
+ *
+ * @tparam T int
+ */
 template <typename T>
 class CoordinateVector_t : public Vector<NDIM, T> {
 
@@ -434,7 +441,10 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // inline SiteIndex index() const;
 };
 
-/// Define the std CoordinateVector type here
+/**
+ * @brief CoordinateVector alias for CoordinateVector_t
+ *
+ */
 using CoordinateVector = CoordinateVector_t<int>;
 
 template <typename T>
