@@ -1,10 +1,11 @@
 /**
  * @file matrix.h
  * @brief Definition of Matrix types
- * @details This file contains base matrix type Matrix_t which defines all general matrix type opirations
-    Matrix types are Matrix, #Vector, #HorizontalVector, #SquareMatrix of which Matrix is defined as a class and the rest are special cases of the Matrix class.
- * 
- * 
+ * @details This file contains base matrix type Matrix_t which defines all general matrix type
+ opirations Matrix types are Matrix, #Vector, #HorizontalVector, #SquareMatrix of which Matrix is
+ defined as a class and the rest are special cases of the Matrix class.
+ *
+ *
  */
 
 #ifndef MATRIX_H_
@@ -25,8 +26,9 @@ template <int n, int m, typename T>
 class Matrix;
 
 /**
- * @brief Vertical Vector is defined as Matrix with width 1, which consequently defines vector operations
- * 
+ * @brief Vertical Vector is defined as Matrix with width 1, which consequently defines vector
+ * operations
+ *
  * @tparam n Length of Vector
  * @tparam T Vector type
  */
@@ -34,8 +36,9 @@ template <int n, typename T>
 using Vector = Matrix<n, 1, T>;
 
 /**
- * @brief Horizontal Vector is defined as Matrix with height 1, which consequently defines vector operations
- * 
+ * @brief Horizontal Vector is defined as Matrix with height 1, which consequently defines vector
+ * operations
+ *
  * @tparam n Length of Vector
  * @tparam T Vector type
  */
@@ -44,9 +47,9 @@ using HorizontalVector = Matrix<1, n, T>;
 
 /**
  * @brief Square matrix is defined as alias with special case of Matrix<n,n,T>
- * 
- * @tparam n 
- * @tparam T 
+ *
+ * @tparam n
+ * @tparam T
  */
 template <int n, typename T>
 using SquareMatrix = Matrix<n, n, T>;
@@ -58,20 +61,26 @@ using SquareMatrix = Matrix<n, n, T>;
 // #include "matrix_column.h"
 
 
-////////////////////////////////////////////////////////////////
-/// The main nxm matrix type template Matrix_t
-/// This is a root type, and "useful" types are derived from this type
-///
-/// Uses curiously recurring template pattern (CRTP), where
-/// the last template parameter is the template itself
-/// Example: the matrix type below is defined as
-///   template <int n, int m, typename T>
-///   class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
-///
-/// Used because stupid c++ makes it complicated to write
-/// generic code, in this case derived functions to return derived type
-///////////////////////////////////////////////////////////////
-
+/**
+ * @brief The main \f$ n \times m \f$ matrix type template Matrix_t. This is a root type, and
+ * "useful" types are derived from this class
+ *
+ * @details Uses curiously recurring template pattern (CRTP), where the last template parameter is
+ * the template itself
+ *
+ * Example: the matrix type below is defined as
+ * @code{.cpp}
+ * template <int n, int m, typename T>
+ * class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
+ * @endcode
+ *
+ * Used because stupid c++ makes it complicated to write generic code, in this case derived
+ * functions to return derived type
+ * @tparam n row length
+ * @tparam m column length
+ * @tparam T Data type
+ * @tparam Mtype Specific "Matrix" type for CRTP
+ */
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t {
 
