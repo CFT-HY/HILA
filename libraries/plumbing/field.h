@@ -639,8 +639,8 @@ class Field {
 #endif
 
     /**
-     * @name Standard
-     * @brief Standard arithmetic ops which fields should implement
+     * @name Standard arithmetic operations
+     * @brief Standard arithmetic operations which fields should implement
      *        Not all are always callable, e.g. division may not be
      *        implemented by all field types
      *  @{
@@ -712,7 +712,18 @@ class Field {
         return *this;
     }
 
-    // +=, -=  etc operators from compatible types
+    /**
+     * @brief += Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to sum
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f += g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const Field<A> &rhs) {
@@ -720,6 +731,18 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief -= Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to subtract
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f -= g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const Field<A> &rhs) {
@@ -727,6 +750,18 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief *= Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to compute product with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f *= g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const Field<A> &rhs) {
@@ -734,6 +769,18 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief /= Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to divide with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f /= g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const Field<A> &rhs) {
@@ -741,6 +788,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief += Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to sum
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f += a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const A &rhs) {
@@ -748,6 +808,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief -= Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to subtract
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f -= a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const A &rhs) {
@@ -755,6 +828,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief *= Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to multiply with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f *= a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const A &rhs) {
@@ -762,6 +848,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief /= Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to divide with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f /= a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const A &rhs) {
@@ -770,21 +869,46 @@ class Field {
     }
 
     // Unary + and -
+
+    /**
+     * @brief Unary + operator, acts as Identity
+     *
+     * @return Field<T> Returns itself
+     */
     Field<T> operator+() const {
         return *this;
     }
 
+    /**
+     * @brief Unary - operator, acts as negation to all field elements
+     *
+     * @return Field<T>
+     */
     Field<T> operator-() const {
         Field<T> f;
         f[ALL] = -(*this)[X];
         return f;
     }
 
+    /**
+     * @brief Field comparison operator.
+     * @details Computes squarenorm of difference of two fields and checks if squarenorm is less
+     * than tolerance epsilon=0.
+     *
+     * @param rhs Field to compare Field with
+     * @return true
+     * @return false
+     */
     bool operator==(const Field<T> &rhs) const {
         hila::scalar_type<T> epsilon = 0;
         return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
+    /**
+     * @brief Computes squarenorm of Field depending on how it is defined for Field type T
+     *
+     * @return double
+     */
     double squarenorm() const {
         double n = 0;
         onsites(ALL) {
@@ -793,16 +917,32 @@ class Field {
         return n;
     }
 
+    /**
+     * @brief Computes norm of Field depending on how it is defined for Field type T
+     *
+     * @return double
+     */
     double norm() {
         return sqrt(squarenorm());
     }
 
+    /**
+     * @brief Computes conjugate of Field depending on how it is defined for Field type T
+     *
+     * @return Field<T>
+     */
     Field<T> conj() const {
         Field<T> f;
         f[ALL] = ::conj((*this)[X]);
         return f;
     }
 
+    /**
+     * @brief Computes dagger or Hermitian conjugate of Field depending on how it is
+     * defined for Field type T
+     *
+     * @return Field<T>
+     */
     template <typename R = T, typename A = decltype(::dagger(std::declval<R>()))>
     Field<A> dagger() const {
         Field<A> f;
@@ -810,6 +950,13 @@ class Field {
         return f;
     }
 
+    /**
+     * @brief Returns real part of Field
+     *
+     * @tparam R Field current type
+     * @tparam A Field real part type
+     * @return Field<A>
+     */
     template <typename R = T, typename A = decltype(::real(std::declval<R>()))>
     Field<A> real() const {
         Field<A> f;
@@ -817,6 +964,13 @@ class Field {
         return f;
     }
 
+    /**
+     * @brief Returns imaginary part of Field
+     *
+     * @tparam R Field current type
+     * @tparam A Field imaginary part type
+     * @return Field<A>
+     */
     template <typename R = T, typename A = decltype(::imag(std::declval<R>()))>
     Field<A> imag() const {
         Field<A> f;
