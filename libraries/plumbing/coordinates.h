@@ -517,16 +517,26 @@ inline CoordinateVector_t<T> operator-(const Direction dir, CoordinateVector_t<T
 }
 
 
-/////////////////////////////////////////////////////////////////////
-///  X-coordinate type - "dummy" class, used only
-///  in loop index and is removed by code analysis
-///  Has nothing inside except some methods
-/////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief X-coordinate type - "dummy" class
+ * @details used only in loop index and is removed by code analysis. Generally empty except for
+ * method deceleration
+ */
 class X_index_type {
   public:
+    /**
+     * @brief Returns coordinate of site at index X
+     *
+     * @return const CoordinateVector&
+     */
     const CoordinateVector &coordinates() const;
 
+    /**
+     * @brief Returns dth dimension coordinate of X
+     *
+     * @param d direction to probe
+     * @return int
+     */
     int coordinate(Direction d) const;
 
     int x() const;
@@ -538,6 +548,11 @@ class X_index_type {
 #endif
 #endif
 
+    /**
+     * @brief Returns parity of site at index X
+     *
+     * @return ::Parity
+     */
     ::Parity parity() const;
 };
 

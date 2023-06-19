@@ -197,7 +197,7 @@ class Field {
      @{
      */
     /**
-     * @brief Default construct a new Field object
+     * @brief Default construct a new Field object. Assigns field_struct fs to nullptr
      *
      */
     Field() {
@@ -658,7 +658,7 @@ class Field {
 
     /**
      * @brief More general assignment operation if A can be casted into T
-     * 
+     *
      * @tparam A Type of element to be assigned
      * @param rhs Field to assign from
      * @return Field<T>& Assigned field
@@ -673,7 +673,7 @@ class Field {
 
     /**
      * @brief Assginment from element
-     * 
+     *
      * @tparam A Type of element to be assigned
      * @param d element to assign to Field
      * @return Field<T>& Assigned Field
@@ -687,8 +687,8 @@ class Field {
     }
 
     /**
-     * @brief assignment of 0 - nullptr, zeroes field
-     * 
+     * @brief assignment of 0 - nullptr, zero field
+     *
      * @param z nullptr
      * @return Field<T>& Zero Field
      */
@@ -697,7 +697,12 @@ class Field {
         return *this;
     }
 
-    // Do also move assignment
+    /**
+     * @brief Move Assignment
+     *
+     * @param rhs
+     * @return Field<T>&
+     */
     Field<T> &operator=(Field<T> &&rhs) {
         if (this != &rhs) {
             free();
@@ -828,34 +833,39 @@ class Field {
     void cancel_comm(Direction d, Parity p) const;
 
     /**
-     *
      * @name Shift operations
-     * @brief Create a periodically shifted copy of the field
-     * @details  this is currently OK only for short moves, very inefficient for longer moves
-     * @param v
      * @{
      */
 
     /**
-     * @todo make more advanced, switching to "global" move for long shifts
-     * @param par
-     * @param r
-     * @return Field<T>& returns a reference to res
+     * @brief Create a periodically shifted copy of the field
+     * @details  this is currently OK only for short moves, very inefficient for longer moves
+     * @param v CoordinateVector to shift field with
+     * @param r Field to store result in
+     * @param par Parity
+     * @return Field<T>&
      */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
-
+    /**
+     * @brief Create a periodically shifted copy of the field
+     * @details this is currently OK only for short moves, very inefficient for longer moves.
+     * If Parity is not given to shift, then it is called with Parity ALL
+     * @param v CoordinateVector to shift field with
+     * @param r Field to store result in
+     * @return Field<T>&
+     */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
         return shift(v, r, ALL);
     }
     /**
-     *
-     * @param par
+     * @brief Create a periodically shifted copy of the field
+     * @details This is currently OK only for short moves, very inefficient for longer moves
+     * @param v CoordinateVector to shift field with
+     * @param par Parity
      * @return Field<T>
      */
     Field<T> shift(const CoordinateVector &v, Parity par) const;
-    /**
-     * @}
-     */
+    /** @} */
 
     // General getters and setters
 
@@ -1014,26 +1024,69 @@ class Field {
     template <typename Out>
     void write_slice(Out &outputfile, const CoordinateVector &slice, int precision = 6) const;
 
-    // and sum reduction
+    /**
+     * @brief Sum reduction of Field
+     * @details The sum in the reduction is defined by the Field type T
+     * @param par Parity
+     * @param allreduce Switch to turn on or off MPI allreduce
+     * @return T Field element type reduced to one element
+     */
     T sum(Parity par = Parity::all, bool allreduce = true) const;
 
+    /**
+     * @brief Product reduction of Field
+     * @details The product in the reduction is defined by the Field type T.
+     * @param par Parity
+     * @param allreduce Switch to turn on or off MPI allreduce
+     * @return T Field element type reduced to one element
+     */
     T product(Parity par = Parity::all, bool allreduce = true) const;
 
-    // Declare gpu_reduce here, defined only for GPU targets
-    // For internal use only, preferably
-    // T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
-    //              bool do_mpi = true) const;
-    /// Declare gpu_reduce here, defined only for GPU targets
-    /// For internal use only, preferably
-
+    /**
+     * @brief Declare gpu_reduce here, defined only for GPU targets
+     * @internal
+     * @param min_or_max
+     * @param par
+     * @param loc
+     * @return T
+     */
     T gpu_minmax(bool min_or_max, Parity par, CoordinateVector &loc) const;
 
+    /**
+     * @brief Minimum value of Field. If CoordinateVector is passed to function
+     * then location of minimum value will be stored in said CoordinateVector
+     * @name Min functions
+     * @param par ::Parity
+     * @return T Minimum value of Field
+     */
+    /** @{ */
     T min(Parity par = ALL) const;
     T min(CoordinateVector &loc) const;
     T min(Parity par, CoordinateVector &loc) const;
+    /** @} */
+
+    /**
+     * @brief Maximum value of Field. If CoordinateVector is passed to function
+     * then location of maximum value will be stored in said CoordinateVector
+     * @name Max functions
+     * @param par ::Parity
+     * @return T Minimum value of Field
+     */
+    /** @{ */
     T max(Parity par = ALL) const;
     T max(CoordinateVector &loc) const;
     T max(Parity par, CoordinateVector &loc) const;
+    /** @} */
+
+    /**
+     * @brief Function to perform min or max operations
+     * @internal
+     *
+     * @param is_min if true we compute min
+     * @param par Parity
+     * @param loc Location of min or max
+     * @return T
+     */
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
 
     void random();
@@ -1313,8 +1366,10 @@ auto operator/(Field<A> lhs, const B &rhs) {
     return lhs;
 }
 
-///////////////////////////////////////////////////////////////////////
-/// Implement std::swap() for fields
+/**
+ * @brief std:swap() for Fields
+ *
+ */
 namespace std {
 template <typename T>
 void swap(Field<T> &A, Field<T> &B) {

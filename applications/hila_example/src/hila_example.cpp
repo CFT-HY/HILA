@@ -99,6 +99,5 @@ int main(int argc, char **argv) {
 
     hila::out0 << "FFT time " << hila::gettime() - t << '\n';
 
-
     hila::finishrun();
 }

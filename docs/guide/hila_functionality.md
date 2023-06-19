@@ -154,72 +154,95 @@ These are only some of the examples of what the CoordinateVector and Direction o
 
 ## Field
 
-Field is the most important Datatype offered by HILA. The Field defines the lattice system and is the general object we evolve and iterate over. The Field and be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
+Field is the most important Datatype offered by HILA. The Field defines the lattice, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
+
+To see all the possible methods of a Field see the class page which lists comprehensive documentation.
 
 ### Access and Traversal
 
 The principal traversal of the lattice is with *site loops* `onsites(Parity)`, and a
-special location identifier `X` (effectively a new keyword).  
+special location identifier `X` (effectively a new keyword). Within the onsites loop `X` location identifier represents the current location of a point that is currently being indexed. __Note__ that the `X` identifier is only defined within onsites loops. Access operation `f[X]` can be applied only to field variables, and has the type of the
+field element. `X` is of type X_index_type. All available methods can be seen in the class documentation. Note that the X_index_type class is only a dummy class with decelerations, yet _hilapp_ handles defining the contents of the methods, so the source is not available.
 
+To illustrate how looping over a Field object works we will first define a few fields:
 ~~~cpp
-   using mytype = Matrix<3,3,Complex<double>>;   // use type alias
-   Field<mytype> f,g,h;
-   . . .
-
-   onsites(ALL) f[X] = 2 + g[X];          // 2 acts as 2*I for square matrices
-   f[ALL] = 2 + g[X];                     // equivalent shorter form for simple 1-line assignments
-   f = 2 + g;                             // this is also equivalent!
-
-   parity p = EVEN;
-   Direction d = e_x;
-
-   onsites(p) {
-       auto t = g[X + d];                 // X +- Direction fetches from neighbour site
-       f[X] += t + t*t;                   // can define variables in the loop   
-
-       h[X] = g[X + e_x - 2*e_y];         // non-nearest neighbour fetch (TODO:optimize!)
-
-       if (X.coordinate(e_t) == 0) {      // Do this on 1st timeslice only
-            h[X] *= 0.5;
-       }
-   }
-   
+  using mytype = Matrix<3,3,Complex<double>>;   // use type alias
+  Field<mytype> f,g,h; // Default constructor assigns the fields to `nullptr`
+  g = 2 // Assigning g to be 2*Id throughout the field
 ~~~
 
-`X` can be used only inside site loops.  
-Access operation `f[X]` can be applied only to field variables, and has the type of the
-field element (in the case above `mytype`).
+For a field comprised of square-matrix elements, real numbers are algebraically interpreted as \f$ 2 = 2\cdot\mathbb{1}\f$, multiples of identity matrix.
 
-`X` has methods:
-
-- `CoordinateVector X.coordinates()`: CoordinateVector of the current site
-
-- `int X.coordinate(Direction)`: coordinate to direction
-
-- `Parity X.parity()`: parity of current site
-
-
-The assignment `f[ALL] = 2 + g[X];` can also be done with `f = 2 + g`.
-The main difference is in sequencing: the first form goes through the lattice sites in one *site loop*,
-whereas the second stores the result of 2 + g to a temporary field variable which is copied to f (in this case
-std::moved).  The site loop form is faster since it minimizes temporaries and memory accesses.  
-
-Because `f[X]` is of type field element, the methods defined for the element type can be used.  
-`f[X].dagger()` is ok, `f.dagger()` is not.
-
-`f[X]` also serves as a visual identifier for a field variable access.
-
-Reduction:
+We can now iterate over the fields with the onsites loop:
 
 ~~~cpp
-    mytype d = 0;
-    onsites(ALL) d += f[X] - g[X+e_x];
-
-    hila::out0 << "The reduction is << d << std::endl;
+  onsites(ALL) f[X] = 2 + g[X];          // 2 acts as 2*I for square matrices
 ~~~
 
-Other features:
+Above we linearly add each element at `X` from g to each element at `X` in f with an additional \f$2\cdot\mathbb{1}\f$ at each site. The ALL statement is a ::Parity which indicates that we will iterate over the whole Field. Other options are EVEN and ODD which indicate that we only iterate over the even or odd elements of the field.
 
+Similarly we can write this same statement in the following short form:
+
+
+~~~cpp
+  f[ALL] = 2 + g[X];                     // equivalent shorter form for simple 1-line assignments
+  f = 2 + g;                             // this is also equivalent!
+~~~
+
+Above you can also notice the simplest algebraic form, which allows for applying linear operations of the fields. The main difference is in sequencing: the first form goes through the lattice sites in one *site loop*, whereas the second stores the result of 2 + g to a temporary field variable which is copied to f (in this case std::moved). The site loop form is faster since it minimizes temporaries and memory accesses.
+
+Now to demonstrate a more complicated onsites loop we will apply neighboring effects. 
+~~~cpp
+  parity p = EVEN;
+  Direction d = e_x;
+
+  onsites(p) {
+      auto t = g[X + d];                 // fetch from neighboring site in the e_x direction
+      f[X] += t + t*t;                   // can define variables in the loop   
+
+      h[X] = g[X + e_x - 2*e_y];         // non-nearest neighbour fetch (TODO:optimize!)
+
+      if (X.coordinate(e_t) == 0) {      // Do this on 1st timeslice only
+          h[X] *= 0.5;
+      }
+  }
+~~~
+
+On the first line in the onsites loop we define a variable which we assign the `e_x` neighbor to. As we can see, variables can be defined within the scope of the loop.
+
+Non nearest neighboring indexing also works, which is illustrated on the fourth line of the onsites loop. 
+
+On line 6 of the onsites loop we can also see that if statements can be used to apply limitations, in the above case we use it to index a slice of the field.
+
+Because `f[X]` is of type field element (in this case mytype), the methods defined for the element type can be used. Within onsites loop `f[X].dagger()` is ok, `f.dagger()` is not. `f[X]` also serves as a visual identifier for a field variable access.
+
+### Additional features
+
+#### Reductions
+
+The Field object has the following reductions defined:
+
+- Field::sum
+- Field::product
+- Field::min
+- Field::max
+
+Also sum and product reductions can be performed withing the onsites loops as:
+
+~~~cpp
+    mytype s = 0;
+    mytype p = 1;
+    onsites(ALL) {
+      s += f[X] - g[X+e_x];
+      p *= f[X] - g[X+e_x];
+
+    hila::out0 << "The sum reduction is" << s << std::endl;
+    hila::out0 << "The product reduction is" << s << std::endl;
+~~~
+
+#### Other features
+
+Assignment and manipulation of external variables are illustrated below:
 ~~~cpp
     double a = 3, b = 5;
     Field<double> f, g=0;
@@ -230,10 +253,14 @@ Other features:
         double c = sin(f[X]);      // ok, variable c defined within the loop
         f[X] = c + g;              // ERROR: using field variable g without [X]
     }
+~~~
 
+Field::shift operations allow shifting all elements by a certain displacement vector v. Even and Odd elements cannot be shifted with Field::shift method
+~~~cpp
     CoordinateVector v = {0,1,1,0};
 
-    f = g.shift(v);                // these two
+    f = g.shift(v);                // these three
+    g.shift(v,f);                   //
     f[ALL] = g[X + v];             // are equivalent
 
     f[EVEN] = g[X + v];            // Cannot be done with g.shift() alone
