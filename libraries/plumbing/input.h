@@ -26,88 +26,6 @@
 ///    hila::input f;
 ///----------------------------------------------------------------------------
 ///
-/// open(): open file for reading
-///
-///       bool hila::input::open(std::string filename,
-///                              bool use_cmdline,
-///                              bool exit_on_error=true)
-///
-///    If use_cmdline == true (default), use command line -i -argument
-///    to get the input file name.  Then the "filename" is the default name
-///    used if there is no command line filename.
-///
-///    If exit_on_error == true, quit the
-///    program on error.  The return value is passed to all MPI nodes.
-///
-///      f.open("filename");
-///      bool success = f.open("filename",false);
-///
-///----------------------------------------------------------------------------
-///
-/// get(std::string key) - read input values
-///
-///    hila::input::returntype hila::input::get(std::string key)
-///
-///    Use as
-///       var = f.get("key");
-///
-///    reads in a key-value pair
-///            key   <value(s)>
-///    from the input file f, and returns the value of type of variable var.
-///    The value is broadcast to all MPI nodes.  The method infers
-///    the type of the returned variable from the type of the assignment.
-///
-///    Key is an alphanumeric string, which may contain words separated by
-///    whitespace.
-///
-///    Recognized types:
-///        Any arithmetic type (ints/floats), Complex<float>, Complex<double>,
-///        std::string, CoordinateVector,
-///        Vector<n,T>, std::vector<T>     where T is one of the above types
-///
-///    If there is an error, an error message is printed and the program quits.
-///
-///    Examples:
-///
-///        int i = f.get("number of cats");
-///
-///    matches " number of cats   5 "  from the file f, and returns 5 on
-///    variable i, which is broadcast to all nodes.
-///
-///        CoordinateVector v;
-///        v = f.get("lattice size");
-///
-///    matches "lattice  size  32, 32, 32, 32"  (if NDIM == 4).
-///
-///    Multiple items are separated by commas, whitespace is not
-///    significant.
-///
-///        std::vector<double> dvec = f.get("vec");
-///
-///    matches "vec  3,4, 5.5, 7.8, 4"  and returns a vector of double values.
-///    The numbers are read until they are not followed by a comma.  If comma
-///    is the last non-whitespace character on the line, reading continues to
-///    the next line.
-///
-///        Complex<double> phase = f.get("complex phase");
-///
-///    matches "complex phase   (0.4, 0.5)"
-///    complex values are given in pairs within ( , )
-///
-///        std::string s = f.get("key");
-///
-///    matches "key <string value>" where string value is either
-///     a) sequence of non-whitespace chars, delimited by whitespace, eol, ','
-///        or '#'.
-///     b) characters enclosed by quotes "..".  These have to pair
-///        within the same line.  Quote marks are removed.
-///
-///    If there is no key label, the value is read without requiring any key:
-///
-///         int i = f.get();    // read an int
-///
-///----------------------------------------------------------------------------
-///
 /// get_item(): select one item from a "menu":
 ///
 ///        int hila::input::get_item(std::string key,
@@ -211,6 +129,21 @@
 
 namespace hila {
 
+/**
+ * @brief hila::input - Class for parsing runtime parameter files.
+ *
+ * @details Input files consist normally of "key <value>" -pairs.
+ *
+ * It is important to note that the data structure employed by the input class is not a dictionary,
+ * but technically a stack. This means that the values are read in sequentially, thus they must be
+ * in the file in the order they are read in.
+ *
+ * \code{.cpp}
+ *  hila::input f("filename");   // initialization with filename opens the file for input
+ * \endcode
+ *
+ * Comment character '#': everything after # in input file is a comment to the end of the line.
+ */
 class input {
 
   private:
@@ -233,6 +166,24 @@ class input {
         open(fname);
     }
 
+    /**
+     * @brief Open file that parameters are read from
+     * @details If input class is initialized with path to file that needs to be opened,
+     * then the file will be opened automatically, and this method does not need to be called.
+     *
+     * If no argument is given then filename will be interperated as default input file name
+     *
+     * In the case that use_cmdline is True and if no argument is given and filename is given with
+     * -i {alternative_file} cmdline argument then {alternative_file} will be the specified file to
+     * be opened.
+     *
+     * @param fname Path to file that needs to be read
+     * @param use_cmdline Default True
+     * @param exit_on_error If true exit on error. Return value is passed to all MPI nodes. Default
+     * True
+     * @return true
+     * @return false
+     */
     bool open(const std::string &fname, bool use_cmdline = true, bool exit_on_error = true);
     void close();
 
@@ -290,8 +241,109 @@ class input {
         }
     };
 
-    // The main get() method is simply constructor for returntype
-
+    /**
+     * @brief Get next value in stack of read in input string from parameters file.
+     * @details Use as
+     * \code{.cpp}
+     *    var = f.get("key");
+     * \endcode
+     * reads in a key-value pair
+     * \code{.txt}
+     *         key   <value(s)>
+     * \endcode
+     * from the input file f, and returns the value of type of variable var.
+     * The value is broadcast to all MPI nodes.  The method infers
+     * the type of the returned variable from the type of the assignment.
+     *
+     * Key is an alphanumeric string, which may contain words separated by whitespace.
+     *
+     * The get method simply traverses the parsed in stack of input values in the given
+     * parameters file. A functionality of the method is that the given argument key is skipped and
+     * the value that this key is assigned to is then fetched and returned.
+     *
+     * Technically the key's can also be read in if no argument is given to get. The main
+     * functionality of the key argument is to book keep by the user that all parameters are read
+     * in. If the key that is wanting to be read doesn't exist, then get throws an error and the
+     * program is stopped.
+     *
+     * With this logic one could construct a parameters file of only values:
+     *
+     * \code {.txt}
+     * value_1
+     * value_2
+     * .
+     * .
+     * .
+     * value_n
+     * \endcode
+     *
+     * and read in the values in a loop by simply calling hila::input::get() consecutively, but this
+     * is not advised.
+     *
+     * The type of the value to be read in is inferred by the variable the value is fetched into. If
+     * the value cannot be casted into the variable, then the parser will throw an error and crash.
+     *
+     * ## Types which the parser supports with examples
+     *
+     * Multiple items are separated by commas, whitespace is not significant.
+     *
+     * ### Any arithmetic type (ints/floats)
+     * @code{.cpp}
+     *        int i = f.get("number of cats");
+     * @endcode
+     *    __matches__ " number of cats   5 "
+     *
+     * ### Complex<float/double>
+     * @code{.cpp}
+     *        Complex<double> phase = f.get("complex phase");
+     * @endcode
+     *    __matches__ "complex phase   (0.4, 0.5)"
+     *
+     *    complex values are given in pairs within ( , )
+     *
+     * ### std::string
+     * @code{.cpp}
+     *        std::string s = f.get("key");
+     * @endcode
+     *    __matches__ "key <string value>" where string value is either
+     *
+     *     - sequence of non-whitespace chars, delimited by whitespace, eol, ','
+     *        or '#'.
+     *
+     *     - characters enclosed by quotes "..".  These have to pair
+     *        within the same line.  Quote marks are removed.
+     *
+     * ### CoordinateVector
+     * @code{.cpp}
+     *        CoordinateVector v;
+     *        v = f.get("lattice size");
+     * @endcode
+     *    __matches__ "lattice  size  32, 32, 32, 32"  (if NDIM == 4).
+     *
+     * ### Vector<T,int>
+     * @code{.cpp}
+     * Vector<5,int> vec = f.get("initial vector")
+     * @endcode
+     *    __matches__ "initial vector 1, 2, 3, 4, 5"
+     *
+     * ### std::vector<T>
+     * @code{.cpp}
+     *        std::vector<double> dvec = f.get("vec");
+     * @endcode
+     *    __matches__ "vec  3,4, 5.5, 7.8, 4"  and returns a vector of double values.
+     *    The numbers are read until they are not followed by a comma.  If comma
+     *    is the last non-whitespace character on the line, reading continues to
+     *    the next line.
+     *
+     *  T is one of the other supported types.
+     *
+     * __NOTE__: The parser will crash if during reading in a multi valued line (Vector,
+     * std::vector) the line ends with a ",". The parser will interpret that there is data on the
+     * next line to read in and will fail during the next get call.
+     *
+     * @param key Parameter to be read in.
+     * @return returntype Value corresponding to input key
+     */
     inline returntype get(const std::string &key) {
         return returntype(key, this);
     }
@@ -426,8 +478,15 @@ class input {
         return no_error;
     }
 
-    // get_item selects one from a "menu" of items
 
+    /**
+     * @brief Get the item object
+     *
+     * @param label
+     * @param items
+     * @param bcast
+     * @return int
+     */
     int get_item(const std::string &label, const std::vector<std::string> &items,
                  bool bcast = true);
 

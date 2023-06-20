@@ -279,7 +279,17 @@ Access field at a single point: `f[CoordinateVector]`.  This can be used only ou
 ## Input library
 
 Class hila::input can be used to read parameters and other data for simulation programs.
-It matches key-value pairs from input files.  As an example, if the file `parameters.dat` contains
+It matches key-value pairs from input files.
+
+The available methods in the input class are:
+
+- hila::input::open
+- hila::input::get
+- hila::input::get_item
+- hila::input::get_value
+- hila::input::close
+
+As an example, if the file `parameters.dat` contains
 
 ```
     # this is a comment
@@ -296,7 +306,7 @@ It matches key-value pairs from input files.  As an example, if the file `parame
     labels        setA, setB, setC
 ```
 
-it can be read (mostly) using the method `input::get(std::string key)`:
+then the values can be read as follows:
 
 ~~~cpp
 #include "hila.h"
@@ -305,16 +315,36 @@ int main(int argc, char * argv[]) {
 
     hila::initialize(argc,argv);
 
-    // open file after hila::initialize
-    // here to variable p
+    /** 
+     * Open file to be read after hila::initialize
+     * 
+     * Input object is initialized with file,
+     * that we want to read input data from
+     */
     hila::input p("parameters.dat");
 
+    /** 
+     * Values are read in with hila::input.get as key value pairs
+     * 
+     * Values seperated with a delimiter ',' are read in as initializer lists,
+     * thus the lattice size can be read into a CoordinateVector which supports
+     * initialization with {x,y,z,t}
+     */
     CoordinateVector lsize = p.get("lattice size");
     double beta            = p.get("beta");
 
-    // Calling get_item() as below means that allowed values for 
-    // "clover" are:  "tree", "perturbative", or a float/double value.
-    // Return value is 0, 1, 2 respectively.
+    /** 
+     * For values that have variability in it's types one can use hila::input.get_item
+     * get_item allows the user to give a list of possible values for a given key.
+     *
+     * The user defines the list of possible values and get_item return's the index of the
+     * value found. In our case key:clover is paired with value:"perturbative", thus 
+     * input::get_item will return 1. After this we define an if statement to handle all
+     * the possible situations depending on type.
+     *
+     * After get_item is used the value assigned to the key:"clover" can be retrieved by
+     * input::get() without argument.
+     */
     int i = p.get_item("clover",{"tree","perturbative","%f"});
     double clover;
     if (i == 0) 
@@ -327,17 +357,26 @@ int main(int argc, char * argv[]) {
     int loops       = p.get("loops");
     long rng_seed   = p.get("seed");
 
-    // reading a std::vector<> reads in comma-separated values
-    // this reads in a vector of 6 doubles
+    /** 
+     * Similarly as above with the CoordinateVector we can read in "," seperated lists
+     * into std:vector. Below we read in the 6 doubles assigned to the key "coefficients"
+     */
     std::vector<double> run_coefficients = p.get("coefficients");
 
-    // and this a vector of 3 strings
+    /** 
+     * Reading in std::string type also works as expected.
+     */
     std::vector<std::string> labels      = p.get("labels");
 
-    // Close the file. File is also closed when p gets out of scope
+    /**
+     * Lastly we close the file. Though the file will close automatically when the input
+     * object get's out of scope
+     */
     p.close();   
 
-    // lattice setup is convenient to do after parameters have been read
+    /**
+     * lattice setup is convenient to do after parameters have been read
+     */
     lattice.setup(lsize);
 
 ~~~
