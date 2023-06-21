@@ -3,7 +3,7 @@
  * @file matrix.h
  * @brief Definition of Matrix types
  * @details This file contains base matrix type Matrix_t which defines all general matrix type
- opirations Matrix types are Matrix, #Vector, #HorizontalVector, #SquareMatrix of which Matrix is
+ opirations Matrix types are Matrix, #Vector, #RowVector, #SquareMatrix of which Matrix is
  defined as a class and the rest are special cases of the Matrix class.
  *
  *
@@ -27,25 +27,19 @@ template <int n, int m, typename T>
 class Matrix;
 
 /**
- * @var Vector is defined as 1-column Matrix
+ * @brief Vector is defined as 1-column Matrix
  */
 template <int n, typename T>
 using Vector = Matrix<n, 1, T>;
 
 /**
  * @brief RowVector is a 1-row Matrix
- *
- * @tparam n
- * @tparam T
  */
 template <int n, typename T>
 using RowVector = Matrix<1, n, T>;
 
 /**
  * @brief Square matrix is defined as alias with special case of Matrix<n,n,T>
- *
- * @tparam n
- * @tparam T
  */
 template <int n, typename T>
 using SquareMatrix = Matrix<n, n, T>;
