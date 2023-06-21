@@ -823,37 +823,24 @@ class Field {
     void cancel_comm(Direction d, Parity p) const;
 
     /**
-     *
-     * @name Shift operations
      * @brief Create a periodically shifted copy of the field
      * @details  this is currently OK only for short moves, very inefficient for longer moves
+     * Example:
+     * @code{.cpp}
+     *   
+     * @endcode
      * @param v
-     * @{
-     *  /
-    /**
-     * @todo make more advanced, switching to "global" move for long shifts
      * @param par
      * @param r
      * @return Field<T>& returns a reference to res
      */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
-    /**
-     * @remark Overload of @ref shift(const CoordinateVector &v, Field<T> &r, Parity par) with
-     * par=ALL
-     * @param r
-     */
+
     Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
         return shift(v, r, ALL);
     }
-    /**
-     *
-     * @param par
-     * @return Field<T>
-     */
-    Field<T> shift(const CoordinateVector &v, Parity par) const;
-    /**
-     * @}
-     */
+
+    Field<T> shift(const CoordinateVector &v) const;
 
     // General getters and setters
 
@@ -1458,13 +1445,10 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
 }
 
 
-/**
- * @todo Add remark in comparison to other version of shift
- */
 template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v) const {
     Field<T> res;
-    shift(v, res, par);
+    shift(v, res, ALL);
     return res;
 }
 
@@ -1601,7 +1585,7 @@ inline void ensure_field_operators_exist() {
     // make shift also explicit
     CoordinateVector v = 0;
     Field<T> f;
-    f = f.shift(v, ALL);
+    f = f.shift(v);
 }
 
 #endif
