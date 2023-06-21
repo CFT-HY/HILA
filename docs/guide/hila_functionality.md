@@ -278,16 +278,17 @@ Access field at a single point: `f[CoordinateVector]`.  This can be used only ou
 
 ## Input library
 
-Class hila::input can be used to read parameters and other data for simulation programs.
+Class hila::input can be used to read parameters and other data for simulations.
 It matches key-value pairs from input files.
 
 The available methods in the input class are:
 
 - hila::input::open
-- hila::input::get
-- hila::input::get_item
-- hila::input::get_value
 - hila::input::close
+- hila::input::quiet
+- hila::input::get
+- hila::input::get_value
+- hila::input::get_item
 
 As an example, if the file `parameters.dat` contains
 
@@ -315,36 +316,33 @@ int main(int argc, char * argv[]) {
 
     hila::initialize(argc,argv);
 
-    /** 
-     * Open file to be read after hila::initialize
-     * 
-     * Input object is initialized with file,
-     * that we want to read input data from
-     */
+     
+    // Open file to be read after hila::initialize
+    // 
+    // Input object is initialized with file,
+    // that we want to read input data from
     hila::input p("parameters.dat");
 
-    /** 
-     * Values are read in with hila::input.get as key value pairs
-     * 
-     * Values seperated with a delimiter ',' are read in as initializer lists,
-     * thus the lattice size can be read into a CoordinateVector which supports
-     * initialization with {x,y,z,t}
-     */
+     
+    // Values are read in with hila::input.get as key value pairs
+    // 
+    // Values seperated with a delimiter ',' are read in as initializer lists,
+    // thus the lattice size can be read into a CoordinateVector which supports
+    // initialization with {x,y,z,t}
     CoordinateVector lsize = p.get("lattice size");
     double beta            = p.get("beta");
 
-    /** 
-     * For values that have variability in it's types one can use hila::input.get_item
-     * get_item allows the user to give a list of possible values for a given key.
-     *
-     * The user defines the list of possible values and get_item return's the index of the
-     * value found. In our case key:clover is paired with value:"perturbative", thus 
-     * input::get_item will return 1. After this we define an if statement to handle all
-     * the possible situations depending on type.
-     *
-     * After get_item is used the value assigned to the key:"clover" can be retrieved by
-     * input::get() without argument.
-     */
+     
+    // For values that have variability in it's types one can use hila::input.get_item
+    // get_item allows the user to give a list of possible values for a given key.
+    //
+    // The user defines the list of possible values and get_item return's the index of the
+    // value found. In our case key:clover is paired with value:"perturbative", thus 
+    // input::get_item will return 1. After this we define an if statement to handle all
+    // the possible situations depending on type.
+    // 
+    // After get_item is used the value assigned to the key:"clover" can be retrieved by
+    // input::get() without argument. 
     int i = p.get_item("clover",{"tree","perturbative","%f"});
     double clover;
     if (i == 0) 
@@ -357,78 +355,184 @@ int main(int argc, char * argv[]) {
     int loops       = p.get("loops");
     long rng_seed   = p.get("seed");
 
-    /** 
-     * Similarly as above with the CoordinateVector we can read in "," seperated lists
-     * into std:vector. Below we read in the 6 doubles assigned to the key "coefficients"
-     */
+    // Similarly as above with the CoordinateVector we can read in "," seperated lists
+    // into std:vector. Below we read in the 6 doubles assigned to the key "coefficients"
     std::vector<double> run_coefficients = p.get("coefficients");
 
-    /** 
-     * Reading in std::string type also works as expected.
-     */
+    // Reading in std::string type also works as expected.
     std::vector<std::string> labels      = p.get("labels");
 
-    /**
-     * Lastly we close the file. Though the file will close automatically when the input
-     * object get's out of scope
-     */
+    // Lastly we close the file. Though the file will close automatically when the input
+    // object get's out of scope
     p.close();   
 
-    /**
-     * lattice setup is convenient to do after parameters have been read
-     */
+    
+    // lattice setup is convenient to do after parameters have been read
     lattice.setup(lsize);
-
+    .
+    .
+    .
+}
 ~~~
 
-- The method `input::get()` above deduces the type to be 
-  read in from the expected return value.  The order is fixed, the items (lines)
-  cannot be swapped (TODO: should this be allowed?).
-  If an error occurs (wrong keys or values), program exits with an error message.
-
-- Because the order is fixed, the keys don't really carry information for the program.  However, they
-  help to ensure that the values are as intended.
-
-- The method `input::get()` broadcasts the values to all nodes.  They have to be called by
-  all nodes simultaneously.
-
-- Method `input::get_value()` has more options for synchronization and error returns.  See 
-  documentation in `input.h`
+For more detailed description on the methods see hila::input class
 
 ## Check input and layout
 
 The input files and the lattice layout can be checked with the 
 commands (after the application program has been built)
 ~~~bash
-   <hila-program-name> check
-   <hila-program-name> check=<number-of-nodes>        # without spaces
+   <hila-program-name> -check
+   <hila-program-name> -check -n <number-of-nodes>       # without spaces
 ~~~
 This runs the program without initializing MPI, Cuda or other hardware features and
 exits at `lattice.setup()` before any large memory allocations are made.  If the 
 number-of-nodes argument is given, program reports how the node layout is done.
 
-Example: if you built the `hila_example` program above, in directory `hila/applications/hila_example`
-the command `build/hila_example check=32` checks the input file and the layout to 32 nodes.
+__Example__: 
+
+Running `hila_example` in directory `hila/applications/hila_example` with the command `build/hila_example -check -n 32` checks the input file and the layout for 32 nodes.
+
+~~~bash
+cd applications/hila_example
+make -j4 hila_simple_example
+./build/hila_simple_example -check -n 32
+~~~
+
+<details> 
+<summary> Expected output </summary>
+
+~~~bash
+$ ./build/hila_example -check -n 32
+****** INPUT AND LAYOUT CHECK ******
+----- HILA ⩩ lattice framework ---------------------------
+Running program ./build/hila_example
+with command line arguments '-check -n 32 '
+Code version: git SHA d117618b
+Compiled Jun 21 2023 at 11:28:48
+with options: EVEN_SITES_FIRST
+Starting -- date Wed Jun 21 11:30:25 2023  run time 0.0005546s
+No runtime limit given
+GNU c-library performance: not returning allocated memory
+----- Reading file parameters ------------------------------
+lattice size         128,128,128
+smear loops          100
+smear coefficient    0.1
+expansion order      12
+random seed          3324565456
+------------------------------------------------------------
+------------------------------------------------------------
+LAYOUT: lattice size  128 x 128 x 128  =  2097152 sites
+Dividing to 32 nodes
+
+Sites on node: 64 x 32 x 32  =  65536
+Processor layout: 2 x 4 x 4  =  32 nodes
+Node remapping: NODE_LAYOUT_BLOCK with blocksize 4
+Node block size 2 2 1  block division 1 2 4
+------------------------------------------------------------
+***** Input check done *****
+No timers defined
+ No communications done from node 0
+Finishing -- date Wed Jun 21 11:30:25 2023  run time 0.02263s
+------------------------------------------------------------
+~~~
+
+</details>
+
+If the application source had a typo in parameter reading, for example `lsize = par.get("latticesize");` then the output will notify the following:
+
+<details> 
+<summary> Expected output </summary>
+
+~~~bash
+$ ./build/hila_example -check -n 32
+****** INPUT AND LAYOUT CHECK ******
+----- HILA ⩩ lattice framework ---------------------------
+Running program ./build/hila_example
+with command line arguments '-check -n 32 '
+Code version: git SHA d117618b
+Compiled Jun 21 2023 at 11:28:48
+with options: EVEN_SITES_FIRST
+Starting -- date Wed Jun 21 11:34:54 2023  run time 0.0002599s
+No runtime limit given
+GNU c-library performance: not returning allocated memory
+----- Reading file parameters ------------------------------
+ lattice size       128,128,128
+Error: expecting key 'latticesize'
+Error: expecting 3 comma-separated ints after 'latticesize'
+No timers defined
+Finishing -- date Wed Jun 21 11:34:54 2023  run time 0.0005286s
+------------------------------------------------------------
+~~~
+
+</details>
+
+Additionally if the node layout is insufficient then the output would be:
+
+<details> 
+<summary> Expected output </summary>
+
+~~~bash
+$ ./build/hila_example -check -n 7
+****** INPUT AND LAYOUT CHECK ******
+----- HILA ⩩ lattice framework ---------------------------
+Running program ./build/hila_example
+with command line arguments '-check -n 7 '
+Code version: git SHA d117618b
+Compiled Jun 21 2023 at 11:28:48
+with options: EVEN_SITES_FIRST
+Starting -- date Wed Jun 21 11:36:22 2023  run time 0.0003294s
+No runtime limit given
+GNU c-library performance: not returning allocated memory
+----- Reading file parameters ------------------------------
+lattice size         128,128,128
+smear loops          100
+smear coefficient    0.1
+expansion order      12
+random seed          3324565456
+------------------------------------------------------------
+------------------------------------------------------------
+LAYOUT: lattice size  128 x 128 x 128  =  2097152 sites
+Dividing to 7 nodes
+
+Using uneven node division to direction 0:
+Lengths: 2 * (19 sites) + 5 * (18 sites)
+Divisions: 19 - 18 - 18 - 19 - 18 - 18 - 18
+Filling efficiency: 96.2406%
+NOTE: number of smaller nodes > large nodes 
+
+Sites on node: (18-19) x 128 x 128  =  294912 - 311296
+Processor layout: 7 x 1 x 1  =  7 nodes
+Node remapping: NODE_LAYOUT_BLOCK with blocksize 4
+Node block size 1 1 1  block division 7 1 1
+------------------------------------------------------------
+***** Input check done *****
+No timers defined
+ No communications done from node 0
+Finishing -- date Wed Jun 21 11:36:22 2023  run time 0.06517s
+------------------------------------------------------------
+~~~
+
+</details>
 
 ## HILA pre-processor tool
 
-In short, the framework can be used in these steps: 
+The _hilapp_ tool is not something that generally the user should worry about, but to get a better understanding of what happens under the hood we offer the following explanation.
 
-1. Write c++ code using the syntax and datatypes laid out below
-2. Use the hilapp excecutable to convert this code into .cpt code 
-3. Compile the new .cpt code into the final excecutable
+In short, the workflow with the _hilapp_ tool works in the following manner: 
 
-![Workflow illustration](./images/workflowV1.png)
- 
+1. Write c++ code using the syntax and datatypes described above
 
-You can then use it to compile an extended C++ file into standard C++ using
+2. Use the _hilapp_ executable to convert this code into .cpt code 
+
 ~~~bash
 bin/hilapp path/to/program.cpp
 ~~~
-This will create a `cpt` file written in standard C++.
+
+This will create a `cpt` file which is essentially standard C++.
+
+3. Compile the new .cpt code into the final executable
 
 The `cpt` can be compiled with any c++ compiler, but must be linked against the headers and c++ files in the plumbing directory.
 
-Check the example programs in the programs folder. You can use almost any standard C++ code, by there are a couple of new reserved names: the variable `X` and the function `onsites()`. In addition the framework defines a global `lattice` variable, which you should not overwrite.
-
-In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.
+![Workflow illustration](./images/workflowV1.png)

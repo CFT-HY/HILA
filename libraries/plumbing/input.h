@@ -7,126 +7,6 @@
 #include "lattice.h"
 #include "plumbing/com_mpi.h"
 
-////////////////////////////////////////////////////////////////////////
-/// hila::input - Class for parsing runtime parameter files
-///
-/// Input files consist normally of "key <value>" -pairs.
-///
-/// Comment character '#': everything after # is a comment to the end of the
-/// line.
-///
-/// The values are read in sequentially, thus, they must be in the file in the
-/// order they are read in.
-///
-/// Class provides user functions
-///    open(), close(), get(), get_item(), get_value(), quiet()
-///
-///    hila::input f("filename");   - initialization with filename opens
-///                                   the file for input
-///    hila::input f;
-///----------------------------------------------------------------------------
-///
-/// get_item(): select one item from a "menu":
-///
-///        int hila::input::get_item(std::string key,
-///                        std::vector<std::string> items,
-///                        bool broadcast = true);
-///
-///    "items" contains the allowed entries. Return value is the
-///    index of the item found in input file.
-///
-///    If the value of the optional bool parameter broadcast is:
-///    - true (default): the result is broadcast to all nodes
-///                      and the program exits if no matches found.
-///    - false: result is not broadcast, and if no match found returns -1.
-///
-///    Special item values:
-///      "%f"  - matches a float or double value
-///      "%i"  - matches an int or long
-///      "%s"  - matches any string value
-///
-///    If one of these is matched, it has to be read again with corresponding
-///    get() or get_value() -method.
-///
-///    Examples:
-///
-///         i = f.get_item("colour", {"red","green","blue"});
-///
-///    will return value 1 if f contains "colour  green", and quits the
-///    program if none of the 3 alternatives are found.
-///
-///         double clover;
-///         int i = f.get_item("c_sw", {"tree","perturbative","%f"} );
-///         if (i == 2)
-///              clover = f.get();
-///         else { ...
-///
-///    If file contains:
-///         c_sw  perturbative   - get_item() returns 1
-///         c_sw  1.343          - get_item() returns 2 and subsequent
-///                                get() sets c_sw = 1.343
-///         c_sw  abcd           - error message and quit
-///
-///    NOTE: "%s" matches anything. It should be the last item in the list.
-///         (The items are tested in order and first to match is returned.)
-///
-///----------------------------------------------------------------------------
-///
-/// get_value(): read input (alternative to get())
-///
-///        template <typename T>
-///        bool hila::input::get_value(T & val,std::string key,
-///                                    bool broadcast=true);
-///
-///    Val can be any value used in get()-method above.  If broadcast==false,
-///    the value is not broadcast to other nodes.  The return value is false if
-///    the value could not be read successfully, true otherwise.
-///    This method does not exit on error (but an error message may be printed)
-///    Example:
-///          int i,j;
-///          bool success;
-///          success = get_value(i, "key", false);   // only node 0 gets i
-///          success = get_value(j,"key2");          // all nodes get j
-///
-///    NOTE: if broadcast == false the return value is correct only on node 0.
-///
-///
-///----------------------------------------------------------------------------
-///
-/// close():    hila::input::close()
-///
-///         f.close();
-///    closes the input f.  Now "f.open("file")" can be used again.
-///    File is also closed when variable "f" goes out of scope.
-///
-///----------------------------------------------------------------------------
-///
-/// quiet():    hila::input::quiet(bool be_silent=true)
-///
-///         f.quiet();      // don't print read items to hila::out
-///         f.quiet(false); // re-enable printing
-///
-///    By default hila::input methods print everything read to hila::out
-///    for logging.  f.quiet(); disables this.
-///
-///------------------------------------------------------------------
-///
-/// NOTE: methods which broadcast to all nodes (default) must be called
-///       from all nodes synchronously. These include open(), get(),
-///       get_value() with bcast=true, get_item with bcast=true.
-///
-///       Thus;
-///          if (hila::myrank() == 0) {
-///              double v = f.get("a value");
-///              ...
-///          }
-///
-///       deadlocks (if there are more than 1 rank). Method
-///          f.get_value(v,"a value",false);
-///       can be used in this context.
-///
-////////////////////////////////////////////////////////////////////////
-
 namespace hila {
 
 /**
@@ -138,11 +18,36 @@ namespace hila {
  * but technically a stack. This means that the values are read in sequentially, thus they must be
  * in the file in the order they are read in.
  *
+ * In examples of other methods we will refer to the input object as f. Creating the input object is
+ * done with:
+ *
  * \code{.cpp}
- *  hila::input f("filename");   // initialization with filename opens the file for input
+ * hila::input f("filename");   // initialization with filename opens the file for input
  * \endcode
  *
- * Comment character '#': everything after # in input file is a comment to the end of the line.
+ * One can also initialize the input object without specifying the filename:
+ *
+ * \code{.cpp}
+ * hila::input f;   // initialization with filename opens the file for input
+ * \endcode
+ *
+ * in which case the `hila::input::open` method needs to be called separately.
+ *
+ * __Comment character '#'__: everything after # in input file is a comment to the end of the line.
+ *
+ * __NOTE__: methods which broadcast to all nodes (default) must be called from all nodes
+ * synchronously. These include open(), get(), get_value() with bcast=true, get_item with
+ * bcast=true.
+ *
+ * Thus:
+ * \code{.cpp}
+ * if (hila::myrank() == 0) {
+ *     double v = f.get("a value");
+ *     ...
+ * }
+ * \endcode
+ * deadlocks (if there are more than 1 rank). Method `f.get_value(v,"a value",false)` can be used in
+ * this context.
  */
 class input {
 
@@ -185,14 +90,32 @@ class input {
      * @return false
      */
     bool open(const std::string &fname, bool use_cmdline = true, bool exit_on_error = true);
+
+    /** @brief Closes input parameter file
+     *  @details After `f.close()` the file can be reopened with `f.open("file")` and the stack is
+     * reset. File is also closed when variable "f" goes out of scope.
+     */
     void close();
 
-    // make class quiet (no printouts), quiet(false) returns to normal
+    /**
+     * @brief Silence print output during file reading
+     * @details
+     * \code{.cpp}
+     *   f.quiet();      // don't print read items to hila::out
+     *   f.quiet(false); // re-enable printing
+     * \endcode
+     * By default hila::input methods print everything read to hila::out0 for logging. `f.quiet()`
+     * disables this.
+     *
+     * @param really
+     */
     void quiet(bool really = true) {
         speaking = !really;
     }
 
-    /// returntyhpe is a special class for resolving get("label") return type
+    /**
+     * @brief returntype is a special class for resolving get("label") return type
+     */
     class returntype {
       public:
         std::string label;
@@ -352,10 +275,30 @@ class input {
         return returntype("", this);
     }
 
-    /// General single-value input method, can be called with
-    /// <input>.get_value<type>("key");
-    /// but typically used in .get() -methods
-
+    /**
+     * @brief Read input (alternative to get())
+     * @details
+     * Val can be any value used in get()-method above.  If broadcast==false,
+     * the value is not broadcast to other nodes.  The return value is false if
+     * the value could not be read successfully, true otherwise.
+     * This method does not exit on error (but an error message may be printed)
+     * Example:
+     * \code{.cpp}
+     *       int i,j;
+     *       bool success;
+     *       success = get_value(i, "key", false);   // only node 0 gets i
+     *       success = get_value(j,"key2");          // all nodes get j
+     *\endcode
+     * __NOTE__: if broadcast == false the return value is correct only on node 0.
+     *
+     * Supported types same as for hila::input::get
+     * @tparam T
+     * @param val variable to store gotten value in. Infers the type for the fetched value
+     * @param label key to fetch value for
+     * @param bcast default true. If true the value will be broadcasted to all nodes
+     * @return true Returns true on success
+     * @return false Returns false if return value is correct only on node 0.
+     */
     template <typename T>
     bool get_value(T &val, const std::string &label, bool bcast = true) {
         val = {};
@@ -385,9 +328,14 @@ class input {
 
         return no_error;
     }
-
-    /// Specialize the above method to Complex -pair:  (re,im)
-
+    /**
+     * @name get_value overloads for different value type
+     * @internal
+     * @{
+     */
+    /**
+     * @brief get_value for Complex<T>
+     */
     template <typename T>
     bool get_value(Complex<T> &val, const std::string &label, bool bcast = true) {
         val = 0;
@@ -412,9 +360,9 @@ class input {
         }
         return no_error;
     }
-
-    /// Specialize .get_value<Vector<n,T>>() : which includes CoordinateVector
-
+    /**
+     * @brief get_value for #Vector<n,T>
+     */
     template <int n, typename T>
     bool get_value(Vector<n, T> &val, const std::string &label, bool bcast = true) {
         val = 0;
@@ -437,9 +385,9 @@ class input {
         }
         return no_error;
     }
-
-    /// Specialization to CoordinateVector
-
+    /**
+     * @brief get_value for #CoordinateVector
+     */
     template <int n = NDIM>
     bool get_value(CoordinateVector &val, const std::string &label, bool bcast = true) {
         Vector<n, int> iv;
@@ -448,8 +396,9 @@ class input {
         return b;
     }
 
-    /// Specialize -get_value() to std::vector<>
-
+    /**
+     * @brief get_value for std::vector<T>
+     */
     template <typename T>
     bool get_value(std::vector<T> &val, const std::string &label, bool bcast = true) {
         val = {};
@@ -477,15 +426,54 @@ class input {
 
         return no_error;
     }
-
+    /** @} */
 
     /**
-     * @brief Get the item object
+     * @brief Identify item from a list
+     * @details"items" contains the allowed entries. Return value is the
+     * index of the item found in input file.
      *
-     * @param label
-     * @param items
-     * @param bcast
-     * @return int
+     * If the value of the optional bool parameter broadcast is:
+     * - true (default): the result is broadcast to all nodes
+     *                   and the program exits if no matches found.
+     *
+     * - false: result is not broadcast, and if no match found returns -1.
+     *
+     * Special item values:
+     *
+     *   - "%f" matches a float or double value
+     *   - "%i" matches an int or long
+     *   - "%s" matches any string value
+     *
+     * If one of these is matched, it has to be read again with corresponding
+     * get() or get_value() -method. get_item doesn't progress the stack, so get() will fetch the
+     * next value which the item result corresponds to
+     *
+     * Examples:
+     * \code{.cpp}
+     *      i = f.get_item("colour", {"red","green","blue"});
+     * \endcode
+     * will return value 1 if f contains "colour  green", and quits the
+     * program if none of the 3 alternatives are found.
+     * \code{.cpp}
+     *      double clover;
+     *      int i = f.get_item("c_sw", {"tree","perturbative","%f"} );
+     *      if (i == 2)
+     *           clover = f.get();
+     *      else { ...
+     * \endcode
+     * If file contains:
+     *         - c_sw  perturbative get_item() returns 1
+     *         - c_sw  1.343        get_item() returns 2 and subsequent get() sets c_sw = 1.343
+     *         - c_sw  abcd         error message and quit
+     *
+     * __NOTE__: "%s" matches anything. It should be the last item in the list.
+     *      (The items are tested in order and first to match is returned.)
+     *
+     * @param label  key to match in parameters file
+     * @param items  list of items to identify with
+     * @param bcast  Default true, if true broadcast to all MPI ranks
+     * @return int index of identified item in users defined list
      */
     int get_item(const std::string &label, const std::vector<std::string> &items,
                  bool bcast = true);
