@@ -1,4 +1,14 @@
 /** @file matrix.h */
+/**
+ * @file matrix.h
+ * @brief Definition of Matrix types
+ * @details This file contains base matrix type Matrix_t which defines all general matrix type
+ opirations Matrix types are Matrix, #Vector, #RowVector, #SquareMatrix of which Matrix is
+ defined as a class and the rest are special cases of the Matrix class.
+ *
+ *
+ */
+
 #ifndef MATRIX_H_
 #define MATRIX_H_
 
@@ -13,32 +23,24 @@ class Matrix_t;
 template <const int n, const int m, typename T = double>
 class Array;
 
-///////////////////////////////////////////////////////////////
-/// Generic Matrix class fwd definition
-///////////////////////////////////////////////////////////////
-
 template <int n, int m, typename T>
 class Matrix;
 
 /**
- * @var Vector is defined as 1-column Matrix
+ * @brief Vector is defined as 1-column Matrix
  */
 template <int n, typename T>
 using Vector = Matrix<n, 1, T>;
 
 /**
  * @brief RowVector is a 1-row Matrix
- * 
- * @tparam n 
- * @tparam T 
  */
 template <int n, typename T>
 using RowVector = Matrix<1, n, T>;
 
-///////////////////////////////////////////////////////////////
-/// Define SquareMatrix as an alias
-///////////////////////////////////////////////////////////////
-
+/**
+ * @brief Square matrix is defined as alias with special case of Matrix<n,n,T>
+ */
 template <int n, typename T>
 using SquareMatrix = Matrix<n, n, T>;
 
@@ -49,20 +51,26 @@ using SquareMatrix = Matrix<n, n, T>;
 // #include "matrix_column.h"
 
 
-////////////////////////////////////////////////////////////////
-/// The main nxm matrix type template Matrix_t
-/// This is a root type, and "useful" types are derived from this type
-///
-/// Uses curiously recurring template pattern (CRTP), where
-/// the last template parameter is the template itself
-/// Example: the matrix type below is defined as
-///   template <int n, int m, typename T>
-///   class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
-///
-/// Used because stupid c++ makes it complicated to write
-/// generic code, in this case derived functions to return derived type
-///////////////////////////////////////////////////////////////
-
+/**
+ * @brief The main \f$ n \times m \f$ matrix type template Matrix_t. This is a root type, and
+ * "useful" types are derived from this class
+ *
+ * @details Uses curiously recurring template pattern (CRTP), where the last template parameter is
+ * the template itself
+ *
+ * Example: the matrix type below is defined as
+ * @code{.cpp}
+ * template <int n, int m, typename T>
+ * class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
+ * @endcode
+ *
+ * Used because stupid c++ makes it complicated to write generic code, in this case derived
+ * functions to return derived type
+ * @tparam n row length
+ * @tparam m column length
+ * @tparam T Data type
+ * @tparam Mtype Specific "Matrix" type for CRTP
+ */
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t {
 
@@ -177,8 +185,8 @@ class Matrix_t {
 
     // define also method size() for vectors and square matrices only!
     /**
-     * 
-    */
+     *
+     */
 
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     static constexpr int size() {
@@ -408,7 +416,7 @@ class Matrix_t {
     }
 
     /// subtract assign a Matrix_t
-//#pragma hila loop_function
+    //#pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) {
@@ -419,7 +427,7 @@ class Matrix_t {
     }
 
     /// add assign a scalar to square matrix
-//#pragma hila loop_function
+    //#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) {
@@ -433,7 +441,7 @@ class Matrix_t {
     }
 
     /// subtract assign type T and convertible
-//#pragma hila loop_function
+    //#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) {
