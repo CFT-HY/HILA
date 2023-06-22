@@ -1,22 +1,36 @@
+/**
+ * @file coordinates.h
+ * @brief This header file defines:
+ *   - enum ::Direction
+ *   - enum class ::Parity
+ *   - class CoordinateVector
+ *
+ * These are used to traverse the lattice coordinate systems
+ *
+ */
+
 #ifndef COORDINATES_H_
 #define COORDINATES_H_
-/// This header file defines:
-///   enum Direction
-///   enum class Parity
-///   class CoordinateVector
-/// These are used to traverse the lattice coordinate systems
 
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
 
-///////////////////////////////////////////////////////////////////////////
-/// enum Direction - includes the opposite Direction
-/// defined as unsigned, but note that Direction + int is not defined
-/// Direction can be used as an array index (interchangably with int)
-///////////////////////////////////////////////////////////////////////////
-
-// clang-format off
 #if NDIM == 4
+/**
+ * @enum Direction
+ * @brief Enumerator for direction that assigns integer to direction to be interpreted as unit
+ * vector.
+ * @details In NDIM\f$=4\f$ (max dimensionality) we have:
+ *
+ * \f$\{e_x = 0, e_y = 1, e_z = 2, e_t = 3\}\f$
+ *
+ * Negative directions are defined as \f$ e_{-i} = \f$ NDIM \f$\cdot2 - 1 - e_i\f$
+ *
+ * Defined as unsigned, but note that Direction + int is not defined. To operate with int, Direction
+ * must be first cast to int
+ *
+ * Direction can be used as an array index (interchangably with int)
+ */
 enum Direction : unsigned {
     e_x = 0,
     e_y,
@@ -29,33 +43,18 @@ enum Direction : unsigned {
     NDIRECTIONS
 };
 #elif NDIM == 3
-enum Direction : unsigned { 
-    e_x = 0,
-    e_y,
-    e_z,
-    e_z_down,
-    e_y_down,
-    e_x_down, 
-    NDIRECTIONS 
-};
+enum Direction : unsigned { e_x = 0, e_y, e_z, e_z_down, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM == 2
-enum Direction : unsigned { 
-    e_x = 0,
-    e_y,
-    e_y_down,
-    e_x_down,
-    NDIRECTIONS
-};
+enum Direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM == 1
-enum Direction : unsigned { 
-    e_x = 0,
-    e_x_down,
-    NDIRECTIONS
-};
+enum Direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
 #endif
-// clang-format on
 
-constexpr unsigned NDIRS = NDIRECTIONS; //
+/**
+ * @brief Number of directions
+ *
+ */
+constexpr unsigned NDIRS = NDIRECTIONS;
 
 // Increment for directions:  ++dir,  dir++  does the obvious
 // dir-- not defined, should we?
@@ -72,7 +71,10 @@ static inline Direction operator++(Direction &dir, int) {
     return d;
 }
 
-/// Basic Direction looper, which defines the Direction as you go.
+/**
+ * @brief Macro to loop over (all) ::Direction(s)
+ *
+ */
 #define foralldir(d) for (Direction d = e_x; d < NDIM; ++d)
 
 inline Direction opp_dir(const Direction d) {
@@ -156,17 +158,27 @@ inline std::ostream &operator<<(std::ostream &os, const Direction d) {
     return os;
 }
 
-////////////////////////////////////////////////////////////////////
-/// enum class Parity type definition - stronger protection than std enum
-///
-////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Parity enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site
+ * (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
+ */
 enum class Parity : unsigned { none = 0, even, odd, all };
-//
+
 // should use here #define instead of const Parity? Makes EVEN a protected symbol
-constexpr Parity EVEN = Parity::even; // bit pattern:  001
-constexpr Parity ODD = Parity::odd;   //               010
-constexpr Parity ALL = Parity::all;   //               011
+
+/**
+ * @name Parity constexpr aliases
+ * @brief Aliases for contents of ::Parity
+ */
+/** @{ */
+/** @brief bit pattern:  001*/
+constexpr Parity EVEN = Parity::even;
+/** @brief bit pattern:  010*/
+constexpr Parity ODD = Parity::odd;
+/** @brief bit pattern:  011*/
+constexpr Parity ALL = Parity::all;
+/** @} */
 
 // this is used in diagnostics - make static inline so can be defd here
 namespace hila {
@@ -231,10 +243,13 @@ inline int pmod(const int a, const int b) {
 
 // class SiteIndex;
 
-//////////////////////////////////////////////////////////////////////
-/// CoordinateVector type
-//////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Class for coordinate vector useful in indexing lattice
+ *
+ * @details Defined as Vector<NDIM, int> meaning that all operations from Matrix class are inherited
+ *
+ * @tparam T int
+ */
 template <typename T>
 class CoordinateVector_t : public Vector<NDIM, T> {
 
@@ -426,7 +441,10 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // inline SiteIndex index() const;
 };
 
-/// Define the std CoordinateVector type here
+/**
+ * @brief CoordinateVector alias for CoordinateVector_t
+ *
+ */
 using CoordinateVector = CoordinateVector_t<int>;
 
 template <typename T>
@@ -499,16 +517,26 @@ inline CoordinateVector_t<T> operator-(const Direction dir, CoordinateVector_t<T
 }
 
 
-/////////////////////////////////////////////////////////////////////
-///  X-coordinate type - "dummy" class, used only
-///  in loop index and is removed by code analysis
-///  Has nothing inside except some methods
-/////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief X-coordinate type - "dummy" class
+ * @details used only in loop index and is removed by code analysis. Generally empty except for
+ * method deceleration
+ */
 class X_index_type {
   public:
+    /**
+     * @brief Returns coordinate of site at index X
+     *
+     * @return const CoordinateVector&
+     */
     const CoordinateVector &coordinates() const;
 
+    /**
+     * @brief Returns dth dimension coordinate of X
+     *
+     * @param d direction to probe
+     * @return int
+     */
     int coordinate(Direction d) const;
 
     int x() const;
@@ -520,6 +548,11 @@ class X_index_type {
 #endif
 #endif
 
+    /**
+     * @brief Returns parity of site at index X
+     *
+     * @return ::Parity
+     */
     ::Parity parity() const;
 };
 

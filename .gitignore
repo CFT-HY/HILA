@@ -11,3 +11,5 @@ settings.json
 docs/latex/
 docs/html/*
 !docs/html/images/
+latex/
+html/

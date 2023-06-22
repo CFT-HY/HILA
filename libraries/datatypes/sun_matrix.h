@@ -10,6 +10,12 @@
 template <typename G>
 class Algebra;
 
+/**
+ * @brief Class for SU(N) matrix
+ *
+ * @tparam N Dimensionality of SU(N) matrix
+ * @tparam T
+ */
 template <int N, typename T>
 class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
 
@@ -84,7 +90,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     }
 
 
-    const SU & random(int nhits = 16) out_only {
+    const SU &random(int nhits = 16) out_only {
 
         // use Pauli matrix representation to generate SU(2) random matrix
         if constexpr (N == 2) {
