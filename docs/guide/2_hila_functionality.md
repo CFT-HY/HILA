@@ -80,7 +80,7 @@ List of datatypes offered by HILA
 
 - Complex\<S\>
 - #Vector\<n,T\>
-- #HorizontalVector\<n,T\>
+- #RowVector\<n,T\>
 - Matrix\<n,m,T\>
 - #SquareMatrix\<n,T\>
 - Array\<n,m,T\>

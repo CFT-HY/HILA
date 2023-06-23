@@ -19,7 +19,7 @@ class MatrixTest {
                     80,81,82,83,84,85,86,87,88,89,
                     90,91,92,93,94,95,96,97,98,99};
     Vector<N, MyType> dummy_vector = {0,10,20,30,40,50,60,70,80,90};
-    HorizontalVector<M, MyType> dummy_vector_t = {0,1,2,3,4,5,6,7,8,9};
+    RowVector<M, MyType> dummy_vector_t = {0,1,2,3,4,5,6,7,8,9};
 
     template <typename T>
     void fill_dummy_matrix(T assign_value) {
