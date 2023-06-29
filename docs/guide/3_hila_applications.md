@@ -1,11 +1,10 @@
-# HILA Applications
+# HILA Applications 
 
 __List of documented applications/simulations offered by HILA.__
 
-hila_simple_example.cpp: 
-> Simple HILA example application which computes laplacian of Gaussian random complex field
-hila_health_check.cpp: 
-> HILA application which performs health check
+hila_healthcheck.cpp:
+>' HILA healthcheck application. '
 
----
-> __NOTE__: Still under works
+hila_simple_example.cpp:
+>' Simple HILA example application which computes laplacian of Gaussian random complex field '
+
