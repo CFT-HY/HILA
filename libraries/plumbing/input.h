@@ -211,7 +211,7 @@ class input {
      * Multiple items are separated by commas, whitespace is not significant.
      *
      * ### Any arithmetic type (ints/floats)
-     * @code{.cpp}
+     * @code
      *        int i = f.get("number of cats");
      * @endcode
      *    __matches__ " number of cats   5 "
