@@ -1,11 +1,9 @@
-/** @file matrix.h */
 /**
  * @file matrix.h
  * @brief Definition of Matrix types
  * @details This file contains base matrix type Matrix_t which defines all general matrix type
  opirations Matrix types are Matrix, #Vector, #RowVector, #SquareMatrix of which Matrix is
  defined as a class and the rest are special cases of the Matrix class.
- *
  *
  */
 
