@@ -3,6 +3,7 @@
  * @author Aaron Haarti
  * @brief Simple HILA example application which computes laplacian of Gaussian random complex
  * field
+ *
  * @details The application generates a \f$ 32^2 \f$ size field \f$ f \f$ of random Complex numbers.
  * We proceed to compute the summed absolute value of the Laplacian of said field:
  *
