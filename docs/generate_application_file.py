@@ -28,8 +28,8 @@ def generate_application_file(files_and_briefs,write_file):
     f = open(write_file,'w')
     f.write("# HILA Applications \n\n__List of documented applications/simulations offered by HILA.__\n\n")
     for file,brief in files_and_briefs.items():
-        f.write("{}:\n".format(file.split('/')[-1]))
-        f.write(">{}\n\n".format(brief))
+        f.write("{}:\n\n".format(file.split('/')[-1]))
+        f.write("> {}\n\n".format(brief))
     f.close()
 
             
