@@ -20,7 +20,8 @@ def find_brief(source_files):
             end = int(re.search(r'@details', file_content).span()[0])
             brief = repr(file_content[start:end])
             brief = re.sub(r'\\n \*', '',brief)
-            files_and_briefs[file] = str(brief)
+            #remove first and last character ' with indexing
+            files_and_briefs[file] = str(brief[1:-1])
         
     return files_and_briefs
     
