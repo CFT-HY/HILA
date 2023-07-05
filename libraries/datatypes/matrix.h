@@ -66,7 +66,7 @@ using SquareMatrix = Matrix<n, n, T>;
  * functions to return derived type
  * @tparam n row length
  * @tparam m column length
- * @tparam T Data type
+ * @tparam T Data type Matrix
  * @tparam Mtype Specific "Matrix" type for CRTP
  */
 template <const int n, const int m, typename T, typename Mtype>
@@ -80,7 +80,7 @@ class Matrix_t {
     static_assert(hila::is_complex_or_arithmetic<T>::value,
                   "Matrix requires Complex or arithmetic type");
 
-    /// std incantation for field types
+    // std incantation for field types
     using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
@@ -100,7 +100,18 @@ class Matrix_t {
     }
 
 
-    /// define default constructors to ensure std::is_trivial
+    /**
+     * @brief Construct a new Matrix_t object
+     * @details The following matrix constructors are available:
+     *
+     * ## default constructor
+     * \code {.cpp}
+     * using MyType = double;
+     * Matrix<n,m,double> M;
+     * \endcode
+     *
+     *
+     */
     Matrix_t() = default;
     ~Matrix_t() = default;
     Matrix_t(const Matrix_t &v) = default;
@@ -134,9 +145,8 @@ class Matrix_t {
         }
     }
 
-    /// Construct matrix automatically from right-size initializer list
-    /// This does not seem to be dangerous, so keep non-explicit
-
+    // Construct matrix automatically from right-size initializer list
+    // This does not seem to be dangerous, so keep non-explicit
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Matrix_t(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&
