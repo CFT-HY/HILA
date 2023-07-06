@@ -90,21 +90,32 @@ class Matrix_t {
         return true;
     }
 
-    // is_vector and is_square bools
+    /**
+     * @brief Returns true if Matrix is a vector
+     *
+     * @return true
+     * @return false
+     */
     static constexpr bool is_vector() {
         return (n == 1 || m == 1);
     }
 
+    /**
+     * @brief Returns true if matrix is a square matrix
+     *
+     * @return true
+     * @return false
+     */
     static constexpr bool is_square() {
         return (n == m);
     }
 
-    /// define default constructors to ensure std::is_trivial
+    /// Define default constructors to ensure std::is_trivial
     Matrix_t() = default;
     ~Matrix_t() = default;
     Matrix_t(const Matrix_t &v) = default;
 
-    /// constructor from scalar -- keep it explicit!  Not good for auto use
+    // constructor from scalar -- keep it explicit!  Not good for auto use
     template <typename S, int nn = n, int mm = m,
               std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
     explicit inline Matrix_t(const S rhs) {
@@ -117,7 +128,7 @@ class Matrix_t {
             }
     }
 
-    /// Construct from a different type matrix
+    // Construct from a different type matrix
     // template <typename S, typename MT,
     //           std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     // Matrix_t(const Matrix_t<n, m, S, MT> &rhs) out_only {
@@ -126,7 +137,7 @@ class Matrix_t {
     //     }
     // }
 
-    /// construct from 0
+    // construct from 0
     inline Matrix_t(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
@@ -171,19 +182,32 @@ class Matrix_t {
     }
 
     /// Define constant methods rows(), columns() - may be useful in template code
+
+    /**
+     * @brief Returns row length
+     *
+     * @return constexpr int
+     */
     static constexpr int rows() {
         return n;
     }
+    /**
+     * @brief Returns column length
+     *
+     * @return constexpr int
+     */
     static constexpr int columns() {
         return m;
     }
 
 
-    // define also method size() for vectors and square matrices only!
     /**
+     * @brief Returns size of #Vector or square Matrix
      *
+     * @tparam q row size n
+     * @tparam p column size m
+     * @return constexpr int
      */
-
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     static constexpr int size() {
         return p;
@@ -1003,22 +1027,54 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
      * @brief Construct a new Matrix object
      * @details The following ways of initializing a matrix are:
      *
-     * __default constructor__:
-     * \code {.cpp}
-     * .
-     * .
-     * .
+     * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
+     *
+     * __Default constructor__:
+     *
+     * Allocates undefined \f$ n\times m\f$ Array.
+     *
+     * \code{.cpp}
      * Matrix<n,m,MyType> M;
      * \endcode
      *
      *
+     * __Scalar constructor__:
+     *
+     * Assigns scalar to diagonal elements \f$ M = \mathbf{I}\cdot x\f$.
+     *
+     * \code{.cpp}
+     * MyType x = hila::random();
+     * Matrix<n,m,MyType> M = x;
+     * \endcode
+     *
+     * __Copy constructor__:
+     *
+     * Assignment from previously defined matrix if types are compatible. For example the code below
+     * only works if assignment from MyOtherType to MyType is defined.
+     *
+     * \code{.cpp}
+     * Matrix<n,m,MyOtherType> M_0;
+     * .
+     * . \\ M_0 is filled with content
+     * .
+     * Matrix<n,m,MyType> M = M_0;
+     * \endcode
+     *
+     * __Initializer list__:
+     *
+     * Assignment from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Matrix<2,2,int> M = {1, 0
+     *                      0, 1};
+     * \endcode
      */
     Matrix() = default;
     ~Matrix() = default;
     Matrix(const Matrix &v) = default;
 
 
-    /// constructor from scalar -- keep it explicit!  Not good for auto use
+    // constructor from scalar -- keep it explicit!  Not good for auto use
     template <typename S, int nn = n, int mm = m,
               std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
     explicit Matrix(const S rhs) out_only {
@@ -1031,7 +1087,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
             }
     }
 
-    /// Construct from a different type matrix
+    // Construct from a different type matrix
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix(const Matrix_t<n, m, S, MT> &rhs) out_only {
@@ -1040,16 +1096,15 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
         }
     }
 
-    /// construct from 0
+    // construct from 0
     Matrix(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             this->c[i] = 0;
         }
     }
 
-    /// Construct matrix automatically from right-size initializer list
-    /// This does not seem to be dangerous, so keep non-explicit
-
+    // Construct matrix automatically from right-size initializer list
+    // This does not seem to be dangerous, so keep non-explicit
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&
