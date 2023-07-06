@@ -99,19 +99,7 @@ class Matrix_t {
         return (n == m);
     }
 
-
-    /**
-     * @brief Construct a new Matrix_t object
-     * @details The following matrix constructors are available:
-     *
-     * ## default constructor
-     * \code {.cpp}
-     * using MyType = double;
-     * Matrix<n,m,double> M;
-     * \endcode
-     *
-     *
-     */
+    /// define default constructors to ensure std::is_trivial
     Matrix_t() = default;
     ~Matrix_t() = default;
     Matrix_t(const Matrix_t &v) = default;
@@ -424,7 +412,7 @@ class Matrix_t {
     }
 
     /// subtract assign a Matrix_t
-    //#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) {
@@ -435,7 +423,7 @@ class Matrix_t {
     }
 
     /// add assign a scalar to square matrix
-    //#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) {
@@ -449,7 +437,7 @@ class Matrix_t {
     }
 
     /// subtract assign type T and convertible
-    //#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) {
@@ -990,10 +978,19 @@ class Matrix_t {
     }
 };
 
-//////////////////////////////////////////////////////////////////////////
-/// The matrix class definition here
-//////////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief \f$ n \times m \f$ Matrix class which defines matrix operations.
+ * @details The Matrix class is a derived class of Matrix_t, which is the general definition of a
+ * matrix class. See Matrix_t details section for reasoning.
+ *
+ * All mathematical operations for Matrix are inherited from Matrix_t and are visible on this page.
+ *
+ * To see all methods of initializing a matrix see constructor method #Matrix::Matrix
+ *
+ * @tparam n row length
+ * @tparam m column length
+ * @tparam T Data type Matrix
+ */
 template <int n, int m, typename T>
 class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
@@ -1002,7 +999,20 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
-    /// define default constructors to ensure std::is_trivial
+    /**
+     * @brief Construct a new Matrix object
+     * @details The following ways of initializing a matrix are:
+     *
+     * __default constructor__:
+     * \code {.cpp}
+     * .
+     * .
+     * .
+     * Matrix<n,m,MyType> M;
+     * \endcode
+     *
+     *
+     */
     Matrix() = default;
     ~Matrix() = default;
     Matrix(const Matrix &v) = default;
