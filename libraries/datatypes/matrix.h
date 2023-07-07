@@ -171,7 +171,7 @@ class Matrix_t {
         return *reinterpret_cast<const Mtype *>(this);
     }
 
-    /// automatically cast to generic matrix
+    // automatically cast to generic matrix
 #pragma hila loop_function
     inline operator Matrix<n, m, T> &() {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
@@ -208,51 +208,85 @@ class Matrix_t {
      * @tparam p column size m
      * @return constexpr int
      */
+    // size for row vector
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     static constexpr int size() {
         return p;
     }
-
+    // size for column vector
     template <int q = n, int p = m, std::enable_if_t<p == 1, int> = 0>
     static constexpr int size() {
         return q;
     }
-
+    // size for square matrix
     template <int q = n, int p = m, std::enable_if_t<q == p, int> = 0>
     static constexpr int size() {
         return q;
     }
 
-    /// standard access ops m.e(i,j) - assume T is small, as it should
+    /**
+     * @brief Standard array indexing operation for matrices and vectors
+     *
+     * @details Accessing singular elements is insufficient, but matrix elements are often quite
+     * small.
+     *
+     * Exammple for matrix:
+     * \code
+     *  Matrix<n,m,MyType> M;
+     *  MyType a = M.e(i,j); \\ i <= n, j <= m
+     * \endcode
+     *
+     * Example for vector:
+     * \code {.cpp}
+     *  Vector<n,MyType> V;
+     * MyType a = V.e(i) \\ i <= n
+     * \endcode
+     *
+     * @param i row index
+     * @param j column index
+     * @return T matrix element type
+     */
     inline T e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
     }
-    /// standard access ops m.e(i,j) - assume T is small, as it should
+    // Same as above but with const_function, see const_function for details
     inline T &e(const int i, const int j) const_function {
         // return elem[i][j];
         return c[i * m + j];
     }
-
-    /// declare single e here too in case we have a vector
-    /// (one size == 1)
+    // declare single e here too in case we have a vector
+    // (n || m == 1)
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
     }
-
+    // Same as above but with const_function, see const_function for details
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &e(const int i) const_function {
         return c[i];
     }
 
-    /// And also [] for vectors (not matrices!)
-    /// (one size == 1)
+    /**
+     * @brief Indexing operation [] defined only for vectors.
+     *
+     * @details Example:
+     *
+     * \code {.cpp}
+     * Vector<n,MyType> V;
+     * MyType a = V[i] \\ i <= n
+     * \endcode
+     *
+     * @tparam q row size n
+     * @tparam p column size m
+     * @param i row or vector index depending on which is being indexed
+     * @return T
+     */
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T operator[](const int i) const {
         return c[i];
     }
-
+    // Same as above but with const_function, see const_function for details
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &operator[](const int i) const_function {
         return c[i];
@@ -266,24 +300,40 @@ class Matrix_t {
     //     return v;
     // }
 
-    /// return reference to row in a matrix
+
+    /**
+     * @brief Return reference to row in a matrix
+     *
+     * @param r index of row to be referenced
+     * @return const RowVector<m, T>&
+     */
     const RowVector<m, T> &row(int r) const {
         return *(reinterpret_cast<const RowVector<m, T> *>(this) + r);
     }
-
-    /// return reference to row in a matrix
+    // non const version of above
     RowVector<m, T> &row(int r) {
         return *(reinterpret_cast<RowVector<m, T> *>(this) + r);
     }
 
-    /// return reference to row in a matrix
+    /**
+     * @brief Set row of Matrix with #RowVector if types are assignable
+     *
+     * @tparam S RowVector type
+     * @param r Index of row to be set
+     * @param v RowVector to be set
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     void set_row(int r, const RowVector<m, S> &v) {
         for (int i = 0; i < m; i++)
             e(r, i) = v[i];
     }
 
-    /// get column of a matrix
+    /**
+     * @brief Returns column vector as value at index c
+     *
+     * @param c index of column vector to be returned
+     * @return const Vector<n, T>
+     */
     const Vector<n, T> column(int c) const {
         Vector<n, T> v;
         for (int i = 0; i < n; i++)
@@ -296,14 +346,25 @@ class Matrix_t {
     //     return hila_matrix_column_t<n, T, Mtype>(*this, c);
     // }
 
-    /// set column of a matrix
+    /**
+     * @brief Set column of Matrix with #Vector if types are assignable
+     *
+     * @tparam S Vector type
+     * @param c Index of column to be set
+     * @param v #Vector to be set
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     void set_column(int c, const Vector<n, S> &v) {
         for (int i = 0; i < n; i++)
             e(i, c) = v[i];
     }
 
-    /// return diagonal of a square matrix as a vector
+    /**
+     * @brief Return diagonal of square matrix
+     * @details If called for non square matrix the program will throw an error.
+     *
+     * @return Vector<n, T> returned vector.
+     */
     Vector<n, T> diagonal() {
         static_assert(n == m, "diagonal() method defined only for square matrices");
         Vector<n, T> res;
@@ -312,7 +373,21 @@ class Matrix_t {
         return res;
     }
 
-    /// return diagonal of a square matrix as a vector
+    /**
+     * @brief Set diagonal of square matrix to #Vector which is passed to the method
+     * @details If called for non square matrix the program will throw an error.
+     *
+     * Example:
+     *
+     * \code {.cpp}
+     * SquareMatrix<n,MyType> S = 0; \\ Zero matrix
+     * Vector<n,MyType> V = 1; \\ Vector assigned to 1 at all elements
+     * S.set_diagonal(V); \\ Results in Identity matrix of size n
+     * \endcode
+     *
+     * @tparam S type vector to assign values to
+     * @param v Vector to assign to diagonal
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     void set_diagonal(const Vector<n, S> &v) {
         static_assert(n == m, "set_diagonal() method defined only for square matrices");
@@ -321,12 +396,18 @@ class Matrix_t {
     }
 
 
-    /// interpret Matrix as Array -  for array ops
-    Array<n, m, T> &asArray() const_function {
-        return *reinterpret_cast<Array<n, m, T> *>(this);
-    }
+    /**
+     * @brief Cast Matrix to Array
+     * @details used for array operations
+     *
+     * @return Array<n, m, T>&
+     */
     const Array<n, m, T> &asArray() const {
         return *reinterpret_cast<const Array<n, m, T> *>(this);
+    }
+    // Same as above but with const_function, see const_function for details
+    Array<n, m, T> &asArray() const_function {
+        return *reinterpret_cast<Array<n, m, T> *>(this);
     }
 
     /// casting from one Matrix (number) type to another: do not do this automatically.
@@ -348,7 +429,12 @@ class Matrix_t {
     //     return res;
     // }
 
-    /// unary -
+    /**
+     * @brief Unary - operator
+     * @details Returns matrix with the signs of all the elements in the Matrix flipped.
+     *
+     * @return Mtype
+     */
     inline Mtype operator-() const {
         Mtype res;
         for (int i = 0; i < n * m; i++) {
@@ -357,20 +443,26 @@ class Matrix_t {
         return res;
     }
 
-    /// unary +  - there's an automatic cast here
+    /**
+     * @brief Unary + operator
+     * @details Equivalent to identity operator meaning that matrix stays as is.
+     *
+     * @return const Mtype&
+     */
     inline const Mtype &operator+() const {
         return *this;
     }
 
-    /// assign from 0
-#pragma hila loop_function
-    inline Mtype &operator=(const std::nullptr_t &z) out_only {
-        for (int i = 0; i < n * m; i++) {
-            c[i] = 0;
-        }
-        return *this;
-    }
-
+    /**
+     * @brief Boolean operator == to determine if two matrices are exactly the same
+     * @details Tolerance for equivalence is zero, meaning that the matrices must be exactly the
+     * same.
+     *
+     * @tparam S Type for Matrix which is being compared to
+     * @param rhs right hand side Matrix which we are comparing
+     * @return true
+     * @return false
+     */
     template <typename S>
     bool operator==(const Matrix<n, m, S> &rhs) const {
         for (int i = 0; i < n; i++)
@@ -381,12 +473,64 @@ class Matrix_t {
         return true;
     }
 
+    /**
+     * @brief Boolean operator != to check if matrices are exactly different
+     * @details if matrices are exactly the same then this will return false
+     *
+     * @tparam S Type for MAtrix which is being compared to
+     * @param rhs right hand side Matrix which we are comparing
+     * @return true
+     * @return false
+     */
     template <typename S>
     bool operator!=(const Matrix<n, m, S> &rhs) const {
         return !(*this == rhs);
     }
 
-    /// Assign from different type matrix
+    /**
+     * @brief Assignment operator = to assign values to matrix
+     * @details The following ways to assign a matrix are:
+     *
+     * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
+     *
+     * __Assignment from matrix__:
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M_0;
+     * .
+     * . M_0 has values assigned to it
+     * .
+     * Matrix<n,m,MyType> M; \\ undefined matrix
+     * M = M_0; \\ Assignment from M_0
+     * \endcode
+     *
+     * __Assignment from 0__:
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M;
+     * M = 0; Zero matrix;
+     * \endcode
+     *
+     * __Assignment from scalar__:
+     *
+     * Assignment from scalar assigns the scalar to the diagonal elements as \f$ M = I\cdot a\f$
+     *
+     * \code {.cpp}
+     * MyType a = hila::random;
+     * Matrix<n,m,MyType> M;
+     * M = a; M = I*a
+     * \endcode
+     *
+     *__Initializer list__:
+     *
+     * Assignment from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Matrix<2,2,int> M ;
+     * M = {1, 0
+     *      0, 1};
+     * \endcode
+     */
 #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
@@ -397,7 +541,16 @@ class Matrix_t {
         return *this;
     }
 
-    /// Assign from "scalar" for square matrix
+    // assign from 0
+#pragma hila loop_function
+    inline Mtype &operator=(const std::nullptr_t &z) out_only {
+        for (int i = 0; i < n * m; i++) {
+            c[i] = 0;
+        }
+        return *this;
+    }
+
+    // Assign from "scalar" for square matrix
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) out_only {
@@ -412,7 +565,7 @@ class Matrix_t {
         return *this;
     }
 
-    /// Assign from initializer list
+    // Assign from initializer list
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(std::initializer_list<S> rhs) out_only {
@@ -424,7 +577,7 @@ class Matrix_t {
         return *this;
     }
 
-    /// add assign a Matrix
+    // add assign a Matrix
 #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
@@ -1040,7 +1193,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
      *
      * __Scalar constructor__:
      *
-     * Assigns scalar to diagonal elements \f$ M = \mathbf{I}\cdot x\f$.
+     * Construct with given scalar at diagonal elements \f$ M = \mathbf{I}\cdot x\f$.
      *
      * \code{.cpp}
      * MyType x = hila::random();
@@ -1049,8 +1202,8 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
      *
      * __Copy constructor__:
      *
-     * Assignment from previously defined matrix if types are compatible. For example the code below
-     * only works if assignment from MyOtherType to MyType is defined.
+     * Construction from previously defined matrix if types are compatible. For example the code
+     * below only works if assignment from MyOtherType to MyType is defined.
      *
      * \code{.cpp}
      * Matrix<n,m,MyOtherType> M_0;
@@ -1062,7 +1215,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
      *
      * __Initializer list__:
      *
-     * Assignment from c++ initializer list.
+     * Construction from c++ initializer list.
      *
      * \code{.cpp}
      * Matrix<2,2,int> M = {1, 0
