@@ -64,6 +64,7 @@ using SquareMatrix = Matrix<n, n, T>;
  *
  * Used because stupid c++ makes it complicated to write generic code, in this case derived
  * functions to return derived type
+ *
  * @tparam n row length
  * @tparam m column length
  * @tparam T Data type Matrix
@@ -577,7 +578,29 @@ class Matrix_t {
         return *this;
     }
 
-    // add assign a Matrix
+    /**
+     * @brief Add assign operator with matrix or scalar
+     * @details Add assign operator can be used in the following ways
+     *
+     * __Add assign matrix__:
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M,N;
+     * M = 1;
+     * N = 1;
+     * M += N; \\M = 2*I
+     * \endcode
+     *
+     * __Add assign scalar__:
+     *
+     * Adds scalar \f$ a \f$ to __square__ matrix as \f$ M + a\cdot\mathbb{1} \f$
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M = 1;
+     * M += 1 ; \\ M = 2*I
+     * \endcode
+     *
+     */
 #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
@@ -588,7 +611,29 @@ class Matrix_t {
         return *this;
     }
 
-    /// subtract assign a Matrix_t
+    /**
+     * @brief Subtract assign operator with matrix or scalar
+     * @details Subtract assign operator can be used in the following ways
+     *
+     * __Subtract assign matrix__:
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M,N;
+     * M = 3;
+     * N = 1;
+     * M -= N; \\M = 2*I
+     * \endcode
+     *
+     * __Subtract assign scalar__:
+     *
+     * Adds scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M = 3;
+     * M -= 1 ; \\ M = 2*I
+     * \endcode
+     *
+     */
     // #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
@@ -599,7 +644,7 @@ class Matrix_t {
         return *this;
     }
 
-    /// add assign a scalar to square matrix
+    // add assign a scalar to square matrix
     // #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
@@ -613,7 +658,7 @@ class Matrix_t {
         return *this;
     }
 
-    /// subtract assign type T and convertible
+    // subtract assign type T and convertible
     // #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
@@ -626,7 +671,40 @@ class Matrix_t {
         return *this;
     }
 
-    /// multiply assign with matrix
+    /**
+     * @brief Multiply assign scalar or matrix
+     * @details Multiplication works as defined for matrix multiplication and scalar matrix
+     * multiplication.
+     *
+     * Matrix multiply assign only defined for square matrices, since the matrix dimensions would
+     * change otherwise.
+     *
+     * Multiply assign operator can be used in the following ways
+     *
+     * __Multiply assign matrix__:
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M,N;
+     * .
+     * . Fill matrices M and N
+     * .
+     * M *= N; \\ M = M*N
+     * \endcode
+     *
+     * __Subtract assign scalar__:
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M;
+     * .
+     * . Fill whole matrix with 1
+     * .
+     * M *= 2 ; \\ M is filled with 2
+     * \endcode
+     *
+     * @param rhs
+     * @return template <int p, typename S, typename MT,
+     * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
+     */
     // #pragma hila loop_function
     template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
@@ -1161,6 +1239,8 @@ class Matrix_t {
  * matrix class. See Matrix_t details section for reasoning.
  *
  * All mathematical operations for Matrix are inherited from Matrix_t and are visible on this page.
+ * __NOTE__: Some method documentation is not being displayed, for example the assignment operator
+ * documentation is not being inherited. See Matrix_t::operator= for use.
  *
  * To see all methods of initializing a matrix see constructor method #Matrix::Matrix
  *
