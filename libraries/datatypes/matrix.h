@@ -65,8 +65,8 @@ using SquareMatrix = Matrix<n, n, T>;
  * Used because stupid c++ makes it complicated to write generic code, in this case derived
  * functions to return derived type
  *
- * @tparam n row length
- * @tparam m column length
+ * @tparam n Number of rows
+ * @tparam m Number of columns
  * @tparam T Matrix element type
  * @tparam Mtype Specific "Matrix" type for CRTP
  */
@@ -1480,8 +1480,8 @@ class Matrix_t {
  * __NOTE__: In the documentation examples n,m are integers and MyType is a HILA [standard
  * type](@ref standard) or Complex.
  *
- * @tparam n row length
- * @tparam m column length
+ * @tparam n Number of rows
+ * @tparam m Number of columns
  * @tparam T Data type Matrix
  */
 template <int n, int m, typename T>
@@ -1887,8 +1887,48 @@ auto det(const Mtype &mat) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-/// Now matrix additions: matrix + matrix
+// Now matrix additions: matrix + matrix
 
+/**
+ * @brief Addition operator
+ * @details Defined for the following operations
+ *
+ * __Matrix + Matrix:__
+ *
+ * Addition operator between matrices is defined in the usual way (element wise).
+ *
+ * __NOTE__: Matrices must share same dimensionality.
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M, N, S;
+ * M.fill(1);
+ * N.fill(1);
+ * S = M + N; // Resulting matrix is uniformly 2
+ * \endcode
+ *
+ *
+ * __Scalar + Matrix / Matrix + Scalar:__
+ *
+ * Addition operator between matrix and scalar is defined in the usual way, where the scalar is
+ * added to the diagonal elements.
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ *
+ * \f$ M + 2 = M + 2\cdot\mathbb{1} \f$
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M,S;
+ * M.fill(0);
+ * S = M + 1; // Resulting matrix is identity matrix
+ * \endcode
+ *
+ *
+ * @tparam Mtype1 Matrix type for a
+ * @tparam Mtype2 Matrix type for b
+ * @param a Left matrix or scalar
+ * @param b Right matrix or scalar
+ * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
+ */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
@@ -1926,8 +1966,46 @@ inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
     return a;
 }
 
-
-/// Matrix - matrix
+/**
+ * @brief Addition operator
+ * @details Defined for the following operations
+ *
+ * __Matrix - Matrix:__
+ *
+ * Subtraction operator between matrices is defined in the usual way (element wise).
+ *
+ * __NOTE__: Matrices must share same dimensionality.
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M, N, S;
+ * M.fill(1);
+ * N.fill(1);
+ * S = M - N; // Resulting matrix is uniformly 0
+ * \endcode
+ *
+ *
+ * __Scalar - Matrix / Matrix - Scalar:__
+ *
+ * Subtraction operator between matrix and scalar is defined in the usual way, where the scalar is
+ * subtracted from the diagonal elements.
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ *
+ * \f$ M - 2 = M - 2\cdot\mathbb{1} \f$
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M,S;
+ * M = 2; // M = 2*I
+ * S = M - 1; // Resulting matrix is identity matrix
+ * \endcode
+ *
+ *
+ * @tparam Mtype1 Matrix type for a
+ * @tparam Mtype2 Matrix type for b
+ * @param a Left matrix or scalar
+ * @param b Right matrix or scalar
+ * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
+ */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>>
@@ -1945,7 +2023,7 @@ inline Rtype operator-(const Mtype1 &a, const Mtype2 &b) {
     return r;
 }
 
-/// Matrix + scalar
+// Matrix + scalar
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -1964,7 +2042,7 @@ inline Rtype operator+(const Mtype &a, const S &b) {
     return r;
 }
 
-/// scalar + matrix
+// scalar + matrix
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -1975,7 +2053,7 @@ inline Rtype operator+(const S &b, const Mtype &a) {
     return a + b;
 }
 
-/// matrix - scalar
+// matrix - scalar
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -1994,7 +2072,7 @@ inline Rtype operator-(const Mtype &a, const S &b) {
     return r;
 }
 
-/// scalar - matrix
+// scalar - matrix
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -2014,11 +2092,11 @@ inline Rtype operator-(const S &b, const Mtype &a) {
 }
 
 ////////////////////////////////////////
-/// matrix * matrix is the most important bit
+// matrix * matrix is the most important bit
 
 // same type square matrices:
 template <typename Mt, std::enable_if_t<Mt::is_matrix() && Mt::rows() == Mt::columns(), int> = 0>
-inline Mt operator*(const Mt &A, const Mt &B) {
+inline Mt operator*(const Mt &a, const Mt &b) {
 
     constexpr int n = Mt::rows();
 
@@ -2026,21 +2104,77 @@ inline Mt operator*(const Mt &A, const Mt &B) {
 
     for (int i = 0; i < n; i++)
         for (int j = 0; j < n; j++) {
-            res.e(i, j) = A.e(i, 0) * B.e(0, j);
+            res.e(i, j) = a.e(i, 0) * b.e(0, j);
             for (int k = 1; k < n; k++) {
-                res.e(i, j) += A.e(i, k) * B.e(k, j);
+                res.e(i, j) += a.e(i, k) * b.e(k, j);
             }
         }
     return res;
 }
 
-// different type matrices - return generic
+/**
+ * @brief Multiplication operator
+ * @details Multiplication type depends on the original types of the multiplied matrices. Defined
+ * for the following operations.
+ *
+ * __Matrix * Matrix:__
+ *
+ * [Standard matrix multiplication](https://en.wikipedia.org/wiki/Matrix_multiplication) where LHS
+ * columns must match RHS rows
+ *
+ * \code {.cpp}
+ * Matrix<2, 3, double> M;
+ * Matrix<3, 2, double> N;
+ * M.random();
+ * N.random();
+ * auto S = N * M; // Results in a 3 x 3 Matrix since N.rows() = 3 and M.columns = 3
+ * \endcode
+ *
+ * __ #RowVector * #Vector / #Vector * #RowVector:__
+ *
+ * Defined as standard [dot product](https://en.wikipedia.org/wiki/Dot_product) between vectors as
+ * long as vectors are of same length
+ *
+ * \code {.cpp}
+ * RowVector<n,MyType> V;
+ * Vector<n,MyType> W;
+ * //
+ * // Fill V and W
+ * //
+ * auto S = V*W; // Results in MyType scalar
+ * \endcode
+ *
+ * #Vector * RowVector is same as outer product which is equivalent to a matrix
+ * multiplication
+ *
+ * \code {.cpp}
+ * auto S = W*V // Result in n x n Matrix of type MyType
+ * \endcode
+ *
+ * __Matrix * Scalar / Scalar * Matrix:__
+ *
+ * Multiplication operator between Matrix and Scalar are defined in the usual way (element wise)
+ *
+ * \code {.cpp}
+ * Matrix<n,n,MyType> M;
+ * M.fill(1);
+ * auto S = M*2; // Resulting Matrix is uniformly 2
+ * \endcode
+ *
+ * @tparam Mt1 Matrix type for a
+ * @tparam Mt2 Matrix type for b
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @param a Left Matrix, Vector or Scalar
+ * @param b Right Matrix, Vector or Scalar
+ * @return Matrix<n, m, R>
+ */
 template <typename Mt1, typename Mt2,
           std::enable_if_t<Mt1::is_matrix() && Mt2::is_matrix() && !std::is_same<Mt1, Mt2>::value,
                            int> = 0,
           typename R = hila::ntype_op<hila::number_type<Mt1>, hila::number_type<Mt2>>,
           int n = Mt1::rows(), int m = Mt2::columns()>
-inline Matrix<n, m, R> operator*(const Mt1 &A, const Mt2 &B) {
+inline Matrix<n, m, R> operator*(const Mt1 &a, const Mt2 &b) {
 
     constexpr int p = Mt1::columns();
     static_assert(p == Mt2::rows(), "Matrix size: LHS columns != RHS rows");
@@ -2050,25 +2184,25 @@ inline Matrix<n, m, R> operator*(const Mt1 &A, const Mt2 &B) {
     if constexpr (n > 1 && m > 1) {
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++) {
-                res.e(i, j) = A.e(i, 0) * B.e(0, j);
+                res.e(i, j) = a.e(i, 0) * b.e(0, j);
                 for (int k = 1; k < p; k++) {
-                    res.e(i, j) += A.e(i, k) * B.e(k, j);
+                    res.e(i, j) += a.e(i, k) * b.e(k, j);
                 }
             }
     } else if constexpr (m == 1) {
         // matrix x vector
         for (int i = 0; i < n; i++) {
-            res.e(i) = A.e(i, 0) * B.e(0);
+            res.e(i) = a.e(i, 0) * b.e(0);
             for (int k = 1; k < p; k++) {
-                res.e(i) += A.e(i, k) * B.e(k);
+                res.e(i) += a.e(i, k) * b.e(k);
             }
         }
     } else if constexpr (n == 1) {
         // vector x matrix
         for (int j = 0; j < m; j++) {
-            res.e(j) = A.e(0) * B.e(0, j);
+            res.e(j) = a.e(0) * b.e(0, j);
             for (int k = 1; k < p; k++) {
-                res.e(j) += A.e(k) * B.e(k, j);
+                res.e(j) += a.e(k) * b.e(k, j);
             }
         }
     }
@@ -2076,7 +2210,7 @@ inline Matrix<n, m, R> operator*(const Mt1 &A, const Mt2 &B) {
     return res;
 }
 
-/// and treat separately horiz. vector * vector
+// and treat separately horiz. vector * vector
 template <int m, int n, typename T1, typename T2, typename Rt = hila::ntype_op<T1, T2>>
 Rt operator*(const Matrix<1, m, T1> &A, const Matrix<n, 1, T2> &B) {
 
@@ -2092,7 +2226,7 @@ Rt operator*(const Matrix<1, m, T1> &A, const Matrix<n, 1, T2> &B) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-/// matrix * scalar
+// matrix * scalar
 template <typename Mt, typename S,
           std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
@@ -2104,7 +2238,7 @@ inline Rt operator*(const Mt &mat, const S &rhs) {
     return res;
 }
 
-/// scalar * matrix
+// scalar * matrix
 template <typename Mt, typename S,
           std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
@@ -2112,7 +2246,29 @@ inline Rt operator*(const S &rhs, const Mt &mat) {
     return mat * rhs; // assume commutes
 }
 
-/// matrix / scalar
+// matrix / scalar
+
+/**
+ * @brief Division operator
+ *
+ * Defined for following operations
+ *
+ * __ Matrix / Scalar: __
+ *
+ * Division operator between Matrix and Scalar are defined in the usual way (element wise)
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M;
+ * M.fill(2);
+ * auto S = M/2; // Resulting matrix is uniformly 1
+ * \endcode
+ *
+ * @tparam Mt Matrix type
+ * @tparam S Scalar type
+ * @param mat Matrix to divide scalar with
+ * @param rhs Scalar to divide with
+ * @return Rt Resulting Matrix
+ */
 template <typename Mt, typename S,
           std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
@@ -2125,7 +2281,19 @@ inline Rt operator/(const Mt &mat, const S &rhs) {
 }
 
 
-/// mul_trace(a,b) - multiply matrices a and b and take trace
+/**
+ * @brief Returns trace of product of two matrices
+ * @details Wrapper around Matrix::mul_trace in the form
+ * \code {.cpp}
+ * mul_trace(a,b) // -> a.mul_trace(b)
+ * \endcode
+ *
+ * @tparam Mtype1 Matrix type for a
+ * @tparam Mtype2 Matrix type for b
+ * @param a Left Matrix
+ * @param b Right Matrix
+ * @return auto Resulting trace
+ */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0>
 inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
@@ -2138,7 +2306,20 @@ inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
 //////////////////////////////////////////////////////////////////////////////////
 
 
-/// Stream operator
+// Stream operator
+/**
+ * @brief Stream operator
+ * @details Naive Stream operator for formatting Matrix for printing. Simply puts elements one after
+ * the other in row major order
+ *
+ * @tparam n
+ * @tparam m
+ * @tparam T
+ * @tparam MT
+ * @param strm
+ * @param A
+ * @return std::ostream&
+ */
 template <int n, int m, typename T, typename MT>
 std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
     for (int i = 0; i < n; i++)
@@ -2155,7 +2336,18 @@ std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
 
 namespace hila {
 
-
+/**
+ * @brief Converts Matrix_t object to string
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Matrix element type
+ * @tparam MT Matrix type
+ * @param A Matrix to convert to string
+ * @param prec Precision of T
+ * @param separator Separator between elements
+ * @return std::string
+ */
 template <int n, int m, typename T, typename MT>
 std::string to_string(const Matrix_t<n, m, T, MT> &A, int prec = 8, char separator = ' ') {
     std::stringstream strm;
@@ -2170,6 +2362,27 @@ std::string to_string(const Matrix_t<n, m, T, MT> &A, int prec = 8, char separat
     return strm.str();
 }
 
+/**
+ * @brief Formats Matrix_t object in a human readable way
+ * @details Example 2 x 3 matrix is the following
+ * \code {.cpp}
+ *  Matrix<2, 3, double> W;
+ *  W.random();
+ *  hila::out0 << hila::prettyprint(W ,4) << '\n';
+ *  // Result:
+ *  // [ 0.8555 0.006359 0.3193 ]
+ *  // [  0.237   0.8871 0.8545 ]
+ * \endcode
+ *
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Matrix element type
+ * @tparam MT Matrix type
+ * @param A Matrix to be formatted
+ * @param prec Precision of Matrix element
+ * @return std::string
+ */
 template <int n, int m, typename T, typename MT>
 std::string prettyprint(const Matrix_t<n, m, T, MT> &A, int prec = 8) {
     std::stringstream strm;
@@ -2217,13 +2430,34 @@ std::string prettyprint(const Matrix_t<n, m, T, MT> &A, int prec = 8) {
 
 } // namespace hila
 
-/// Norm squared function
+/**
+ * @brief Returns square norm of Matrix
+ * @details Wrapper around Matrix::squarenorm - sum of squared elements
+ *
+ * Can be called as:
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M;
+ * auto a = squarenorm(M);
+ * \endcode
+ *
+ * @tparam Mt Matrix type
+ * @param rhs Matrix to compute square norm of
+ * @return auto
+ */
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
 inline auto squarenorm(const Mt &rhs) {
     return rhs.squarenorm();
 }
 
 /// Vector norm - sqrt of squarenorm()
+
+/**
+ * @brief Returns vector norm of Matrix
+ * @details Wrapper around Matrix::norm - sqrt of sum of squared elements
+ * @tparam Mt Matrix type
+ * @param rhs Matrix to compute norm of
+ * @return auto
+ */
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
 inline auto norm(const Mt &rhs) {
     return rhs.norm();
@@ -2235,8 +2469,8 @@ inline auto norm(const Mt &rhs) {
  * @details Algorithm: numerical Recipes, 2nd ed. p. 47 ff
  * Works for Real and Complex matrices
  * Defined only for square matrices
- * @tparam n row length
- * @tparam m column length
+ * @tparam n Number of rows
+ * @tparam m Number of columns
  * @tparam T Matrix element type
  * @tparam MT Matrix type
  * @tparam radix Matrix element scalar type in case Complex
@@ -2441,8 +2675,8 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
  *                    &= 1 + H\cdot(1 + (\frac{H}{2})\cdot (1 + (\frac{H}{3})\cdot(...))) \f}
  * Done backwards in order to reduce accumulation of errors
 
- * @tparam n row length
- * @tparam m column length
+ * @tparam n Number of rows
+ * @tparam m Number of columns
  * @tparam T Matrix element type
  * @tparam MT Matrix type
  * @param matmatrix to compute exponential for
