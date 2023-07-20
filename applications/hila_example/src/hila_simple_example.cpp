@@ -19,7 +19,7 @@
 static_assert(NDIM == 3, "NDIM must be 3");
 
 /**
- * @brief
+ * @brief Main function for application which implements the method
  *
  * @param argc
  * @param argv

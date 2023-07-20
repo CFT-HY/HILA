@@ -1,3 +1,10 @@
+/**
+ * @file cmplx.h
+ * @brief Definition of Complex types
+ * @details This file contains definitions and methods for Complex numbers and Imaginary type
+ *
+ */
+
 #ifndef CMPLX_H_
 #define CMPLX_H_
 
@@ -24,13 +31,14 @@ inline T nmul_add(T a, T b, T c) {
     return c - a * b;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-/// main cmpx type definition
-/// Define complex type as a template. This allows Hilapp to replace the internal
-/// type with a vector. The datatype T must be an arithmetic type.
-///////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Complex definition
+ * @details Define complex type as a class. This allows Hilapp to replace the internal type with
+ * a vector.
+ *
+ * __NOTE:__ T must be Arithmetic type
+ * @tparam T Arithmetic type
+ */
 template <typename T>
 class Complex {
 
@@ -43,6 +51,11 @@ class Complex {
     using argument_type = T;
 
     // and the content of the complex number
+
+    /**
+     * @param re Real part
+     * @param im Imaginary part
+     */
     T re, im;
 
     Complex<T>() = default;
