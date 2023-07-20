@@ -96,8 +96,6 @@ int main(int argc, char **argv) {
     FFT_field(f, g);
 
     hila::out0 << "FFT time " << hila::gettime() - t << '\n';
-    Matrix<2, 3, double> W;
-    W.random();
-    hila::out0 << hila::prettyprint(W, 4) << '\n';
+
     hila::finishrun();
 }
