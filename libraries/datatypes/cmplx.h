@@ -36,7 +36,10 @@ inline T nmul_add(T a, T b, T c) {
  * @details Define complex type as a class. This allows Hilapp to replace the internal type with
  * a vector.
  *
- * __NOTE:__ T must be Arithmetic type
+ * __NOTE:__ T must be arithmetic and integrable. In the following documentation MyType refers to T,
+ * as in an arithmetic and integrable type.
+ * @param re Real part
+ * @param im Imaginary part
  * @tparam T Arithmetic type
  */
 template <typename T>
@@ -51,13 +54,66 @@ class Complex {
     using argument_type = T;
 
     // and the content of the complex number
-
-    /**
-     * @param re Real part
-     * @param im Imaginary part
-     */
     T re, im;
 
+    /**
+     * @brief Construct a new Complex object
+     * @details The following ways of constructing a Complex object are
+     *
+     * __Default constructor:__
+     *
+     * \code{.cpp}
+     * Complex<MyType> C;
+     * \endcode
+     *
+     * The default constructor initializes \p Complex#re and \p Complex#im to 0
+     *
+     * __Complex constructor:__
+     *
+     * Initialize both real and imaginary element
+     *
+     * \code{.cpp}
+     * MyType a,b;
+     * a = hila::random();
+     * b = hila::random();
+     * Complex<MyType> C(a,b); // C.re = a, C.im = b
+     * \endcode
+     * __Copy constructor:__
+     *
+     * Initialize form already existing Complex number
+     *
+     * \code {.cpp}
+     * MyType a,b;
+     * a = hila::random();
+     * b = hila::random();
+     * Complex<MyType> C(a,b);
+     * Complex<MyType> B = C; // B.re = a, B.im = b
+     * \endcode
+     *
+     * Equivalent initializing is `Complex<MyType> B(C)`
+     *
+     * __Real constructor:__
+     *
+     * Initialize only real element and sets imaginary to 0
+     *
+     * \code {.cpp}
+     * MyType a = hila::random();
+     * Complex<MyType> C(a); // C.re = a, C.im = 0
+     * \endcode
+     *
+     * Not equivalent to `Complex<MyType> C = a`
+     *
+     * __Zero constructor:__
+     *
+     * Initialize to zero with nullpointer trick
+     *
+     * \code {.cpp}
+     * Complex<MyType> C = 0; // C.re = 0, C.im = 0
+     * \endcode
+     *
+     * Equivalent to `Complex<MyType> C` and `Complex<MyType> C(0)`
+     *
+     */
     Complex<T>() = default;
     ~Complex<T>() = default;
     Complex<T>(const Complex<T> &a) = default;
@@ -88,10 +144,25 @@ class Complex {
 
     // make also std accessors real() and imag() - don't return reference, because
     // v.real() would not then work inside loops!
+
+
+    /**
+     * @brief Real part of Complex number
+     * @details Overloads exist for pass by value and pass by reference for when Complex is defined
+     * as non-const or const
+     *
+     * @return T Real part
+     */
     inline T real() const {
         return re;
     }
-
+    /**
+     * @brief Imaginary part of Complex number
+     * @details Overloads exist for pass by value and pass by reference for when Complex is defined
+     * as non-const or const
+     *
+     * @return T Imaginary part
+     */
     inline T imag() const {
         return im;
     }
@@ -111,6 +182,31 @@ class Complex {
         return Complex<A>(re, im);
     }
 
+    /**
+     * @brief Assignment operator
+     * @details The following ways of assigning a Complex object are
+     *
+     * __Assignment for Complex:__
+     *
+     * \code {.cpp}
+     * Complex<MyType> C(hila::random(),hila::random());
+     * Complex<MyType> B;
+     * B = C; // B.re = C.re, B.im = C.im
+     * \endcode
+     *
+     * __Assignment from real:__
+     *
+     * Assigns real part and imaginary part to zero
+     *
+     * \code {.cpp}
+     * Complex<MyType> B;
+     * MyType a = hila::random;
+     * B = a; // B.re = a, B.im = 0
+     * \endcode
+     *
+     * @param s
+     * @return Complex<T>&
+     */
     inline Complex<T> &operator=(const Complex<T> &s) = default;
 
     // Assignment from Complex<A>
@@ -129,14 +225,35 @@ class Complex {
         return *this;
     }
 
-
+    /**
+     * @brief Compute square norm of Complex number
+     * @details
+     * \f{align}{ |z|^2 = \Re(z)^2 + \Im(z)^2\f}
+     *
+     * @return T Squared norm
+     */
     inline T squarenorm() const {
         return re * re + im * im;
     }
 
+    /**
+     * @brief Compute absolute value of Complex number
+     * @details Essentially sqrt(squarenorm(z)):
+     * \f{align}{ |z| = \sqrt{\Re(z)^2 + \Im(z)^2}\f}
+     *
+     * @return T
+     */
     inline T abs() const {
         return sqrt(squarenorm());
     }
+
+    /**
+     * @brief Compute argument of Complex number
+     * @details
+     * \f{align}{ \arg(z) = \arctan 2(\Re(z),\Im(z))\f}
+     *
+     * @return T
+     */
     inline T arg() const {
         return atan2(im, re);
     }
