@@ -493,7 +493,7 @@ class Matrix_t {
      * @details The following ways to assign a matrix are:
      *
      *
-     * __Assignment from matrix__:
+     * __Assignment from Matrix__:
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M_0;
@@ -1494,7 +1494,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
     /**
      * @brief Construct a new Matrix object
-     * @details The following ways of initializing a matrix are:
+     * @details The following ways of constructing a matrix are:
      *
      * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
      *
@@ -1523,9 +1523,9 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
      *
      * \code{.cpp}
      * Matrix<n,m,MyOtherType> M_0;
-     * .
-     * . \\ M_0 is filled with content
-     * .
+     * //
+     * // M_0 is filled with content
+     * //
      * Matrix<n,m,MyType> M = M_0;
      * \endcode
      *
@@ -2679,7 +2679,7 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
  * @tparam m Number of columns
  * @tparam T Matrix element type
  * @tparam MT Matrix type
- * @param matmatrix to compute exponential for
+ * @param mat Matrix to compute exponential for
  * @param order order to compute exponential to
  * @return Matrix_t<n, m, T, MT>
  */
