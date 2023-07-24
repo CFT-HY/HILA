@@ -97,5 +97,11 @@ int main(int argc, char **argv) {
 
     hila::out0 << "FFT time " << hila::gettime() - t << '\n';
 
+    Complex<double> c;
+    c.gaussian_random();
+    hila::out0 << c << '\n';
+
+    hila::out0 << c.str() << '\n';
+
     hila::finishrun();
 }

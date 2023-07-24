@@ -250,7 +250,7 @@ class Complex {
     /**
      * @brief Compute argument of Complex number
      * @details
-     * \f{align}{ \arg(z) = \arctan 2(\Re(z),\Im(z))\f}
+     * \f{align}{ \arg(z) = \arctan2(\Re(z),\Im(z))\f}
      *
      * @return T
      */
@@ -258,21 +258,57 @@ class Complex {
         return atan2(im, re);
     }
 
+    /**
+     * @brief Compute conjugate of Complex number
+     * @details
+     * \f{align}{ z &= x + i\cdot y \\
+     * \Rightarrow z^* &= x - i\cdot y\f}
+     *
+     * @return Complex<T>
+     */
     inline Complex<T> conj() const {
         return Complex<T>(re, -im);
     }
 
-    // alias dagger to conjugate
+    /**
+     * @brief Compute dagger of Complex number
+     * @details Alias to Complex::conj
+     *
+     * \f{align}{ z^* = z^\dagger \f}
+     * @return Complex<T>
+     */
     inline Complex<T> dagger() const {
         return Complex<T>(re, -im);
     }
 
+    /**
+     * @brief Stores and returns Complex number given in polar coordinates
+     *
+     * \f{align}{ z = r\cdot e^{i\theta} \f}
+     * \code {.cpp}
+     * Complex<double> c;
+     * double r = 1;
+     * double theta = 3.14159265358979/2; // pi/2
+     * c.polar(r,theta); // c.re = 0, c.im = 1
+     * \endcode
+     *
+     *
+     * @param r Radius of Complex number
+     * @param theta Angle of complex number in radians
+     * @return Complex<T> Complex number
+     */
     inline Complex<T> polar(const T r, const T theta) out_only {
         re = r * cos(theta);
         im = r * sin(theta);
         return *this;
     }
 
+    /**
+     * @brief Assign random values to Complex real and imaginary part
+     * @details Uses hila::random for both real and imaginary part
+     *
+     * @return Complex<T>&
+     */
     inline Complex<T> &random() out_only {
         re = hila::random();
         im = hila::random();
@@ -281,7 +317,8 @@ class Complex {
 
     /**
      * @brief Produces complex gaussian random values
-     * @todo better documentation for complex gaussian_random
+     * @details Uses hila::gaussrand2 for both real and imaignary part
+     * Assigns same random value for both real and imaginary part
      * @param width gaussian_random
      * @return Complex<T>&
      */
@@ -292,17 +329,51 @@ class Complex {
         return *this;
     }
 
-    // unary + and -
+    /**
+     * @brief Unary + operator
+     * @details Leaves Complex number unchanged
+     * @return Complex<T>
+     */
     inline Complex<T> operator+() const {
         return *this;
     }
 
+    /**
+     * @brief Unary - operator
+     * @details Negates Complex number
+     *
+     * @return Complex<T>
+     */
     inline Complex<T> operator-() const {
         return Complex<T>(-re, -im);
     }
 
     // mark += and *= as loop_functions, because these can be used
     // in reductions implicitly
+
+    /**
+     * @brief += addition assignment operator
+     * @details Addition assignment for Complex numbers can be performed in the following ways
+     *
+     * __Complex addition assignment:__
+     *
+     * \code{.cpp}
+     * Complex<double> z(0,0);
+     * Complex<double> w(1,1);
+     * z += w; // z.re = 1, z.im = 1
+     * \endcode
+     *
+     * __Real addition assignment:__
+     *
+     * Add assign only to real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(0,0);
+     * z += 1; // z.re = 1, z.im = 0
+     * \endcode
+     *
+     *
+     */
 #pragma hila loop_function
     template <typename A>
     inline Complex<T> &operator+=(const Complex<A> &lhs) {
@@ -317,6 +388,29 @@ class Complex {
         return *this;
     }
 
+    /**
+     * @brief -= subtraction assignment operator
+     * @details Subtraction assignment for Complex numbers can be performed in the following ways
+     *
+     * __Complex subtract assign:__
+     *
+     * \code{.cpp}
+     * Complex<double> z(0,0);
+     * Complex<double> w(1,1);
+     * z -= w; // z.re = -1, z.im = -1
+     * \endcode
+     *
+     * __Real subtract assign:__
+     *
+     * Subtract assign only to real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(0,0);
+     * z -= 1; // z.re = -1, z.im = 0
+     * \endcode
+     *
+     *
+     */
     template <typename A>
     inline Complex<T> &operator-=(const Complex<A> &lhs) {
         re -= lhs.re;
@@ -338,6 +432,34 @@ class Complex {
     // }
 
 #pragma hila loop_function
+    /**
+     * @brief *= multiply assignment operator
+     * @details Multiply assignment for Complex numbers can be performed in the following ways
+     *
+     * __Complex multiply assign:__
+     *
+     * Standard Complex number multiplication
+     *
+     * \f{align}{z &= x + iy, w = x' + iy' \\
+     * z w &= (x + iy)(x' + iy') = (xx'-yy') + i(xy' + yx')\f}
+     * \code{.cpp}
+     * Complex<double> z,w;
+     * //
+     * // z,w get values
+     * //
+     * z*=w; // z = zw as defined above
+     * \endcode
+     * __Real multiply assign:__
+     *
+     * Multiply assign by real number to both components of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(1,1);
+     * z *= 2; // z.re = 2, z.im = 2
+     * \endcode
+     *
+     *
+     */
     template <typename A>
     inline Complex<T> &operator*=(const Complex<A> &lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
@@ -361,6 +483,35 @@ class Complex {
     //   re = r;
     //   return *this;
     // }
+
+    /**
+     * @brief /= divide assignment operator
+     * @details Divide assignment for Complex numbers can be performed in the following ways
+     *
+     * __Complex divide assign:__
+     *
+     * Standard Complex number division
+     *
+     * \f{align}{z &= x + iy, w = x' + iy' \\
+     * \frac{z}{w} &= \frac{x + iy}{x' + iy'} = \frac{(xx'+ yy') + i( yx' - xy')}{|w|^2}\f}
+     * \code{.cpp}
+     * Complex<double> z,w;
+     * //
+     * // z,w get values
+     * //
+     * z/=w; // z = z/w as defined above
+     * \endcode
+     * __Real divide assign:__
+     *
+     * Divide assign by real number to both components of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(2,2);
+     * z /= 2; // z.re = 1, z.im = 1
+     * \endcode
+     *
+     *
+     */
     template <typename A>
     inline Complex<T> &operator/=(const Complex<A> &lhs) {
         T n = lhs.squarenorm();
@@ -379,11 +530,36 @@ class Complex {
 
     // define also increment and decrement operators (though not so intuitive for complex)
 
+    /**
+     * @brief ++ increment operator
+     *
+     * Increments real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(1,1);
+     * z++; // z.re = 2, z.im = 1
+     * \endcode
+     *
+     *
+     * @return Complex<T>&
+     */
     inline Complex<T> &operator++() {
         this->re++;
         return *this;
     }
-
+    /**
+     * @brief -- decrement operator
+     *
+     * Decrement real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(1,1);
+     * z--; // z.re = 0, z.im = 1
+     * \endcode
+     *
+     *
+     * @return Complex<T>&
+     */
     inline Complex<T> &operator--() {
         this->re--;
         return *this;
@@ -410,12 +586,32 @@ class Complex {
 
 
     // Convenience method a.conj_mul(b) == a^* b
+
+    /**
+     * @brief Conjugate multiply method
+     * @details Conjugate a (*this) and multiply with give argument b: `a.conj_mul(b)` \f$ \equiv
+     * a^* \cdot b\f$
+     *
+     * @tparam A Type for Complex number b
+     * @param b number to multiply with
+     * @return Complex<T>
+     */
     template <typename A>
     inline Complex<T> conj_mul(const Complex<A> &b) const {
         return Complex<T>(re * b.re + im * b.im, re * b.im - im * b.re);
     }
 
     // Convenience method a.mul_conj(b) == a * b^*
+
+    /**
+     * @brief Multiply conjugate method
+     * @details Multiply a (*this) with conjugate of given argument b: `a.mul_conj(b)` \f$ \equiv a
+     * \cdot b^*\f$
+     *
+     * @tparam A Type for Complex number b
+     * @param b number to conjugate and multiply withv
+     * @return Complex<T>
+     */
     template <typename A>
     inline Complex<T> mul_conj(const Complex<A> &b) const {
         return Complex<T>(re * b.re + im * b.im, im * b.re - re * b.im);
