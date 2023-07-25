@@ -6,7 +6,7 @@ updates in trajectory          1
 trajectories                   500
 thermalization                 0
 random seed                    0
-traj/saved                     200
+traj/saved                     1000
 config name                    config
 
 # polyakov potential is off or
