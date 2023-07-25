@@ -1,8 +1,23 @@
+/**
+ * @file gaugefield.h
+ * @brief Definition of Gauge Field
+ * @details This file contains the definition for the GaugeField class
+ */
 #ifndef GAUGEFIELD_H_
 #define GAUGEFIELD_H_
 
 #include "hila.h"
 
+/**
+ * @brief Gauge field class
+ * @details Stores and defines links between Lattice Field elements. Number of links is
+ * `lattice.size()*NDIM`, since for each point there is a link in all directions.
+ *
+ * @param fdir std::array<Field<T>,NDIM> type element which stores GaugeField links in back to back
+ * direction wise ordering.
+ *
+ * @tparam T Group that GaugeField consists of
+ */
 template <typename T>
 class GaugeField {
   private:
