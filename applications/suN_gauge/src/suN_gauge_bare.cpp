@@ -77,45 +77,6 @@ void staplesum_db(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parit
     }
 }
 
-
-template <typename group>
-void reunitarize_gauge(GaugeField<group> &U) {
-    foralldir(d) {
-        onsites(ALL) U[d][X].reunitarize();
-    }
-}
-
-
-template <typename group>
-double measure_plaq(const GaugeField<group> &U, double db = 0.0) {
-
-    Reduction<double> plaq;
-    plaq.allreduce(false);
-
-    foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-        if (db == 0.0) {
-            onsites(ALL) {
-                plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
-                                         U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
-                                  group::size();
-            }
-        } else {
-            onsites(ALL) {
-                double c;
-                if (2 * X.z() < lattice.size(e_z))
-                    c = 1 - db;
-                else
-                    c = 1 + db;
-
-                plaq += c * (1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
-                                              U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
-                                       group::size());
-            }
-        }
-    }
-    return plaq.value();
-}
-
 template <typename group>
 void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
@@ -130,7 +91,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     auto poly = measure_polyakov(U);
 
-    auto plaq = measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+    auto plaq = U.measure_plaq() / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
     hila::out0 << "MEAS " << std::setprecision(8);
 
@@ -274,7 +235,7 @@ void do_trajectory(GaugeField<group> &U, const parameters &p) {
         }
         update(U, p, false);
     }
-    reunitarize_gauge(U);
+    U.reunitarize_gauge();
 }
 
 
