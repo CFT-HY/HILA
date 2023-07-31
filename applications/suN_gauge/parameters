@@ -1,4 +1,4 @@
-lattice size                   10,10,16,6
+lattice size                   40,40,64,6
 beta                           10.79
 delta beta fraction            0
 overrelax steps                4

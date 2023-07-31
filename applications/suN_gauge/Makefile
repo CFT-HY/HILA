@@ -7,7 +7,7 @@
 HILA_DIR := ../..
 
 # Number of colors
-NCOL := 3
+NCOL := 2
 
 # Set default goal and arch
 .DEFAULT_GOAL := suN_gauge
@@ -35,10 +35,10 @@ suN_gauge_bare: build/suN_gauge_bare ; @:
 build/suN_gauge: Makefile build/suN_gauge.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/suN_gauge.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
 
-build/suN_gauge_bare: Makefile build/suN_gauge_bare.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/suN_gauge_bare.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
+build/suN_gauge_bare: Makefile build/suN_gauge_bare.o  $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@  build/suN_gauge_bare.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
 
-
+#build/suN_gauge_bare.o: src/suN_gauge_bare.h
 
 
 
