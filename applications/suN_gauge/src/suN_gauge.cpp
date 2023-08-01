@@ -10,7 +10,7 @@
 
 using mygroup = SU<NCOLOR, double>;
 
-enum class poly_limit {OFF, RANGE, PARABOLIC};
+enum class poly_limit { OFF, RANGE, PARABOLIC };
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -587,7 +587,7 @@ bool accept_polyakov(const parameters &p, const double p_old, const double p_new
 
         return accept;
     } else {
-        if (p_new >= p.poly_min && p_new <= p.poly_max) 
+        if (p_new >= p.poly_min && p_new <= p.poly_max)
             return true;
         if (p_new > p.poly_max && p_new < p_old)
             return true;
@@ -714,7 +714,7 @@ int main(int argc, char **argv) {
         p.poly_m2 = par.get("mass2");
     } else {
         p.polyakov_pot = poly_limit::RANGE;
-        Vector<2,double> r;
+        Vector<2, double> r;
         r = par.get();
         p.poly_min = r[0];
         p.poly_max = r[1];

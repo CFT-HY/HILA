@@ -328,14 +328,8 @@ class input {
 
         return no_error;
     }
-    /**
-     * @name get_value overloads for different value type
-     * @internal
-     * @{
-     */
-    /**
-     * @brief get_value for Complex<T>
-     */
+
+    // get_value for Complex<T>
     template <typename T>
     bool get_value(Complex<T> &val, const std::string &label, bool bcast = true) {
         val = 0;
@@ -360,9 +354,7 @@ class input {
         }
         return no_error;
     }
-    /**
-     * @brief get_value for #Vector<n,T>
-     */
+    // get_value for #Vector<n,T>
     template <int n, typename T>
     bool get_value(Vector<n, T> &val, const std::string &label, bool bcast = true) {
         val = 0;
@@ -385,9 +377,8 @@ class input {
         }
         return no_error;
     }
-    /**
-     * @brief get_value for #CoordinateVector
-     */
+
+    // get_value for #CoordinateVector
     template <int n = NDIM>
     bool get_value(CoordinateVector &val, const std::string &label, bool bcast = true) {
         Vector<n, int> iv;
@@ -396,9 +387,7 @@ class input {
         return b;
     }
 
-    /**
-     * @brief get_value for std::vector<T>
-     */
+    // get_value for std::vector<T>
     template <typename T>
     bool get_value(std::vector<T> &val, const std::string &label, bool bcast = true) {
         val = {};

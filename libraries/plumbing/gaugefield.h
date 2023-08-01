@@ -1,8 +1,23 @@
+/**
+ * @file gaugefield.h
+ * @brief Definition of Gauge Field
+ * @details This file contains the definition for the GaugeField class
+ */
 #ifndef GAUGEFIELD_H_
 #define GAUGEFIELD_H_
 
 #include "hila.h"
 
+/**
+ * @brief Gauge field class
+ * @details Stores and defines links between Lattice Field elements. Number of links is
+ * `lattice.size()*NDIM`, since for each point there is a link in all directions.
+ *
+ * @param fdir std::array<Field<T>,NDIM> type element which stores GaugeField links in back to back
+ * direction wise ordering.
+ *
+ * @tparam T Group that GaugeField consists of
+ */
 template <typename T>
 class GaugeField {
   private:
@@ -73,7 +88,44 @@ class GaugeField {
     }
 
     ////////////////////////////////////////////////////////
-    /// I/O operations for gauge fields (here only binary)
+    // Gauge Field operations
+    void reunitarize_gauge() {
+        foralldir(d) {
+            onsites(ALL)(*this)[d][X].reunitarize();
+        }
+    }
+
+    double measure_plaq(double db = 0.0) const {
+        Reduction<double> plaq;
+        plaq.allreduce(false);
+
+        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+            if (db == 0.0) {
+                onsites(ALL) {
+                    plaq += 1.0 - real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
+                                             (*this)[dir1][X + dir2].dagger() *
+                                             (*this)[dir2][X].dagger())) /
+                                      T::size();
+                }
+            } else {
+                onsites(ALL) {
+                    double c;
+                    if (2 * X.z() < lattice.size(e_z))
+                        c = 1 - db;
+                    else
+                        c = 1 + db;
+
+                    plaq += c * (1.0 - real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
+                                                  (*this)[dir1][X + dir2].dagger() *
+                                                  (*this)[dir2][X].dagger())) /
+                                           T::size());
+                }
+            }
+        }
+        return plaq.value();
+    }
+    ////////////////////////////////////////////////////////
+    // I/O operations for gauge fields (here only binary)
 
     void write(std::ofstream &outputfile) const {
         foralldir(d) {
