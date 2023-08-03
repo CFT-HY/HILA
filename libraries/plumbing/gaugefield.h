@@ -89,9 +89,8 @@ class GaugeField {
 
     /**
      * @brief Reunitarize Gauge Field consisting of \f$ SU(N)\f$ matrices
-     * @details Only defined for \f$ SU(N) \f$ matrices
+     * @details Only defined for \f$ SU(N) \f$ matrices and Fields
      */
-    template <typename A = SU<NCOLOR, double>, std::enable_if_t<std::is_same<T, A>::value, int> = 0>
     void reunitarize_gauge() {
         foralldir(d) {
             onsites(ALL)(*this)[d][X].reunitarize();
