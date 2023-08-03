@@ -31,6 +31,14 @@
 #define NDIM 4
 #endif
 
+#ifndef NCOLOR
+/**
+ * @brief SU(N) matrix degree
+ * @details Set's SU(N) matrix degree to 0 which is equivalent to NULL
+ */
+#define NCOLOR 0
+#endif
+
 
 #ifndef DEFAULT_OUTPUT_NAME
 /**

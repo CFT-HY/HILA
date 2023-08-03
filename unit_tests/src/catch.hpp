@@ -1,6 +1,6 @@
 /*
- *  Catch v2.13.9
- *  Generated: 2022-04-12 22:37:23.260201
+ *  Catch v2.13.10
+ *  Generated: 2022-10-16 11:01:23.452308
  *  ----------------------------------------------------------
  *  This file has been merged from multiple headers. Please don't edit it directly
  *  Copyright (c) 2022 Two Blue Cubes Ltd. All rights reserved.
@@ -8,7 +8,6 @@
  *  Distributed under the Boost Software License, Version 1.0. (See accompanying
  *  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  */
-#include "hila.h"
 #ifndef TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
 #define TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
 // start catch.hpp
@@ -16,7 +15,7 @@
 
 #define CATCH_VERSION_MAJOR 2
 #define CATCH_VERSION_MINOR 13
-#define CATCH_VERSION_PATCH 9
+#define CATCH_VERSION_PATCH 10
 
 #ifdef __clang__
 #    pragma clang system_header
@@ -1648,7 +1647,7 @@ namespace Catch {
 
         template<typename E>
         std::string convertUnknownEnumToString( E e ) {
-            return ::Catch::Detail::stringify(static_cast<typename std::number_type<E>::type>(e));
+            return ::Catch::Detail::stringify(static_cast<typename std::underlying_type<E>::type>(e));
         }
 
 #if defined(_MANAGED)
@@ -7396,8 +7395,6 @@ namespace Catch {
             template <typename T, bool Destruct>
             struct ObjectStorage
             {
-                using TStorage = typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type;
-
                 ObjectStorage() : data() {}
 
                 ObjectStorage(const ObjectStorage& other)
@@ -7440,7 +7437,7 @@ namespace Catch {
                     return *static_cast<T*>(static_cast<void*>(&data));
                 }
 
-                TStorage data;
+                struct { alignas(T) unsigned char data[sizeof(T)]; }  data;
             };
         }
 
@@ -7950,7 +7947,7 @@ namespace Catch {
     #if defined(__i386__) || defined(__x86_64__)
         #define CATCH_TRAP() __asm__("int $3\n" : : ) /* NOLINT */
     #elif defined(__aarch64__)
-        #define CATCH_TRAP()  __asm__(".inst 0xd4200000")
+        #define CATCH_TRAP()  __asm__(".inst 0xd43e0000")
     #endif
 
 #elif defined(CATCH_PLATFORM_IPHONE)
@@ -13559,7 +13556,7 @@ namespace Catch {
 
             // Handle list request
             if( Option<std::size_t> listed = list( m_config ) )
-                return static_cast<int>( *listed );
+                return (std::min) (MaxExitCode, static_cast<int>(*listed));
 
             TestGroup tests { m_config };
             auto const totals = tests.execute();
@@ -15392,7 +15389,7 @@ namespace Catch {
     }
 
     Version const& libraryVersion() {
-        static Version version( 2, 13, 9, "", 0 );
+        static Version version( 2, 13, 10, "", 0 );
         return version;
     }
 
@@ -15481,26 +15478,26 @@ namespace {
     }
 
     bool shouldNewline(XmlFormatting fmt) {
-        return !!(static_cast<std::number_type<XmlFormatting>::type>(fmt & XmlFormatting::Newline));
+        return !!(static_cast<std::underlying_type<XmlFormatting>::type>(fmt & XmlFormatting::Newline));
     }
 
     bool shouldIndent(XmlFormatting fmt) {
-        return !!(static_cast<std::number_type<XmlFormatting>::type>(fmt & XmlFormatting::Indent));
+        return !!(static_cast<std::underlying_type<XmlFormatting>::type>(fmt & XmlFormatting::Indent));
     }
 
 } // anonymous namespace
 
     XmlFormatting operator | (XmlFormatting lhs, XmlFormatting rhs) {
         return static_cast<XmlFormatting>(
-            static_cast<std::number_type<XmlFormatting>::type>(lhs) |
-            static_cast<std::number_type<XmlFormatting>::type>(rhs)
+            static_cast<std::underlying_type<XmlFormatting>::type>(lhs) |
+            static_cast<std::underlying_type<XmlFormatting>::type>(rhs)
         );
     }
 
     XmlFormatting operator & (XmlFormatting lhs, XmlFormatting rhs) {
         return static_cast<XmlFormatting>(
-            static_cast<std::number_type<XmlFormatting>::type>(lhs) &
-            static_cast<std::number_type<XmlFormatting>::type>(rhs)
+            static_cast<std::underlying_type<XmlFormatting>::type>(lhs) &
+            static_cast<std::underlying_type<XmlFormatting>::type>(rhs)
         );
     }
 
@@ -16469,17 +16466,7 @@ ConsoleReporter::ConsoleReporter(ReporterConfig const& config)
                 { "estimated    high mean  high std dev", 14, ColumnInfo::Right }
             };
         }
-    }())) {
-        /* code injection to silence non-root nodes when running Catch2 in
-         * a distributed execution, for distributed QuEST unit-testing.
-         */    
-        // int rank;
-        // MPI_Comm_rank(lattice.mpi_comm_lat, &rank);
-
-        // // put non-root streams in a fail state, so they silently discard output
-        // if (rank != 0 && testRunStats.totals.testCases.allPassed())
-        //     stream.setstate(std::ios_base::failbit);  
-    }
+    }())) {}
 ConsoleReporter::~ConsoleReporter() = default;
 
 std::string ConsoleReporter::getDescription() {
@@ -16581,7 +16568,7 @@ void ConsoleReporter::benchmarkEnded(BenchmarkStats<> const& stats) {
 
 void ConsoleReporter::benchmarkFailed(std::string const& error) {
 	Colour colour(Colour::Red);
-    (*m_tablePrinter) 
+    (*m_tablePrinter)
         << "Benchmark failed (" << error << ')'
         << ColumnBreak() << RowBreak();
 }
@@ -16602,10 +16589,6 @@ void ConsoleReporter::testGroupEnded(TestGroupStats const& _testGroupStats) {
     StreamingReporterBase::testGroupEnded(_testGroupStats);
 }
 void ConsoleReporter::testRunEnded(TestRunStats const& _testRunStats) {
-    int rank;
-    MPI_Comm_rank(lattice.mpi_comm_lat, &rank);
-    if(rank != 0 && _testRunStats.totals.testCases.allPassed())
-        return;
     printTotalsDivider(_testRunStats.totals);
     printTotals(_testRunStats.totals);
     stream << std::endl;
@@ -17541,12 +17524,20 @@ namespace Catch {
 
 #ifndef __OBJC__
 
+#ifndef CATCH_INTERNAL_CDECL
+#ifdef _MSC_VER
+#define CATCH_INTERNAL_CDECL __cdecl
+#else
+#define CATCH_INTERNAL_CDECL
+#endif
+#endif
+
 #if defined(CATCH_CONFIG_WCHAR) && defined(CATCH_PLATFORM_WINDOWS) && defined(_UNICODE) && !defined(DO_NOT_USE_WMAIN)
 // Standard C/C++ Win32 Unicode wmain entry point
-extern "C" int wmain (int argc, wchar_t * argv[], wchar_t * []) {
+extern "C" int CATCH_INTERNAL_CDECL wmain (int argc, wchar_t * argv[], wchar_t * []) {
 #else
 // Standard C/C++ main entry point
-int main (int argc, char * argv[]) {
+int CATCH_INTERNAL_CDECL main (int argc, char * argv[]) {
 #endif
 
     return Catch::Session().run( argc, argv );
