@@ -87,41 +87,39 @@ class GaugeField {
         return *this;
     }
 
-    ////////////////////////////////////////////////////////
-    // Gauge Field operations
+    /**
+     * @brief Reunitarize Gauge Field consisting of \f$ SU(N)\f$ matrices
+     * @details Only defined for \f$ SU(N) \f$ matrices
+     */
+    template <typename A = SU<NCOLOR, double>, std::enable_if_t<std::is_same<T, A>::value, int> = 0>
     void reunitarize_gauge() {
         foralldir(d) {
             onsites(ALL)(*this)[d][X].reunitarize();
         }
     }
 
-    double measure_plaq(double db = 0.0) const {
+    /**
+     * @brief Computes Wilson action
+     * @details \f{align}{ S &=  \beta\sum_{\textbf{dir}_1 < \textbf{dir}_2}\sum_{X} \frac{1}{N}
+     * \Re\mathrm{Tr}\left[ 1- U_{\textbf{dir}_1 \textbf{dir}_2}(X) \right] \f} Where \f$\beta =
+     * 2N/g^2\f$
+     *
+     * @return double
+     */
+    double measure_plaq() const {
         Reduction<double> plaq;
         plaq.allreduce(false);
 
         foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-            if (db == 0.0) {
-                onsites(ALL) {
-                    plaq += 1.0 - real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
-                                             (*this)[dir1][X + dir2].dagger() *
-                                             (*this)[dir2][X].dagger())) /
-                                      T::size();
-                }
-            } else {
-                onsites(ALL) {
-                    double c;
-                    if (2 * X.z() < lattice.size(e_z))
-                        c = 1 - db;
-                    else
-                        c = 1 + db;
 
-                    plaq += c * (1.0 - real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
-                                                  (*this)[dir1][X + dir2].dagger() *
-                                                  (*this)[dir2][X].dagger())) /
-                                           T::size());
-                }
+            onsites(ALL) {
+                plaq += 1.0 -
+                        real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
+                                   (*this)[dir1][X + dir2].dagger() * (*this)[dir2][X].dagger())) /
+                            T::size();
             }
         }
+
         return plaq.value();
     }
     ////////////////////////////////////////////////////////
