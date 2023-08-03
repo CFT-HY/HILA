@@ -1,10 +1,19 @@
+/** @file sun_overrelax.h */
+
 #ifndef SUN_OVERRELAX_H
 #define SUN_OVERRELAX_H
 
 #include "sun_matrix.h"
 #include "su2.h"
 
-
+/**
+ * @brief \f$ SU(N) \f$ Overrelaxation
+ * @details Performs overrelaxation using \f$ SU(2) \f$ subgroups
+ * @tparam T Group element type such as Real or Complex
+ * @tparam N Number of colors
+ * @param U \f$ SU(N) \f$ link to perform overrelaxation on
+ * @param staple Staple to compute overrelaxation with
+ */
 template <typename T, int N>
 void suN_overrelax(SU<N, T> &U, const SU<N, T> &staple) {
     /* Do overrelaxation by SU(2) subgroups */
@@ -49,7 +58,6 @@ void suN_overrelax(SU<N, T> &U, const SU<N, T> &staple) {
         } /* hits */
           /* check_unitarity( U );
            */
-
 }
 
 #endif

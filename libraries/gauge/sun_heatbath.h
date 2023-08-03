@@ -1,8 +1,9 @@
+/** @file sun_heatbath.h */
+
 #ifndef SUN_HEATBATH_H
 #define SUN_HEATBATH_H
 
 
-/************************** sun_heatbath.h *******************************/
 /* Kennedy-Pendleton quasi heat bath on SU(2) subgroups */
 
 /* This does the heatbath with
@@ -14,8 +15,17 @@
 #include "sun_matrix.h"
 #include "su2.h"
 
-
-template <typename T,int N>
+/**
+ * @brief \f$ SU(N) \f$ heatbath
+ * @details Kennedy-Pendleton quasi heat bath on \f$ SU(2)\f$ subgroups
+ * @tparam T Group element type such as Real or Complex
+ * @tparam N Number of colors
+ * @param U \f$ SU(N) \f$ link to perform heatbath on
+ * @param staple Staple to compute heatbath with
+ * @param beta
+ * @return double
+ */
+template <typename T, int N>
 double suN_heatbath(SU<N, T> &U, const SU<N, T> &staple, double beta) {
     // K-P quasi-heat bath by SU(2) subgroups
 
@@ -27,7 +37,7 @@ double suN_heatbath(SU<N, T> &U, const SU<N, T> &staple, double beta) {
     int k, test;
     double b3;
     SU<N, T> action;
-    SU<2,T> h2x2;
+    SU<2, T> h2x2;
     SU2<T> v, a, h;
     double pi2 = M_PI * 2.0;
 
@@ -174,15 +184,15 @@ double suN_heatbath(SU<N, T> &U, const SU<N, T> &staple, double beta) {
             a.b = rho * sin((double)xr2);
 
             /* now do the updating.  h = a*v^dagger, new u = h*u */
-            h = a * v;    // v was daggerized above
+            h = a * v; // v was daggerized above
 
             /* Elements of SU(2) matrix */
             h2x2 = h.convert_to_2x2_matrix();
 
             /* update the link and 'action' */
 
-            U.mult_by_2x2_left(ina,inb,h2x2);
-            action.mult_by_2x2_left(ina,inb,h2x2);
+            U.mult_by_2x2_left(ina, inb, h2x2);
+            action.mult_by_2x2_left(ina, inb, h2x2);
 
         } /*  hits */
 
