@@ -1,5 +1,5 @@
 lattice size                   16,16,20,6
-beta                           10
+beta                           15
 delta beta fraction            0
 overrelax steps                4
 updates in trajectory          1
@@ -8,3 +8,4 @@ thermalization                 0
 random seed                    0
 traj/saved                     1000
 config name                    config
+twist_coeff                    1

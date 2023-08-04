@@ -1,10 +1,3 @@
-/**
- * @file suN_gauge.cpp
- * @details Simple application which Generates \f$ SU(N) \f$ GaugeField using \ref staplesum, \ref
- * suN_overrelax and \ref suN_heatbath. Each evolution, the application measures the Wilson action
- * using GaugeField::measure_plaq and Polyakov lines using \ref measure_polyakov.
- *
- */
 #include "hila.h"
 #include "gauge/staples.h"
 #include "gauge/polyakov.h"
@@ -13,6 +6,7 @@
 #include "gauge/sun_overrelax.h"
 
 #include <fftw3.h>
+#include <numeric>
 
 // local includes
 #include "parameters.h"
@@ -50,13 +44,13 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     auto poly = measure_polyakov(U);
 
-    auto plaq = measure_plaq_twist(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+    auto plaq = measure_plaq_with_z(U,p.twist_coeff) ;/// (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
     hila::out0 << "MEAS " << std::setprecision(8);
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
-
-    hila::out0 << plaq << ' ' << poly << '\n';
+    auto sum = std::reduce(plaq.begin(), plaq.end()-1);
+    hila::out0 << sum << " " <<  plaq[plaq.size() - 1] << ' ' << poly << '\n';
 }
 
 /**
@@ -103,7 +97,7 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
     staples_timer.start();
 
-    staplesum_twist(U, staples, d, par, 1);
+    staplesum_twist(U, staples, d, par, p.twist_coeff);
     staples_timer.stop();
 
     if (relax) {
@@ -187,6 +181,7 @@ int main(int argc, char **argv) {
     p.n_save = par.get("traj/saved");
     // measure surface properties and print "profile"
     p.config_file = par.get("config name");
+    p.twist_coeff = par.get("twist_coeff");
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -205,7 +200,7 @@ int main(int argc, char **argv) {
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
 
-    // restore_checkpoint(U, start_traj, p);
+    restore_checkpoint(U, start_traj, p);
 
     // We need random number here
     if (!hila::is_rng_seeded())
@@ -238,9 +233,9 @@ int main(int argc, char **argv) {
             measure_timer.stop();
         }
 
-        // if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
-        //     checkpoint(U, trajectory, p);
-        // }
+        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+            checkpoint(U, trajectory, p);
+        }
     }
 
     hila::finishrun();
