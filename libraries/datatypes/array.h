@@ -3,9 +3,13 @@
 
 #include "datatypes/matrix.h"
 
-////////////////////////////////////////////////////////////////
-/// nxm Array type
-////////////////////////////////////////////////////////////////
+/**
+ * @brief \f$ n\times m \f$ Array type
+ *
+ * @tparam n - row length
+ * @tparam m - column length
+ * @tparam T Data type for Array
+ */
 template <const int n, const int m, typename T>
 class Array {
   public:
@@ -154,18 +158,18 @@ class Array {
 
     /**
      * @brief Compare equality of arrays
-     * 
+     *
      * Two arrays are equal iff arrays are of same dimension and all elements compare to equal
      * Note: Complex == scalar if arithmetic value is equal
-     * 
-     * @tparam S 
-     * @param rhs 
+     *
+     * @tparam S
+     * @param rhs
      * @return true if equal
      */
 
-    template <typename S,int n1, int m1>
+    template <typename S, int n1, int m1>
     bool operator==(const Array<n1, m1, S> &rhs) const {
-        if constexpr (n != n1 || m != m1) 
+        if constexpr (n != n1 || m != m1)
             return false;
 
         for (int i = 0; i < n; i++)
@@ -178,15 +182,15 @@ class Array {
 
     /**
      * @brief Compare non-equality of two arrays
-     * 
+     *
      * Negation of operator==()
-     * 
-     * @tparam S 
-     * @tparam n1 
-     * @tparam m1 
-     * @param rhs 
-     * @return true 
-     * @return false 
+     *
+     * @tparam S
+     * @tparam n1
+     * @tparam m1
+     * @param rhs
+     * @return true
+     * @return false
      */
 
     template <typename S, int n1, int m1>

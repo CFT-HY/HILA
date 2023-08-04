@@ -31,7 +31,6 @@
 #define NDIM 4
 #endif
 
-
 #ifndef DEFAULT_OUTPUT_NAME
 /**
  * @def DEFAULT_OUTPUT_NAME

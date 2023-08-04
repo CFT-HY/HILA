@@ -1,8 +1,23 @@
+/**
+ * @file gaugefield.h
+ * @brief Definition of Gauge Field
+ * @details This file contains the definition for the GaugeField class
+ */
 #ifndef GAUGEFIELD_H_
 #define GAUGEFIELD_H_
 
 #include "hila.h"
 
+/**
+ * @brief Gauge field class
+ * @details Stores and defines links between Lattice Field elements. Number of links is
+ * `lattice.size()*NDIM`, since for each point there is a link in all directions.
+ *
+ * @param fdir std::array<Field<T>,NDIM> type element which stores GaugeField links in back to back
+ * direction wise ordering.
+ *
+ * @tparam T Group that GaugeField consists of
+ */
 template <typename T>
 class GaugeField {
   private:
@@ -72,8 +87,42 @@ class GaugeField {
         return *this;
     }
 
+    /**
+     * @brief Reunitarize Gauge Field consisting of \f$ SU(N)\f$ matrices
+     * @details Only defined for \f$ SU(N) \f$ matrices and Fields
+     */
+    void reunitarize_gauge() {
+        foralldir(d) {
+            onsites(ALL)(*this)[d][X].reunitarize();
+        }
+    }
+
+    /**
+     * @brief Computes Wilson action
+     * @details \f{align}{ S &=  \beta\sum_{\textbf{dir}_1 < \textbf{dir}_2}\sum_{X} \frac{1}{N}
+     * \Re\mathrm{Tr}\left[ 1- U_{\textbf{dir}_1 \textbf{dir}_2}(X) \right] \f} Where \f$\beta =
+     * 2N/g^2\f$
+     *
+     * @return double
+     */
+    double measure_plaq() const {
+        Reduction<double> plaq;
+        plaq.allreduce(false);
+
+        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+
+            onsites(ALL) {
+                plaq += 1.0 -
+                        real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
+                                   (*this)[dir1][X + dir2].dagger() * (*this)[dir2][X].dagger())) /
+                            T::size();
+            }
+        }
+
+        return plaq.value();
+    }
     ////////////////////////////////////////////////////////
-    /// I/O operations for gauge fields (here only binary)
+    // I/O operations for gauge fields (here only binary)
 
     void write(std::ofstream &outputfile) const {
         foralldir(d) {
