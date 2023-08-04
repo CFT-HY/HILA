@@ -52,7 +52,6 @@ bool is_device_rng_on();
 // inside them from all compilation units - although hila::random() has special treatment
 
 
-#pragma hila contains_rng loop_function
 /**
  * @brief Real valued uniform random number generator
  * @details Returns a uniform double precision random number in interval [0,1).  Can be
@@ -63,6 +62,7 @@ bool is_device_rng_on();
  *
  * @return double
  */
+#pragma hila contains_rng loop_function
 double random();
 
 // alias for host (CPU) rng, used in GPU code generation. Must not be used inside onsites() {}. This
