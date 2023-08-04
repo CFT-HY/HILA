@@ -1,6 +1,5 @@
 /**
  * @file suN_gauge.cpp
- * @brief Application to simulate \f$ SU(N) \f$ Gauge field.
  * @details Simple application which Generates \f$ SU(N) \f$ GaugeField using \ref staplesum, \ref
  * suN_overrelax and \ref suN_heatbath. Each evolution, the application measures the Wilson action
  * using GaugeField::measure_plaq and Polyakov lines using \ref measure_polyakov.
@@ -18,6 +17,7 @@
 // local includes
 #include "parameters.h"
 #include "checkpoint.h"
+#include "twist_specific_methods.cpp"
 
 /**
  * @brief Helper function to get valid z-coordinate index
@@ -50,7 +50,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     auto poly = measure_polyakov(U);
 
-    auto plaq = U.measure_plaq() / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+    auto plaq = measure_plaq_twist(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
     hila::out0 << "MEAS " << std::setprecision(8);
 
@@ -103,7 +103,7 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
     staples_timer.start();
 
-    staplesum(U, staples, d, par);
+    staplesum_twist(U, staples, d, par, 1);
     staples_timer.stop();
 
     if (relax) {

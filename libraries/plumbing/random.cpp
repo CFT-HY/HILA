@@ -20,7 +20,6 @@ static std::uniform_real_distribution<double> real_rnd_dist(0.0, 1.0);
 
 // In GPU code hila::random() defined in hila_gpu.cpp
 #if !defined(CUDA) && !defined(HIP)
-
 double hila::random() {
     return real_rnd_dist(mersenne_twister_gen);
 }
