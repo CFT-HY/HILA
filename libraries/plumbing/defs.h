@@ -1,6 +1,10 @@
 #ifndef DEFS_H_
 #define DEFS_H_
-
+/**
+ * @file defs.h
+ * @brief This file defines all includes for HILA
+ *
+ */
 // This gives us math constants, e.g. M_PI etc.
 #define _USE_MATH_DEFINES
 
@@ -22,7 +26,7 @@
 #include <mpi.h>
 #endif
 
-// Read in Makefile tunable parameters first 
+// Read in Makefile tunable parameters first
 // NDEBUG is defined (or not) in params, so assert.h comes after
 #include "params.h"
 

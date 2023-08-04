@@ -51,10 +51,17 @@ bool is_device_rng_on();
 // are marked as "loop function" and "contains rng", because hilapp does not have a view
 // inside them from all compilation units - although hila::random() has special treatment
 
-///
-/// hila::random()  returns a uniform double precision random number in interval [0,1).  Can be
-/// called from outside or inside site loops (on GPU if the device rng is initialized)
 
+/**
+ * @brief Real valued uniform random number generator
+ * @details Returns a uniform double precision random number in interval [0,1).  Can be
+ * called from outside or inside site loops (on GPU if the device rng is initialized).
+ *
+ *  Uses
+ * [std::uniform_real_distribution](https://en.cppreference.com/w/cpp/numeric/random/uniform_real_distribution)
+ *
+ * @return double
+ */
 #pragma hila contains_rng loop_function
 double random();
 
@@ -117,7 +124,7 @@ T &random(out_only T &val) {
     return val;
 }
 
-/// 
+///
 /// Template function
 ///     T hila::random<T>();
 /// without argument.  This is used to generate random value for T without defined variable.
@@ -163,7 +170,7 @@ T &gaussian_random(out_only T &val, double w = 1.0) {
     return val;
 }
 
-/// 
+///
 /// Template function
 ///     T hila::gaussian_random<T>();
 /// generates gaussian random value of type T, with variance 1.
@@ -180,8 +187,6 @@ T gaussian_random() {
     hila::gaussian_random(val);
     return val;
 }
-
-
 
 
 } // namespace hila

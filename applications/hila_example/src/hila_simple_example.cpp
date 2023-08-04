@@ -1,6 +1,30 @@
+/**
+ * @file hila_simple_example.cpp
+ * @author Aaron Haarti
+ * @brief Simple HILA example application which computes laplacian of Gaussian random complex
+ * field
+ *
+ * @details The application generates a \f$ 32^2 \f$ size field \f$ f \f$ of random Complex numbers.
+ * We proceed to compute the summed absolute value of the Laplacian of said field:
+ *
+ * \f{align}{g(X) &= |\nabla^2 f(X)| \\
+ *       &= \sum_{d \in \hat{e}} |f(X + d) - 2f(X) + f(X-d)|, \f}
+ *
+ * where \f$\hat{e} = \{e_x,e_y,e_z\}\f$ is the set of unit vectors. Afterwards this quantity is
+ * printed out.
+ *
+ */
+
 #include "hila.h"
 static_assert(NDIM == 3, "NDIM must be 3");
 
+/**
+ * @brief Main function for application which implements the method
+ *
+ * @param argc
+ * @param argv
+ * @return int
+ */
 int main(int argc, char *argv[]) {
 
     hila::initialize(argc, argv);

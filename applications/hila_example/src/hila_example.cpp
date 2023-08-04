@@ -22,13 +22,11 @@ int main(int argc, char **argv) {
     // see file "input.h" for documentation
 
     hila::input par("parameters");
-
     CoordinateVector lsize;
     lsize = par.get("lattice size"); // reads NDIM numbers
     int loops = par.get("smear loops");
     double smear_coeff = par.get("smear coefficient");
     int taylor_order = par.get("expansion order");
-
     long seed = par.get("random seed");
 
     par.close(); // file is closed also when par goes out of scope
@@ -99,6 +97,11 @@ int main(int argc, char **argv) {
 
     hila::out0 << "FFT time " << hila::gettime() - t << '\n';
 
+    Complex<double> c;
+    c.gaussian_random();
+    hila::out0 << c << '\n';
+
+    hila::out0 << c.str() << '\n';
 
     hila::finishrun();
 }

@@ -1,4 +1,9 @@
-
+/**
+ * @file hila_healthcheck.cpp
+ * @author Kari Rummukainen
+ * @brief HILA healthcheck application.
+ * @details Performs a comprehensive health check on HILA libraries.
+ */
 #include "hila.h"
 
 
