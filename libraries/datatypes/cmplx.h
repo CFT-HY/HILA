@@ -431,7 +431,6 @@ class Complex {
     //   return *this;
     // }
 
-#pragma hila loop_function
     /**
      * @brief *= multiply assignment operator
      * @details Multiply assignment for Complex numbers can be performed in the following ways
@@ -460,6 +459,7 @@ class Complex {
      *
      *
      */
+#pragma hila loop_function
     template <typename A>
     inline Complex<T> &operator*=(const Complex<A> &lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
