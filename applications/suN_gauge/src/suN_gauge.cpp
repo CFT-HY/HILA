@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
 
-    // restore_checkpoint(U, start_traj, p);
+    restore_checkpoint(U, start_traj, p);
 
     // We need random number here
     if (!hila::is_rng_seeded())
@@ -238,9 +238,9 @@ int main(int argc, char **argv) {
             measure_timer.stop();
         }
 
-        // if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
-        //     checkpoint(U, trajectory, p);
-        // }
+        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+            checkpoint(U, trajectory, p);
+        }
     }
 
     hila::finishrun();

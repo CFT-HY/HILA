@@ -1,3 +1,4 @@
+#include <tuple>
 /**
  * @brief Sum the staples of link matrices to direction dir by inducing twist at z=0 t=0 on x-y
  * plane
@@ -11,7 +12,7 @@
  */
 template <typename T>
 void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity par = ALL,
-                     int twist_coeff = 1) {
+                     int twist_coeff = 2) {
 
     Field<T> lower;
     GaugeField<double> twist = 0;
@@ -42,14 +43,14 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
             onsites(par) {
                 staples[X] = U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() *
                                  expi(2 * M_PI * (twist[d1][X] / NCOLOR)) +
-                             lower[X - d2] * expi(2 * M_PI * (twist[d1][X] / NCOLOR)).conj();
+                             lower[X - d2] * expi(-2 * M_PI * (twist[d1][X] / NCOLOR));
             }
             first = false;
         } else {
             onsites(par) {
                 staples[X] += U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() *
                                   expi(2 * M_PI * (twist[d1][X] / NCOLOR)) +
-                              lower[X - d2] * expi(2 * M_PI * (twist[d1][X] / NCOLOR)).conj();
+                              lower[X - d2] * expi(-2 * M_PI * (twist[d1][X] / NCOLOR));
             }
         }
     }
@@ -63,26 +64,122 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
  *
  * @return double
  */
+// template <typename T>
+// double measure_plaq_twist(GaugeField<T> U, int twist_coeff = 1) {
+//     Reduction<double> plaq;
+//     plaq.allreduce(false);
+
+//     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+
+//         onsites(ALL) {
+//             if (dir1 == e_z && X.z() == 0 && X.t() == 0) {
+//                 plaq += 1.0 -
+//                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                             T::size();
+//             } else {
+//                 plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
+//                                          U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
+//                                   T::size();
+//             }
+//         }
+//     }
+
+//     return plaq.value();
+// }
+
+// template <typename T>
+// double measure_plaq_twist_better(GaugeField<T> U, int twist_coeff = 1) {
+//     Reduction<double> plaq;
+//     plaq.allreduce(false);
+//     GaugeField<double> twist = 0;
+//     onsites(ALL) {
+//         if (X.z() == 0 && X.t() == 0) {
+//             twist[e_z][X] = twist_coeff;
+//             twist[e_t][X] = -twist_coeff;
+//         }
+//     }
+
+//     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+//         onsites(ALL) {
+//             plaq += 1.0 -
+//                     real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+//                                 U[dir2][X].dagger() * expi(2 * M_PI * (twist[dir1][X] / NCOLOR)))) /
+//                         T::size();
+//         }
+//     }
+
+//     return plaq.value();
+// }
+
 template <typename T>
-double measure_plaq_twist(GaugeField<T> U, int twist_coeff = 1) {
+std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff = 1) {
     Reduction<double> plaq;
+    ReductionVector<double> plaq_vec(lattice.size(e_z)+1);
     plaq.allreduce(false);
+    plaq_vec.allreduce(false);
 
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
 
         onsites(ALL) {
-            if (dir1 == e_z && dir2 == e_t && X.z() == 0 && X.t() == 0) {
-                plaq += 1.0 -
+            double p;
+            if (dir1 == e_z && X.z() == 0 && X.t() == 0) {
+                p = 1.0 -
                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
                             T::size();
+                plaq += p;
+                plaq_vec[X.z()] += p;
             } else {
-                plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
-                                         U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
-                                  T::size();
+                p = 1.0 -
+                        real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+                                   U[dir2][X].dagger())) /
+                            T::size();
+                plaq += p;
+                plaq_vec[X.z()] += p;
             }
         }
     }
-
-    return plaq.value();
+    plaq_vec[lattice.size(e_z)] = plaq.value() /(lattice.volume() * NDIM * (NDIM - 1) / 2);
+    for (int i = 0; i < plaq_vec.size()-1; i++)
+    {
+        plaq_vec[i] /= (lattice.volume() * NDIM * (NDIM - 1) / 2*lattice.size(e_z));
+    }
+    
+    return plaq_vec.vector();
 }
+//     Reduction<double> plaq;
+//     //ReductionVector<double> p_z(lattice.size(e_z));
+//     // p_z = 0;
+//     plaq.allreduce(false);
+//     // p_z.allreduce(false);
+//     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+
+//         onsites(ALL) {
+//             //double p;
+//             if (dir1 == e_z && X.z() == 0 && X.t() == 0) {
+//                 // p = 1.0 -
+//                 //         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+//                 //                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                 //             T::size();
+//                 plaq += 1.0 -
+//                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                             T::size();
+//                 //p_z[X.z()] += p;
+
+//             } else {
+//                 // p = 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
+//                 //                          U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
+//                 //                   T::size();
+//                 plaq += 1.0 -
+//                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                             T::size();
+//                 //p_z[X.z()] += p;
+//             }
+//         }
+//     }
+
+//     return plaq.value();
+// }

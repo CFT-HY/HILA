@@ -7,7 +7,7 @@
 HILA_DIR := ../..
 
 # Number of colors
-NCOL := 3
+NCOL := 4
 
 # Set default goal and arch
 .DEFAULT_GOAL := suN_gauge
