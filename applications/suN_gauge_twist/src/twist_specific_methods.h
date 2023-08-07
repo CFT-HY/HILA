@@ -34,7 +34,8 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
         // calculate first lower 'U' of the staple sum
         // do it on opp parity
         onsites(opp_parity(par)) {
-            lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
+            lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1] *
+                       expi(-2 * M_PI * (twist[d1][X] / NCOLOR));
         }
 
         // calculate then the upper 'n', and add the lower
@@ -43,14 +44,14 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
             onsites(par) {
                 staples[X] = U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() *
                                  expi(2 * M_PI * (twist[d1][X] / NCOLOR)) +
-                             lower[X - d2] * expi(-2 * M_PI * (twist[d1][X] / NCOLOR));
+                             lower[X - d2];
             }
             first = false;
         } else {
             onsites(par) {
                 staples[X] += U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() *
                                   expi(2 * M_PI * (twist[d1][X] / NCOLOR)) +
-                              lower[X - d2] * expi(-2 * M_PI * (twist[d1][X] / NCOLOR));
+                              lower[X - d2];
             }
         }
     }
