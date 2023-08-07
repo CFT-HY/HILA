@@ -31,7 +31,7 @@ int z_ind(int z) {
  * @param p Parameter struct
  */
 template <typename group>
-vector<double> measure_stuff(const GaugeField<group> &U, const parameters &p) {
+void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     static bool first = true;
 
@@ -48,12 +48,11 @@ vector<double> measure_stuff(const GaugeField<group> &U, const parameters &p) {
     }
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
-    auto sum = std::reduce(plaq.begin(), plaq.end() - 1);
+    // auto sum = std::reduce(plaq.begin(), plaq.end() - 1);
     for (int i = 0; i < plaq.size(); i++) {
         hila::out0 << plaq[i] << " ";
     }
     hila::out0 << "\n";
-    return plaq
 }
 
 /**
