@@ -11,8 +11,7 @@
  * @param twist_coeff Integer to rotate phase with
  */
 template <typename T>
-void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity par = ALL,
-                     int twist_coeff = 2) {
+void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1,int twist_coeff, Parity par = ALL) {
 
     Field<T> lower;
     GaugeField<double> twist = 0;
@@ -66,7 +65,7 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
  * @return double
  */
 template <typename T>
-std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff = 1) {
+std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff) {
     Reduction<double> plaq;
     ReductionVector<double> plaq_vec(lattice.size(e_z) + 1);
     plaq.allreduce(false);
