@@ -99,7 +99,9 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
     staples_timer.start();
 
-    staplesum_twist(U, staples, d, par, p.twist_coeff);
+    //staplesum_twist(U, staples, d, p.twist_coeff,par);
+    staplesum_twist(U, staples, d, p.twist_coeff,par);
+
     staples_timer.stop();
 
     if (relax) {
@@ -207,7 +209,7 @@ int main(int argc, char **argv) {
     // We need random number here
     if (!hila::is_rng_seeded())
         hila::seed_random(seed);
-
+    hila::out0 << "MEASURE start\n" ;
     for (int trajectory = start_traj; trajectory < p.n_trajectories; trajectory++) {
 
         double ttime = hila::gettime();
@@ -239,6 +241,7 @@ int main(int argc, char **argv) {
             checkpoint(U, trajectory, p);
         }
     }
+    hila::out0 << "MEASURE end\n";
 
     hila::finishrun();
 }
