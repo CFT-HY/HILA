@@ -11,7 +11,7 @@
 // local includes
 #include "parameters.h"
 #include "checkpoint.h"
-#include "twist_specific_methods.cpp"
+#include "twist_specific_methods.h"
 
 /**
  * @brief Helper function to get valid z-coordinate index
@@ -31,26 +31,29 @@ int z_ind(int z) {
  * @param p Parameter struct
  */
 template <typename group>
-void measure_stuff(const GaugeField<group> &U, const parameters &p) {
+vector<double> measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     static bool first = true;
 
-    if (first) {
-        hila::out0 << "Legend:";
-        hila::out0 << " plaq  P.real  P.imag\n";
+    // auto poly = measure_polyakov(U);
 
+    auto plaq =
+        measure_plaq_with_z(U, p.twist_coeff); /// (lattice.volume() * NDIM * (NDIM - 1) / 2);
+
+    if (first) {
+        for (int i = 0; i < plaq.size() - 1; i++)
+            hila::out0 << i << " ";
+        hila::out0 << "sum \n";
         first = false;
     }
 
-    auto poly = measure_polyakov(U);
-
-    auto plaq = measure_plaq_with_z(U,p.twist_coeff) ;/// (lattice.volume() * NDIM * (NDIM - 1) / 2);
-
-    hila::out0 << "MEAS " << std::setprecision(8);
-
     // write the -(polyakov potential) first, this is used as a weight factor in aa
-    auto sum = std::reduce(plaq.begin(), plaq.end()-1);
-    hila::out0 << sum << " " <<  plaq[plaq.size() - 1] << ' ' << poly << '\n';
+    auto sum = std::reduce(plaq.begin(), plaq.end() - 1);
+    for (int i = 0; i < plaq.size(); i++) {
+        hila::out0 << plaq[i] << " ";
+    }
+    hila::out0 << "\n";
+    return plaq
 }
 
 /**
@@ -224,11 +227,11 @@ int main(int argc, char **argv) {
         if (trajectory >= 0) {
             measure_timer.start();
 
-            hila::out0 << "Measure_start " << trajectory << '\n';
+            // hila::out0 << "Measure_start " << trajectory << '\n';
 
             measure_stuff(U, p);
 
-            hila::out0 << "Measure_end " << trajectory << std::endl;
+            // hila::out0 << "Measure_end " << trajectory << std::endl;
 
             measure_timer.stop();
         }

@@ -210,7 +210,8 @@ int main(int argc, char **argv) {
     // We need random number here
     if (!hila::is_rng_seeded())
         hila::seed_random(seed);
-
+    logger_class logger;
+    logger.set_output(hila::out0);
     for (int trajectory = start_traj; trajectory < p.n_trajectories; trajectory++) {
 
         double ttime = hila::gettime();
@@ -242,6 +243,7 @@ int main(int argc, char **argv) {
             checkpoint(U, trajectory, p);
         }
     }
+    delete logger;
 
     hila::finishrun();
 }

@@ -75,7 +75,8 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
 //             if (dir1 == e_z && X.z() == 0 && X.t() == 0) {
 //                 plaq += 1.0 -
 //                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff /
+//                                    NCOLOR)))) /
 //                             T::size();
 //             } else {
 //                 plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
@@ -104,7 +105,8 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
 //         onsites(ALL) {
 //             plaq += 1.0 -
 //                     real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-//                                 U[dir2][X].dagger() * expi(2 * M_PI * (twist[dir1][X] / NCOLOR)))) /
+//                                 U[dir2][X].dagger() * expi(2 * M_PI * (twist[dir1][X] /
+//                                 NCOLOR)))) /
 //                         T::size();
 //         }
 //     }
@@ -115,7 +117,7 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, Pa
 template <typename T>
 std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff = 1) {
     Reduction<double> plaq;
-    ReductionVector<double> plaq_vec(lattice.size(e_z)+1);
+    ReductionVector<double> plaq_vec(lattice.size(e_z) + 1);
     plaq.allreduce(false);
     plaq_vec.allreduce(false);
 
@@ -125,27 +127,25 @@ std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff = 1) {
             double p;
             if (dir1 == e_z && X.z() == 0 && X.t() == 0) {
                 p = 1.0 -
-                        real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-                                   U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
-                            T::size();
+                    real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+                               U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+                        T::size();
                 plaq += p;
                 plaq_vec[X.z()] += p;
             } else {
-                p = 1.0 -
-                        real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-                                   U[dir2][X].dagger())) /
-                            T::size();
+                p = 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+                                     U[dir2][X].dagger())) /
+                              T::size();
                 plaq += p;
                 plaq_vec[X.z()] += p;
             }
         }
     }
-    plaq_vec[lattice.size(e_z)] = plaq.value() /(lattice.volume() * NDIM * (NDIM - 1) / 2);
-    for (int i = 0; i < plaq_vec.size()-1; i++)
-    {
-        plaq_vec[i] /= (lattice.volume() * NDIM * (NDIM - 1) / 2*lattice.size(e_z));
+    plaq_vec[lattice.size(e_z)] = plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+    for (int i = 0; i < plaq_vec.size() - 1; i++) {
+        plaq_vec[i] /= (lattice.volume() * NDIM * (NDIM - 1)) / 2;
     }
-    
+
     return plaq_vec.vector();
 }
 //     Reduction<double> plaq;
@@ -159,12 +159,15 @@ std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff = 1) {
 //             //double p;
 //             if (dir1 == e_z && X.z() == 0 && X.t() == 0) {
 //                 // p = 1.0 -
-//                 //         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-//                 //                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                 //         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger()
+//                 *
+//                 //                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff /
+//                 NCOLOR)))) /
 //                 //             T::size();
 //                 plaq += 1.0 -
 //                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff /
+//                                    NCOLOR)))) /
 //                             T::size();
 //                 //p_z[X.z()] += p;
 
@@ -174,7 +177,8 @@ std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff = 1) {
 //                 //                   T::size();
 //                 plaq += 1.0 -
 //                         real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff / NCOLOR)))) /
+//                                    U[dir2][X].dagger() * expi(2 * M_PI * (twist_coeff /
+//                                    NCOLOR)))) /
 //                             T::size();
 //                 //p_z[X.z()] += p;
 //             }
