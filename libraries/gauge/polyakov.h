@@ -1,15 +1,20 @@
+/** @file polyakov.h */
+
 #ifndef POLYAKOV_H_
 #define POLYAKOV_H_
 
 #include "hila.h"
 
-/////////////////////////////////////////////////////////////////////////////
-/// Measure Polyakov lines to direction dir
-///
-/// Naive implementation, includes extra communications
-
+/**
+ * @brief Measure Polyakov lines to direction dir
+ * @details Naive implementation, includes extra communication
+ * @tparam T GaugeField Group
+ * @param U GaugeField to measure
+ * @param dir Direction
+ * @return Complex<double>
+ */
 template <typename T>
-Complex<double> measure_polyakov(const GaugeField<T> &U, Direction dir) {
+Complex<double> measure_polyakov(const GaugeField<T> &U, Direction dir = Direction(NDIM - 1)) {
 
     Field<T> polyakov = U[dir];
 

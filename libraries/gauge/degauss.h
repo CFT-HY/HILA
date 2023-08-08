@@ -36,7 +36,7 @@ void get_gauss_violation(const GaugeField<group> &U,
 template <typename group>
 void gauss_fix_step(const GaugeField<group> &U, VectorField<Algebra<group>> &E,
                     const Field<Algebra<group>> &violation,
-                    const hila::number_type<group> mag) {
+                    const hila::scalar_type<group> mag) {
 
     foralldir(dir) {
         onsites(ALL) {
@@ -59,8 +59,8 @@ auto degauss_step(const GaugeField<group> &U, VectorField<Algebra<group>> &E) {
     //  faster.
 
     constexpr double aleph = 1.25;
-    constexpr hila::number_type<group> onealeph = aleph / 12.0;
-    constexpr hila::number_type<group> twoaleph = 2.0 * onealeph;
+    constexpr hila::scalar_type<group> onealeph = aleph / 12.0;
+    constexpr hila::scalar_type<group> twoaleph = 2.0 * onealeph;
 
     //  Now what's the initial violation
     get_gauss_violation(U, E, violation);

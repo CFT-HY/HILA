@@ -51,7 +51,7 @@ bool GeneralVisitor::is_field_parity_expr(Expr *E) {
 /// Checks if E is parity of a field (for example f[X]).
 /// Catches both parity and X_plus_direction
 bool GeneralVisitor::is_field_with_X_expr(Expr *E) {
-    E = E->IgnoreParens();
+    E = E->IgnoreParens()->IgnoreImplicit();
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
 
     if (OC && strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0 &&
@@ -548,7 +548,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     } else {
         // end of VarDecl - how about other decls, e.g. functions?
         reportDiag(DiagnosticsEngine::Level::Error, DRE->getSourceRange().getBegin(),
-                   "Reference to unimplemented (non-variable) type");
+                   "reference to unimplemented (non-variable) type");
     }
 
     return nullptr;

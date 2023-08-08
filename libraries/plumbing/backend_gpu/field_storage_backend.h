@@ -33,7 +33,7 @@ template <typename T>
 __device__ inline auto field_storage<T>::get(const unsigned i,
                                              const unsigned field_alloc_size) const {
     assert(i < field_alloc_size);
-    using base_t = hila::number_type<T>;
+    using base_t = hila::scalar_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     T value;
     base_t *value_f = (base_t *)&value;
@@ -49,7 +49,7 @@ template <typename T>
 __device__ inline void field_storage<T>::set(const T &value, const unsigned i,
                                              const unsigned field_alloc_size) {
     assert(i < field_alloc_size);
-    using base_t = hila::number_type<T>;
+    using base_t = hila::scalar_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     const base_t *value_f = (base_t *)&value;
     base_t *fp = (base_t *)(fieldbuf);
@@ -188,7 +188,7 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer, u
                                             const int n, const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_t = hila::number_type<T>;
+        using base_t = hila::scalar_type<T>;
         constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element = field.get(site_index[Index], field_alloc_size);
         base_t *ep = (base_t *)&element;
@@ -206,7 +206,7 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
                                                     const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_t = hila::number_type<T>;
+        using base_t = hila::scalar_type<T>;
         constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element = -field.get(site_index[Index], field_alloc_size);
         base_t *ep = (base_t *)&element;
@@ -317,7 +317,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
     gpuFree(d_site_index);
 }
 
-template <typename T>
+template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
 __global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsigned offset,
                                                    unsigned *site_index, const int n,
                                                    const unsigned field_alloc_size) {
@@ -336,29 +336,33 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
     // Only need to do something for antiperiodic boundaries
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     if (antiperiodic) {
-        unsigned n, start = 0;
-        if (par == ODD) {
-            n = lattice.special_boundaries[dir].n_odd;
-            start = lattice.special_boundaries[dir].n_even;
+        if constexpr (has_unary_minus<T>::value) {
+            unsigned n, start = 0;
+            if (par == ODD) {
+                n = lattice.special_boundaries[dir].n_odd;
+                start = lattice.special_boundaries[dir].n_even;
+            } else {
+                if (par == EVEN)
+                    n = lattice.special_boundaries[dir].n_even;
+                else
+                    n = lattice.special_boundaries[dir].n_total;
+            }
+            unsigned offset = lattice.special_boundaries[dir].offset + start;
+
+            unsigned *d_site_index;
+            check_device_error("earlier");
+            gpuMalloc(&d_site_index, n * sizeof(unsigned));
+            gpuMemcpy(d_site_index, lattice.special_boundaries[dir].move_index + start,
+                      n * sizeof(unsigned), gpuMemcpyHostToDevice);
+
+            unsigned N_blocks = n / N_threads + 1;
+            set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
+                *this, offset, d_site_index, n, lattice.field_alloc_size());
+
+            gpuFree(d_site_index);
         } else {
-            if (par == EVEN)
-                n = lattice.special_boundaries[dir].n_even;
-            else
-                n = lattice.special_boundaries[dir].n_total;
+            assert("Antiperiodic b.c. cannot be used with unsigned field elements");
         }
-        unsigned offset = lattice.special_boundaries[dir].offset + start;
-
-        unsigned *d_site_index;
-        check_device_error("earlier");
-        gpuMalloc(&d_site_index, n * sizeof(unsigned));
-        gpuMemcpy(d_site_index, lattice.special_boundaries[dir].move_index + start,
-                  n * sizeof(unsigned), gpuMemcpyHostToDevice);
-
-        unsigned N_blocks = n / N_threads + 1;
-        set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(*this, offset, d_site_index, n,
-                                                                    lattice.field_alloc_size());
-
-        gpuFree(d_site_index);
     }
 
 #else
@@ -372,7 +376,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer, un
                                            const int n, const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_t = hila::number_type<T>;
+        using base_t = hila::scalar_type<T>;
         constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element;
         base_t *ep = (base_t *)&element;

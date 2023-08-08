@@ -37,7 +37,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
         if (is_initialized) {
             if (speaking)
                 hila::out0 << "Error: file '" << fname << "' cannot be opened because '" << filename
-                          << "' is open in this input variable\n";
+                           << "' is open in this input variable\n";
 
             got_error = true;
         } else {
@@ -112,7 +112,7 @@ bool input::get_line() {
 
         is_line_printed = false; // not yet printed
     }
-    return true; // sync this at another spot
+    return true;                 // sync this at another spot
 }
 
 // print the read-in line with a bit special formatting
@@ -167,11 +167,15 @@ bool input::contains_word_list(const std::string &list, int &end_of_key) {
     while (std::isspace(*q))
         q++;
 
+    bool last_space = false;
+    char last_char = 0;
     while (*p && *q) {
         // compare non-space chars
         while (*p && *q && *p == *q && !std::isspace(*q)) {
+            last_char = *p;
             p++;
             q++;
+            last_space = false;
         }
         if (std::isspace(*q) && std::isspace(*p)) {
             // matching spaces, skip
@@ -179,15 +183,20 @@ bool input::contains_word_list(const std::string &list, int &end_of_key) {
                 p++;
             while (std::isspace(*q))
                 q++;
+            last_space = true;
         }
 
         if (*p != *q)
             break;
     }
     // if line contained the words in list, *q = 0.
+
     while (std::isspace(*q))
         q++;
-    if (*q != 0)
+    // if *q != 0 then some chars do not match
+    // if *q == 0 then p has to fully match.  This is true if
+    // the last match was space or *p == 0 or *p is space or comma (,)
+    if (*q != 0 || !(last_space || *p == 0 || std::isspace(*p) || last_char == ',' || *p == ','))
         return false;
 
     end_of_key = p - linebuffer.c_str();
@@ -256,8 +265,8 @@ bool input::handle_key(const std::string &key) {
         int end_of_key = 0;
         if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
             if (speaking) {
+                hila::out0 << "Error: expecting key '" << key << "', found instead:\n";
                 print_linebuf(0);
-                hila::out0 << "Error: expecting key '" << key << "'\n";
             }
             return false;
         }
@@ -317,6 +326,7 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
         }
 
         if (item < 0) {
+
             // error, nothing was found
             no_error = false;
             if (speaking) {

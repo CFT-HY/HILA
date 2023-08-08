@@ -1,3 +1,5 @@
+/** @file field_comm.h */
+
 #ifndef FIELD_COMM_H
 #define FIELD_COMM_H
 
@@ -155,11 +157,6 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
-
-/// Definition of shift - this is currently OK only for short moves,
-/// very inefficient for longer moves
-/// TODO: make more advanced, switching to "global" move for long shifts
-/// Returns a reference to parameter "res"
 
 template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
@@ -329,7 +326,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
 
         // HANDLE RECEIVES: get node which will send here
-        post_receive_timer.start();
 
         // buffer can be separate or in Field buffer
         receive_buffer = fs->get_receive_buffer(d, par, from_node);
@@ -341,6 +337,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
             hila::terminate(1);
         }
 
+        post_receive_timer.start();
+
         // c++ version does not return errors
         MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
@@ -350,7 +348,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
     if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
         // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
-        start_send_timer.start();
 
         unsigned sites = to_node.n_sites(par);
 
@@ -364,14 +361,15 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         size_t n = sites * size / size_type;
 #ifdef GPU_AWARE_MPI
         gpuStreamSynchronize(0);
-        //gpuDeviceSynchronize();
+        // gpuDeviceSynchronize();
 #endif
+
+        start_send_timer.start();
 
         MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
 
         start_send_timer.stop();
-
     }
 
     // and do the boundary shuffle here, after MPI has started
@@ -641,15 +639,12 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
     }
 }
 
-
-/// Set an array of elements. Assuming that each node calls this with the same value, it is
-/// sufficient to set the elements locally
 template <typename T>
 void Field<T>::set_elements(const std::vector<T> &elements,
                             const std::vector<CoordinateVector> &coord_list) {
     assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
     std::vector<unsigned> my_indexes;
-    std::vector<unsigned> my_elements;
+    std::vector<T> my_elements;
     for (int i = 0; i < coord_list.size(); i++) {
         CoordinateVector c = coord_list[i];
         if (lattice.is_on_mynode(c)) {

@@ -1,23 +1,35 @@
+/** @file staples.h */
+
 #ifndef STAPLESUM_H_
 #define STAPLESUM_H_
 
 #include "hila.h"
 
-/////////////////////////////////////////////////////////////////////////////
-/// Sum the staples of link matrices to direction dir
-/// we could do
-/// foralldir(d2) if (d2 != d1)
-///    stapes[par] += U[d2][X]*U[d1][X+d2]*U[d2][X+d1].dagger()  +
-///                   U[d2][X-d2].dagger()*U[d1][X-d2]*U[d2][X-d2+d1]
-/// but let us do it a bit more optimized way
-
+/**
+ * @brief Sum the staples of link matrices to direction dir
+ *
+ * Naive method is to compute:
+ *
+ * \code {.cpp}
+ * foralldir(d2) if (d2 != d1)
+ *     stapes[par] += U[d2][X]*U[d1][X+d2]*U[d2][X+d1].dagger()  +
+ *                    U[d2][X-d2].dagger()*U[d1][X-d2]*U[d2][X-d2+d1]
+ * \endcode
+ *
+ * But the method is computed in a slightly more optimized way
+ *
+ * @tparam T
+ * @param U GaugeField to compute staples for
+ * @param staples Filed to compute staplesum into at each lattice point
+ * @param d1 Direction to compute staplesum for
+ * @param par Parity to compute staplesum for
+ */
 template <typename T>
 void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity par = ALL) {
 
     Field<T> lower;
 
-    // zero staples just inc case
-    staples = 0;
+    bool first = true;
     foralldir(d2) if (d2 != d1) {
 
         // anticipate that these are needed
@@ -27,15 +39,21 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity p
 
         // calculate first lower 'U' of the staple sum
         // do it on opp parity
-        onsites(~par) {
+        onsites(opp_parity(par)) {
             lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
         }
 
         // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop 
-        onsites(par) {
-            staples[X] +=
-                U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+        // lower could also be added on a separate loop
+        if (first) {
+            onsites(par) {
+                staples[X] = U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+            }
+            first = false;
+        } else {
+            onsites(par) {
+                staples[X] += U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+            }
         }
     }
 }

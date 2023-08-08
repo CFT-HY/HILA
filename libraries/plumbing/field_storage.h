@@ -1,3 +1,5 @@
+/** @file field_storage.h */
+
 #ifndef FIELD_STORAGEH
 #define FIELD_STORAGEH
 
@@ -8,7 +10,13 @@
 
 #include "plumbing/has_unary_minus.h"
 
-// Forward declare the field struct
+/**
+ * Forward deceleration 
+ * @class field_struct
+ * @brief Stores Field class data and communication parameters for said data
+ * 
+ * @todo field-specific boundary conditions
+*/
 template <typename T>
 class field_struct;
 
@@ -18,11 +26,11 @@ class field_struct;
 #define DEVICE
 #endif
 
-////////////////////////////////////////////////////////////////////////
-/// The field_storage struct contains minimal information for using
-/// the field in a loop. It is communicated to CUDA kernels and other
-/// accelerator functions.
-////////////////////////////////////////////////////////////////////////
+/**
+ * @brief The field_storage struct contains minimal information for using
+ * the field in a loop. It is communicated to CUDA kernels and other
+ * accelerator functions.
+ */
 template <typename T>
 class field_storage {
   public:

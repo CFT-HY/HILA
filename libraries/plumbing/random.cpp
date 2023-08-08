@@ -6,23 +6,22 @@
 
 #include <random>
 
-//#ifndef OPENMP
+// #ifndef OPENMP
 
 // static variable which holds the random state
 // Use 64-bit mersenne twister
 static std::mt19937_64 mersenne_twister_gen;
 
 // random numbers are in interval [0,1)
-static std::uniform_real_distribution<double> real_rnd_dist(0.0,1.0);
+static std::uniform_real_distribution<double> real_rnd_dist(0.0, 1.0);
 
-//#endif
+// #endif
 
 
 // In GPU code hila::random() defined in hila_gpu.cpp
 #if !defined(CUDA) && !defined(HIP)
-
 double hila::random() {
-    return real_rnd_dist( mersenne_twister_gen );
+    return real_rnd_dist(mersenne_twister_gen);
 }
 
 #endif
@@ -30,23 +29,53 @@ double hila::random() {
 // Generate random number in non-kernel (non-loop) code.  Not meant to
 // be used in "user code"
 double hila::host_random() {
-    return real_rnd_dist( mersenne_twister_gen );
+    return real_rnd_dist(mersenne_twister_gen);
 }
 
 /////////////////////////////////////////////////////////////////////////
 
-static bool rng_is_intialized = false;
+static bool rng_is_initialized = false;
+
+///
+/// Random shuffling of rng seed for MPI nodes
+/// Do it in a manner makes it difficult to give the same seed by mistake
+/// and also avoids giving the same seed for 2 nodes
+/// For single MPI node seed remains unchanged
+
+namespace hila {
+uint64_t shuffle_rng_seed(uint64_t seed) {
+
+    uint64_t n = hila::myrank();
+    if (hila::partitions.number() > 1)
+        n += hila::partitions.mylattice() * hila::number_of_nodes();
+
+    return (seed + n) ^ (n << 31);
+}
+
+
+void initialize_host_rng(uint64_t seed) {
+
+    seed = hila::shuffle_rng_seed(seed);
+
+    // #if !defined(OPENMP)
+    mersenne_twister_gen.seed(seed);
+    // warm it up
+    for (int i = 0; i < 9000; i++)
+        mersenne_twister_gen();
+    // #endif
+}
+
+} // namespace hila
 
 /// Seed random number generators
 /// Seed is shuffled so that different nodes
 /// get different rng seeds.  If seed == 0,
 /// generate seed using the time() -function.
 
-void hila::seed_random(uint64_t seed) {
+void hila::seed_random(uint64_t seed, bool device_init) {
 
-    rng_is_intialized = true;
+    rng_is_initialized = true;
 
-#ifndef SITERAND
 
     uint64_t n = hila::myrank();
     if (hila::partitions.number() > 1)
@@ -64,41 +93,35 @@ void hila::seed_random(uint64_t seed) {
         }
         hila::broadcast(seed);
     }
-    // do node shuffling for seed
-    // do it in a manner makes it difficult to give the same seed by mistake
-    // and also avoids giving the same seed for 2 nodes
-    // n=0 remains unchanged
 
-    seed = seed ^ (n ^ ((7*n) << 25));
+#ifndef SITERAND
 
     hila::out0 << "Using node random numbers, seed for node 0: " << seed << std::endl;
 
-// #if !defined(OPENMP)
-    mersenne_twister_gen.seed( seed );
-    // warm it up
-    for (int i = 0; i < 9000; i++)
-        mersenne_twister_gen();
-// #endif
-
+    hila::initialize_host_rng(seed);
 
 #if defined(CUDA) || defined(HIP)
+
     // we can use the same seed, the generator is different
-    hila::seed_device_rng(seed);
+    if (device_init) {
+        hila::initialize_device_rng(seed);
+    } else {
+        hila::out0 << "Not initializing GPU random numbers\n";
+    }
+
 #endif
 
     // taus_initialize();
 
 #else
 
-    // TODO: clean SITERAND!
-    // Now SITERAND is defined
+    // TODO: SITERAND is not yet implemented!
     // This is usually used only for occasional benchmarking, where identical output
     // independent of the node number is desired
 
     hila::out0 << "*** SITERAND is in use!\n";
 
-    random_seed_arr =
-        (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
+    random_seed_arr = (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
     forallsites(i) {
         random_seed_arr[i][0] = (unsigned short)(seed + site[i].index);
         random_seed_arr[i][1] = (unsigned short)(seed + 2 * site[i].index);
@@ -109,6 +132,20 @@ void hila::seed_random(uint64_t seed) {
 
 #endif
 }
+
+////////////////////////////////////////////////////////////////////
+/// Def here gpu rng functions for non-gpu
+////////////////////////////////////////////////////////////////////
+
+#if !(defined(CUDA) || defined(HIP))
+
+void hila::free_device_rng() {}
+bool hila::is_device_rng_on() {
+    return true;
+}
+void hila::initialize_device_rng(uint64_t seed) {}
+
+#endif
 
 
 ///////////////////////////////////////////////////////////////////
@@ -156,7 +193,7 @@ double hila::gaussrand() {
 // Cuda and other stuff which does not accept
 // static variables - just throw away another gaussian number.
 
-//#pragma hila loop function contains rng
+// #pragma hila loop function contains rng
 double hila::gaussrand() {
     double second;
     return hila::gaussrand2(second);
@@ -164,14 +201,33 @@ double hila::gaussrand() {
 
 #endif
 
+///////////////////////////////////////////////////////////////
+/// Check if RNG is seeded already
+///////////////////////////////////////////////////////////////
+
+bool hila::is_rng_seeded() {
+    return rng_is_initialized;
+}
+
 
 ///////////////////////////////////////////////////////////////
 /// RNG initialization check - emitted on loops
 ///////////////////////////////////////////////////////////////
 
 void hila::check_that_rng_is_initialized() {
-    if (!rng_is_intialized) {
-        hila::out0 << "Error: trying to use random numbers without initializing the generator\n";
+    bool isinit;
+
+    if (!rng_is_initialized) {
+        hila::out0 << "ERROR: trying to use random numbers without initializing the generator"
+                   << std::endl;
         hila::terminate(1);
     }
+#if defined(CUDA) || defined(HIP)
+    if (!hila::is_device_rng_on()) {
+        hila::out0 << "ERROR: GPU random number generator is not initialized and onsites()-loop is "
+                      "using random numbers"
+                   << std::endl;
+        hila::terminate(1);
+    }
+#endif
 }

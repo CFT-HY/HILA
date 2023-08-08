@@ -87,6 +87,14 @@ HILA_OBJECTS = \
 
 # Remvoved com_simple.o, require MPI
 
+ifeq (,$(wildcard $(ARCH_DIR)/$(ARCH).mk))
+  $(info #########################################################################)
+  $(info ARCH Makefile "$(ARCH_DIR)/$(ARCH).mk" does not exist.)
+  $(info For available target architectures, use "make list-archs" (or "make help"))
+  $(info #########################################################################)
+  $(error )
+endif
+
 # Read in the appropriate platform bits and perhaps extra objects
 include $(ARCH_DIR)/$(ARCH).mk
 
