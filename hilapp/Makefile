@@ -207,6 +207,7 @@ OBJECTS = \
   $(BUILDDIR)/function_contains_loop_visitor.o \
   $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \
+  $(BUILDDIR)/sourceloc_utils.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
 

@@ -14,6 +14,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+
 #include "srcbuf.h"
 
 // set namespaces globally
