@@ -1967,7 +1967,7 @@ inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
 }
 
 /**
- * @brief Addition operator
+ * @brief Subtraction operator
  * @details Defined for the following operations
  *
  * __Matrix - Matrix:__
