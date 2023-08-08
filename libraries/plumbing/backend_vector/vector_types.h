@@ -19,27 +19,27 @@ struct is_vectorizable_type {
 // };
 
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, int>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::scalar_type<T>, int>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, unsigned int>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::scalar_type<T>, unsigned int>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, int64_t>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::scalar_type<T>, int64_t>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, uint64_t>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::scalar_type<T>, uint64_t>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, float>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::scalar_type<T>, float>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, double>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::scalar_type<T>, double>::value>> {
     static constexpr bool value = true;
 };
 
@@ -102,7 +102,7 @@ template <typename T>
 struct vector_info<T, typename std::enable_if_t<hila::is_vectorizable_type<T>::value>> {
     static constexpr bool is_vectorizable = true;
     // Get base type first
-    using base_type = hila::number_type<T>;
+    using base_type = hila::scalar_type<T>;
     // Find vector length
     static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
     // Find the vector type from above

@@ -1,0 +1,10 @@
+lattice size                   16,16,20,6
+beta                           10
+delta beta fraction            0
+overrelax steps                4
+updates in trajectory          1
+trajectories                   500
+thermalization                 0
+random seed                    0
+traj/saved                     1000
+config name                    config

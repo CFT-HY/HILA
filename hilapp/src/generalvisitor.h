@@ -305,12 +305,12 @@ class GeneralVisitor {
     void backend_handle_loop_constructor(call_info_struct &ci);
 
     /// Handle functions called in a loop
-    void handle_loop_function_cuda(call_info_struct &ci);
+    void handle_loop_function_gpu(call_info_struct &ci);
     void handle_loop_function_openacc(FunctionDecl *fd);
     void handle_loop_function_avx(call_info_struct &ci);
 
     /// Handle functions called in a loop
-    void handle_loop_constructor_cuda(call_info_struct &ci);
+    void handle_loop_constructor_gpu(call_info_struct &ci);
     void handle_loop_constructor_openacc(CXXConstructorDecl *fd);
     void handle_loop_constructor_avx(call_info_struct &ci);
 

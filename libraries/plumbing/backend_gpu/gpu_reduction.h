@@ -42,7 +42,7 @@
 #if !defined(HILAPP)
 
 // static constexpr int whichKernel = GPU_REDUCE_KERNEL;
-static constexpr int numThreads = N_GPU_REDUCE_THREADS;
+// static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Define what reduction kernel to use - a local variable
 // Number from 0 to 9, can benchmark ...
@@ -952,7 +952,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-#else // if !defined(HILAPP) && !defined(SLOW_GPU_REDUCTION)
+#else // if !defined(HILAPP)
 
 // just declare the name
 // template <class T>
@@ -977,7 +977,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 //            "EVEN_SITES_FIRST neede for gpu reduction with parity");
 // #endif
 
-//     using base_t = hila::number_type<T>;
+//     using base_t = hila::scalar_type<T>;
 //     constexpr int n = sizeof(T) / sizeof(base_t);
 
 //     // fields are stored 1 after another on gpu fields

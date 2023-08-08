@@ -1,3 +1,4 @@
+/** @file field.h */
 #ifndef FIELD_H
 #define FIELD_H
 
@@ -29,51 +30,27 @@ void ensure_field_operators_exist();
 
 #include "plumbing/ensure_loop_functions.h"
 
-/// Field class
-/// This implements the standard methods for accessing fields
-/// Hilapp replaces the parity access patterns, Field[par] with a loop over
-/// the appropriate sites.
-///
-/// The Field class also contains member functions used by hilapp, as well
-/// as members that may be useful for application developers.
-///
-/// The Field mainly implements the interface to the Field and not the
-/// content.
-///
-/// The Field contains a pointer to Field::field_struct, which implements
-/// MPI communication of the Field boundaries.
-///
-/// The Field::field_struct points to a field_storage, which is defined
-/// by each backend. It implements storing and accessing the Field data,
-/// including buffers for storing haloes returned from MPI communication.
-///
-/// Memory allocation (mainly automised by hilapp):
-/// Field.allocate(): sets up memory for field content and communication.
-/// Field.free(): destroys the data.
-/// Field.is_allocated(): returns true if the Field data has been allocated
-/// Field.is_initialized() returns true if the Field has been written
-/// Field.check_alloc(): allocate if necessary
-/// Field.check_alloc() const: assert that the Field is allocated
-///
-/// MPI related (automatically done by hilapp, but may be useful in apps):
-/// Field.gather_status(): returns current gather_status_t
-/// Field.mark_changed(): make sure the Field gets communicated
-/// Field.mark_gathered(): mark the Field already gathered, no need to
-///        communicate.
-///
-/// Field.shift(): create a periodically shifted copy of the field
-///
-/// Others
-/// Field.set_boundary_condition(): set the boundary conditions in a
-///         given Direction (periodic or antiperiodic)
-/// Field.get_boundary_condition(): get the boundary condition of the Field
-/// Field.copy_boundary_condition(): copy the boundary condition to the
-///        from another Field
-/// Field.get_elements(): retrieve a list of elements to all nodes
-/// Field.get_element(): retrieve an element to all nodes
-/// Field.set_elements(): set elements in the Field
-/// Field.set_element(): set an element in the Field
-///
+/**
+ * @class Field
+ * @brief The field class implements the standard methods for accessing fields
+ *  Hilapp replaces the parity access patterns, Field[par] with a loop over
+ *  the appropriate sites.
+ *
+ * @details The Field class also contains member functions used by hilapp, as well
+ *  as members that may be useful for application developers.
+ *
+ *  The Field mainly implements the interface to the Field and not the
+ *  content.
+ *
+ *  The Field contains a pointer to Field::field_struct, which implements
+ *  MPI communication of the Field boundaries.
+ *
+ *  The Field::field_struct points to a field_storage, which is defined
+ *  by each backend. It implements storing and accessing the Field data,
+ *  including buffers for storing haloes returned from MPI communication.
+ *
+ * @tparam T
+ */
 template <typename T>
 class Field {
 
@@ -81,8 +58,12 @@ class Field {
     enum class gather_status_t : unsigned { NOT_DONE, STARTED, DONE };
 
   private:
-    /// The following struct holds the data + information about the field
-    /// TODO: field-specific boundary conditions?
+    /**
+     * @class field_struct
+     * @brief Stores Field class data and communication parameters for said data
+     *
+     * @todo field-specific boundary conditions
+     */
     class field_struct {
       public:
         field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
@@ -211,61 +192,84 @@ class Field {
 
     field_struct *RESTRICT fs;
 
-    ////////////////////////////////////////////////
-    /// Field constructors
-
+    /**
+     * @name Constructor
+     @{
+     */
+    /**
+     * @brief Default construct a new Field object. Assigns field_struct fs to nullptr
+     *
+     */
     Field() {
 
         // put here some implementation checks for field vars
 #ifdef VECTORIZED
-        static_assert(sizeof(hila::number_type<T>) == 4 || sizeof(hila::number_type<T>) == 8,
+        static_assert(sizeof(hila::scalar_type<T>) == 4 || sizeof(hila::scalar_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
 #if defined(CUDA) || defined(HIP)
-        static_assert(!std::is_same<hila::number_type<T>, long double>::value,
+        static_assert(!std::is_same<hila::scalar_type<T>, long double>::value,
                       "Type 'long double' numbers in Field<> not supported by cuda/hip");
 #endif
 
         fs = nullptr; // lazy allocation on 1st use
     }
-
-    // Straightforward copy constructor seems to be necessary
+    /**
+     * @brief Copy constructor with already initialised Field
+     *
+     * @param other
+     */
     Field(const Field &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
     }
-
-    // copy constructor - from fields which can be assigned
+    /**
+     * @brief Copy constructor form Field of type A to field of type F if the conversion is defined
+     *
+     * @tparam A
+     * @param other
+     */
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
     Field(const Field<A> &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
     }
-
-    // constructor with compatible scalar
+    /**
+     * @brief Construct a new Field object with scalar (val) of type A to a field of type F type if
+     * the conversion is defined
+     *
+     * @tparam A
+     * @param val
+     */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
     Field(const A &val) : Field() {
         (*this)[ALL] = val;
     }
-
-    // constructor from 0 - nullptr trick in use
+    /**
+     * @brief Construct a new Field object with scalar 0 with nullpointer trick
+     *
+     * @param z
+     */
     Field(const std::nullptr_t z) : Field() {
         (*this)[ALL] = 0;
     }
 
-    // move constructor - steal the content
+    /**
+     * @brief Construct a new Field object by stealing content from previous field (rhs) which will
+     * be set to null
+     *
+     * @param rhs
+     */
     Field(Field &&rhs) {
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
-
-    /////////////////////////////////////////////////
-    /// Destructor
+    /** @} */
 
     ~Field() {
         free();
@@ -278,6 +282,9 @@ class Field {
 #endif
     }
 
+    /**
+     * @brief  Sets up memory for field content and communication.
+     */
     void allocate() {
         assert(fs == nullptr);
         if (lattice.volume() == 0) {
@@ -317,6 +324,11 @@ class Field {
 #endif
     }
 
+    /**
+     * @brief Destroys field data
+     *
+     *
+     */
     void free() {
         // don't call destructors when exiting - either MPI or cuda can already
         // be off.
@@ -330,14 +342,35 @@ class Field {
         }
     }
 
+    /**
+     * @brief Returns true if the Field data has been allocated
+     *   \code{.cpp}
+     *    class Cpp {};
+     *   \endcode
+     * @return true
+     * @return false
+     */
     bool is_allocated() const {
         return (fs != nullptr);
     }
 
+    /**
+     * @brief Returns true if the Field has been written
+     *
+     * @param p Field parity
+     * @return bool
+     */
     bool is_initialized(Parity p) const {
         return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
     }
 
+    /**
+     * @brief Returns current gather_status_t
+     *
+     * @param p Field partiy
+     * @param d Direction
+     * @return gather_status_t
+     */
     gather_status_t gather_status(Parity p, int d) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
         return fs->gather_status_arr[(int)p - 1][d];
@@ -347,21 +380,31 @@ class Field {
         fs->gather_status_arr[(int)p - 1][d] = stat;
     }
 
-    /// check that Field is allocated, and if not do it (if not const)
-    /// Must be called BEFORE the var is actually used
-    /// "hilapp" will generate these calls as needed!
+    /**
+     * @brief  Allocate Field if it is not already allocated
+     * @details check that Field is allocated, and if not do it (if not const)
+     * Must be called BEFORE the var is actually used
+     * "hilapp" will generate these calls as needed!
+     *
+     */
     void check_alloc() {
         if (!is_allocated())
             allocate();
     }
 
-    /// If Field is const specified, we should not be able to write to it in the first
-    /// place
+    /**
+     * @brief If Field is const assert that the Field is allocated
+     */
     void check_alloc() const {
         assert(is_allocated());
     }
 
-    // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
+
+    /**
+     * @brief Bookkeeping for field communication
+     * @details If ALL changes, both parities invalid; if p != ALL, then p and ALL.
+     * @param p Field parity
+     */
     void mark_changed(const Parity p) const {
 
         for (Direction i = (Direction)0; i < NDIRS; ++i) {
@@ -379,21 +422,32 @@ class Field {
         fs->assigned_to |= parity_bits(p);
     }
 
-    /// Mark the field parity gathered from Direction
-    // In case p=ALL we could mark everything gathered, but we'll be conservative here
-    // and mark only this parity, because there might be other parities on the fly and
-    // corresponding waits should be done,  This should never happen in automatically
-    // generated loops. In any case start_gather, is_gathered, get_gather_parity has
-    // intelligence to figure out the right thing to do
-    //
-
+    /**
+     * @brief Mark the Field already gathered, no need to communicate
+     * @details Mark the field parity gathered from Direction
+     * In case p=ALL we could mark everything gathered, but we'll be conservative here
+     * and mark only this parity, because there might be other parities on the fly and
+     * corresponding waits should be done,  This should never happen in automatically
+     * generated loops. In any case start_gather, is_gathered, get_gather_parity has
+     * intelligence to figure out the right thing to do
+     *
+     * @param dir
+     * @param p
+     */
     void mark_gathered(int dir, const Parity p) const {
         set_gather_status(p, dir, gather_status_t::DONE);
     }
 
-    // Check if the field has been gathered since the previous communication
-    // par = ALL:   ALL or (EVEN+ODD) are OK
-    // par != ALL:  ALL or par are OK
+    /**
+     * @brief Check if the field has been gathered since the previous communication
+     * @details par = ALL:   ALL or (EVEN+ODD) are OK\n
+     *          par != ALL:  ALL or par are OK
+     * @hilapponly
+     * @param dir
+     * @param par
+     * @return true
+     * @return false
+     */
     bool is_gathered(int dir, Parity par) const {
         if (par != ALL) {
             return gather_status(par, dir) == gather_status_t::DONE ||
@@ -405,13 +459,23 @@ class Field {
         }
     }
 
-    // Mark communication started -- this must be just the one
-    // going on with MPI
+    /**
+     * @brief Mark communication has started
+     * @hilapponly
+     * @param dir
+     * @param p
+     */
     void mark_gather_started(int dir, Parity p) const {
         set_gather_status(p, dir, gather_status_t::STARTED);
     }
 
-    /// Check if communication has started.  This is strict, checks exactly this parity
+    /**
+     * @brief Check if communication has started
+     * @hilapponly
+     * @param dir
+     * @param par
+     * @return bool
+     */
     bool is_gather_started(int dir, Parity par) const {
         return gather_status(par, dir) == gather_status_t::STARTED;
     }
@@ -434,11 +498,12 @@ class Field {
     }
 
 
-    ///////////////////////////////////////////////////////////////////////
-    /// Boundary condition methods
-
-    /// Set boundary condition for field
-
+    /**
+     * @brief Set the boundary condition in a given Direction (periodic or antiperiodic)
+     *
+     * @param dir Direction of boundary condition
+     * @param bc Field boundary condition
+     */
     void set_boundary_condition(Direction dir, hila::bc bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -479,8 +544,12 @@ class Field {
 #endif
     }
 
-    ///////////////////////////////////////////////////////////////////////
-
+    /**
+     * @brief Get the boundary condition of the Field
+     *
+     * @param dir Boundary condition in certain direction
+     * @return hila::bc The boundary condition of the Field
+     */
     hila::bc get_boundary_condition(Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         return fs->boundary_condition[dir];
@@ -498,6 +567,12 @@ class Field {
         hila::out0 << ")\n";
     }
 
+    /**
+     * @brief Copy the boundary condition from another field
+     *
+     * @tparam A the type of the field which we are copying from
+     * @param rhs the ohter Field
+     */
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
         foralldir(dir) {
@@ -563,19 +638,31 @@ class Field {
     }
 #endif
 
-    /////////////////////////////////////////////////////////////////
-    /// Standard arithmetic ops which fields should implement
-    /// Not all are always callable, e.g. division may not be
-    /// implemented by all field types
-    /////////////////////////////////////////////////////////////////
-
-    // Basic assignment operator
+    /**
+     * @name Standard arithmetic operations
+     * @brief Standard arithmetic operations which fields should implement
+     *        Not all are always callable, e.g. division may not be
+     *        implemented by all field types
+     *  @{
+     */
+    /**
+     * @brief Basic assignment operator
+     *
+     * @param rhs
+     * @return Field<T>& Assigned field
+     */
     Field<T> &operator=(const Field<T> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
     }
 
-    // More general = - possible only if T = A is OK
+    /**
+     * @brief More general assignment operation if A can be casted into T
+     *
+     * @tparam A Type of element to be assigned
+     * @param rhs Field to assign from
+     * @return Field<T>& Assigned field
+     */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
@@ -584,7 +671,13 @@ class Field {
         return *this;
     }
 
-    // Assign from element
+    /**
+     * @brief Assginment from element
+     *
+     * @tparam A Type of element to be assigned
+     * @param d element to assign to Field
+     * @return Field<T>& Assigned Field
+     */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
@@ -593,13 +686,23 @@ class Field {
         return *this;
     }
 
-    // assignment of 0 - nullptr, zeroes field
+    /**
+     * @brief assignment of 0 - nullptr, zero field
+     *
+     * @param z nullptr
+     * @return Field<T>& Zero Field
+     */
     Field<T> &operator=(const std::nullptr_t &z) {
         (*this)[ALL] = 0;
         return *this;
     }
 
-    // Do also move assignment
+    /**
+     * @brief Move Assignment
+     *
+     * @param rhs
+     * @return Field<T>&
+     */
     Field<T> &operator=(Field<T> &&rhs) {
         if (this != &rhs) {
             free();
@@ -609,7 +712,18 @@ class Field {
         return *this;
     }
 
-    // +=, -=  etc operators from compatible types
+    /**
+     * @brief += Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to sum
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f += g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const Field<A> &rhs) {
@@ -617,6 +731,18 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief -= Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to subtract
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f -= g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const Field<A> &rhs) {
@@ -624,6 +750,18 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief *= Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to compute product with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f *= g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const Field<A> &rhs) {
@@ -631,6 +769,18 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief /= Operator between two fields if A and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to divide with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f /= g;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const Field<A> &rhs) {
@@ -638,6 +788,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief += Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to sum
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f += a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const A &rhs) {
@@ -645,6 +808,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief -= Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to subtract
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f -= a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const A &rhs) {
@@ -652,6 +828,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief *= Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to multiply with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f *= a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const A &rhs) {
@@ -659,6 +848,19 @@ class Field {
         return *this;
     }
 
+    /**
+     * @brief /= Operator between element and field if type of rhs and Field type T are compatible
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Element to divide with
+     * @return Field<T>&
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a
+     * . . .
+     * f /= a;
+     * \endcode
+     */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const A &rhs) {
@@ -667,21 +869,46 @@ class Field {
     }
 
     // Unary + and -
+
+    /**
+     * @brief Unary + operator, acts as Identity
+     *
+     * @return Field<T> Returns itself
+     */
     Field<T> operator+() const {
         return *this;
     }
 
+    /**
+     * @brief Unary - operator, acts as negation to all field elements
+     *
+     * @return Field<T>
+     */
     Field<T> operator-() const {
         Field<T> f;
         f[ALL] = -(*this)[X];
         return f;
     }
 
+    /**
+     * @brief Field comparison operator.
+     * @details Computes squarenorm of difference of two fields and checks if squarenorm is less
+     * than tolerance epsilon=0.
+     *
+     * @param rhs Field to compare Field with
+     * @return true
+     * @return false
+     */
     bool operator==(const Field<T> &rhs) const {
-        hila::number_type<T> epsilon = 0;
+        hila::scalar_type<T> epsilon = 0;
         return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
+    /**
+     * @brief Computes squarenorm of Field depending on how it is defined for Field type T
+     *
+     * @return double
+     */
     double squarenorm() const {
         double n = 0;
         onsites(ALL) {
@@ -690,26 +917,94 @@ class Field {
         return n;
     }
 
+    /**
+     * @brief Computes norm of Field depending on how it is defined for Field type T
+     *
+     * @return double
+     */
     double norm() {
         return sqrt(squarenorm());
     }
 
+    /**
+     * @brief Computes conjugate of Field depending on how it is defined for Field type T
+     *
+     * @return Field<T>
+     */
+    Field<T> conj() const {
+        Field<T> f;
+        f[ALL] = ::conj((*this)[X]);
+        return f;
+    }
 
-    ///////////////////////////////////////////////////////////////////////
+    /**
+     * @brief Computes dagger or Hermitian conjugate of Field depending on how it is
+     * defined for Field type T
+     *
+     * @return Field<T>
+     */
+    template <typename R = T, typename A = decltype(::dagger(std::declval<R>()))>
+    Field<A> dagger() const {
+        Field<A> f;
+        f[ALL] = ::dagger((*this)[X]);
+        return f;
+    }
 
-    // Communication routines
+    /**
+     * @brief Returns real part of Field
+     *
+     * @tparam R Field current type
+     * @tparam A Field real part type
+     * @return Field<A>
+     */
+    template <typename R = T, typename A = decltype(::real(std::declval<R>()))>
+    Field<A> real() const {
+        Field<A> f;
+        f[ALL] = ::real((*this)[X]);
+        return f;
+    }
+
+    /**
+     * @brief Returns imaginary part of Field
+     *
+     * @tparam R Field current type
+     * @tparam A Field imaginary part type
+     * @return Field<A>
+     */
+    template <typename R = T, typename A = decltype(::imag(std::declval<R>()))>
+    Field<A> imag() const {
+        Field<A> f;
+        f[ALL] = ::imag((*this)[X]);
+        return f;
+    }
+    /** @} */
+
+    /// Communication routines
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
     void wait_gather(Direction d, Parity p) const;
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
     void cancel_comm(Direction d, Parity p) const;
 
-    // Declaration of shift methods
+    /**
+     * @brief Create a periodically shifted copy of the field
+     * @details  this is currently OK only for short moves, very inefficient for longer moves
+     * Example:
+     * @code{.cpp}
+     *   
+     * @endcode
+     * @param v
+     * @param par
+     * @param r
+     * @return Field<T>& returns a reference to res
+     */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
+
     Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
         return shift(v, r, ALL);
     }
-    Field<T> shift(const CoordinateVector &v, Parity par) const;
+
+    Field<T> shift(const CoordinateVector &v) const;
 
     // General getters and setters
 
@@ -726,11 +1021,12 @@ class Field {
         mark_changed(coord.parity());
     }
 
-
-    /// Get an element and return it on all nodes
-    /// This is not local, the element needs to be communicated to all nodes
-    /// return const to prevent incorrect modifications
-
+    /**
+     * @brief Get singular element which will be broadcast to all nodes
+     *
+     * @param coord coordinate of which the element is fetched with
+     * @return const T
+     */
     const T get_element(const CoordinateVector &coord) const {
         T element;
 
@@ -746,9 +1042,22 @@ class Field {
         return element;
     }
 
-
+    /**
+     * @brief Set an array of elements in the field
+     * @remark Assuming that each node calls this with the same value,
+     * it is sufficient to set the elements locally
+     *
+     * @param elements @typedef vector<T> of elements to set
+     * @param coord_list @typedef vector<CoordinateVector> of coordinates to set
+     */
     void set_elements(const std::vector<T> &elements,
                       const std::vector<CoordinateVector> &coord_list);
+    /**
+     * @brief Retrieves list of elements to all nodes.
+     * @param coord_list vector of coordinates which will be fetched
+     * @param broadcast if true then elements retrieved to root node will be broadcast to all nodes
+     * @return std::vector<T> list of all elements
+     */
     std::vector<T> get_elements(const std::vector<CoordinateVector> &coord_list,
                                 bool broadcast = false) const;
 
@@ -828,9 +1137,9 @@ class Field {
     Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
     Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
 
-    Field<Complex<hila::number_type<T>>>
+    Field<Complex<hila::scalar_type<T>>>
     FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
-    Field<hila::number_type<T>>
+    Field<hila::scalar_type<T>>
     FFT_complex_to_real(fft_direction fdir = fft_direction::forward) const;
 
 
@@ -854,27 +1163,73 @@ class Field {
     template <typename Out>
     void write_slice(Out &outputfile, const CoordinateVector &slice, int precision = 6) const;
 
-    // and sum reduction
+    /**
+     * @brief Sum reduction of Field
+     * @details The sum in the reduction is defined by the Field type T
+     * @param par Parity
+     * @param allreduce Switch to turn on or off MPI allreduce
+     * @return T Field element type reduced to one element
+     */
     T sum(Parity par = Parity::all, bool allreduce = true) const;
 
+    /**
+     * @brief Product reduction of Field
+     * @details The product in the reduction is defined by the Field type T.
+     * @param par Parity
+     * @param allreduce Switch to turn on or off MPI allreduce
+     * @return T Field element type reduced to one element
+     */
     T product(Parity par = Parity::all, bool allreduce = true) const;
 
-    // Declare gpu_reduce here, defined only for GPU targets
-    // For internal use only, preferably
-    // T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
-    //              bool do_mpi = true) const;
-    /// Declare gpu_reduce here, defined only for GPU targets
-    /// For internal use only, preferably
-
+    /**
+     * @brief Declare gpu_reduce here, defined only for GPU targets
+     * @internal
+     * @param min_or_max
+     * @param par
+     * @param loc
+     * @return T
+     */
     T gpu_minmax(bool min_or_max, Parity par, CoordinateVector &loc) const;
 
+    /**
+     * @brief Minimum value of Field. If CoordinateVector is passed to function
+     * then location of minimum value will be stored in said CoordinateVector
+     * @name Min functions
+     * @param par ::Parity
+     * @return T Minimum value of Field
+     */
+    /** @{ */
     T min(Parity par = ALL) const;
     T min(CoordinateVector &loc) const;
     T min(Parity par, CoordinateVector &loc) const;
+    /** @} */
+
+    /**
+     * @brief Maximum value of Field. If CoordinateVector is passed to function
+     * then location of maximum value will be stored in said CoordinateVector
+     * @name Max functions
+     * @param par ::Parity
+     * @return T Minimum value of Field
+     */
+    /** @{ */
     T max(Parity par = ALL) const;
     T max(CoordinateVector &loc) const;
     T max(Parity par, CoordinateVector &loc) const;
+    /** @} */
+
+    /**
+     * @brief Function to perform min or max operations
+     * @internal
+     *
+     * @param is_min if true we compute min
+     * @param par Parity
+     * @param loc Location of min or max
+     * @return T
+     */
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
+
+    void random();
+    void gaussian_random(double width = 1.0);
 
 
 }; // End of class Field<>
@@ -1150,8 +1505,10 @@ auto operator/(Field<A> lhs, const B &rhs) {
     return lhs;
 }
 
-///////////////////////////////////////////////////////////////////////
-/// Implement std::swap() for fields
+/**
+ * @brief std:swap() for Fields
+ *
+ */
 namespace std {
 template <typename T>
 void swap(Field<T> &A, Field<T> &B) {
@@ -1266,6 +1623,26 @@ double norm(const Field<T> &arg) {
     return sqrt(squarenorm(arg));
 }
 
+template <typename T>
+Field<T> conj(const Field<T> &arg) {
+    return arg.conj();
+}
+
+template <typename T, typename A = decltype(::dagger(std::declval<T>()))>
+Field<A> dagger(const Field<T> &arg) {
+    return arg.dagger();
+}
+
+template <typename T, typename A = decltype(::real(std::declval<T>()))>
+Field<A> real(const Field<T> &arg) {
+    return arg.real();
+}
+
+template <typename T, typename A = decltype(::imag(std::declval<T>()))>
+Field<A> imag(const Field<T> &arg) {
+    return arg.imag();
+}
+
 
 template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
 double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
@@ -1277,13 +1654,10 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
 }
 
 
-/////////////////////////////////////////////////////////////////
-
-
 template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v) const {
     Field<T> res;
-    shift(v, res, par);
+    shift(v, res, ALL);
     return res;
 }
 
@@ -1339,6 +1713,33 @@ void Field<T>::gather(Direction d, Parity p) const {
 #include "field_comm.h"
 
 
+template <typename T>
+void Field<T>::random() {
+
+#if defined(CUDA) || defined(HIP)
+
+    if (!hila::is_device_rng_on()) {
+
+        std::vector<T> rng_buffer(lattice.mynode.volume());
+        for (auto &element : rng_buffer)
+            hila::random(element);
+        (*this).set_local_data(rng_buffer);
+
+    } else {
+        onsites(ALL) {
+            hila::random((*this)[X]);
+        }
+    }
+#else
+
+    onsites(ALL) {
+        hila::random((*this)[X]);
+    }
+
+#endif
+}
+
+
 #ifdef HILAPP
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1378,10 +1779,12 @@ inline void dummy_X_f() {
     }
 }
 
-/// Dummy function including Field<T> functions and methods which
-/// need to be explicitly seen by hilapp during 1st pass in order to
-/// generater necessary functions.  Add here ops as needed
-
+/**
+ * @internal
+ * @brief  Dummy function including Field<T> functions and methods which
+ * need to be explicitly seen by hilapp during 1st pass in order to
+ * generater necessary functions.  Add here ops as needed
+ */
 template <typename T>
 inline void ensure_field_operators_exist() {
 
@@ -1391,7 +1794,7 @@ inline void ensure_field_operators_exist() {
     // make shift also explicit
     CoordinateVector v = 0;
     Field<T> f;
-    f = f.shift(v, ALL);
+    f = f.shift(v);
 }
 
 #endif

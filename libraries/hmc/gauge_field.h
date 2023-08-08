@@ -11,7 +11,7 @@
 template <typename sun> class gauge_field_base {
   public:
     /// The base type of the matrix (double, int,...)
-    using basetype = hila::number_type<sun>;
+    using basetype = hila::scalar_type<sun>;
     /// The matrix type
     using gauge_type = sun;
     /// The size of the matrix
@@ -198,7 +198,7 @@ template <typename matrix> class gauge_field : public gauge_field_base<matrix> {
     /// it is the same as the matrix type
     using fund_type = matrix;
     /// The base type (double, float, int...)
-    using basetype = hila::number_type<matrix>;
+    using basetype = hila::scalar_type<matrix>;
     /// The size of the matrix
     static constexpr int N = matrix::size;
     /// Storage for a backup of the gauge field
@@ -301,7 +301,7 @@ template <class repr> class represented_gauge_field : public gauge_field_base<re
     /// The type of a fundamental representation matrix
     using fund_type = typename repr::sun;
     /// The base type (double, float, int...)
-    using basetype = hila::number_type<repr>;
+    using basetype = hila::scalar_type<repr>;
     /// The size of the matrix
     static constexpr int Nf = fund_type::size;
     /// The size of the representation
@@ -403,7 +403,7 @@ class gauge_momentum_action : public action_base, public integrator_base {
     /// The size of the gauge matrix
     static constexpr int N = gauge_mat::size;
     /// The type of the momentum field
-    using momtype = SquareMatrix<N, Complex<hila::number_type<gauge_mat>>>;
+    using momtype = SquareMatrix<N, Complex<hila::scalar_type<gauge_mat>>>;
 
     /// A reference to the gauge field
     gauge_field &gauge;
@@ -454,7 +454,7 @@ template <typename gauge_field> class gauge_action : public action_base {
     /// The size of the gauge matrix
     static constexpr int N = gauge_mat::size;
     /// The type of the momentum field
-    using momtype = SquareMatrix<N, Complex<hila::number_type<gauge_mat>>>;
+    using momtype = SquareMatrix<N, Complex<hila::scalar_type<gauge_mat>>>;
 
     /// A reference to the gauge field
     gauge_field &gauge;

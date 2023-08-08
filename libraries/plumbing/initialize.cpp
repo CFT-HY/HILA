@@ -138,6 +138,7 @@ class cmdlineargs {
                 << "  -o <name>       : output filename (default: stdout)\n"
                 << "  -i <name>       : input filename (overrides the 1st hila::input() name)\n"
                 << "                    use '-i -' for standard input\n"
+                << "  -device <number>: in GPU runs using only 1 GPU, choose this GPU number (default 0)\n"
                 << "  -check          : check input & layout with <nodes>-nodes & exit\n"
                 << "                    only with 1 real MPI node (without mpirun)\n"
                 << "  -n nodes        : number of nodes used in layout check, only relevant with -check\n"
@@ -157,8 +158,20 @@ class cmdlineargs {
 #include <malloc.h>
 #endif
 
+// #define DEBUG_NAN
+
+#ifdef DEBUG_NAN
+#include <fenv.h>
+#endif
+
 void setup_partitions(cmdlineargs &cl);
 
+/**
+ * @brief Read in command line arguments. Initialise default stream and MPI communication
+ *
+ * @param argc Number of command line arguments
+ * @param argv List of command line arguments
+ */
 void hila::initialize(int argc, char **argv) {
 
 #if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_)) // || defined(__bg__)
@@ -170,7 +183,14 @@ void hila::initialize(int argc, char **argv) {
     // mallopt( M_MMAP_MAX, 0 );  /* don't use mmap */
     /* HACK: don't release memory by calling sbrk */
     mallopt(M_TRIM_THRESHOLD, -1);
+
+#ifdef DEBUG_NAN
+    feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
 #endif
+#endif
+
+    // initialize MPI so that hila::myrank() etc. works
+    initialize_communications(argc, &argv);
 
     // Default output file - we're happy with this unless partitions
     // or otherwise indicated
@@ -180,8 +200,6 @@ void hila::initialize(int argc, char **argv) {
     // set the timing so that gettime() returns time from this point
     hila::inittime();
 
-    // initialize MPI so that hila::myrank() etc. works
-    initialize_communications(argc, &argv);
 
     // open hila::out0 only for node 0
     if (hila::myrank() == 0)
@@ -215,7 +233,11 @@ void hila::initialize(int argc, char **argv) {
 
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input) {
-        initialize_gpu(lattice.mynode.rank);
+        long device = commandline.get_int("-device");
+        if (device == LONG_MAX)
+            device = 0;
+
+        initialize_gpu(lattice.mynode.rank, device);
     }
 #endif
 
@@ -252,30 +274,30 @@ void hila::initialize(int argc, char **argv) {
     }
 
     if (hila::myrank() == 0) {
-        print_dashed_line("HILA ⩩ lattice framework");
-        hila::out << "Running program " << argv[0] << "\n";
-        hila::out << "with command line arguments '";
+        print_dashed_line(u8"HILA ⩩ lattice framework");
+        hila::out0 << "Running program " << argv[0] << "\n";
+        hila::out0 << "with command line arguments '";
         for (int i = 1; i < argc; i++)
-            hila::out << argv[i] << ' ';
-        hila::out << "'\n";
-        hila::out << "Code version: ";
+            hila::out0 << argv[i] << ' ';
+        hila::out0 << "'\n";
+        hila::out0 << "Code version: ";
 #if defined(GIT_SHA_VALUE)
 #define xstr(s) makestr(s)
 #define makestr(s) #s
-        hila::out << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
+        hila::out0 << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
 #else
-        hila::out << "no git information available\n";
+        hila::out0 << "no git information available\n";
 #endif
-        hila::out << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
+        hila::out0 << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
 
-        hila::out << "with options:";
-#ifdef EVEN_SITES_FIRST
-        hila::out << " EVEN_SITES_FIRST";
+        hila::out0 << "with options: EVEN_SITES_FIRST";
+#ifndef EVEN_SITES_FIRST
+        hila::out0 << "=0";
 #endif
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        hila::out << " SPECIAL_BOUNDARY_CONDITIONS";
+        hila::out0 << " SPECIAL_BOUNDARY_CONDITIONS";
 #endif
-        hila::out << '\n';
+        hila::out0 << '\n';
 
         hila::timestamp("Starting");
     }
@@ -308,11 +330,21 @@ void hila::initialize(int argc, char **argv) {
 
 
 #if defined(CUDA) || defined(HIP)
+    hila::out0 << "Using thread blocks of size " << N_threads << " threads\n";
+
 #if defined(GPU_AWARE_MPI)
     hila::out0 << "Using GPU_AWARE_MPI\n";
 #else
     hila::out0 << "Not using GPU_AWARE_MPI\n";
 #endif
+
+#if !defined(GPU_VECTOR_REDUCTION_THREAD_BLOCKS) || GPU_VECTOR_REDUCTION_THREAD_BLOCKS <= 0
+    hila::out0 << "ReductionVector with atomic operations (GPU_VECTOR_REDUCTION_THREAD_BLOCKS=0)\n";
+#else
+    hila::out0 << "ReductionVector with " << GPU_VECTOR_REDUCTION_THREAD_BLOCKS
+               << " thread blocks\n";
+#endif
+
     if (!hila::check_input)
         gpu_device_info();
 #endif
@@ -360,12 +392,10 @@ void hila::error(const std::string &msg) {
     hila::error(msg.c_str());
 }
 
-////////////////////////////////////////////////////////////////
-/// Normal, controlled exit - all nodes must call this.
-/// Prints timing information and information about
-/// communications
-////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Normal, controlled exit - all nodes must call this.
+ * Prints timing information and information about communications
+ */
 void hila::finishrun() {
     report_timers();
 
@@ -381,7 +411,6 @@ void hila::finishrun() {
         } else {
             hila::out0 << " No communications done from node 0\n";
         }
-
     }
 
 

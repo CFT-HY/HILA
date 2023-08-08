@@ -9,28 +9,24 @@ From: ubuntu:22.04
     apt-get -y install git make libfftw3-dev
 
     #installing clang devel tools
-    export LLVM_VERSION=14
+    export LLVM_VERSION=15
     apt-get -y install clang-$LLVM_VERSION \
-                       llvm-$LLVM_VERSION \
-                       clang-tools-$LLVM_VERSION \
-                       libclang-common-$LLVM_VERSION-dev \
-                       libclang-cpp$LLVM_VERSION-dev \
-                       libclang-$LLVM_VERSION-dev \
-                       clang-format-$LLVM_VERSION
+                       libclang-$LLVM_VERSION-dev
 
     #Cloning hila and building 
     
     cd /hilapp_src
-    rm build/*
+    rm -rf build/*
     make -j4
     mv build/hilapp /
     cd /
     rm -rf /hilapp_src
     apt-get -y remove make git
     apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev libclang1-$LLVM_VERSION libclang-cpp$LLVM_VERSION
+    apt-get -y remove perl perl-modules-5.34 python3 python3-minimal python3-pkg-resources python3-pygments python3-yaml python3.10 python3.10-minimal
 
 %environment
-    export LLVM_VERSION=14
+    export LLVM_VERSION=15
 
 %runscript
     /hilapp $@

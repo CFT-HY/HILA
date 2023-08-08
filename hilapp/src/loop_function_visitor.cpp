@@ -64,8 +64,7 @@ void check_site_dependence(call_info_struct &ci) {
 /// Check also if they can be vectorized
 //////////////////////////////////////////////////////////////////////////////
 
-class loopFunctionVisitor : public GeneralVisitor,
-                            public RecursiveASTVisitor<loopFunctionVisitor> {
+class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<loopFunctionVisitor> {
 
   public:
     using GeneralVisitor::GeneralVisitor;
@@ -92,8 +91,7 @@ class loopFunctionVisitor : public GeneralVisitor,
         special_call_list = {};
         loop_function_calls = {};
         conditional_vars = {};
-        got_lattice =
-            false; // if function "lattice.size()" etc. do not trap on "lattice"
+        got_lattice = false; // if function "lattice.size()" etc. do not trap on "lattice"
     }
 
     bool VisitStmt(Stmt *s) {
@@ -197,29 +195,25 @@ class loopFunctionVisitor : public GeneralVisitor,
 
                     if (!cmdline::allow_func_globals) {
                         // llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
-                        reportDiag(
-                            DiagnosticsEngine::Level::Error,
-                            e->getSourceRange().getBegin(),
-                            "global or extern variable references in functions called "
-                            "from site loops are not allowed."
-                            "\nThis can be enabled in non-kernelized code with option "
-                            "'-allow-func-globals'");
+                        reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
+                                   "global or extern variable references in functions called "
+                                   "from site loops are not allowed."
+                                   "\nThis can be enabled in non-kernelized code with option "
+                                   "'-allow-func-globals'");
                         return false;
                     } else {
                         if (e->isLValue()) {
-                            reportDiag(
-                                DiagnosticsEngine::Level::Error,
-                                e->getSourceRange().getBegin(),
-                                "modification of global or extern variables in "
-                                "functions called from site loops is not allowed.");
+                            reportDiag(DiagnosticsEngine::Level::Error,
+                                       e->getSourceRange().getBegin(),
+                                       "modification of global or extern variables in "
+                                       "functions called from site loops is not allowed.");
                             return false;
                         }
-                        reportDiag(
-                            DiagnosticsEngine::Level::Warning,
-                            e->getSourceRange().getBegin(),
-                            "global or extern variable references in site loop "
-                            "functions make "
-                            "code non-portable to kernelized code (e.g. GPU code).");
+                        reportDiag(DiagnosticsEngine::Level::Warning,
+                                   e->getSourceRange().getBegin(),
+                                   "global or extern variable references in site loop "
+                                   "functions make "
+                                   "code non-portable to kernelized code (e.g. GPU code).");
                         // just continue after this warning
                     }
                 }
@@ -299,7 +293,8 @@ class loopFunctionVisitor : public GeneralVisitor,
         ci.call = Call;
         ci.funcdecl = D;
         ci.contains_random = contains_rng;
-        if (contains_rng) loop_info.contains_random = true;
+        if (contains_rng)
+            loop_info.contains_random = true;
 
         /// add to function calls to be checked ...
         loop_function_calls.push_back(ci);
@@ -332,16 +327,13 @@ class loopFunctionVisitor : public GeneralVisitor,
 
                 SourceLocation sl = findChar(Call->getSourceRange().getBegin(), '(');
                 if (sl.isInvalid()) {
-                    reportDiag(DiagnosticsEngine::Level::Fatal,
-                               Call->getSourceRange().getBegin(),
-                               "Open parens '(' not found, internal error");
+                    reportDiag(DiagnosticsEngine::Level::Fatal, Call->getSourceRange().getBegin(),
+                               "open parens '(' not found, internal error");
                     exit(1);
                 }
-                sfc.replace_range =
-                    SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
+                sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
 
-                bool replace_this =
-                    true; // for non-cuda code replace only cases which are needed
+                bool replace_this = true; // for non-cuda code replace only cases which are needed
                 if (name == "size") {
                     sfc.replace_expression = "loop_lattice_size(";
                     sfc.add_loop_var = false;
@@ -351,10 +343,8 @@ class loopFunctionVisitor : public GeneralVisitor,
                     sfc.add_loop_var = false;
                     replace_this = target.kernelize;
                 } else {
-                    reportDiag(DiagnosticsEngine::Level::Error,
-                               Call->getSourceRange().getBegin(),
-                               "Method 'lattice.%0()' not allowed inside site loops",
-                               name.c_str());
+                    reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
+                               "method 'lattice.%0()' not allowed inside site loops", name.c_str());
                 }
 
                 if (replace_this) {
@@ -381,7 +371,8 @@ class loopFunctionVisitor : public GeneralVisitor,
             }
 
         } else {
-            if (Call->getDirectCallee()->getQualifiedNameAsString() == "hila::random") {
+            if (Call->getDirectCallee()->getQualifiedNameAsString() == "hila::random" &&
+                Call->getNumArgs() == 0) {
                 // no need to do anything (yet)
 
                 // special_function_call sfc;
@@ -429,8 +420,7 @@ class loopFunctionVisitor : public GeneralVisitor,
 
         if (target.vectorize) {
             for (var_info &vi : var_info_list) {
-                vi.vecinfo.is_vectorizable =
-                    is_vectorizable_type(vi.decl->getType(), vi.vecinfo);
+                vi.vecinfo.is_vectorizable = is_vectorizable_type(vi.decl->getType(), vi.vecinfo);
             }
         }
     }
@@ -506,8 +496,7 @@ class loopFunctionVisitor : public GeneralVisitor,
 
         // push the param vars to var list
         for (auto &arg : ci.arguments) {
-            var_info *vi =
-                add_var_to_decl_list(arg.PV, 0); // no need to worry about scope levels
+            var_info *vi = add_var_to_decl_list(arg.PV, 0); // no need to worry about scope levels
             vi->is_site_dependent = arg.is_site_dependent;
         }
 
@@ -527,8 +516,7 @@ class loopFunctionVisitor : public GeneralVisitor,
             }
 
             llvm::errs() << ")\nDefined in line "
-                         << srcMgr.getSpellingLineNumber(ci.funcdecl->getBeginLoc())
-                         << " in file "
+                         << srcMgr.getSpellingLineNumber(ci.funcdecl->getBeginLoc()) << " in file "
                          << srcMgr.getFilename(ci.funcdecl->getBeginLoc()) << '\n';
 
         } else if (ci.ctordecl) {
@@ -539,8 +527,7 @@ class loopFunctionVisitor : public GeneralVisitor,
                 llvm::errs() << p->getType().getAsString() << ',';
             }
             llvm::errs() << ")\nDefined in line "
-                         << srcMgr.getSpellingLineNumber(ci.ctordecl->getBeginLoc())
-                         << " in file "
+                         << srcMgr.getSpellingLineNumber(ci.ctordecl->getBeginLoc()) << " in file "
                          << srcMgr.getFilename(ci.ctordecl->getBeginLoc()) << '\n';
         }
 
@@ -567,19 +554,17 @@ class loopFunctionVisitor : public GeneralVisitor,
         /// post-process vectorization info
         /// TODO: Disable function vectorizability analysis for now!
         /// this prevents vectorization almost everywhere (site_dependent -> not vectorizable)
-        /// Do more detailed analysis!!! 
+        /// Do more detailed analysis!!!
         if (0 && target.vectorize) {
             ci.is_vectorizable = !ci.contains_random;
             if (ci.is_vectorizable) {
                 for (auto &func : loop_function_calls) {
-                    ci.is_vectorizable &=
-                        (func.is_vectorizable || !func.is_site_dependent);
+                    ci.is_vectorizable &= (func.is_vectorizable || !func.is_site_dependent);
                 }
             }
             if (ci.is_vectorizable) {
                 for (auto &vi : var_info_list) {
-                    ci.is_vectorizable &=
-                        (vi.vecinfo.is_vectorizable || !vi.is_site_dependent);
+                    ci.is_vectorizable &= (vi.vecinfo.is_vectorizable || !vi.is_site_dependent);
                 }
             }
         }
@@ -655,9 +640,16 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
                 ci.funcdecl->getSourceRange().getBegin() ==
                     loop_functions[i]->getSourceRange().getBegin() ||
                 (ci.funcdecl->getInnerLocStart().isValid() &&
-                 ci.funcdecl->getInnerLocStart() ==
-                     loop_functions[i]->getInnerLocStart()))
+                 ci.funcdecl->getInnerLocStart() == loop_functions[i]->getInnerLocStart())) {
                 handle_decl = false;
+
+                // auto fd = ci.funcdecl;
+                // llvm::errs() << "OLD LOOP FUNCTION " << fd->getNameAsString() << " parameters: ";
+                // for (int i = 0; i < fd->getNumParams(); i++)
+                //     llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString() << ' ';
+
+                // llvm::errs() << '\n';
+            }
         }
         if (handle_decl) {
 
@@ -665,6 +657,7 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
 
             // auto fd = ci.funcdecl;
             // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString()
+            //              << " is method: " << ci.is_method
             //              << " parameters: ";
             // for (int i = 0; i < fd->getNumParams(); i++)
             //     llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString()

@@ -5,24 +5,12 @@
 // Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
 //
-// Kari Rummukainen
-// Jarno Rantaharju
-//
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <iostream>
 #include <string>
 // #include <filesystem>  <- this should be used for pathname resolution, but llvm-9
 // does not properly handle
-
-#include "clang/AST/AST.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/ASTConsumers.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/Rewrite/Core/Rewriter.h"
 
 #include "hilapp.h"
 #include "optionsparser.h"
@@ -31,6 +19,7 @@
 #include "specialization_db.h"
 
 // definitions for global variables
+// lots of global state, which we do not bother passing around in arguments
 ClassTemplateDecl *field_decl = nullptr;
 const std::string field_storage_type = "field_storage<";
 const std::string field_type = "Field<";
@@ -40,6 +29,7 @@ std::list<array_ref> array_ref_list = {};
 std::list<loop_const_expr_ref> loop_const_expr_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::list<selection_info> selection_info_list = {};
+std::vector<reduction_expr> reduction_list = {};
 
 bool state::compile_errors_occurred = false;
 
@@ -51,15 +41,13 @@ llvm::cl::OptionCategory HilappCategory(program_name);
 llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
                                       llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<std::string>
-    cmdline::dummy_def("D", llvm::cl::value_desc("macro[=value]"),
-                       llvm::cl::desc("Define name/macro for preprocessor"),
-                       llvm::cl::cat(HilappCategory));
+llvm::cl::opt<std::string> cmdline::dummy_def("D", llvm::cl::value_desc("macro[=value]"),
+                                              llvm::cl::desc("Define name/macro for preprocessor"),
+                                              llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<std::string>
-    cmdline::dummy_incl("I", llvm::cl::value_desc("directory"),
-                        llvm::cl::desc("Directory for include file search"),
-                        llvm::cl::cat(HilappCategory));
+llvm::cl::opt<std::string> cmdline::dummy_incl("I", llvm::cl::value_desc("directory"),
+                                               llvm::cl::desc("Directory for include file search"),
+                                               llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::function_spec_no_inline(
     "function-spec-no-inline",
@@ -73,22 +61,19 @@ llvm::cl::opt<bool> cmdline::method_spec_no_inline(
 
 llvm::cl::opt<bool> cmdline::allow_func_globals(
     "allow-func-globals",
-    llvm::cl::desc(
-        "Allow using global or extern variables in functions called from site loops."
-        "\nThis will not work in kernelized code (for example GPUs)"),
+    llvm::cl::desc("Allow using global or extern variables in functions called from site loops."
+                   "\nThis will not work in kernelized code (for example GPUs)"),
     llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool>
-    cmdline::funcinfo("ident-functions",
-                      llvm::cl::desc("Comment function call types in output"),
-                      llvm::cl::cat(HilappCategory));
+llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
+                                      llvm::cl::desc("Comment function call types in output"),
+                                      llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool>
-    cmdline::no_output("no-output", llvm::cl::desc("No output file, for syntax check"),
-                       llvm::cl::cat(HilappCategory));
+llvm::cl::opt<bool> cmdline::no_output("no-output",
+                                       llvm::cl::desc("No output file, for syntax check"),
+                                       llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
-                                         llvm::cl::desc("Same as no-output"),
+llvm::cl::opt<bool> cmdline::syntax_only("syntax-only", llvm::cl::desc("Same as no-output"),
                                          llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<std::string> cmdline::output_filename(
@@ -101,24 +86,20 @@ llvm::cl::opt<std::string> cmdline::output_filename(
 //                     llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::no_interleaved_comm(
-    "no-interleave",
-    llvm::cl::desc("Do not interleave communications with computation"),
+    "no-interleave", llvm::cl::desc("Do not interleave communications with computation"),
     llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::check_initialization(
     "check-init",
-    llvm::cl::desc(
-        "Insert checks that Field variables are appropriately initialized before use"),
+    llvm::cl::desc("Insert checks that Field variables are appropriately initialized before use"),
     llvm::cl::cat(HilappCategory));
 
 // List of targets that can be specified in command line arguments
 
-llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
-                                     llvm::cl::desc("Generate loops in place"),
+llvm::cl::opt<bool> cmdline::vanilla("target:vanilla", llvm::cl::desc("Generate loops in place"),
                                      llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
-                                  llvm::cl::desc("Generate CUDA kernels"),
+llvm::cl::opt<bool> cmdline::CUDA("target:CUDA", llvm::cl::desc("Generate CUDA kernels"),
                                   llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::HIP("target:HIP", llvm::cl::desc("Generate HIP kernels"),
@@ -128,8 +109,7 @@ llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
                                     llvm::cl::desc("Generate AVX512 vectorized loops"),
                                     llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::AVX("target:AVX",
-                                 llvm::cl::desc("Generate AVX vectorized loops"),
+llvm::cl::opt<bool> cmdline::AVX("target:AVX", llvm::cl::desc("Generate AVX vectorized loops"),
                                  llvm::cl::cat(HilappCategory));
 
 // llvm::cl::opt<bool> cmdline::SSE("target:SSE",
@@ -146,8 +126,7 @@ llvm::cl::opt<bool> cmdline::openacc("target:openacc",
                                      llvm::cl::desc("Offload to GPU using openACC"),
                                      llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::c_openmp("target:openmp",
-                                      llvm::cl::desc("Hybrid OpenMP - MPI"),
+llvm::cl::opt<bool> cmdline::c_openmp("target:openmp", llvm::cl::desc("Hybrid OpenMP - MPI"),
                                       llvm::cl::cat(HilappCategory));
 
 
@@ -157,25 +136,25 @@ llvm::cl::opt<bool> cmdline::c_openmp("target:openmp",
 //       llvm::cl::desc("write pragmas/attributes to functions called from loops"),
 //       llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::slow_gpu_reduce(
-    "gpu-slow-reduce",
-    llvm::cl::desc("Use slow (but memory economical) reduction on gpus"),
-    llvm::cl::cat(HilappCategory));
+llvm::cl::opt<bool>
+    cmdline::slow_gpu_reduce("gpu-slow-reduce",
+                             llvm::cl::desc("Use slow (but memory economical) reduction on gpus"),
+                             llvm::cl::cat(HilappCategory));
+
+llvm::cl::opt<int> cmdline::verbosity("verbosity",
+                                      llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
+                                      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int>
-    cmdline::verbosity("verbosity",
-                       llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
-                       llvm::cl::cat(HilappCategory));
+    cmdline::avx_info("AVXinfo",
+                      llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, "
+                                     "1 not vectorizable loops, 2 all loops"),
+                      llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<int> cmdline::avx_info(
-    "AVXinfo",
-    llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, "
-                   "1 not vectorizable loops, 2 all loops"),
-    llvm::cl::cat(HilappCategory));
-
-llvm::cl::opt<bool> cmdline::comment_pragmas(
-    "comment-pragmas", llvm::cl::desc("Comment out '#pragma hila' -pragmas in output"),
-    llvm::cl::cat(HilappCategory));
+llvm::cl::opt<bool>
+    cmdline::comment_pragmas("comment-pragmas",
+                             llvm::cl::desc("Comment out '#pragma hila' -pragmas in output"),
+                             llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::insert_includes(
     "insert-includes",
@@ -210,9 +189,9 @@ void handle_cmdline_arguments(codetype &target) {
     } else if (cmdline::AVX512) {
         target.vectorize = true;
         target.vector_size = 64;
-    // } else if (cmdline::SSE) {
-    //     target.vectorize = true;
-    //     target.vector_size = 16;
+        // } else if (cmdline::SSE) {
+        //     target.vectorize = true;
+        //     target.vector_size = 16;
     } else if (cmdline::vectorize) {
         target.vectorize = true;
         target.vector_size = cmdline::vectorize;
@@ -267,9 +246,9 @@ struct pragma_types {
 };
 
 static std::vector<pragma_types> pragma_hila_types{
-    {"skip", false},        {"ast_dump", false},     {"loop_function", false},
-    {"novector", false},    {"nonvectorizable", false}, {"contains_rng", false},
-    {"direct_access", true},{"safe_access", true}, {"omp_parallel_region", false}};
+    {"skip", false},         {"ast_dump", false},        {"loop_function", false},
+    {"novector", false},     {"nonvectorizable", false}, {"contains_rng", false},
+    {"direct_access", true}, {"safe_access", true},      {"omp_parallel_region", false}};
 
 void check_pragmas(std::string &arg, SourceLocation prloc, SourceLocation refloc,
                    std::vector<pragma_loc_struct> &pragmas) {
@@ -523,8 +502,7 @@ class MyPPCallbacks : public PPCallbacks {
     /// Use these for suppressing output to .cpt - it's a luxury thing, just to see that
     /// it can be done possible low-importance TODO: generalize to #if ... ?
 
-    void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
-               const MacroDefinition &MD) {
+    void Ifdef(SourceLocation Loc, const Token &MacroNameTok, const MacroDefinition &MD) {
 
         IdentifierInfo *ii = MacroNameTok.getIdentifierInfo();
         if (!ii)
@@ -724,16 +702,23 @@ bool is_macro_defined(const char *name, std::string *arg) {
             auto *MI = pp.getMacroInfo(pp.getIdentifierInfo(name));
             if (MI) {
                 bool first = true;
-                for (auto tok : MI->tokens()) {
-                    if (tok.getLiteralData()) {
+                for (auto ti : MI->tokens()) {
+                    if (ti.isLiteral()) {
                         if (!first)
                             arg->push_back(' ');
                         first = false;
 
-                        int length = tok.getLength();
-                        const char *p = tok.getLiteralData();
+                        int length = ti.getLength();
+                        const char *p = ti.getLiteralData();
                         for (int i = 0; i < length; i++)
                             arg->push_back(*(p++));
+                    } else if (ti.getKind() == tok::TokenKind::minus) {
+                        arg->push_back('-');
+                    } else if (ti.getKind() == tok::TokenKind::plus) {
+                        arg->push_back('+');
+                    } else {
+                        llvm::errs() << "HILAPP ERROR: CANNOT PARSE PREPROCESSOR MACRO " << name
+                                     << " token kind is " << ti.getKind() << '\n';
                     }
                 }
             }
@@ -766,8 +751,8 @@ srcBuf *get_file_buffer(Rewriter &R, const FileID fid) {
     // if not found, return nullptr
     // TODO: this sounds pretty fragile!!
     // IT IS TOO FRAGILE; COMMENT OUT
-    //std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
-    //if (path.find("/hila/") == std::string::npos)
+    // std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
+    // if (path.find("/hila/") == std::string::npos)
     //    return nullptr;
 
     file_buffer fb;
@@ -843,8 +828,7 @@ class MyASTConsumer : public ASTConsumer {
                 Preprocessor &pp = myCompilerInstance->getPreprocessor();
                 // Is there an easier way?
                 CharSourceRange CSR =
-                    Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange(
-                        beginloc);
+                    Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange(beginloc);
                 beginloc = CSR.getBegin();
             }
 
@@ -859,13 +843,12 @@ class MyASTConsumer : public ASTConsumer {
 
                 // save this for source location
                 global.location.top = d->getSourceRange().getBegin();
-                global.location.bot =
-                    Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
+                global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
 
                 // set the default insertion point for possibly generated kernels
                 // go to the beginning of line
                 SourceLocation sl = global.location.top;
-                while (sl.isValid() && getChar(SM,sl) != '\n')
+                while (sl.isValid() && getChar(SM, sl) != '\n')
                     sl = sl.getLocWithOffset(-1);
                 global.location.kernels = sl;
 
@@ -977,7 +960,7 @@ class MyFrontendAction : public ASTFrontendAction {
         if (buf == nullptr)
             return; // system file, nothing to do
 
-        // change filenames to be included 
+        // change filenames to be included
         //   -- DON'T CHANGE NOW
         // change_include_names(myFID);
 
@@ -1021,8 +1004,7 @@ class MyFrontendAction : public ASTFrontendAction {
                         ++p;
                         while (std::isspace(*p))
                             ++p;
-                        assert(strncmp(p, "include", 7) == 0 &&
-                               "Did not find #include");
+                        assert(strncmp(p, "include", 7) == 0 && "Did not find #include");
                         SR = SourceRange(b.getLocWithOffset(-i), e);
                         break;
                     }
@@ -1041,16 +1023,16 @@ class MyFrontendAction : public ASTFrontendAction {
                     // TheRewriter.InsertText(SR.getBegin(),
                     buf->insert(SR.getBegin(),
                                 "// start include " + includestr +
-                                    "---------------------------------\n" +
-                                    buf_from->dump() + "// end include " + includestr +
+                                    "---------------------------------\n" + buf_from->dump() +
+                                    "// end include " + includestr +
                                     "---------------------------------\n",
                                 false);
                 }
 
             } else if (IL.isInvalid() && !SM.isInMainFile(SM.getLocForStartOfFile(f))) {
                 llvm::errs() << "Invalid include loc!\n";
-                llvm::errs() << "File to include: "
-                             << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
+                llvm::errs() << "File to include: " << SM.getFilename(SM.getLocForStartOfFile(f))
+                             << '\n';
 
                 exit(1);
             }
@@ -1110,15 +1092,13 @@ class MyFrontendAction : public ASTFrontendAction {
             }
 
             if (!state::compile_errors_occurred) {
-                write_output_file(
-                    cmdline::output_filename,
-                    get_file_buffer(TheRewriter, SM.getMainFileID())->dump());
+                write_output_file(cmdline::output_filename,
+                                  get_file_buffer(TheRewriter, SM.getMainFileID())->dump());
 
                 if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline)
                     write_specialization_db();
             } else {
-                llvm::errs() << program_name
-                             << ": not writing output due to compile errors\n";
+                llvm::errs() << program_name << ": not writing output due to compile errors\n";
             }
         }
 
@@ -1128,8 +1108,7 @@ class MyFrontendAction : public ASTFrontendAction {
         // EndSourceFile();
     }
 
-    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                   StringRef file) override {
+    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef file) override {
         // llvm::errs() << "** Creating AST consumer for: " << file << "\n";
         TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
         myCompilerInstance = &CI;
@@ -1180,184 +1159,3 @@ int main(int argc, const char **argv) {
     return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-/// Some sourceloc utilities
-/////////////////////////////////////////////////////////////////////////////////////
-
-/// Get next character and sourcelocation, while skipping comments.
-/// On line comments return the eol char
-
-SourceLocation getNextLoc(const SourceManager &SM, SourceLocation sl, bool forward) {
-    bool invalid = false;
-
-    int dir;
-    if (forward)
-        dir = 1;
-    else
-        dir = -1;
-    SourceLocation s = sl.getLocWithOffset(dir);
-    const char *c = SM.getCharacterData(s, &invalid);
-
-    // skip comments - only c-style backwards
-    while ('/' == *c) {
-
-        if (forward && '/' == *SM.getCharacterData(s.getLocWithOffset(1), &invalid)) {
-            // a comment, skip the rest of line
-            while (!invalid && *SM.getCharacterData(s, &invalid) != '\n')
-                s = s.getLocWithOffset(1);
-            c = SM.getCharacterData(s, &invalid);
-
-        } else if ('*' == *SM.getCharacterData(s.getLocWithOffset(dir), &invalid)) {
-            // c-style comment
-            s = s.getLocWithOffset(2 * dir);
-            while (!invalid && *SM.getCharacterData(s, &invalid) != '*' &&
-                   *SM.getCharacterData(s.getLocWithOffset(dir), &invalid) != '/')
-                s = s.getLocWithOffset(dir);
-            s = s.getLocWithOffset(2 * dir);
-            c = SM.getCharacterData(s, &invalid);
-        } else
-            break; // exit from here
-    }
-
-    return s;
-}
-
-char getChar(const SourceManager &SM, SourceLocation sl) {
-    bool invalid = false;
-    const char *c = SM.getCharacterData(sl, &invalid);
-    if (invalid)
-        return 0;
-    else
-        return *c;
-}
-
-// Find the location of the next searched for char.
-SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct) {
-    bool invalid = false;
-    while (sloc.isValid()) {
-        const char *c = SM.getCharacterData(sloc, &invalid);
-        if (*c == ct)
-            return sloc;
-        sloc = getNextLoc(SM, sloc);
-    }
-    return sloc;
-}
-
-/// Skip paren expression following sl, points after the paren
-/// If partype == '(', just balance par expressions (may contain strings).
-/// If partype == '<', balance < > -parens (may contain () -parens, which are balanced
-/// in turn) This last one is useful for template scanning
-
-SourceLocation skipParens(const SourceManager &SM, SourceLocation sl,
-                          const char partype) {
-
-    assert((partype == '(' || partype == '<') && "Unknown paren type in skipParens");
-
-    char endpar;
-    if (partype == '<')
-        endpar = '>';
-    else
-        endpar = ')';
-
-    while (sl.isValid() && getChar(SM, sl) != partype)
-        sl = getNextLoc(SM, sl);
-
-    sl = getNextLoc(SM, sl);
-    char c = getChar(SM, sl);
-    while (sl.isValid() && c != endpar) {
-
-        if (c == partype) {
-            sl = skipParens(SM, sl, partype);
-        } else if (c == '(') {
-            sl = skipParens(SM, sl);
-        } else if (c == '"' || c == '\'') {
-            sl = skipString(SM, sl);
-        } else {
-            // default option, next char loc
-            sl = getNextLoc(SM, sl);
-        }
-
-        // and check next char
-        c = getChar(SM, sl);
-    }
-
-    // successful exit here
-    if (c == endpar)
-        return getNextLoc(SM, sl);
-    // this must be !isValid()
-    return sl;
-}
-
-/// Skip " " or ' ' after location, returns the next location
-
-SourceLocation skipString(const SourceManager &SM, SourceLocation sl) {
-
-    char c;
-    do {
-        c = getChar(SM, sl);
-        sl = getNextLoc(SM, sl);
-    } while (sl.isValid() && c != '\'' && c != '"');
-
-    // first single char
-    if (c == '\'') {
-        c = getChar(SM, sl);
-        if (c == '\\')
-            sl = sl.getLocWithOffset(1);
-        sl = sl.getLocWithOffset(2); // jumps over the closing '
-        return sl;
-    }
-
-    // now string " "
-    int lev = 1;
-    while (lev > 0 && sl.isValid()) {
-        char c = getChar(SM, sl);
-        if (c == '\\')
-            sl = sl.getLocWithOffset(1);
-        if (c == '"')
-            lev = 0;
-        sl = sl.getLocWithOffset(1);
-    }
-
-    return sl;
-}
-
-/// Get next word starting from sl -- if end is non-null, return the end of the
-/// word string here (points to last char)
-
-std::string getNextWord(const SourceManager &SM, SourceLocation sl,
-                        SourceLocation *end) {
-    while (std::isspace(getChar(SM, sl)))
-        sl = getNextLoc(SM, sl); // skip spaces
-
-    std::string res;
-    SourceLocation endloc = sl;
-    char c = getChar(SM, sl);
-    if (std::isalnum(c) || c == '_') {
-        while (sl.isValid() && (std::isalnum(c) || c == '_')) {
-            res.push_back(c);
-            endloc = sl;
-            sl = getNextLoc(SM, sl);
-            c = getChar(SM, sl);
-        }
-    } else
-        res.push_back(c);
-    if (end != nullptr)
-        *end = endloc;
-    return res;
-}
-
-/// Return the text within the range, inclusive (note - skip comments, as usual)
-std::string getRangeText(const SourceManager &SM, SourceLocation begin,
-                         SourceLocation end) {
-
-    // need to be in the same file - and end needs to be after begin
-    if (SM.getFileID(begin) != SM.getFileID(end) || begin > end)
-        return "";
-
-    std::string res;
-    do {
-        res.push_back(getChar(SM, begin));
-        begin = getNextLoc(SM, begin);
-    } while (begin <= end);
-    return res;
-}

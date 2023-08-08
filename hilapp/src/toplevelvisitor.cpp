@@ -31,6 +31,9 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
     }
 }
 
+/// string for the loop call name
+static const std::string site_loop_name("onsites");
+
 /// Check the validity a variable reference in a loop
 bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
     // It must be declared already. Get the declaration and check
@@ -65,7 +68,7 @@ bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
     type = remove_extra_whitespace(type);
     if (type.rfind("element<", 0) != std::string::npos) {
         reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
-                   "Cannot assign a Field element to a non-element type");
+                   "cannot assign a Field element to a non-element type");
     }
     return true;
 }
@@ -105,6 +108,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     e = e->IgnoreParens();
     field_ref lfe;
 
+    e = e->IgnoreImplicit();
     // we know here that Expr is of field-parity type
     if (CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e)) {
         lfe.fullExpr = OC;
@@ -122,6 +126,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
         // "\n";
     } else {
         llvm::errs() << "Should not happen! Error in Field parity\n";
+        llvm::errs() << "Expression " << get_stmt_str(e) << '\n';
         exit(1);
     }
 
@@ -146,7 +151,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 
     if (is_assign && (lfe.nameExpr->isModifiableLvalue(*Context) != Expr::MLV_Valid)) {
         reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
-                   "Cannot assign to non-modifiable lvalue Field expression");
+                   "cannot assign to non-modifiable lvalue Field expression");
     }
 
     std::string parity_expr_type = get_expr_type(lfe.parityExpr);
@@ -174,11 +179,11 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 
         if (is_assign && !is_func_arg) {
             reportDiag(DiagnosticsEngine::Level::Error, lfe.parityExpr->getSourceRange().getBegin(),
-                       "Cannot assign to Field expression with [X + dir] -type argument.");
+                       "assignment to Field expression with [X + dir] -type argument not allowed.");
         }
         if (is_assign && is_func_arg) {
             reportDiag(DiagnosticsEngine::Level::Error, lfe.parityExpr->getSourceRange().getBegin(),
-                       "Cannot use a non-const. reference to Field expression with [X + "
+                       "cannot use a non-const. reference to Field expression with [X + "
                        "dir] -type argument.");
         }
 
@@ -193,7 +198,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 
         if (!has_X) {
             reportDiag(DiagnosticsEngine::Level::Fatal, lfe.parityExpr->getSourceRange().getBegin(),
-                       "Internal error: index should have been X");
+                       "internal error: index should have been X");
             exit(1);
         }
 
@@ -211,7 +216,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             if (frc.isLoopLocal()) {
                 reportDiag(DiagnosticsEngine::Level::Error,
                            lfe.parityExpr->getSourceRange().getBegin(),
-                           "Non-nearest neighbour reference cannot depend on variable "
+                           "non-nearest neighbour reference cannot depend on variable "
                            "'%0' defined inside site loop",
                            frc.getLocalVarInfo()->name.c_str());
             }
@@ -236,7 +241,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             if (!Op) {
                 reportDiag(DiagnosticsEngine::Level::Fatal,
                            lfe.parityExpr->getSourceRange().getBegin(),
-                           "Internal error: could not parse X + Direction/offset -statement");
+                           "internal error: could not parse X + Direction/offset -statement");
                 exit(1);
             }
 
@@ -338,31 +343,47 @@ reduction get_reduction_type(bool is_assign, const std::string &assignop, var_in
 
 ///////////////////////////////////////////////////////////////////
 /// Find the the base of a compound variable expression
+/// Going only 1 level down
 ///////////////////////////////////////////////////////////////////
 
-DeclRefExpr *TopLevelVisitor::find_base_variable(Expr *E) {
-    Expr *RE = E;
 
-    while (!dyn_cast<DeclRefExpr>(RE)) {
-        // RE may be a compound expression. We want the base variable.
-        if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(RE)) {
-            RE = ASE->getBase()->IgnoreImplicit();
-        } else if (MemberExpr *ME = dyn_cast<MemberExpr>(RE)) {
-            RE = ME->getBase()->IgnoreImplicit();
-        } else if (CXXOperatorCallExpr *OCE = dyn_cast<CXXOperatorCallExpr>(RE)) {
-            if (strcmp(getOperatorSpelling(OCE->getOperator()), "[]") == 0) {
-                RE = OCE->getArg(0)->IgnoreImplicit();
-            } else {
-                // It's not a variable
-                return nullptr;
-            }
+Expr *TopLevelVisitor::find_base_expr(Expr *E) {
+
+
+    // RE may be a compound expression. We want the base variable.
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+        return DRE->IgnoreImplicit();
+    } else if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+        return ASE->getBase()->IgnoreImplicit();
+    } else if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+        return ME->getBase()->IgnoreImplicit();
+    } else if (CXXOperatorCallExpr *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+        if (strcmp(getOperatorSpelling(OCE->getOperator()), "[]") == 0) {
+            return OCE->getArg(0)->IgnoreImplicit();
         } else {
             // It's not a variable
             return nullptr;
         }
+    } else if (CXXThisExpr *TE = dyn_cast<CXXThisExpr>(E)) {
+        return TE;
     }
-    return dyn_cast<DeclRefExpr>(RE);
+    return nullptr; // it was something else
 }
+
+///////////////////////////////////////////////////////////////////
+/// Find the the "root" of a compound var expression, trying
+/// to go to the bottom
+///////////////////////////////////////////////////////////////////
+
+Expr *TopLevelVisitor::find_root_variable(Expr *E) {
+    Expr *RE = E;
+
+    do {
+        RE = find_base_expr(RE);
+    } while (RE && !dyn_cast<DeclRefExpr>(RE) && !dyn_cast<CXXThisExpr>(RE));
+    return RE;
+}
+
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -387,17 +408,14 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 ///          -  it is sufficient to read in this array element only,
 ///             and remove var references to variables in index
 ///
-int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype type,
+int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref::reftype type,
                                             bool &is_assign, std::string &assignop) {
 
     if (ref.DRE == nullptr) {
 
         reportDiag(DiagnosticsEngine::Level::Warning, ref.E->getSourceRange().getBegin(),
-                   "array brackets '[]' applied to a non-variable, and hilapp does not "
-                   "(yet) have logic to analyse this."
-                   " Fingers crossed ...");
-
-        return 0;
+                   "array brackets '[]' applied to an object hilapp does not know how to handle "
+                   "(yet). Assuming object is defined outside of the onsites()-loop.");
     }
 
     // if this has #pragma direct_access don't do anything
@@ -409,54 +427,64 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
         return 0;
     }
 
-    VarDecl *vd;
+    VarDecl *vd = nullptr;
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ref.DRE);
-    if (DRE == nullptr) {
-        llvm::errs() << "hilapp error: array refs to member variables not yet "
-                        "implemented - probably does not work\n";
-        llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
-        return 0;
-    }
-    vd = dyn_cast<VarDecl>(DRE->getDecl());
+    // if (DRE == nullptr) {
+    //     llvm::errs() << "hilapp error: array refs to member variables not yet "
+    //                     "implemented - probably does not work\n";
+    //     llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
+    //     return 0;
+    // }
 
-    // Check if it's local
-    if (is_variable_loop_local(vd)) {
-        if (type == array_ref::ARRAY) {
+    if (DRE) {
+        vd = dyn_cast<VarDecl>(DRE->getDecl());
 
-            // if an array is declared within the loop, nothing special needs to
-            // be done.  Let us anyway put it through the std handler in order to
-            // flag it.
+        // Check if it's local
+        if (is_variable_loop_local(vd)) {
+            if (type == array_ref::ARRAY) {
 
-            handle_var_ref(DRE, is_assign, assignop);
+                // if an array is declared within the loop, nothing special needs to
+                // be done.  Let us anyway put it through the std handler in order to
+                // flag it.
 
-            // and traverse whatever is in the index in normal fashion
-            is_assign = false; // we're not assigning to the index
-            TraverseStmt(ref.Idx);
-            parsing_state.skip_children = 1; // it's handled now
-            return 1;
+                handle_var_ref(DRE, is_assign, assignop);
 
-        } else {
+                // and traverse whatever is in the index in normal fashion
+                is_assign = false; // we're not assigning to the index
+                for (auto *s : ref.Idx)
+                    TraverseStmt(s);
 
-            reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                       "Cannot define this variable inside site loop");
-            parsing_state.skip_children = 1;
-            return 1;
+                parsing_state.skip_children = 1; // it's handled now
+                return 1;
+
+            } else {
+
+                reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                           "cannot define this type of variable inside onsites()-loop");
+                parsing_state.skip_children = 1;
+                return 1;
+            }
         }
     }
 
     // Now array is declared outside the loop
 
-    if (is_assign && type != array_ref::REDUCTION) {
+    // Base should  not depend on site
+    if (is_site_dependent(ref.BASE, &loop_info.conditional_vars)) {
         reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                   "Cannot assign to an array, std::vector or std::array here.  Use "
-                   "ReductionVector if reduction is needed.");
+                   "Base of bracket expression '%0' should be constant within onsites()",
+                   get_stmt_str(ref.BASE).c_str());
+        parsing_state.skip_children = 1;
         return 1;
     }
 
     // If index is site dep or contains local variables, we need
     // the whole array in the loop
 
-    bool site_dep = is_site_dependent(ref.Idx, &loop_info.conditional_vars);
+    bool site_dep = false;
+    for (auto *ip : ref.Idx)
+        site_dep |= is_site_dependent(ip, &loop_info.conditional_vars);
+
 
     // if it is assignment = reduction, don't vectorize
     if (site_dep || is_assign)
@@ -476,7 +504,19 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // has this array been referred to already?
     // if so, mark and return
     for (array_ref &ar : array_ref_list) {
-        if (vd == ar.vd && ar.type != array_ref::REPLACE) {
+        bool check = false;
+
+        // if the BASE is var ref, check the declaration
+        if (ref.DRE == ref.BASE) {
+            if (vd == ar.vd && ar.type != array_ref::REPLACE)
+                check = true;
+        } else {
+            // otherwise check the ref name
+            if (!check && ar.name == get_stmt_str(ref.BASE))
+                check = true;
+        }
+
+        if (check) {
 
             if ((ar.type == array_ref::REDUCTION) ^ (type == array_ref::REDUCTION)) {
                 reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
@@ -487,25 +527,31 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
             if (ar.type == array_ref::REDUCTION && ar.reduction_type != reduction_type) {
                 reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                           "Cannot use '+=' and '*=' reduction to the same variable "
+                           "cannot use '+=' and '*=' reduction to the same variable "
                            "simultaneously.");
                 parsing_state.skip_children = 1;
                 return 1;
             }
 
             ar.refs.push_back(ref);
-            is_assign = false;     // reset assign for index traversal
-            TraverseStmt(ref.Idx); // need to traverse index normally
+            is_assign = false; // reset assign for index traversal
+            for (auto *ip : ref.Idx)
+                TraverseStmt(ip); // need to traverse index normally
             parsing_state.skip_children = 1;
             return 1;
         }
     }
 
+
     // now it is a new array ref
     array_ref ar;
     ar.refs.push_back(ref);
     ar.vd = vd;
-    ar.name = vd->getNameAsString();
+    if (vd && ref.DRE == ref.BASE) {
+        ar.name = vd->getNameAsString();
+    } else {
+        ar.name = get_stmt_str(ref.BASE);
+    }
 
     // get type of the element of the array
     ar.element_type = ref.E->getType().getCanonicalType().getAsString(PP);
@@ -513,20 +559,46 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // and save the type of reduction
     ar.reduction_type = reduction_type;
 
-    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr) /* && !is_assign */) {
+    bool has_loop_local_var = false;
+    for (auto *ip : ref.Idx) {
+
+        has_loop_local_var |= contains_loop_local_var(ip, nullptr);
+    }
+
+    // let the refs to ReductionVectors be handled further down
+    if (!site_dep && !has_loop_local_var && type != array_ref::REDUCTION) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
         // referred more than once.  TODO? (small optimization)
+        // instead of array_ref_list use here loop_const_expr_ref
 
-        // use the array_ref_list to note this
-        ar.type = array_ref::REPLACE;
-        array_ref_list.push_back(ar);
+        handle_loop_const_expr_ref(ref.E, is_assign, assignop);
 
         parsing_state.skip_children = 1; // no need to look inside the replacement
-                                         // variable refs inside should not be recorded
+
+        // currently is_assign == false here alwasy
+        // if (!is_assign) {
+        //     ar.type = array_ref::REPLACE;
+        //     array_ref_list.push_back(ar);
+
+        //     parsing_state.skip_children = 1; // no need to look inside the replacement
+        // }
+
         return 1;
     }
+
+    // Cannot assign to an non-vector reduction array, vector etc. if there are site
+    // dependent indices or other bits
+
+    if (is_assign && (site_dep || has_loop_local_var) && type != array_ref::REDUCTION) {
+        reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                   "cannot assign to an array, std::vector or std::array where the access depends"
+                   " on a variable which may be changed inside loop execution. Use "
+                   "ReductionVector if this behaviour is needed.");
+        return 1;
+    }
+
 
     // Now there is site dep/loop local stuff in index.  Whole array has to be taken
     // "in".
@@ -534,13 +606,27 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     ar.type = type;
 
     if (type == array_ref::ARRAY) {
-        const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
+        const ConstantArrayType *cat = Context->getAsConstantArrayType(ref.BASE->getType());
         if (cat) {
-            llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize() << "\n";
 
-            ar.size = cat->getSize().getZExtValue(); // get (extended) size value
+            ar.size = 1;
+            ar.dimensions.clear();
+
+            do {
+                size_t d = cat->getSize().getZExtValue(); // get (extended) size value
+                ar.dimensions.push_back(d);
+                ar.size *= d;
+                cat = Context->getAsConstantArrayType(cat->getElementType());
+            } while (cat);
+
+
             ar.size_expr = std::to_string(ar.size);
             ar.data_ptr = ar.name;
+
+            // llvm::errs() << " %%% Found constant array type expr, size ";
+            // for (auto d : ar.dimensions)
+            //     llvm::errs() << '[' << d << ']';
+            // llvm::errs() << "\n";
 
         } else {
             // Do not accept arrays with variable size!  The size expression does not
@@ -559,7 +645,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
             // Now different array type - flag as error
             reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                       "Array size is unknown - recommend using Vector<>, "
+                       "array size is unknown - recommend using Vector<>, "
                        "std::array<> or std::vector<> instead");
 
             parsing_state.skip_children = 1;
@@ -567,7 +653,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
         }
     } else {
 
-        std::string typestr = vd->getType().getCanonicalType().getAsString(PP);
+        std::string typestr = ref.BASE->getType().getCanonicalType().getAsString(PP);
 
         if (type == array_ref::STD_ARRAY) {
 
@@ -596,7 +682,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
     // traverse whatever is in the index in normal fashion
     is_assign = false; // not assign to index
-    TraverseStmt(ref.Idx);
+    for (auto *ip : ref.Idx)
+        TraverseStmt(ip);
 
     parsing_state.skip_children = 1;
     return 1;
@@ -607,7 +694,14 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool &is_assign,
                                           std::string &assignop) {
 
-    bracket_ref_t br = {ASE, find_base_variable(ASE), ASE->getIdx()};
+    bracket_ref_t br;
+    br.E = ASE;
+    br.BASE = find_base_expr(ASE);
+    br.DRE = find_root_variable(ASE);
+    br.Idx.push_back(ASE->getIdx());
+    while ((ASE = dyn_cast<ArraySubscriptExpr>(ASE->getLHS()->IgnoreImplicit()))) {
+        br.Idx.push_back(ASE->getIdx());
+    }
     return handle_bracket_var_ref(br, array_ref::ARRAY, is_assign, assignop);
 }
 
@@ -636,7 +730,7 @@ bool TopLevelVisitor::is_vector_reference(Stmt *s) {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// handle_vector_reference() processes references like v[index], where
-/// v is std::vector or std::array.  Called only if is_vector_reference() is true
+/// v is std::vector, std::array or ReductionVector. Called only if is_vector_reference() is true
 ///////////////////////////////////////////////////////////////////////////////
 bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
                                               Stmt *assign_stmt) {
@@ -646,8 +740,10 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
     br.E = dyn_cast<Expr>(s);
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(br.E);
 
-    br.DRE = find_base_variable(br.E);
-    br.Idx = OC->getArg(1)->IgnoreImplicit();
+    br.BASE = find_base_expr(br.E);
+    br.DRE = find_root_variable(br.E);
+
+    br.Idx.push_back(OC->getArg(1)->IgnoreImplicit());
 
     if (is_assign)
         br.assign_stmt = assign_stmt;
@@ -660,7 +756,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
     else if (type.find("std::array<") == 0)
         rt = array_ref::STD_ARRAY;
     else {
-        // now we know it is ArrayReduction.  Treat is as reduction only if it is
+        // now we know it is ReductionVector.  Treat is as reduction only if it is
         // assignment
         if (is_assign)
             rt = array_ref::REDUCTION;
@@ -813,8 +909,10 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
         writeBuf->replace(DRE->getSourceRange(), buf);
 
         // llvm::errs() << "   FLOAT CONST VALUE " << buf << '\n';
-    } else
+    } else {
+        // don't know now what it is, hoping for the best
         return true;
+    }
 
     parsing_state.skip_children = 1;
     return true;
@@ -825,14 +923,33 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
 /// loop constants.  This includes struct/class members (and array refs?)
 ///////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
+void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E, bool is_assign, std::string assignop) {
 
     // First, get the string rep of the expression
-    std::string expstr = remove_all_whitespace(get_stmt_str(E));
+    std::string expression = get_stmt_str(E);
+    std::string expstr = remove_all_whitespace(expression);
+
+    if (is_assign && assignop != "+=") {
+        reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                   "expression can be used only on the lhs of a sum reduction (+=)");
+        return;
+    }
 
     // Did we already have it?
     for (loop_const_expr_ref &cer : loop_const_expr_ref_list) {
         if (cer.exprstring == expstr) {
+            if ((is_assign && cer.reduction_type == reduction::NONE) ||
+                !is_assign && cer.reduction_type != reduction::NONE) {
+
+                reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                           "expression cannot be used in reduction and on RHS of statement in the "
+                           "same loop");
+
+                reportDiag(DiagnosticsEngine::Level::Note, cer.refs[0]->getSourceRange().getBegin(),
+                           "location of another reference");
+                return;
+            }
+
             cer.refs.push_back(E);
             return;
         }
@@ -842,6 +959,7 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
     loop_const_expr_ref eref;
 
     eref.refs.push_back(E);
+    eref.expression = expression;
     eref.exprstring = expstr;
 
     // Get the type of the expr
@@ -849,6 +967,11 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
         E->getType().getUnqualifiedType().getCanonicalType().getNonReferenceType();
     typ.removeLocalConst();
     eref.type = typ.getAsString(PP);
+
+    if (is_assign)
+        eref.reduction_type = reduction::SUM;
+    else
+        eref.reduction_type = reduction::NONE;
 
     loop_const_expr_ref_list.push_back(eref);
 }
@@ -927,6 +1050,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+///  MAIN LOOP BODY STATEMENT ANALYSIS HAPPENS HERE
 ///  act on statements within the parity loops.  This is called
 ///  from VisitStmt() if the status state::in_loop_body is true
 ////////////////////////////////////////////////////////////////////////////////
@@ -957,6 +1081,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         is_assignment = true;
 
         // Need to mark/handle the assignment method if necessary
+        // Note that the args are not handled here, just the function call
         if (is_constructor_stmt(s)) {
             handle_constructor_in_loop(s);
         } else if (is_function_call_stmt(s)) {
@@ -1039,9 +1164,20 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // Check for function calls parameters. We need to determine if the
     // function can assign to the a field parameter (is not const).
     if (is_function_call_stmt(s)) {
+
+        // remove loop const functions from loop body
+        // TAKE THIS AWAY FOR NOW - IF LOOP CONST FUNCTION DEPENDS ON TEMPLATE PARAMETERS
+        // THINGS CAN GO WRONG!
+        // if (!is_assignment && loop_constant_function_call(s)) {
+        //     parsing_state.skip_children = 1;
+        //     return true;
+        // }
+
         handle_function_call_in_loop(s, is_assignment);
         // let this fall trough, for - expr f[X] is a function call and is trapped
         // below too
+        // is_assignment = false;
+        // parsing_state.skip_children = 1;
         // return true;
     }
 
@@ -1141,7 +1277,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // Check also the type: if it is not trivial, don't know what to do here
             if (!is_assignment && is_loop_constant(E) && ME->getType().isTrivialType(*Context)) {
 
-                handle_loop_const_expr_ref(E);
+                handle_loop_const_expr_ref(E, is_assignment, assignop);
 
                 parsing_state.skip_children = 1;
                 return true;
@@ -1164,21 +1300,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             return true;
         }
 
-        if (0) {
-
-            // not field type non-const expr
-            // llvm::errs() << "Non-const other Expr: " << get_stmt_str(E) << '\n';
-            // loop-local variable refs inside? If so, we cannot evaluate this as
-            // "whole"
-
-            // check_local_loop_var_refs = 1;
-
-            // TODO: find really uniq variable references
-            // var_ref_list.push_back( handle_var_ref(E) );
-
-            parsing_state.skip_children = 1;
-            return true;
-        }
     } // Expr checking branch - now others...
 
     // This reached only if s is not Expr
@@ -1186,6 +1307,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // start {...} -block or other compound
     if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s) || isa<WhileStmt>(s) ||
         isa<DoStmt>(s) || isa<SwitchStmt>(s) || isa<ConditionalOperator>(s)) {
+
+        if (is_onsites(s)) {
+            reportDiag(DiagnosticsEngine::Level::Error, s->getSourceRange().getBegin(),
+                       "nested '%0'-loops are not allowed", site_loop_name.c_str());
+            parsing_state.skip_children = 1; // once is enough
+            return true;
+        }
 
         static bool passthrough = false;
         // traverse each stmt - use passthrough trick if needed
@@ -1266,7 +1394,7 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
         }
         if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
             reportDiag(DiagnosticsEngine::Level::Error, D->getSourceRange().getBegin(),
-                       "Expecting type argument in \'Field\' template");
+                       "expecting type argument in \'Field\' template");
             return (0);
         }
 
@@ -1377,7 +1505,7 @@ bool TopLevelVisitor::check_field_ref_list() {
             lfv.type_template = get_expr_type(p.nameExpr);
             if (lfv.type_template.find("Field", 0) != 0) {
                 reportDiag(DiagnosticsEngine::Level::Error, p.nameExpr->getSourceRange().getBegin(),
-                           "Confused: type of Field expression?");
+                           "confused: type of Field expression?");
                 no_errors = false;
             }
             lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T>
@@ -1483,7 +1611,7 @@ bool TopLevelVisitor::check_field_ref_list() {
 
                         reportDiag(DiagnosticsEngine::Level::Error,
                                    p->parityExpr->getSourceRange().getBegin(),
-                                   "Simultaneous access '%0' and assignment '%1' not "
+                                   "simultaneous access '%0' and assignment '%1' not "
                                    "allowed with parity ALL",
                                    get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str());
                         no_errors = false;
@@ -1492,10 +1620,10 @@ bool TopLevelVisitor::check_field_ref_list() {
                     } else if (loop_info.parity_value == Parity::none) {
                         reportDiag(DiagnosticsEngine::Level::Remark,
                                    p->parityExpr->getSourceRange().getBegin(),
-                                   "Simultaneous access '%0' and assignment to '%1' is "
+                                   "simultaneous access '%0' and assignment to '%1' is "
                                    "allowed "
                                    "only when parity %2 is EVEN or ODD.  Inserting "
-                                   "assertion to ensure that",
+                                   "assertion to ensure that.",
                                    get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str(),
                                    loop_info.parity_text.c_str());
                         found_error = true;
@@ -1508,7 +1636,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                     if (p->is_written) {
                         reportDiag(DiagnosticsEngine::Level::Note,
                                    p->fullExpr->getSourceRange().getBegin(),
-                                   "Location of assignment");
+                                   "location of assignment");
                     }
                 }
             }
@@ -1533,7 +1661,7 @@ void TopLevelVisitor::check_var_info_list() {
                         if (vr.assignop == "+=" || vr.assignop == "*=") {
                             reportDiag(DiagnosticsEngine::Level::Error,
                                        vr.ref->getSourceRange().getBegin(),
-                                       "Reduction variable \'%0\' used more than once "
+                                       "reduction variable \'%0\' used more than once "
                                        "within one site loop",
                                        vi.name.c_str());
                             break;
@@ -1545,7 +1673,7 @@ void TopLevelVisitor::check_var_info_list() {
                         if (j != i)
                             reportDiag(DiagnosticsEngine::Level::Remark,
                                        vr.ref->getSourceRange().getBegin(),
-                                       "Other reference to \'%0\'", vi.name.c_str());
+                                       "other reference to \'%0\'", vi.name.c_str());
                         j++;
                     }
                 }
@@ -1554,7 +1682,7 @@ void TopLevelVisitor::check_var_info_list() {
                 // Use Reduction<> -type vars only as reductions
                 for (auto &vr : vi.refs) {
                     reportDiag(DiagnosticsEngine::Level::Error, vr.ref->getSourceRange().getBegin(),
-                               "Reduction variables are restricted only for reductions "
+                               "reduction variables are restricted only for reductions "
                                "(on the lhs of \'+=\' or \'*=\')");
                 }
 
@@ -1564,7 +1692,7 @@ void TopLevelVisitor::check_var_info_list() {
                     if (vr.is_assigned)
                         reportDiag(DiagnosticsEngine::Level::Error,
                                    vr.ref->getSourceRange().getBegin(),
-                                   "Cannot assign to variable defined outside site loop "
+                                   "cannot assign to variable defined outside site loop "
                                    "(unless reduction \'+=\' or \'*=\')");
                 }
             }
@@ -1630,7 +1758,7 @@ SourceRange TopLevelVisitor::getRangeWithSemicolon(SourceRange SR, bool flag_err
     if (!range.isValid()) {
         if (flag_error) {
             reportDiag(DiagnosticsEngine::Level::Fatal, SR.getEnd(),
-                       "Expecting ';' after expression");
+                       "expecting ';' after expression");
         }
         // put a valid value in any case
         range = SR;
@@ -1660,7 +1788,7 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
         static bool second_def = false;
         if (second_def) {
             reportDiag(DiagnosticsEngine::Level::Warning, var->getSourceRange().getBegin(),
-                       "Declaring variable 'X' may shadow the site index X");
+                       "declaring variable 'X' may shadow the site index X");
         }
         second_def = true;
     }
@@ -1681,20 +1809,20 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
 
         if (!var->hasLocalStorage()) {
             reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
-                       "Static or external variable declarations not allowed within "
+                       "static or external variable declarations not allowed within "
                        "site loops");
             return true;
         }
 
         if (var->isStaticLocal()) {
             reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
-                       "Cannot declare static variables inside site loops");
+                       "cannot declare static variables inside site loops");
             return true;
         }
 
         if (is_field_decl(var)) {
             reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
-                       "Cannot declare Field<> variables within site loops");
+                       "cannot declare Field<> variables within site loops");
             parsing_state.skip_children = 1;
             return true;
         }
@@ -1762,6 +1890,28 @@ void TopLevelVisitor::remove_vars_out_of_scope(unsigned level) {
         var_decl_list.pop_back();
 }
 
+//////////////////////////////////////////////////////////////////////////////
+/// Find if the Stmt starts onsites() -loop
+//////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::is_onsites(Stmt *s) {
+
+    ForStmt *f = dyn_cast<ForStmt>(s);
+    if (f) {
+        SourceLocation startloc = f->getSourceRange().getBegin();
+
+        if (startloc.isMacroID()) {
+            Preprocessor &pp = myCompilerInstance->getPreprocessor();
+            if (pp.getImmediateMacroName(startloc) == site_loop_name) {
+                // Now we know it is onsites-macro
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 /// VisitStmt is called for each statement in AST.  Thus, when traversing the
 /// AST or part of it we start here, and branch off depending on the statements
@@ -1781,62 +1931,53 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
     // loop of type "onsites(p)"
     // Defined as a macro, needs special macro handling
-    if (isa<ForStmt>(s)) {
+    if (is_onsites(s)) {
 
         ForStmt *f = cast<ForStmt>(s);
         SourceLocation startloc = f->getSourceRange().getBegin();
 
-        if (startloc.isMacroID()) {
-            Preprocessor &pp = myCompilerInstance->getPreprocessor();
-            static std::string loop_call("onsites");
-            if (pp.getImmediateMacroName(startloc) == loop_call) {
-                // Now we know it is onsites-macro
+        CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange(startloc);
+        std::string macro = TheRewriter.getRewrittenText(CSR.getAsRange());
+        bool internal_error = true;
 
-                CharSourceRange CSR =
-                    TheRewriter.getSourceMgr().getImmediateExpansionRange(startloc);
-                std::string macro = TheRewriter.getRewrittenText(CSR.getAsRange());
-                bool internal_error = true;
+        // llvm::errs() << "MACRO STRING " << macro << '\n';
 
-                // llvm::errs() << "MACRO STRING " << macro << '\n';
+        loop_info.has_pragma_novector = has_pragma(s, pragma_hila::NOVECTOR);
+        loop_info.has_pragma_access =
+            has_pragma(s, pragma_hila::ACCESS, &loop_info.pragma_access_args);
+        loop_info.has_pragma_omp_parallel_region =
+            has_pragma(s, pragma_hila::IN_OMP_PARALLEL_REGION);
+        loop_info.has_pragma_safe = has_pragma(s, pragma_hila::SAFE, &loop_info.pragma_safe_args);
 
-                loop_info.has_pragma_novector = has_pragma(s, pragma_hila::NOVECTOR);
-                loop_info.has_pragma_access =
-                    has_pragma(s, pragma_hila::ACCESS, &loop_info.pragma_access_args);
-                loop_info.has_pragma_omp_parallel_region =
-                    has_pragma(s, pragma_hila::IN_OMP_PARALLEL_REGION);
-                loop_info.has_pragma_safe =
-                    has_pragma(s, pragma_hila::SAFE, &loop_info.pragma_safe_args);
+        DeclStmt *init = dyn_cast<DeclStmt>(f->getInit());
+        if (init && init->isSingleDecl()) {
+            VarDecl *vd = dyn_cast<VarDecl>(init->getSingleDecl());
+            if (vd) {
+                const Expr *ie = vd->getInit();
+                if (ie) {
+                    loop_info.parity_expr = ie;
+                    loop_info.parity_value = get_parity_val(loop_info.parity_expr);
+                    loop_info.parity_text = remove_initial_whitespace(
+                        macro.substr(site_loop_name.length(), std::string::npos));
 
-                DeclStmt *init = dyn_cast<DeclStmt>(f->getInit());
-                if (init && init->isSingleDecl()) {
-                    VarDecl *vd = dyn_cast<VarDecl>(init->getSingleDecl());
-                    if (vd) {
-                        const Expr *ie = vd->getInit();
-                        if (ie) {
-                            loop_info.parity_expr = ie;
-                            loop_info.parity_value = get_parity_val(loop_info.parity_expr);
-                            loop_info.parity_text = remove_initial_whitespace(
-                                macro.substr(loop_call.length(), std::string::npos));
+                    global.full_loop_text = macro + " " + get_stmt_str(f->getBody());
 
-                            global.full_loop_text = macro + " " + get_stmt_str(f->getBody());
+                    // Delete "onsites()" -text
 
-                            // Delete "onsites()" -text
+                    // TheRewriter.RemoveText(CSR);
+                    writeBuf->remove(CSR);
 
-                            // TheRewriter.RemoveText(CSR);
-                            writeBuf->remove(CSR);
-
-                            handle_full_loop_stmt(f->getBody(), false);
-                            internal_error = false;
-                        }
-                    }
-                }
-                if (internal_error) {
-                    reportDiag(DiagnosticsEngine::Level::Error, f->getSourceRange().getBegin(),
-                               "\'onsites\'-macro: not a Parity type argument");
-                    return true;
+                    handle_full_loop_stmt(f->getBody(), false);
+                    internal_error = false;
                 }
             }
         }
+        if (internal_error) {
+            reportDiag(DiagnosticsEngine::Level::Error, f->getSourceRange().getBegin(),
+                       "\'onsites\'-macro: not a Parity type argument");
+            return true;
+        }
+
         return true;
     }
 
@@ -1923,7 +2064,7 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
 
         //     reportDiag(
         //         DiagnosticsEngine::Level::Error, OP->getOperatorLoc(),
-        //         "Only direct assignment '=' allowed for Field[CoordinateVector]");
+        //         "only direct assignment '=' allowed for Field[CoordinateVector]");
         //     return false;
         // }
 
@@ -1942,7 +2083,7 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
             op = BO->getOpcodeStr().str()[0];
             if (op != '+' && op != '-' && op != '*' && op != '/') {
                 reportDiag(DiagnosticsEngine::Level::Error, BO->getOperatorLoc(),
-                           "Only operators =, +=, -=, *=, /= allowed here");
+                           "only operators =, +=, -=, *=, /= allowed here");
                 return false;
             }
         } else
@@ -2046,8 +2187,6 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
     if (has_pragma(f, pragma_hila::AST_DUMP))
         ast_dump(f);
 
-    // For the pragmas, we need to check the "previousdecl" -- prototype, if there is a
-    // pragma there Automatic now in has_pragma
 
     if (has_pragma(f, pragma_hila::LOOP_FUNCTION)) {
         // This function can be called from a loop,
@@ -2294,7 +2433,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         }
         if (l < 0) {
             reportDiag(DiagnosticsEngine::Level::Fatal, f->getSourceRange().getBegin(),
-                       "Internal error: Could not locate function name");
+                       "internal error: Could not locate function name");
             exit(1);
         }
         funcBuf.remove(0, l - 1);

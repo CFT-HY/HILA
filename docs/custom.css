@@ -1,0 +1,17 @@
+/* remove quotes from markdown quoteblock*/
+blockquote::before {
+    content: "";
+}
+blockquote::after {
+    content: "";
+}
+
+
+/* Adding wrapping from code blocks */
+div.fragment .line {
+    white-space: pre-wrap;
+}
+div.line {
+    text-indent: -53px;
+    padding-left: 53px;
+}

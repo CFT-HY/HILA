@@ -11,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////
 /// Entry for function calls inside loops.  The call requires a bit
 /// special treatment, the arguments can be field[X] etc. elements
-/// is_assginment = true if the function call is on the rhs of assignment 
+/// is_assginment = true if the function call is on the rhs of assignment
 /// (or result is used as non-const reference)
 ////////////////////////////////////////////////////////////////////////////
 
@@ -66,6 +66,28 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);
 }
+
+////////////////////////////////////////////////////////////////////////////
+/// Check if call is loop constant, then can move it out of loop
+////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::loop_constant_function_call(Stmt *s) {
+
+    Expr *E = dyn_cast<Expr>(s);
+    // if (Expr *E = dyn_cast<Expr>(s))
+    //      if (handle_constant_ref(E)) {
+    //         llvm::errs() << "FUNCTION " << get_stmt_str(s) << " is const!\n";
+    //     }
+
+    if (E && is_loop_constant(E)) {
+        // it is, move outside of loop
+        handle_loop_const_expr_ref(E);
+        return true;
+    }
+    return false;
+
+}
+
 
 ////////////////////////////////////////////////////////////////////////////
 /// And entry point for constructors inside loops.
@@ -139,7 +161,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
     // Handle parameters
     if (decl->getNumParams() != CtorE->getNumArgs()) {
         reportDiag(DiagnosticsEngine::Level::Fatal, CtorE->getSourceRange().getBegin(),
-                   "Internal error: #params %0, #args %1 in constructor",
+                   "internal error: #params %0, #args %1 in constructor",
                    std::to_string(decl->getNumParams()).c_str(),
                    std::to_string(CtorE->getNumArgs()).c_str());
         return;
@@ -304,7 +326,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
                 reportDiag(DiagnosticsEngine::Level::Error, sl,
                            "'out_only' cannot be used with 'const'");
                 reportDiag(DiagnosticsEngine::Level::Note, Call->getSourceRange().getBegin(),
-                           "Called from here");
+                           "called from here");
             }
 
             Expr *E = MCE->getImplicitObjectArgument();
@@ -336,7 +358,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
             if (is_top_level && is_field_with_X_expr(E)) {
 
                 // following is called only if this==g_TopLevelVisitor, this just makes
-                // it compile 
+                // it compile
                 // CONST_FUNCTION is dangerous at the moment here!
                 bool is_assign = !(is_const || (const_function && !is_assignment) ||
                                    E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
@@ -437,6 +459,26 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
         reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
                    "'out_only' can be used only with modifiable lvalue reference");
     }
+
+#ifdef LOOP_FUNCTION_DEBUG
+    llvm::errs() << " **** CALL ARG " << get_stmt_str(E) << "  modifiable " << is_modifiable
+                 << " fieldX " << is_field_with_X_expr(E);
+
+    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E->IgnoreParens()->IgnoreImplicit());
+    if (OC) {
+        llvm::errs() << " operator " << getOperatorSpelling(OC->getOperator());
+        bool isbracket = (strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0);
+        llvm::errs() << " is[] " << isbracket;
+        if (isbracket) {
+            llvm::errs() << " Field " << is_field_expr(OC->getArg(0));
+            llvm::errs() << " with X " << is_X_index_type(OC->getArg(1));
+        }
+    } else {
+        llvm::errs() << " not operator";
+    }
+    llvm::errs() << '\n';
+
+#endif
 
     if (is_modifiable) {
 
@@ -579,7 +621,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             SourceLocation sl = findChar(Call->getSourceRange().getBegin(), '(');
             if (sl.isInvalid()) {
                 reportDiag(DiagnosticsEngine::Level::Fatal, Call->getSourceRange().getBegin(),
-                           "Open parens '(' not found, internal error");
+                           "open parens '(' not found, internal error");
                 exit(1);
             }
             sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
@@ -644,10 +686,10 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             } else {
                 if (is_X_index_type) {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
-                               "Unknown method X.%0()", name.c_str());
+                               "unknown method X.%0()", name.c_str());
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
-                               "Method 'lattice..%0()' not allowed inside site loops",
+                               "method 'lattice..%0()' not allowed inside site loops",
                                name.c_str());
                 }
             }
@@ -663,7 +705,11 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
         }
 
     } else {
-        if (Call->getDirectCallee()->getQualifiedNameAsString() == "hila::random") {
+
+        if (Call->getDirectCallee()->getQualifiedNameAsString() == "hila::random" &&
+            Call->getNumArgs() == 0) {
+
+            // Now it is basic hila::random() -call
             // llvm::errs() << get_stmt_str(Call) << '\n';
             special_function_call sfc;
             sfc.fullExpr = Call;

@@ -3,9 +3,13 @@
 
 #include "datatypes/matrix.h"
 
-////////////////////////////////////////////////////////////////
-/// nxm Array type
-////////////////////////////////////////////////////////////////
+/**
+ * @brief \f$ n\times m \f$ Array type
+ *
+ * @tparam n - row length
+ * @tparam m - column length
+ * @tparam T Data type for Array
+ */
 template <const int n, const int m, typename T>
 class Array {
   public:
@@ -16,7 +20,7 @@ class Array {
     T c[n * m];
 
     /// std incantation for field types
-    using base_type = hila::number_type<T>;
+    using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial
@@ -96,7 +100,6 @@ class Array {
         return c[i];
     }
 
-#if 1
     // cast from array to matrix
     Matrix<n, m, T> &asMatrix() const_function {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
@@ -105,18 +108,17 @@ class Array {
     const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
-#else
-    // cast from array to matrix
-    Matrix<n, T> &asMatrix() const_function {
-        static_assert(n == m, "asMatrix() only for square arrays");
-        return *reinterpret_cast<Matrix<n, T> *>(this);
+
+    // Define also asVector(), although asMatrix() already includes this
+    Vector<n, T> &asVector() const_function {
+        static_assert(1 == m, "asVector() only for column arrays");
+        return *reinterpret_cast<Vector<n, T> *>(this);
     }
 
-    const Matrix<n, T> &asMatrix() const {
-        static_assert(n == m, "asMatrix() only for square arrays");
-        return *reinterpret_cast<const Matrix<n, T> *>(this);
+    const Vector<n, T> &asVector() const {
+        static_assert(1 == m, "asVector() only for column arrays");
+        return *reinterpret_cast<const Vector<n, T> *>(this);
     }
-#endif
 
 
     /// casting from one Array (number) type to another
@@ -154,8 +156,22 @@ class Array {
         return *this;
     }
 
-    template <typename S>
-    bool operator==(const Array<n, m, S> &rhs) const {
+    /**
+     * @brief Compare equality of arrays
+     *
+     * Two arrays are equal iff arrays are of same dimension and all elements compare to equal
+     * Note: Complex == scalar if arithmetic value is equal
+     *
+     * @tparam S
+     * @param rhs
+     * @return true if equal
+     */
+
+    template <typename S, int n1, int m1>
+    bool operator==(const Array<n1, m1, S> &rhs) const {
+        if constexpr (n != n1 || m != m1)
+            return false;
+
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++) {
                 if (e(i, j) != rhs.e(i, j))
@@ -164,8 +180,21 @@ class Array {
         return true;
     }
 
-    template <typename S>
-    bool operator!=(const Array<n, m, S> &rhs) const {
+    /**
+     * @brief Compare non-equality of two arrays
+     *
+     * Negation of operator==()
+     *
+     * @tparam S
+     * @tparam n1
+     * @tparam m1
+     * @param rhs
+     * @return true
+     * @return false
+     */
+
+    template <typename S, int n1, int m1>
+    bool operator!=(const Array<n1, m1, S> &rhs) const {
         return !(*this == rhs);
     }
 
@@ -257,8 +286,8 @@ class Array {
         return res;
     }
     /// return real part
-    inline Array<n, m, hila::number_type<T>> real() const {
-        Array<n, m, hila::number_type<T>> res;
+    inline Array<n, m, hila::scalar_type<T>> real() const {
+        Array<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
@@ -266,8 +295,8 @@ class Array {
     }
 
     /// return imaginary part
-    inline Array<n, m, hila::number_type<T>> imag() const {
-        Array<n, m, hila::number_type<T>> res;
+    inline Array<n, m, hila::scalar_type<T>> imag() const {
+        Array<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -275,8 +304,8 @@ class Array {
     }
 
     /// calculate square norm - sum of squared elements
-    hila::number_type<T> squarenorm() const {
-        hila::number_type<T> result = 0;
+    hila::scalar_type<T> squarenorm() const {
+        hila::scalar_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
             result += ::squarenorm(c[i]);
         }
@@ -286,15 +315,15 @@ class Array {
     /// Generate random elements
     Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
-            ::random(c[i]);
+            hila::random(c[i]);
         }
         return *this;
     }
 
     /// Generate gaussian random elements
-    inline Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
+    Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
-            ::gaussian_random(c[i], width);
+            hila::gaussian_random(c[i], width);
         }
         return *this;
     }
@@ -312,12 +341,12 @@ inline Array<n, m, T> conj(const Array<n, m, T> &arg) {
 }
 /// real part
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::number_type<T>> real(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::scalar_type<T>> real(const Array<n, m, T> &arg) {
     return arg.real();
 }
 /// imaginary part
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::number_type<T>> imag(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::scalar_type<T>> imag(const Array<n, m, T> &arg) {
     return arg.imag();
 }
 
@@ -438,21 +467,10 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
 
 /// Norm squared function
 template <int n, int m, typename T>
-inline hila::number_type<T> squarenorm(const Array<n, m, T> &rhs) {
+inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 
-/// Function that calls random()-method
-template <int n, int m, typename T>
-inline void random(out_only Array<n, m, T> &mat) {
-    mat.random();
-}
-
-/// Function that calls the gaussian_random()-method
-template <int n, int m, typename T>
-inline void gaussian_random(out_only Array<n, m, T> &mat, double width = 1.0) {
-    mat.gaussian_random(width);
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Standard arithmetic functions - do element by element
