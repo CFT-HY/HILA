@@ -11,18 +11,21 @@
  * @param twist_coeff Integer to rotate phase with
  */
 template <typename T>
-void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1,int twist_coeff, Parity par = ALL) {
+void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1, int twist_coeff,
+                     Parity par = ALL) {
 
     Field<T> lower;
-    GaugeField<double> twist = 0;
-    onsites(ALL) {
-        if (X.z() == 0 && X.t() == 0) {
-            twist[e_z][X] = twist_coeff;
-            twist[e_t][X] = -twist_coeff;
-        }
-    }
+    // GaugeField<double> twist = 0;
+    // onsites(ALL) {
+    //     if (X.z() == 0 && X.t() == 0) {
+    //         twist[e_z][X] = twist_coeff;
+    //         twist[e_t][X] = -twist_coeff;
+    //     }
+    // }
 
     bool first = true;
+    staples = 0;
+
     foralldir(d2) if (d2 != d1) {
 
         // anticipate that these are needed
@@ -30,28 +33,32 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1,int
         U[d2].start_gather(d1, ALL);
         U[d1].start_gather(d2, par);
 
+        double twist;
+        if (d1 == e_z && d2 == e_t)
+            twist = twist_coeff;
+        else if (d1 == e_t && d2 == e_z)
+            twist = -twist_coeff;
+        else
+            twist = 0;
+
+        twist /= NCOLOR;
+
         // calculate first lower 'U' of the staple sum
         // do it on opp parity
         onsites(opp_parity(par)) {
-            lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1] *
-                       expi(-2 * M_PI * (twist[d1][X] / NCOLOR));
+            lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
+            if (X.z() == 0 && X.t() == 0)
+                lower[X] *= expi(-2 * M_PI * twist);
         }
 
         // calculate then the upper 'n', and add the lower
         // lower could also be added on a separate loop
-        if (first) {
-            onsites(par) {
-                staples[X] = U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() *
-                                 expi(2 * M_PI * (twist[d1][X] / NCOLOR)) +
-                             lower[X - d2];
-            }
-            first = false;
-        } else {
-            onsites(par) {
-                staples[X] += U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() *
-                                  expi(2 * M_PI * (twist[d1][X] / NCOLOR)) +
-                              lower[X - d2];
-            }
+        onsites(par) {
+            auto upper = U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger();
+            if (X.z() == 0 && X.t() == 0)
+                upper *= expi(2 * M_PI * twist);
+
+            staples[X] += upper + lower[X - d2];
         }
     }
 }
