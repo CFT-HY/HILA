@@ -80,7 +80,7 @@ std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff) {
     GaugeField<double> twist = 0;
     onsites(ALL) {
         if (X.z() == 0 && X.t() == 0) {
-            twist[e_z][X] = twist_coeff;
+            twist[e_z][X] = -twist_coeff;
         }
     }
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
