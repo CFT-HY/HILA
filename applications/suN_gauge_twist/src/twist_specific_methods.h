@@ -75,6 +75,7 @@ template <typename T>
 std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff) {
     Reduction<double> plaq;
     ReductionVector<double> plaq_vec(lattice.size(e_z) + 1);
+    plaq_vec = 0;
     plaq.allreduce(false);
     plaq_vec.allreduce(false);
     GaugeField<double> twist = 0;
