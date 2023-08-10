@@ -50,19 +50,19 @@ using SquareMatrix = Matrix<n, n, T>;
 
 
 /**
- * @brief The main \f$ n \times m \f$ matrix type template Matrix_t. This is a root type, and
- * "useful" types are derived from this class
+ * @brief The main \f$ n \times m \f$ matrix type template Matrix_t. This is a base class type for
+ * "useful" types which are derived from this.
  *
  * @details Uses curiously recurring template pattern (CRTP), where the last template parameter is
  * the template itself
  *
- * Example: the matrix type below is defined as
+ * Example: the Matrix type below is defined as
  * @code{.cpp}
  * template <int n, int m, typename T>
  * class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
  * @endcode
  *
- * Used because stupid c++ makes it complicated to write generic code, in this case derived
+ * This pattern is used because stupid c++ makes it complicated to write generic code, in this case derived
  * functions to return derived type
  *
  * @tparam n Number of rows
