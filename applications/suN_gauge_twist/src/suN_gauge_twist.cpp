@@ -1,9 +1,9 @@
 #include "hila.h"
 #include "gauge/staples.h"
-#include "gauge/polyakov.h"
 #include "gauge/stout_smear.h"
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
+//#include "gauge/polyakov.h"
 
 #include <fftw3.h>
 #include <numeric>
@@ -31,11 +31,10 @@ int z_ind(int z) {
  * @param p Parameter struct
  */
 template <typename group>
-void measure_stuff(const GaugeField<group> &U, const parameters &p) {
+void measure_plaq(const GaugeField<group> &U, const parameters &p) {
 
     static bool first = true;
 
-    // auto poly = measure_polyakov(U);
 
     auto plaq =
         measure_plaq_with_z(U, p.twist_coeff); /// (lattice.volume() * NDIM * (NDIM - 1) / 2);
@@ -53,6 +52,23 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
         hila::out0 << plaq[i] << " ";
     }
     hila::out0 << "\n";
+}
+
+template <typename group>
+void measure_poly(const GaugeField<group> &U, const parameters &p) {
+    static bool first = true;
+    auto poly = measure_polyakov_twist(U);
+    if (first) {
+        for (int i = 0; i < poly.size() - 1; i++)
+            hila::out0 << i << ", ";
+        hila::out0 << "sum \n";
+        first = false;
+    }
+    for (int i = 0; i < poly.size(); i++) {
+        hila::out0 << poly[i] << ", ";
+    }
+    hila::out0 << "\n";
+
 }
 
 /**
@@ -230,7 +246,8 @@ int main(int argc, char **argv) {
 
             // hila::out0 << "Measure_start " << trajectory << '\n';
 
-            measure_stuff(U, p);
+            //measure_plaq(U, p);
+            measure_poly(U, p);
 
             // hila::out0 << "Measure_end " << trajectory << std::endl;
 
