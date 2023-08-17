@@ -2250,7 +2250,13 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
         case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
 
             if (does_function_contain_field_access(f)) {
-                specialize_function_or_method(f);
+                if (!(f->getTemplateSpecializationKind() ==
+                      TemplateSpecializationKind::TSK_ExplicitSpecialization)) {
+                    specialize_function_or_method(f);
+                } else {
+                    llvm::errs() << " **** FUNC " << FuncName
+                                 << " is explicit specialization, avoided spec\n";
+                }
             } else {
                 parsing_state.skip_children = 1; // no reason to look at it further
             }
