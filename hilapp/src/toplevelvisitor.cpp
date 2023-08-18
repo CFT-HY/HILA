@@ -2254,8 +2254,8 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
                       TemplateSpecializationKind::TSK_ExplicitSpecialization)) {
                     specialize_function_or_method(f);
                 } else {
-                    llvm::errs() << " **** FUNC " << FuncName
-                                 << " is explicit specialization, avoided spec\n";
+                    llvm::errs() << " **** INFO: Function " << FuncName
+                                 << " is explicit specialization, not specializing further\n";
                 }
             } else {
                 parsing_state.skip_children = 1; // no reason to look at it further
