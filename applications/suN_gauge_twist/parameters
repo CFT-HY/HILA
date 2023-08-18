@@ -1,11 +1,11 @@
-lattice size         20,20,20,4
-beta                           9
+lattice size         20,20,20,2 
+beta                           5.158585858585859 
 delta beta fraction            0
 overrelax steps                4
 updates in trajectory          1
-trajectories                   1000
+trajectories                   3000
 thermalization                 0
 random seed                    0
 traj/saved                     20000
 config name                    config
-twist_coeff                    2
+twist_coeff                    0
