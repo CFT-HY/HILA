@@ -225,18 +225,19 @@ class SU2 {
         return 2.0 * ret; // factor of 2 from normalization, $\lambda_a = 1/2 \sigma_a$
     }
     /// SU2 matrix exp
+    #pragma hila novector
     inline SU2<T> exp() const {
         // $exp(U) = e^d*(cos(r) + sin(r)/r *(a i\sigma_1 + b i\sigma_2 + c i\sigma_3))$
         // r = sqrt(a^2+b^2+c^2)
         SU2<T> ret;
-        T r = sqrt(a * a + b * b + c * c);
+        T r = ::sqrt(a * a + b * b + c * c);
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
-            ret = 1;
+            ret = ::exp(d);
             return ret;
         }
-        T ed = exp(d);
-        T sr = ed * sin(r) / r;
-        ret.d = ed * cos(r);
+        T ed = ::exp(d);
+        T sr = ed * ::sin(r) / r;
+        ret.d = ed * ::cos(r);
         ret.a *= sr;
         ret.b *= sr;
         ret.c *= sr;
