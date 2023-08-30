@@ -231,12 +231,12 @@ class SU2 {
         SU2<T> ret;
         T r = sqrt(a * a + b * b + c * c);
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
-            ret = 1;
+            ret = ::exp(d);
             return ret;
         }
-        T ed = exp(d);
-        T sr = ed * sin(r) / r;
-        ret.d = ed * cos(r);
+        T ed = ::exp(d);
+        T sr = ed * ::sin(r) / r;
+        ret.d = ed * ::cos(r);
         ret.a *= sr;
         ret.b *= sr;
         ret.c *= sr;
