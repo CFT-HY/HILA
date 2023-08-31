@@ -27,6 +27,6 @@ RUN apt-get -y update && apt-get -y install clang-$LLVM_VERSION \
 
 #installing hilapp
 RUN cd / && \
-    git clone git@github.com:CFT-HY/HILA.git && \
+    git clone https://github.com/CFT-HY/HILA && \
     cd /HILA/hilapp && \
     make -j4 && make install
