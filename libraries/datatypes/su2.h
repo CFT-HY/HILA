@@ -247,15 +247,15 @@ class SU2 {
         //$ exp(U) = A => U = log(A)$
         // (a,b,c) -> (a,b,c)*arcCos(r)/r
         Algebra<SU2<T>> ret;
-        T r = sqrt(a * a + b * b + c * c);
+        T r = ::sqrt(a * a + b * b + c * c);
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
             ret = 0;
             return ret;
         }
-        r = acos(d) / sqrt(r);
-        ret.a = r * this->a;
-        ret.b = r * this->b;
-        ret.c = r * this->c;
+        r = ::acos(d) / r;
+        ret.a = 2.0 * r * this->a;
+        ret.b = 2.0 * r * this->b;
+        ret.c = 2.0 * r * this->c;
         return ret;
     }
 
@@ -543,8 +543,8 @@ class Algebra<SU2<T>> {
             ret = 1;
             return ret;
         }
-        T sr = sin(r) / r;
-        ret.d = cos(r);
+        T sr = ::sin(r) / r;
+        ret.d = ::cos(r);
         ret.a = sr * tmp.a;
         ret.b = sr * tmp.b;
         ret.c = sr * tmp.c;
