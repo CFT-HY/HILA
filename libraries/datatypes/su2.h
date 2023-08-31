@@ -243,20 +243,23 @@ class SU2 {
         ret.c *= sr;
         return ret;
     }
+
+    #pragma hila novector
     /// SU2 matrix log, returns SU2 algebra
     inline Algebra<SU2<T>> log() const {
         //$ exp(U) = A => U = log(A)$
         // (a,b,c) -> (a,b,c)*arcCos(r)/r
         Algebra<SU2<T>> ret;
-        T r = sqrt(a * a + b * b + c * c);
+        T r = ::sqrt(a * a + b * b + c * c);
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
             ret = 0;
             return ret;
         }
-        r = acos(d) / sqrt(r);
-        ret.a = r * this->a;
-        ret.b = r * this->b;
-        ret.c = r * this->c;
+        r = ::acos(d) / r;
+        // factor 2 for the algebra
+        ret.a = 2.0 * r * this->a;
+        ret.b = 2.0 * r * this->b;
+        ret.c = 2.0 * r * this->c;
         return ret;
     }
 
