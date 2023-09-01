@@ -5,6 +5,15 @@
 
 /**
  * @brief \f$ n\times m \f$ Array type
+ * @details Acts as array class which stores data in a simple C style array.
+ *
+ * Main functionality which the Array class offers is to supplement the fall backs of storing
+ * information in a Matrix data structure.
+ *
+ * For example assigning a value to each element with the Matrix class is not directly possible
+ * using the assignment operator=. This is because assignment with matrices is defined as
+ * \f$ M = a = a*I \f$ where M is a general matrix, a is a scalar and I an identity matrix. The
+ * result would only assign a to the diagonal elements.
  *
  * @tparam n - row length
  * @tparam m - column length

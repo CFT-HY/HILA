@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     g[{4, 0, 0}] = 1.0;
     g[{99,99, 99}] = 5;
     g[{24,0, 2}] = 2.3;
-    g.set_element(4,{2,2,1});
+    //g.set_element(4,{2,2,1});
 
     double val1, val2, val3, val4, val5, val6;
     CoordinateVector loc1, loc2, loc3, loc4, loc5, loc6;
