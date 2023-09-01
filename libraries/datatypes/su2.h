@@ -583,15 +583,7 @@ inline Algebra<SU2<R>> operator-(const Algebra<SU2<A>> &lhs, const Algebra<SU2<B
     ret.c = lhs.c - rhs.c;
     return ret;
 }
-/// multiply two Algebra<SU2>'s
-template <typename A, typename B, typename R = hila::type_mul<A, B>>
-inline Algebra<SU2<R>> operator*(const Algebra<SU2<A>> &x, const Algebra<SU2<B>> &y) {
-    Algebra<SU2<R>> ret;
-    ret.a = (-x.b * y.c + x.c * y.b);
-    ret.b = (-x.c * y.a + x.a * y.c);
-    ret.c = (-x.a * y.b + x.b * y.a);
-    return ret;
-}
+
 /// Algebra<SU2> * scalar
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_mul<A, B>>::value, int> = 0>
