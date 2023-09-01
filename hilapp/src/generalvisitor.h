@@ -221,7 +221,8 @@ class GeneralVisitor {
 
     bool is_simple_reduction(const std::string &opcode, Expr *assignee);
 
-    bool is_increment_expr(Stmt *s, Expr **assignee = nullptr);
+    bool is_increment_expr(Stmt *s, Expr **assignee = nullptr, bool *decrement = nullptr,
+                           bool *prefix = nullptr, SourceLocation *sl = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
 

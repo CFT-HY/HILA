@@ -179,6 +179,7 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     bool is_field_with_coordinate_stmt(Stmt *s);
     void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc, char optype);
     void field_with_coordinate_read(Expr *E);
+    bool handle_field_coordinate_expr(Expr *e);
 
     /// Does ; follow the statement?
     SourceRange getRangeWithSemicolon(Stmt *S, bool flag_error = true);
@@ -226,7 +227,7 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Find the "base" of compound expr, e.g. a in "a[i]"
     Expr *find_base_expr(Expr *E);
 
-    /// Try to find the "root" of compound variable ref, i.e. 
+    /// Try to find the "root" of compound variable ref, i.e.
     /// the DeclRefExpr where Expr belongs.  Can also return CXXThisExpr
     Expr *find_root_variable(Expr *E);
 
