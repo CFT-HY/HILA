@@ -79,7 +79,7 @@ bool GeneralVisitor::is_field_with_X_and_dir(Expr *E) {
 /////////////////////////////////////////////////////////////////
 
 bool GeneralVisitor::is_field_with_coordinate(Expr *E) {
-    E = E->IgnoreParens();
+    E = E->IgnoreImplicit()->IgnoreParens();
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
 
     if (OC && strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0 &&
@@ -157,7 +157,8 @@ bool GeneralVisitor::is_simple_reduction(const std::string &opcode, Expr *assign
 }
 
 /////////////////////////////////////////////////////////////////
-bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee) {
+bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee, bool *decrement, bool *prefix,
+                                       SourceLocation *sl) {
     if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
 
         if (OP->getOperator() == OverloadedOperatorKind::OO_PlusPlus ||
@@ -166,6 +167,15 @@ bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee) {
             if (assignee) {
                 *assignee = OP->getArg(0)->IgnoreImplicit();
             }
+
+            if (decrement)
+                *decrement = (OP->getOperator() == OverloadedOperatorKind::OO_MinusMinus);
+
+            if (prefix) 
+                *prefix = (OP->getNumArgs() == 1);   // postfix has 2nd dummy int arg!
+
+            if (sl)
+                *sl = OP->getOperatorLoc();
 
             return true;
         }
@@ -186,6 +196,15 @@ bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee) {
                     }
                 }
             }
+
+            if (decrement)
+                *decrement = U->isDecrementOp();
+
+            if (prefix)
+                *prefix = U->isPrefix();
+
+            if (sl)
+                *sl = U->getOperatorLoc();
 
             return true;
         }

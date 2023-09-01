@@ -1115,7 +1115,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         is_assignment = true;
         is_compound = true;
         assign_stmt = nullptr;
-        assignop = "++";
+        assignop = "++"; // generic flag for all inc/dec operators
 
         is_field_assign = (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
 
@@ -2047,37 +2047,44 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 /// Handle Field[Coordinate] -expressions
 ////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
+// check that expr contains field[coord], and it is not handled
+// before. Handling marked by removing tailing ]!!
 
-    static bool was_previously_assigned = false;
+bool TopLevelVisitor::handle_field_coordinate_expr(Expr *e) {
+    if (is_field_with_coordinate(e)) {
+        e = e->IgnoreImplicit()->IgnoreParens();
+        CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e);
+        if (OC && writeBuf->get(OC->getRParenLoc(), 1) == "]") {
+            // got it, wipe away
+            writeBuf->replace(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()), " ");
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
 
     // Check first if this is field[c] = ... -stmt
 
     // assigment through operator=()
 
     CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
-    if (OP && OP->isAssignmentOp() && is_field_with_coordinate(OP->getArg(0)->IgnoreImplicit())) {
+    if (OP && OP->isAssignmentOp() && handle_field_coordinate_expr(OP->getArg(0))) {
 
         const char *sp = getOperatorSpelling(OP->getOperator());
         char op = sp[0];
         // operator is = for assign, +-*/ for compound
 
-        //     reportDiag(
-        //         DiagnosticsEngine::Level::Error, OP->getOperatorLoc(),
-        //         "only direct assignment '=' allowed for Field[CoordinateVector]");
-        //     return false;
-        // }
-
         field_with_coordinate_assign(OP->getArg(0)->IgnoreImplicit(),
                                      OP->getArg(1)->IgnoreImplicit(), OP->getOperatorLoc(), op);
-        was_previously_assigned = true;
 
         return true;
     }
 
     // check also Field<double> or some other non-class assign
     BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-    if (BO && BO->isAssignmentOp() && is_field_with_coordinate(BO->getLHS()->IgnoreImplicit())) {
+    if (BO && BO->isAssignmentOp() && handle_field_coordinate_expr(BO->getLHS())) {
         char op;
         if (BO->isCompoundAssignmentOp()) {
             op = BO->getOpcodeStr().str()[0];
@@ -2091,7 +2098,30 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
 
         field_with_coordinate_assign(BO->getLHS()->IgnoreImplicit(), BO->getRHS()->IgnoreImplicit(),
                                      BO->getOperatorLoc(), op);
-        was_previously_assigned = true;
+
+        return true;
+    }
+
+    // Check also field a[]++ and --
+
+    Expr *arg;
+    bool is_decrement, is_prefix;
+    SourceLocation sl;
+    if (is_increment_expr(s, &arg, &is_decrement, &is_prefix, &sl) &&
+        handle_field_coordinate_expr(arg)) {
+
+        // operators: ++f : 'A' , f++ : 'a' , --f : 'S' , f-- : 's'
+        char op;
+        if (is_decrement && is_prefix)
+            op = 'S';
+        else if (is_decrement)
+            op = 's';
+        else if (is_prefix)
+            op = 'A';
+        else
+            op = 'a';
+
+        field_with_coordinate_assign(arg->IgnoreImplicit(), nullptr, sl, op);
 
         return true;
     }
@@ -2100,12 +2130,8 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
     // If assginment was previously seen, the expr has been handled already
 
     Expr *E = dyn_cast<Expr>(s);
-    if (E && is_field_with_coordinate(E)) {
-        if (!was_previously_assigned) {
-            field_with_coordinate_read(E);
-        }
-        was_previously_assigned = false;
-
+    if (E && handle_field_coordinate_expr(E)) {
+        field_with_coordinate_read(E);
         return true;
     }
 
@@ -2116,20 +2142,44 @@ void TopLevelVisitor::field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceL
                                                    char op) {
 
     // lhs is field[par] -expr - we know here that arg is of the
-    // right type, so this succeeds
+    // right type, so this should succeed
+
+    lhs = lhs->IgnoreImplicit();
+    if (isa<ParenExpr>(lhs)) {
+        reportDiag(DiagnosticsEngine::Level::Error, lhs->getSourceRange().getBegin(),
+                   "parenthesis not allowed here");
+        return;
+    }
+
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(lhs);
 
-    if (writeBuf->get(oploc, 1) == ",")
-        return; // this has already been changed
+    assert(OC && "Not [] operator!");
 
-    // now change = -> ,
-    if (op == '=') {
-        writeBuf->replace(SourceRange(oploc, oploc), ",");
+    if (rhs != nullptr) {
+        // now assignment op branch
+
+        if (writeBuf->get(oploc, 1) == ",")
+            return; // this has already been changed
+
+        // now change = -> ,
+        if (op == '=') {
+            writeBuf->replace(SourceRange(oploc, oploc), ",");
+        } else {
+            writeBuf->replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
+        }
+
     } else {
-        writeBuf->replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
+        // now ++ or --
+
+        if (writeBuf->get(oploc, 1) == " ")
+            return; // taken care of
+
+        // blank operator
+        writeBuf->replace(SourceRange(oploc, oploc.getLocWithOffset(1)), " ");
     }
-    // Remove ]
-    writeBuf->remove(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()));
+
+    // Remove ]   -- ALREADY REMOVED
+    // writeBuf->remove(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()));
     // find [ and insert method call
     SourceLocation sl = OC->getArg(1)->getBeginLoc();
     while (sl.isValid() && getChar(sl) != '[')
@@ -2152,19 +2202,44 @@ void TopLevelVisitor::field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceL
     case '/':
         call = ".compound_div_element(";
         break;
+
+    // and ++ / --
+    case 'a':
+        call = ".increment_postfix_element(";
+        break;
+    case 'A':
+        call = ".increment_prefix_element(";
+        break;
+    case 's':
+        call = ".decrement_postfix_element(";
+        break;
+    case 'S':
+        call = ".decrement_prefix_element(";
+        break;
     }
     writeBuf->replace(SourceRange(sl, sl), call);
     // and insert closing )
-    sl = getSourceLocationAtEndOfRange(get_real_range(rhs->getSourceRange()));
+    SourceRange sr;
+    if (rhs != nullptr) {
+        rhs = rhs->IgnoreImplicit()->IgnoreParens();
+        sr = rhs->getSourceRange();
+    } else
+        sr = lhs->getSourceRange();
+
+    sl = getSourceLocationAtEndOfRange(get_real_range(sr));
     sl = sl.getLocWithOffset(1);
     writeBuf->insert(sl, ")", true);
 }
+
 
 void TopLevelVisitor::field_with_coordinate_read(Expr *E) {
 
     // expr is field[par] -expr - we know here that arg is of the
     // right type, so this succeeds
+    E = E->IgnoreImplicit()->IgnoreParens();
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+
+    assert(OC && "Not [] operator!");
 
     // Replace ] with )
     writeBuf->replace(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()), ")");
