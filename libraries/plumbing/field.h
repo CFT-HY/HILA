@@ -1012,13 +1012,14 @@ class Field {
     /// is sufficient to set the element locally
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
-    void set_element(const CoordinateVector &coord, const A &value) {
+    const A & set_element(const CoordinateVector &coord, const A &value) {
         if (lattice.is_on_mynode(coord)) {
             T element;
             element = value;
             set_value_at(element, lattice.site_index(coord));
         }
         mark_changed(coord.parity());
+        return value;
     }
 
     /**
@@ -1036,8 +1037,7 @@ class Field {
             element = get_value_at(lattice.site_index(coord));
         }
 
-
-        MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice.mpi_comm_lat);
+        hila::broadcast(element,owner);
 
         return element;
     }
@@ -1083,6 +1083,9 @@ class Field {
     //     e = 0;
     //     set_element(e, coord);
     // }
+
+    // Compound element ops - used in field element operations like F[cv] += smth;
+    // These are optimized so that do NOT return a value, thus cannot be chained.  This avoids MPI.
 
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
@@ -1130,6 +1133,41 @@ class Field {
             set_value_at(v, i);
         }
         mark_changed(coord.parity());
+    }
+
+
+    // pre- and postfix ++ -- return value
+
+    inline const T increment_postfix_element(const CoordinateVector &coord) {
+        T r, v; 
+        v = get_element(coord);
+        r = v;
+        v++;
+        set_element(coord,v);
+        return r;
+    }
+
+    inline const T increment_prefix_element(const CoordinateVector &coord) {
+        T v = get_element(coord);
+        ++v;
+        set_element(coord,v);
+        return v;
+    }
+
+    inline const T decrement_postfix_element(const CoordinateVector &coord) {
+        T r, v; 
+        v = get_element(coord);
+        r = v;
+        v--;
+        set_element(coord,v);
+        return r;
+    }
+
+    inline const T decrement_prefix_element(const CoordinateVector &coord) {
+        T v = get_element(coord);
+        --v;
+        set_element(coord,v);
+        return v;
     }
 
 
