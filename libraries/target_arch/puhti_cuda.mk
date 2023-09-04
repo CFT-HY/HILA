@@ -9,7 +9,7 @@
 
 $(info ########################################################################)
 $(info Target puhti_cuda:  remember to )
-$(info   module load gcc cuda openmpi/4.1.4-cuda )
+$(info   module load gcc/11.3.0 openmpi/4.1.4-cuda cuda fftw )
 $(info ########################################################################)
 
 # Define compiler
@@ -43,9 +43,7 @@ MPI_LIBS =  -lmpi
 LDLIBS = -lcufft -lm $(MPI_LIBS)
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
-
-################
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 # These variables must be defined here
 #
