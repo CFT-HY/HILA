@@ -55,9 +55,6 @@ int main(int argc, char *argv[]) {
     average = average / lattice.volume();
     hila::out0 << "Average of g is " << average << '\n';
 
-    Imaginary_t<double> a(1);
-    double b = 1;
-    hila::out0 << a + b << '\n';
     // make a clean exit
     hila::finishrun();
 }
