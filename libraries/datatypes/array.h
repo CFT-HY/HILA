@@ -15,9 +15,23 @@
  * \f$ M = a = a*I \f$ where M is a general matrix, a is a scalar and I an identity matrix. The
  * result would only assign a to the diagonal elements.
  *
- * @tparam n - row length
- * @tparam m - column length
- * @tparam T Data type for Array
+ * Unlike the Matrix object, the Array object assigns element wise. This allows filling the Array
+ * with the assignment operator. Additionally element wise operations are useable as long as they
+ * are defined for the Array type. For example the operation:
+ *
+ * \code
+ * Array<n,m,double> m.random();
+ * sin(m);
+ * \endcode
+ *
+ * is defined, since the \f$sin\f$ function is defined for doubles.
+ *
+ * The above operation would not work for matrices, but with casting operations. Matrix::asArray and
+ * Array::asMatrix one can take full advantage of element wise operations.
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
  */
 template <const int n, const int m, typename T>
 class Array {
@@ -25,19 +39,63 @@ class Array {
     static_assert(hila::is_complex_or_arithmetic<T>::value,
                   "Array requires Complex or arithmetic type");
 
-    /// Same data as Matrix, a one dimensional array
+    // Store Array contents in one dimensional C style array
     T c[n * m];
 
-    /// std incantation for field types
+    // std incantation for field types
     using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
-    /// define default constructors to ensure std::is_trivial
+    /**
+     * @brief Construct a new Matrix object
+     * @details The following ways of constructing a matrix are:
+     *
+     * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
+     *
+     * __Default constructor__:
+     *
+     * Allocates undefined \f$ n\times m\f$ Array.
+     *
+     * \code{.cpp}
+     * Array<n,m,MyType> A;
+     * \endcode
+     *
+     *
+     * __Scalar constructor__:
+     *
+     * Construct with given scalar which is assigned to all elements in array
+     *
+     * \code{.cpp}
+     * MyType x = hila::random();
+     * Array<n,m,MyType> A = x;
+     * \endcode
+     *
+     * __Copy constructor__:
+     *
+     * Construction from previously defined Array.
+     *
+     * \code{.cpp}
+     * Array<n,m,MyOtherType> A_0;
+     * //
+     * // A_0 is filled with content
+     * //
+     * Array<n,m,MyType> A = A_0;
+     * \endcode
+     *
+     * __Initializer list__:
+     *
+     * Construction from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Array<2,2,int> A = {1, 0
+     *                      0, 1};
+     * \endcode
+     */
     Array() = default;
     ~Array() = default;
     Array(const Array<n, m, T> &v) = default;
 
-    /// constructor from scalar - make this also explicit, consistency
+    // constructor from scalar - make this also explicit, consistency
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     explicit inline Array(const S rhs) {
         for (int i = 0; i < n * m; i++) {
@@ -52,8 +110,8 @@ class Array {
             c[i] = static_cast<T>(0);
     }
 
-    /// Construct array automatically from right-size initializer list
-    /// This does not seem to be dangerous, so keep non-explicit
+    // Construct array automatically from right-size initializer list
+    // This does not seem to be dangerous, so keep non-explicit
 
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array(std::initializer_list<S> rhs) {
@@ -64,15 +122,30 @@ class Array {
         }
     }
 
-    /// Define constant methods rows(), columns() - may be useful in template code
+    /**
+     * @brief Returns number of rows
+     *
+     * @return constexpr int
+     */
     constexpr int rows() const {
         return n;
     }
+    /**
+     * @brief Returns number of columns
+     *
+     * @return constexpr int
+     */
     constexpr int columns() const {
         return m;
     }
 
-    // define also method size() for 'vector arrays' and square arrays only!
+    /**
+     * @brief Returns size of #Vector Array or square Array
+     *
+     * @tparam q Number of rows n
+     * @tparam p Number of columns m
+     * @return constexpr int
+     */
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     constexpr int size() const {
         return p;
@@ -88,17 +161,38 @@ class Array {
         return q;
     }
 
-    /// access operators .e(i,j) and .e(i) from Matrix
+    /**
+     * @brief Standard array indexing operation for 2D and 1D Arrays
+     *
+     * @details Accessing singular elements is insufficient, but matrix elements are often quite
+     * small.
+     *
+     * Exammple for 2D Array:
+     * \code
+     *  Array<n,m,MyType> A;
+     *  MyType a = A.e(i,j); \\ i <= n, j <= m
+     * \endcode
+     *
+     * Example for Vector Array:
+     * \code {.cpp}
+     *  Array1d<n,MyType> A;
+     * MyType a = A.e(i) \\ i <= n
+     * \endcode
+     *
+     * @param i row index
+     * @param j column index
+     * @return T matrix element type
+     */
     inline T e(const int i, const int j) const {
         return c[i * m + j];
     }
-    /// standard access ops m.e(i,j) - assume T is small, as it should
+    // standard access ops m.e(i,j) - assume T is small, as it should
     inline T &e(const int i, const int j) const_function {
         return c[i * m + j];
     }
 
-    /// declare single e here too in case we have a vector
-    /// (one size == 1)
+    // declare single e here too in case we have a vector
+    // (one size == 1)
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
@@ -109,7 +203,11 @@ class Array {
         return c[i];
     }
 
-    // cast from array to matrix
+    /**
+     * @brief Cast Array to Matrix
+     *
+     * @return Matrix<n, m, T>&
+     */
     Matrix<n, m, T> &asMatrix() const_function {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
@@ -118,7 +216,12 @@ class Array {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
 
-    // Define also asVector(), although asMatrix() already includes this
+    /**
+     * @brief Cast Array1D to Vector
+     * @details asMatrix will perform the same operation.
+     *
+     * @return Vector<n, T>&
+     */
     Vector<n, T> &asVector() const_function {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<Vector<n, T> *>(this);
@@ -130,8 +233,8 @@ class Array {
     }
 
 
-    /// casting from one Array (number) type to another
-    /// TODO: CHECK AVX CONVERSIONS
+    // casting from one Array (number) type to another
+    // TODO: CHECK AVX CONVERSIONS
     template <typename S, std::enable_if_t<hila::is_assignable<S &, T>::value, int> = 0>
     operator Array<n, m, S>() {
         Array<n, m, S> res;
@@ -141,7 +244,12 @@ class Array {
         return res;
     }
 
-    /// unary -
+    /**
+     * @brief Unary - operator
+     * @details Returns Array with the signs of all the elements in the Arrat flipped.
+     *
+     * @return Array<n,m,T>
+     */
     inline Array<n, m, T> operator-() const {
         Array<n, m, T> res;
         for (int i = 0; i < n * m; i++) {
@@ -150,12 +258,59 @@ class Array {
         return res;
     }
 
-    /// unary +
+    /**
+     * @brief Unary + operator
+     * @details Equivalent to identity operator meaning that Arrat stays as is.
+     *
+     * @return const Array<n, m, T>
+     */
     inline Array<n, m, T> operator+() const {
         return *this;
     }
 
-    /// Assign from scalar to array
+    /**
+     * @brief Assignment operator = to assign values to Array
+     * @details The following ways to assign an Array are:
+     *
+     *
+     * __Assignment from Array__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A_0;
+     * .
+     * . A_0 has values assigned to it
+     * .
+     * Array<n,m,MyType> A; \\ undefined matrix
+     * A = A_0; \\ Assignment from A_0
+     * \endcode
+     *
+     * __Assignment from 0__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A;
+     * A = 0; Zero matrix;
+     * \endcode
+     *
+     * __Assignment from scalar__:
+     *
+     * Assignment from scalar assigns the scalar to the diagonal elements as \f$ A = I\cdot a\f$
+     *
+     * \code {.cpp}
+     * MyType a = hila::random;
+     * Array<n,m,MyType> A;
+     * A = a; A = I*a
+     * \endcode
+     *
+     *__Initializer list__:
+     *
+     * Assignment from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Array<2,2,int> A ;
+     * A = {1, 0
+     *      0, 1};
+     * \endcode
+     */
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array<n, m, T> &operator=(const S rhs) {
