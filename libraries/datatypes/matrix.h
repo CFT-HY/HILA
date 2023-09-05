@@ -602,7 +602,7 @@ class Matrix_t {
      *
      * @tparam S Element type of rhs
      * @tparam MT Matrix type of rhs
-     * @param rhs Matrix to multiply with
+     * @param rhs Matrix to add
      * @return Mtype&
      */
 #pragma hila loop_function
@@ -630,13 +630,12 @@ class Matrix_t {
      *
      * __Subtract assign scalar__:
      *
-     * Adds scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
+     * Subtract scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M = 3;
      * M -= 1 ; \\ M = 2*I
      * \endcode
-
      *
      * @param rhs Matrix to subtract with
      * @return template <typename S, typename MT,
@@ -2130,7 +2129,7 @@ inline Mt operator*(const Mt &a, const Mt &b) {
  * auto S = N * M; // Results in a 3 x 3 Matrix since N.rows() = 3 and M.columns = 3
  * \endcode
  *
- * __ #RowVector * #Vector / #Vector * #RowVector:__
+ * __RowVector * #Vector / #Vector * #RowVector:__
  *
  * Defined as standard [dot product](https://en.wikipedia.org/wiki/Dot_product) between vectors as
  * long as vectors are of same length
