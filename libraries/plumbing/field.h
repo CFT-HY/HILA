@@ -1012,14 +1012,14 @@ class Field {
     /// is sufficient to set the element locally
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
-    const A & set_element(const CoordinateVector &coord, const A &value) {
+    const T set_element(const CoordinateVector &coord, const A &value) {
+        T element;
+        element = value;
         if (lattice.is_on_mynode(coord)) {
-            T element;
-            element = value;
             set_value_at(element, lattice.site_index(coord));
         }
         mark_changed(coord.parity());
-        return value;
+        return element;
     }
 
     /**
