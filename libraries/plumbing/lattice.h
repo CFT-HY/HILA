@@ -267,9 +267,9 @@ class lattice_struct {
     std::vector<comm_node_struct> create_comm_node_vector(CoordinateVector offset, unsigned *index,
                                                           bool receive);
 
-    bool first_site_even() const {
-        return mynode.first_site_even;
-    };
+    // bool first_site_even() const {
+    //     return mynode.first_site_even;
+    // };
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     void init_special_boundaries();

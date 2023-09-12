@@ -260,8 +260,8 @@ class Field {
     }
 
     /**
-     * @brief Construct a new Field object by stealing content from previous field (rhs) which will
-     * be set to null
+     * @brief Move constructor: construct a new Field object by stealing content from previous field
+     * (rhs) which will be set to null
      *
      * @param rhs
      */
@@ -698,7 +698,7 @@ class Field {
     }
 
     /**
-     * @brief Move Assignment
+     * @brief Move Assignment - steal the content of rhs
      *
      * @param rhs
      * @return Field<T>&
@@ -991,7 +991,7 @@ class Field {
      * @details  this is currently OK only for short moves, very inefficient for longer moves
      * Example:
      * @code{.cpp}
-     *   
+     *
      * @endcode
      * @param v
      * @param par
@@ -1037,7 +1037,7 @@ class Field {
             element = get_value_at(lattice.site_index(coord));
         }
 
-        hila::broadcast(element,owner);
+        hila::broadcast(element, owner);
 
         return element;
     }
@@ -1139,34 +1139,34 @@ class Field {
     // pre- and postfix ++ -- return value
 
     inline const T increment_postfix_element(const CoordinateVector &coord) {
-        T r, v; 
+        T r, v;
         v = get_element(coord);
         r = v;
         v++;
-        set_element(coord,v);
+        set_element(coord, v);
         return r;
     }
 
     inline const T increment_prefix_element(const CoordinateVector &coord) {
         T v = get_element(coord);
         ++v;
-        set_element(coord,v);
+        set_element(coord, v);
         return v;
     }
 
     inline const T decrement_postfix_element(const CoordinateVector &coord) {
-        T r, v; 
+        T r, v;
         v = get_element(coord);
         r = v;
         v--;
-        set_element(coord,v);
+        set_element(coord, v);
         return r;
     }
 
     inline const T decrement_prefix_element(const CoordinateVector &coord) {
         T v = get_element(coord);
         --v;
-        set_element(coord,v);
+        set_element(coord, v);
         return v;
     }
 
