@@ -1399,7 +1399,6 @@ inline auto operator/(const Imaginary_t<A> &a, const Imaginary_t<B> &b) {
 /// Set of complex functions
 ///////////////////////////////////////////////////////////////////////////////
 
-
 /// exp(z)
 template <typename T>
 inline Complex<T> exp(const Complex<T> z) {
@@ -1424,7 +1423,12 @@ inline Complex<T> log(Complex<T> z) {
     return Complex<T>(static_cast<T>(0.5) * log(z.squarenorm()), z.arg());
 }
 
-/// sqrt(z) branch cut at -x axis
+// sqrt(z) branch cut at -x axis
+
+/**
+ * @brief Sqrt
+ * @details Square root
+ */
 template <typename T>
 inline Complex<T> sqrt(Complex<T> z) {
     T r = z.squarenorm();
@@ -1534,6 +1538,7 @@ template <typename T>
 inline Complex<T> acosh(Complex<T> z) {
     return log(z + sqrt(z * z - 1));
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.

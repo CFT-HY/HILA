@@ -1,3 +1,9 @@
+/**
+ * @file array.h
+ * @brief Definition of Array class
+ * @details This file contains the definitions of Array class and utility functions related to it.
+ */
+
 #ifndef ARRAY_H_
 #define ARRAY_H_
 
@@ -670,7 +676,7 @@ inline Array<n, m, hila::scalar_type<T>> imag(const Array<n, m, T> &arg) {
  * \code {.cpp}
  * Array<n,m,MyType> A, B, C;
  * A = 1;
- * B = 1
+ * B = 1;
  * C = A + B; // C is uniformly 2
  * \endcode
  *
@@ -682,7 +688,7 @@ inline Array<n, m, hila::scalar_type<T>> imag(const Array<n, m, T> &arg) {
  * \code {.cpp}
  * Array<n,m,MyType> A,B;
  * A = 1;
- * B = A + 1; // S is B is uniformly 2
+ * B = A + 1; // B is uniformly 2
  * \endcode
  *
  * @tparam n Number of rows
@@ -709,7 +715,7 @@ inline Array<n, m, T> operator+(Array<n, m, T> a, const Array<n, m, T> &b) {
  * \code {.cpp}
  * Array<n,m,MyType> A, B, C;
  * A = 2;
- * B = 1
+ * B = 1;
  * C = A - B; // C is uniformly 2
  * \endcode
  *
@@ -721,7 +727,7 @@ inline Array<n, m, T> operator+(Array<n, m, T> a, const Array<n, m, T> &b) {
  * \code {.cpp}
  * Array<n,m,MyType> A,B;
  * A = 2;
- * B = A - 1; // S is B is uniformly 2
+ * B = A - 1; // B is uniformly 2
  * \endcode
  *
  * @tparam n Number of rows
@@ -770,21 +776,85 @@ inline Array<n, m, T> operator-(const S b, Array<n, m, T> a) {
     return a;
 }
 
-/// and Array*Array
+/**
+ * @brief Multiplication operator
+ * @details Defined for the following operations
+ *
+ * __Array*Array:__
+ *
+ * __NOTE__: Arrays must share same dimensionality
+ *
+ * \code {.cpp}
+ * Array<n,m,MyType> A, B, C;
+ * A = 2;
+ * B = 3;
+ * C = A*B; // C is uniformly 6
+ * \endcode
+ *
+ *
+ * __Scalar * Array / Array * Scalar:__
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ * *
+ * \code {.cpp}
+ * Array<n,m,MyType> A,B;
+ * A = 2;
+ * B = A*3; // B is uniformly 6
+ * \endcode
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a
+ * @param b
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> operator*(Array<n, m, T> a, const Array<n, m, T> &b) {
     a *= b;
     return a;
 }
 
-/// and Array/Array
+/**
+ * @brief Division operator
+ * @details Defined for the following operations
+ *
+ * __Array/Array:__
+ *
+ * __NOTE__: Arrays must share same dimensionality
+ *
+ * \code {.cpp}
+ * Array<n,m,MyType> A, B, C;
+ * A = 4;
+ * B = 2;
+ * C = A/B; // C is uniformly 2
+ * \endcode
+ *
+ *
+ * __Scalar / Array / Array / Scalar:__
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ * *
+ * \code {.cpp}
+ * Array<n,m,MyType> A,B;
+ * A = 4;
+ * B = A/2; // B is uniformly 2
+ * \endcode
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a
+ * @param b
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> operator/(Array<n, m, T> a, const Array<n, m, T> &b) {
     a /= b;
     return a;
 }
 
-/// Array * scalar
+// Array * scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
@@ -792,7 +862,7 @@ inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
     return a;
 }
 
-/// scalar * Array
+// scalar * Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
@@ -800,7 +870,7 @@ inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
     return a;
 }
 
-/// Array / scalar
+// Array / scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
@@ -808,7 +878,7 @@ inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
     return a;
 }
 
-/// scalar / Array
+// scalar / Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_div<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
@@ -817,7 +887,18 @@ inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     return a;
 }
 
-/// Stream operator
+/**
+ * @brief Stream operator
+ * @details Naive Stream operator for formatting Matrix for printing. Simply puts elements one after
+ * the other in row major order
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param strm OS stream
+ * @param A Array to write
+ * @return std::ostream&
+ */
 template <int n, int m, typename T>
 std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
     return operator<<(strm, A.asMatrix());
@@ -825,6 +906,17 @@ std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
 
 namespace hila {
 
+/**
+ * @brief Converts Array object to string
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param A Array to convert to string
+ * @param prec Precision of T
+ * @param separator Separator between elements
+ * @return std::string
+ */
 template <int n, int m, typename T>
 std::string to_string(const Array<n, m, T> &A, int prec = 8, char separator = ' ') {
     return to_string(A.asMatrix(), prec, separator);
@@ -838,17 +930,35 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
 } // namespace hila
 
 
-/// Norm squared function
+/**
+ * @brief Return square norm of Array
+ * @details Wrapper around Array::squarenrom
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param rhs Array to compute squarenorm of
+ * @return hila::scalar_type<T>
+ */
 template <int n, int m, typename T>
 inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 
+/** @name Arithmetic operations
+ *  @details all operations are applied linearly to the Array A
+ *  @{
+ */
 
-////////////////////////////////////////////////////////////////////////////////
-/// Standard arithmetic functions - do element by element
-////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Square root
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> sqrt(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -856,6 +966,15 @@ inline Array<n, m, T> sqrt(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Cuberoot
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> cbrt(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -863,6 +982,15 @@ inline Array<n, m, T> cbrt(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Exponential
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> exp(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -870,6 +998,15 @@ inline Array<n, m, T> exp(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Logarithm
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> log(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -877,6 +1014,15 @@ inline Array<n, m, T> log(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Sine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> sin(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -884,6 +1030,15 @@ inline Array<n, m, T> sin(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Cosine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> cos(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -891,6 +1046,15 @@ inline Array<n, m, T> cos(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Tangent
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> tan(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -898,6 +1062,15 @@ inline Array<n, m, T> tan(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Sine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> asin(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -905,6 +1078,15 @@ inline Array<n, m, T> asin(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Cosine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> acos(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -912,6 +1094,15 @@ inline Array<n, m, T> acos(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Tangent
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> atan(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -919,6 +1110,15 @@ inline Array<n, m, T> atan(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Hyperbolic Sine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> sinh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -926,6 +1126,15 @@ inline Array<n, m, T> sinh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Hyperbolic Cosine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> cosh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -933,6 +1142,15 @@ inline Array<n, m, T> cosh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Hyperbolic tangent
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> tanh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -940,6 +1158,15 @@ inline Array<n, m, T> tanh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Hyperbolic Sine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> asinh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -947,6 +1174,15 @@ inline Array<n, m, T> asinh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Hyperbolic Cosine
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> acosh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -954,6 +1190,15 @@ inline Array<n, m, T> acosh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Hyperbolic Tangent
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> atanh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -961,6 +1206,19 @@ inline Array<n, m, T> atanh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Power
+ *
+ * @details Array can be raised homogeneously to the power of a integer or scalar b or Array can be
+ * raised to the power of another Array b element wise.
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @param b Array, Integer or Real scalar to raise to the power of
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> pow(Array<n, m, T> a, int b) {
     for (int i = 0; i < n * m; i++)
@@ -982,6 +1240,15 @@ inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n, m, T> &b) {
     return a;
 }
 
+/**
+ * @brief Rounding
+ * @details Rounding function if T is arithmetic type
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type, must be arithmetic type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> round(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -989,6 +1256,15 @@ inline Array<n, m, T> round(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Floor
+ * @details Flooring function if T is arithmetic type
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type, must be arithmetic type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> floor(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -996,6 +1272,15 @@ inline Array<n, m, T> floor(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Ceiling
+ * @details Ceiling function if T is arithmetic type
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type, must be arithmetic type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> ceil(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -1003,19 +1288,37 @@ inline Array<n, m, T> ceil(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Truncation
+ * @details Truncation function if T is arithmetic type
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type, must be arithmetic type
+ * @param a Input array
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> trunc(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = trunc(a.c[i]);
     return a;
 }
+/** @} */
 
-
-// Cast operators to different number or Complex type
-// cast_to<double>(a);
-// Cast from number->number, number->Complex, Complex->Complex OK,
-//     Complex->number not.
-
+/**
+ * @brief Array casting operation
+ * @details Cast array to different number type or Complex type
+ *
+ * Allowed casting: number->number, number->Complex, Complex->Complex
+ *
+ * Not allowed casting: Complex->number
+ * @tparam Ntype Type to cast to
+ * @tparam T Input Array type
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @param mat Array to cast
+ * @return Array<n, m, Ntype>
+ */
 template <typename Ntype, typename T, int n, int m,
           std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
@@ -1039,6 +1342,7 @@ Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
 template <int n, typename T = double>
 using Array1d = Array<n, 1, T>;
 
+/// Array1d and Array2d are just aliased to Array
 template <int n, int m, typename T = double>
 using Array2d = Array<n, m, T>;
 
