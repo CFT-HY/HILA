@@ -947,17 +947,19 @@ inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
 
 /** @name Arithmetic operations
  *  @details all operations are applied linearly to the Array A
- *  @{
- */
-
-/**
- * @brief Square root
  *
+ * Most functions are self explanitory, but if necessary function will have a detailed section with
+ * additional information.
  * @tparam n Number of rows
  * @tparam m Number of columns
  * @tparam T Array element type
  * @param a Input array
  * @return Array<n, m, T>
+ *  @{
+ */
+
+/**
+ * @brief Square root
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> sqrt(Array<n, m, T> a) {
@@ -968,12 +970,6 @@ inline Array<n, m, T> sqrt(Array<n, m, T> a) {
 
 /**
  * @brief Cuberoot
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> cbrt(Array<n, m, T> a) {
@@ -984,12 +980,6 @@ inline Array<n, m, T> cbrt(Array<n, m, T> a) {
 
 /**
  * @brief Exponential
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> exp(Array<n, m, T> a) {
@@ -1000,12 +990,6 @@ inline Array<n, m, T> exp(Array<n, m, T> a) {
 
 /**
  * @brief Logarithm
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> log(Array<n, m, T> a) {
@@ -1016,12 +1000,6 @@ inline Array<n, m, T> log(Array<n, m, T> a) {
 
 /**
  * @brief Sine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> sin(Array<n, m, T> a) {
@@ -1032,12 +1010,6 @@ inline Array<n, m, T> sin(Array<n, m, T> a) {
 
 /**
  * @brief Cosine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> cos(Array<n, m, T> a) {
@@ -1048,12 +1020,6 @@ inline Array<n, m, T> cos(Array<n, m, T> a) {
 
 /**
  * @brief Tangent
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> tan(Array<n, m, T> a) {
@@ -1064,12 +1030,6 @@ inline Array<n, m, T> tan(Array<n, m, T> a) {
 
 /**
  * @brief Inverse Sine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> asin(Array<n, m, T> a) {
@@ -1080,12 +1040,6 @@ inline Array<n, m, T> asin(Array<n, m, T> a) {
 
 /**
  * @brief Inverse Cosine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> acos(Array<n, m, T> a) {
@@ -1096,12 +1050,6 @@ inline Array<n, m, T> acos(Array<n, m, T> a) {
 
 /**
  * @brief Inverse Tangent
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> atan(Array<n, m, T> a) {
@@ -1112,12 +1060,6 @@ inline Array<n, m, T> atan(Array<n, m, T> a) {
 
 /**
  * @brief Hyperbolic Sine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> sinh(Array<n, m, T> a) {
@@ -1128,12 +1070,6 @@ inline Array<n, m, T> sinh(Array<n, m, T> a) {
 
 /**
  * @brief Hyperbolic Cosine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> cosh(Array<n, m, T> a) {
@@ -1144,12 +1080,6 @@ inline Array<n, m, T> cosh(Array<n, m, T> a) {
 
 /**
  * @brief Hyperbolic tangent
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> tanh(Array<n, m, T> a) {
@@ -1160,12 +1090,6 @@ inline Array<n, m, T> tanh(Array<n, m, T> a) {
 
 /**
  * @brief Inverse Hyperbolic Sine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> asinh(Array<n, m, T> a) {
@@ -1176,12 +1100,6 @@ inline Array<n, m, T> asinh(Array<n, m, T> a) {
 
 /**
  * @brief Inverse Hyperbolic Cosine
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> acosh(Array<n, m, T> a) {
@@ -1192,12 +1110,6 @@ inline Array<n, m, T> acosh(Array<n, m, T> a) {
 
 /**
  * @brief Inverse Hyperbolic Tangent
- *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> atanh(Array<n, m, T> a) {
@@ -1212,12 +1124,7 @@ inline Array<n, m, T> atanh(Array<n, m, T> a) {
  * @details Array can be raised homogeneously to the power of a integer or scalar b or Array can be
  * raised to the power of another Array b element wise.
  *
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Array element type
- * @param a Input array
  * @param b Array, Integer or Real scalar to raise to the power of
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T>
 inline Array<n, m, T> pow(Array<n, m, T> a, int b) {
@@ -1243,11 +1150,7 @@ inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n, m, T> &b) {
 /**
  * @brief Rounding
  * @details Rounding function if T is arithmetic type
- * @tparam n Number of rows
- * @tparam m Number of columns
  * @tparam T Array element type, must be arithmetic type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> round(Array<n, m, T> a) {
@@ -1259,11 +1162,7 @@ inline Array<n, m, T> round(Array<n, m, T> a) {
 /**
  * @brief Floor
  * @details Flooring function if T is arithmetic type
- * @tparam n Number of rows
- * @tparam m Number of columns
  * @tparam T Array element type, must be arithmetic type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> floor(Array<n, m, T> a) {
@@ -1275,11 +1174,7 @@ inline Array<n, m, T> floor(Array<n, m, T> a) {
 /**
  * @brief Ceiling
  * @details Ceiling function if T is arithmetic type
- * @tparam n Number of rows
- * @tparam m Number of columns
  * @tparam T Array element type, must be arithmetic type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> ceil(Array<n, m, T> a) {
@@ -1291,11 +1186,7 @@ inline Array<n, m, T> ceil(Array<n, m, T> a) {
 /**
  * @brief Truncation
  * @details Truncation function if T is arithmetic type
- * @tparam n Number of rows
- * @tparam m Number of columns
  * @tparam T Array element type, must be arithmetic type
- * @param a Input array
- * @return Array<n, m, T>
  */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> trunc(Array<n, m, T> a) {
