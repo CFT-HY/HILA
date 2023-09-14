@@ -1256,14 +1256,23 @@ class Matrix_t {
 
 
     /**
-     * @brief Multiply (nxm)-matrix from left by a matrix which is 1 except for 4 elements on
-     * rows/columns p,q.
+     * @brief Multiply \f$ n \times m \f$-matrix from the left by  \f$ n \times m \f$ matrix defined
+     * by  \f$ 2 \times 2 \f$ sub matrix
+     * @details The multiplication is defined as follows, let \f$M\f$ as the \f$ 2 \times 2 \f$
+     * input matrix and \f$B\f$ be `(this)` matrix, being the matrix stored in the object this
+     * method is called for. Let \f$A = I\f$ be a \f$ n \times m \f$ unit matrix. We then set the
+     * values of A to be: \f{align}{ A_{p,p} = M_{0,0}, \hspace{5px} A_{p,q} = M_{0,1}, \hspace{5px}
+     * A_{q,p} = M_{1,0}, \hspace{5px} A_{q,q} = M_{1,1}. \f}
      *
-     * @tparam R
-     * @tparam Mt
-     * @param p
-     * @param q
-     * @param M
+     * Then the resulting matrix will be:
+     *
+     * \f{align}{ B = A \cdot B  \f}
+     *
+     * @tparam R Element type of M
+     * @tparam Mt Matrix type of M
+     * @param p First row and column
+     * @param q Second row and column
+     * @param M \f$ 2 \times 2\f$ Matrix to multiply with
      */
     template <typename R, typename Mt>
     void mult_by_2x2_left(int p, int q, const Matrix_t<2, 2, R, Mt> &M) {
@@ -1283,14 +1292,16 @@ class Matrix_t {
     }
 
     /**
-     * @brief Multiply (nxm)-matrix from right by a matrix which is 1 except for 4 elements on
-     * rows/columns p,q.
+     * @brief  Multiply \f$ n \times m \f$-matrix from the right by  \f$ n \times m \f$ matrix
+     * defined by  \f$ 2 \times 2 \f$ sub matrix
+     * @details See Matrix::mult_by_2x2_left, only difference being that the multiplication is from
+     * the right.
      *
-     * @tparam R
-     * @tparam Mt
-     * @param p
-     * @param q
-     * @param M
+     * @tparam R Element type of M
+     * @tparam Mt Matrix type of M
+     * @param p First row and column
+     * @param q Second row and column
+     * @param M \f$ 2 \times 2\f$ Matrix to multiply with
      */
     template <typename R, typename Mt>
     void mult_by_2x2_right(int p, int q, const Matrix_t<2, 2, R, Mt> &M) {
