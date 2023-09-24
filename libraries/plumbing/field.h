@@ -1777,6 +1777,32 @@ void Field<T>::random() {
 #endif
 }
 
+template <typename T>
+void Field<T>::gaussian_random(double width) {
+
+#if defined(CUDA) || defined(HIP)
+
+    if (!hila::is_device_rng_on()) {
+
+        std::vector<T> rng_buffer(lattice.mynode.volume());
+        for (auto &element : rng_buffer)
+            hila::gaussian_random(element,width);
+        (*this).set_local_data(rng_buffer);
+
+    } else {
+        onsites(ALL) {
+            hila::gaussian_random((*this)[X],width);
+        }
+    }
+#else
+
+    onsites(ALL) {
+        hila::gaussian_random((*this)[X],width);
+    }
+
+#endif
+}
+
 
 #ifdef HILAPP
 
