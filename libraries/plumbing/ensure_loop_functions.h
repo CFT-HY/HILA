@@ -17,7 +17,7 @@
 
 template <typename T>
 void ensure_unary_minus_is_loop_function() {
-    if constexpr (has_unary_minus<T>::value) {
+    if constexpr (hila::has_unary_minus<T>::value) {
         Field<T> f;
         onsites(ALL) f[X] = -f[X];
         onsites(ALL) if (X.coordinate(e_x) == 0) f[X] = -f[X];

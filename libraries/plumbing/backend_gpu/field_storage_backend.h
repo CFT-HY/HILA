@@ -141,7 +141,7 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
 
 /// A kernel that gathers elements negated
 // requires unary -
-template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
 __global__ void gather_elements_negated_kernel(field_storage<T> field, T *buffer,
                                                unsigned *site_index, const int n,
                                                const unsigned field_alloc_size) {
@@ -160,7 +160,7 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
     unsigned *d_site_index;
     T *d_buffer;
 
-    if constexpr (!has_unary_minus<T>::value) {
+    if constexpr (!hila::has_unary_minus<T>::value) {
         assert(sizeof(T) < 0 && "Unary 'operatur- ()' must be defined for Field variable "
                                 "for antiperiodic b.c.");
     } else {
@@ -200,7 +200,7 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer, u
 }
 
 // gather -elements only if unary - exists
-template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
 __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *buffer,
                                                     unsigned *site_index, const int n,
                                                     const unsigned field_alloc_size) {
@@ -266,7 +266,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     int N_blocks = n / N_threads + 1;
     if (antiperiodic) {
 
-        if constexpr (has_unary_minus<T>::value) {
+        if constexpr (hila::has_unary_minus<T>::value) {
             gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(
                 *this, d_buffer, d_site_index, n, lattice.field_alloc_size());
         }
@@ -317,7 +317,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
     gpuFree(d_site_index);
 }
 
-template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
 __global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsigned offset,
                                                    unsigned *site_index, const int n,
                                                    const unsigned field_alloc_size) {
@@ -336,7 +336,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
     // Only need to do something for antiperiodic boundaries
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     if (antiperiodic) {
-        if constexpr (has_unary_minus<T>::value) {
+        if constexpr (hila::has_unary_minus<T>::value) {
             unsigned n, start = 0;
             if (par == ODD) {
                 n = lattice.special_boundaries[dir].n_odd;

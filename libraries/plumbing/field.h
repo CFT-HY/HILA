@@ -513,8 +513,9 @@ class Field {
         // this section is just to generate loop function calls for unary-.  Will removed by hilapp
         // from final code.  If type T does not have -, give error
 
-        static_assert(has_unary_minus<T>::value, "BC possible only for types which implement unary "
-                                                 "minus (-) -operator and are not unsigned");
+        static_assert(hila::has_unary_minus<T>::value,
+                      "BC possible only for types which implement unary "
+                      "minus (-) -operator and are not unsigned");
 
         ensure_unary_minus_is_loop_function<T>();
 #endif
@@ -1786,18 +1787,18 @@ void Field<T>::gaussian_random(double width) {
 
         std::vector<T> rng_buffer(lattice.mynode.volume());
         for (auto &element : rng_buffer)
-            hila::gaussian_random(element,width);
+            hila::gaussian_random(element, width);
         (*this).set_local_data(rng_buffer);
 
     } else {
         onsites(ALL) {
-            hila::gaussian_random((*this)[X],width);
+            hila::gaussian_random((*this)[X], width);
         }
     }
 #else
 
     onsites(ALL) {
-        hila::gaussian_random((*this)[X],width);
+        hila::gaussian_random((*this)[X], width);
     }
 
 #endif
