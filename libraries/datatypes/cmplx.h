@@ -254,7 +254,7 @@ class Complex {
     /**
      * @brief Compute argument of Complex number
      * @details
-     * \f{align}{ \arg(z) = \arctan2(\Re(z),\Im(z))\f}
+     * \f{align}{ \arg(z) = \arctan2(\Im(z)),\Re(z)\f}
      *
      * @return T
      */
