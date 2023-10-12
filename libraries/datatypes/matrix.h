@@ -2459,7 +2459,7 @@ inline auto squarenorm(const Mt &rhs) {
     return rhs.squarenorm();
 }
 
-/// Vector norm - sqrt of squarenorm()
+// Vector norm - sqrt of squarenorm()
 
 /**
  * @brief Returns vector norm of Matrix

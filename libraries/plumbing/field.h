@@ -1,4 +1,8 @@
-/** @file field.h */
+/**
+ * @file field.h
+ * @brief This files containts definitions for the Field class and the classes required to define
+ * it such as field_struct.
+ */
 #ifndef FIELD_H
 #define FIELD_H
 
@@ -32,24 +36,26 @@ void ensure_field_operators_exist();
 
 /**
  * @class Field
- * @brief The field class implements the standard methods for accessing fields
- *  Hilapp replaces the parity access patterns, Field[par] with a loop over
- *  the appropriate sites.
+ * @brief The field class implements the standard methods for accessing Fields. Hilapp replaces the
+ * parity access patterns, Field[par] with a loop over the appropriate sites. Since the Field class
+ * is one of the more important functionalities of HILA, extensive general instructions on the Field
+ * class can be read at [HILA Functionality](@ref Field_documentation) documentation.
  *
- * @details The Field class also contains member functions used by hilapp, as well
- *  as members that may be useful for application developers.
+ * @details The Field class contains member functions used by hilapp, which are marked internal, as
+ * well as members that are useful for application developers.
  *
- *  The Field mainly implements the interface to the Field and not the
- *  content.
+ * The Field mainly implements the interface to the Field and not the content.
  *
- *  The Field contains a pointer to Field::field_struct, which implements
- *  MPI communication of the Field boundaries.
+ * The Field contains a pointer to Field::field_struct, which implements MPI communication of the
+ * Field boundaries. Though generally the application developer does not need to worry about the
+ * Field::field_struct class, hence it is marked as internal and it's documentation cannot be viewed
+ * in the Web documentation.
  *
- *  The Field::field_struct points to a field_storage, which is defined
- *  by each backend. It implements storing and accessing the Field data,
- *  including buffers for storing haloes returned from MPI communication.
+ * The Field::field_struct points to a field_storage, which is defined by each backend. It
+ * implements storing and accessing the Field data, including buffers for storing haloes returned
+ * from MPI communication.
  *
- * @tparam T
+ * @tparam T Field content type
  */
 template <typename T>
 class Field {
@@ -59,9 +65,11 @@ class Field {
 
   private:
     /**
+     * @internal
      * @class field_struct
      * @brief Stores Field class data and communication parameters for said data
      *
+     * Generally the user need not worry about this class.
      * @todo field-specific boundary conditions
      */
     class field_struct {
@@ -87,7 +95,10 @@ class Field {
         T *receive_buffer[NDIRS];
 #endif
         T *send_buffer[NDIRS];
-
+        /**
+         * @internal
+         * @brief Initialize communication
+         */
         void initialize_communication() {
             for (int d = 0; d < NDIRS; d++) {
                 for (int p = 0; p < 3; p++)
@@ -99,6 +110,11 @@ class Field {
             }
         }
 
+        /**
+         * @internal
+         * @brief Free communication
+         *
+         */
         void free_communication() {
             for (int d = 0; d < NDIRS; d++) {
                 if (send_buffer[d] != nullptr)
@@ -110,15 +126,30 @@ class Field {
             }
         }
 
+        /**
+         * @internal
+         * @brief Allocate payload for lattice
+         */
         void allocate_payload() {
             payload.allocate_field(lattice);
         }
+
+        /**
+         * @internal
+         * @brief Deallocate payload for lattice
+         */
         void free_payload() {
             payload.free_field();
         }
 
 #ifndef VECTORIZED
-        /// Getter for an individual elements in a loop
+        /**
+         * @internal
+         * @brief Getter for individual element inside loop
+         *
+         * @param i
+         * @return auto
+         */
         inline auto get(const unsigned i) const {
             return payload.get(i, lattice.field_alloc_size());
         }
@@ -128,8 +159,11 @@ class Field {
             payload.set(value, i, lattice.field_alloc_size());
         }
 
-        /// Getter for an element outside a loop. Used to manipulate the field directly
-        /// outside loops.
+        /**
+         * @internal
+         * @brief Getter for an element outside a loop. Used to manipulate the field directly
+         * outside loops.
+         */
         inline auto get_element(const unsigned i) const {
             return payload.get_element(i, lattice);
         }
@@ -156,18 +190,33 @@ class Field {
         }
 #endif
 
-        /// Gather boundary elements for communication
+        /**
+         * @internal
+         * @brief Gather boundary elements for communication
+         */
         void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                                   const lattice_struct::comm_node_struct &to_node) const;
 
-        /// Place boundary elements from neighbour
+        /**
+         * @internal
+         * @brief Place boundary elements from neighbour
+         */
         void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                                  const lattice_struct::comm_node_struct &from_node);
 
-        /// Place boundary elements from local lattice (used in vectorized version)
+        /**
+         * @internal
+         * @brief Place boundary elements from local lattice (used in vectorized version)
+         */
         void set_local_boundary_elements(Direction dir, Parity par);
 
-        /// Gather a list of elements to a single node
+        /**
+         * @internal
+         * @brief Gather a list of elements to a single node
+         * @param buffer
+         * @param coord_list
+         * @param root
+         */
         void gather_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                              int root = 0) const;
         void scatter_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
@@ -186,19 +235,44 @@ class Field {
                   "constructor, copy and delete");
 
   public:
-    ////////////////////////////////////////////////
-    /// Field::fs keeps all of the field content
-    ////////////////////////////////////////////////
-
+    /**
+     * @brief Field::fs holds all of the field content in Field::field_struct.
+     * @details The field_struct class is nonetheless marked as internal so the user need not worry
+     * about it.
+     */
     field_struct *RESTRICT fs;
 
     /**
-     * @name Constructor
-     @{
-     */
-    /**
-     * @brief Default construct a new Field object. Assigns field_struct fs to nullptr
+     * @brief Field constructor
+     * @details The following ways of constructing a Field object are the following:
      *
+     * __Default constructor__:
+     *
+     * Assigns Field::fs to nullptr.
+     *
+     * \code {.cpp}
+     * Field<MyType> f;
+     * \endcode
+     *
+     * __Copy constructor__:
+     *
+     * Copy from already existing field of similar type if conversion exists. For example for float
+     * to double.
+     *
+     * \code {.cpp}
+     * Field<MyType> f = g;
+     * \endcode
+     *
+     * __Assignment from constant constructor__:
+     *
+     * Assign constant to field if conversion exists.
+     *
+     * \code
+     * .
+     * . Let a be a constant of type MyType1
+     * .
+     * Field<MyType2> f = a;
+     * \endcode
      */
     Field() {
 
@@ -216,8 +290,8 @@ class Field {
         fs = nullptr; // lazy allocation on 1st use
     }
     /**
+     * @internal
      * @brief Copy constructor with already initialised Field
-     *
      * @param other
      */
     Field(const Field &other) : Field() {
@@ -226,8 +300,8 @@ class Field {
         (*this)[ALL] = other[X];
     }
     /**
+     * @internal
      * @brief Copy constructor form Field of type A to field of type F if the conversion is defined
-     *
      * @tparam A
      * @param other
      */
@@ -238,9 +312,9 @@ class Field {
         (*this)[ALL] = other[X];
     }
     /**
+     * @internal
      * @brief Construct a new Field object with scalar (val) of type A to a field of type F type if
      * the conversion is defined
-     *
      * @tparam A
      * @param val
      */
@@ -251,8 +325,8 @@ class Field {
         (*this)[ALL] = val;
     }
     /**
+     * @internal
      * @brief Construct a new Field object with scalar 0 with nullpointer trick
-     *
      * @param z
      */
     Field(const std::nullptr_t z) : Field() {
@@ -260,16 +334,16 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Construct a new Field object by stealing content from previous field (rhs) which will
-     * be set to null
-     *
+     * be set to null happens in the case of std::move for example ` Field<MyType> f = g+h` where
+     * `g+h` is generated momenterally and then destroyed.
      * @param rhs
      */
     Field(Field &&rhs) {
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
-    /** @} */
 
     ~Field() {
         free();
@@ -283,6 +357,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief  Sets up memory for field content and communication.
      */
     void allocate() {
@@ -326,12 +401,9 @@ class Field {
 
     /**
      * @brief Destroys field data
-     *
-     *
+     * @details don't call destructors when exiting - either MPI or cuda can already be off.
      */
     void free() {
-        // don't call destructors when exiting - either MPI or cuda can already
-        // be off.
         if (fs != nullptr && !hila::about_to_finish) {
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
@@ -344,19 +416,14 @@ class Field {
 
     /**
      * @brief Returns true if the Field data has been allocated
-     *   \code{.cpp}
-     *    class Cpp {};
-     *   \endcode
-     * @return true
-     * @return false
+     * @return bool
      */
     bool is_allocated() const {
         return (fs != nullptr);
     }
 
     /**
-     * @brief Returns true if the Field has been written
-     *
+     * @brief Returns true if the Field has been assigned to.
      * @param p Field parity
      * @return bool
      */
@@ -365,8 +432,8 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Returns current gather_status_t
-     *
      * @param p Field partiy
      * @param d Direction
      * @return gather_status_t
@@ -382,9 +449,10 @@ class Field {
 
     /**
      * @brief  Allocate Field if it is not already allocated
-     * @details check that Field is allocated, and if not do it (if not const)
-     * Must be called BEFORE the var is actually used
-     * "hilapp" will generate these calls as needed!
+     * @details Check that Field is allocated, and if not do it (if not const). Must be called
+     * before the var is actually used. "hilapp" will generate these calls as needed!
+     *
+     * If Field is const assert that the Field is allocated.
      *
      */
     void check_alloc() {
@@ -393,6 +461,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief If Field is const assert that the Field is allocated
      */
     void check_alloc() const {
@@ -401,6 +470,7 @@ class Field {
 
 
     /**
+     * @internal
      * @brief Bookkeeping for field communication
      * @details If ALL changes, both parities invalid; if p != ALL, then p and ALL.
      * @param p Field parity
@@ -423,6 +493,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Mark the Field already gathered, no need to communicate
      * @details Mark the field parity gathered from Direction
      * In case p=ALL we could mark everything gathered, but we'll be conservative here
@@ -439,10 +510,10 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Check if the field has been gathered since the previous communication
      * @details par = ALL:   ALL or (EVEN+ODD) are OK\n
      *          par != ALL:  ALL or par are OK
-     * @hilapponly
      * @param dir
      * @param par
      * @return true
@@ -460,8 +531,8 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Mark communication has started
-     * @hilapponly
      * @param dir
      * @param p
      */
@@ -470,8 +541,8 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Check if communication has started
-     * @hilapponly
      * @param dir
      * @param par
      * @return bool
@@ -484,9 +555,11 @@ class Field {
         return gather_status(par, dir) == gather_status_t::NOT_DONE;
     }
 
-    /// function boundary_need_to_communicate(dir) returns false if there's special B.C. which
-    /// does not need comms here, otherwise true
-
+    /**
+     * @internal
+     * @brief function boundary_need_to_communicate(dir) returns false if there's special B.C. which
+     * does not need comms here, otherwise true
+     */
     bool boundary_need_to_communicate(const Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
 
@@ -500,7 +573,6 @@ class Field {
 
     /**
      * @brief Set the boundary condition in a given Direction (periodic or antiperiodic)
-     *
      * @param dir Direction of boundary condition
      * @param bc Field boundary condition
      */
@@ -546,7 +618,6 @@ class Field {
 
     /**
      * @brief Get the boundary condition of the Field
-     *
      * @param dir Boundary condition in certain direction
      * @return hila::bc The boundary condition of the Field
      */
@@ -600,8 +671,14 @@ class Field {
     }
 
 #ifndef VECTORIZED
-    /// Get an individual element outside a loop. This is also used as a getter in the
-    /// vanilla code.
+
+    /**
+     * @brief Get an individual element outside a loop. This is also used as a getter in the vanilla
+     * code.
+     *
+     * @param i
+     * @return auto
+     */
     inline auto get_value_at(const unsigned i) const {
         return fs->get_element(i);
     }
@@ -619,8 +696,13 @@ class Field {
 #endif
 
 #ifndef VECTORIZED
-    /// Set an individual element outside a loop. This is also used as a setter in the
-    /// vanilla code.
+    /**
+     * @brief Set an individual element outside a loop. This is also used as a getter in the vanilla
+     * code.
+     *
+     * @param i
+     * @return auto
+     */
     template <typename A>
     inline void set_value_at(const A &value, unsigned i) {
         fs->set_element(value, i);
@@ -646,7 +728,25 @@ class Field {
      *  @{
      */
     /**
-     * @brief Basic assignment operator
+     * @brief Assignment operator.
+     *
+     * @details Assignment can be performed in the following ways:
+     *
+     * __Assignment from field:__
+     *
+     * Assignment from field is possible if types are the same or convertible
+     *
+     * \code {.cpp}
+     * f = g;
+     * \endcode
+     *
+     * __Assignment from scalar:__
+     *
+     * Assignment from scalar is possible if scalar is convertible to Field type
+     *
+     * \code {.cpp}
+     * f = a; // a is a scalar
+     * \endcode
      *
      * @param rhs
      * @return Field<T>& Assigned field
@@ -657,6 +757,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief More general assignment operation if A can be casted into T
      *
      * @tparam A Type of element to be assigned
@@ -672,6 +773,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Assginment from element
      *
      * @tparam A Type of element to be assigned
@@ -687,6 +789,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief assignment of 0 - nullptr, zero field
      *
      * @param z nullptr
@@ -698,6 +801,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Move Assignment
      *
      * @param rhs
@@ -713,16 +817,30 @@ class Field {
     }
 
     /**
-     * @brief += Operator between two fields if A and Field type T are compatible
+     * @brief Addition assignment operator
+     * @details Addition assignmen operator can be called in the following ways as long as types are
+     * convertible.
      *
-     * @tparam A Type of r.h.s element
-     * @param rhs Field to sum
-     * @return Field<T>&
+     * __Addition assignment with field:__
+     *
      * \code{.cpp}
      * Field<MyType> f,g;
      * . . .
      * f += g;
      * \endcode
+     *
+     * __Addition assignment with scalar:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a;
+     * . . .
+     * f += a;
+     * \endcode
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to sum
+     * @return Field<T>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
@@ -789,17 +907,13 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief += Operator between element and field if type of rhs and Field type T are compatible
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to sum
      * @return Field<T>&
-     * \code{.cpp}
-     * Field<MyType> f;
-     * MyType a
-     * . . .
-     * f += a;
-     * \endcode
+
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
@@ -1532,7 +1646,7 @@ void swap(Field<T> &A, Field<T> &B) {
 } // namespace std
 
 ///////////////////////////////////////////////////////////////////////
-/// Allow some arithmetic functions if implemented
+// Allow some arithmetic functions if implemented
 
 template <typename T, typename R = decltype(exp(std::declval<T>()))>
 Field<R> exp(const Field<T> &arg) {
@@ -1698,7 +1812,7 @@ void Field<T>::drop_comms(Direction d, Parity p) const {
     }
 }
 
-/// cancel ongoing send and receive
+/// @internal cancel ongoing send and receive
 
 template <typename T>
 void Field<T>::cancel_comm(Direction d, Parity p) const {
@@ -1715,7 +1829,7 @@ void Field<T>::cancel_comm(Direction d, Parity p) const {
 }
 
 
-/// And a convenience combi function
+///  @internal And a convenience combi function
 template <typename T>
 void Field<T>::gather(Direction d, Parity p) const {
     start_gather(d, p);

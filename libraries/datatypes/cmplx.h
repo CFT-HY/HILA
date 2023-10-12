@@ -1396,28 +1396,28 @@ inline auto operator/(const Imaginary_t<A> &a, const Imaginary_t<B> &b) {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Set of complex functions
+// Set of complex functions
 ///////////////////////////////////////////////////////////////////////////////
 
-/// exp(z)
+/// \f$\exp(z)\f$
 template <typename T>
 inline Complex<T> exp(const Complex<T> z) {
     return exp(z.re) * Complex<T>(cos(z.im), sin(z.im));
 }
 
-/// exp(i x)
+/// \f$\exp(i\cdot x)\f$
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Complex<T> expi(T a) {
     return Complex<T>(cos(a), sin(a));
 }
 
-/// @brief exp(imaginary)
+// exp(imaginary)
 template <typename T>
 inline Complex<T> exp(const Imaginary_t<T> im) {
     return expi(im.imag());
 }
 
-/// log(z)
+/// \f$\log{z}\f$
 template <typename T>
 inline Complex<T> log(Complex<T> z) {
     return Complex<T>(static_cast<T>(0.5) * log(z.squarenorm()), z.arg());
@@ -1425,10 +1425,7 @@ inline Complex<T> log(Complex<T> z) {
 
 // sqrt(z) branch cut at -x axis
 
-/**
- * @brief Sqrt
- * @details Square root
- */
+/// \f$\sqrt{z}\f$
 template <typename T>
 inline Complex<T> sqrt(Complex<T> z) {
     T r = z.squarenorm();
@@ -1436,7 +1433,7 @@ inline Complex<T> sqrt(Complex<T> z) {
     return pow(r, 0.25) * expi(0.5 * a);
 }
 
-/// cbrt(z)
+/// \f$\sqrt[3]{z}\f$
 template <typename T>
 inline Complex<T> cbrt(Complex<T> z) {
     T r = z.squarenorm();
@@ -1444,40 +1441,40 @@ inline Complex<T> cbrt(Complex<T> z) {
     return pow(r, (1.0 / 6.0)) * expi((1.0 / 3.0) * a);
 }
 
-/// pow(z.p) = z^p = exp(p*log(z))
+/// pow(z.p) = \f$z^p\f$ = \f$exp(p*log(z))\f$
 template <typename A, typename B>
 inline auto pow(Complex<A> z, Complex<B> p) {
     return exp(p * log(z));
 }
 
-/// pow(z.p) with scalar power
+// pow(z.p) with scalar power
 template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
 inline Complex<T> pow(Complex<T> z, S p) {
     return exp(p * log(z));
 }
 
-/// pow(z.p) with scalar base
+// pow(z.p) with scalar base
 template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
 inline Complex<T> pow(S z, Complex<T> p) {
     return exp(p * log(z));
 }
 
-/// sin(z)
-/// = sin(re + i im) = sin(re)cos(i im) + cos(re)sin(i im)
-/// = sin(re) cosh(im) + i cos(re) sinh(im)
+/// \f{align}{sin(z) &= \sin(\Re(z) + i \Im(z)) \\
+/// &= \sin(\Re(z))\cos(i \Im(z)) + \cos(\Re(z))\sin(i \Im(z)) \\
+/// &= \sin(\Re(z)) \cosh(\Im(z)) + i \cos(\Re(z)) \sinh(\Im(z)) \f}
 template <typename T>
 inline Complex<T> sin(Complex<T> z) {
     return Complex<T>(sin(z.re) * cosh(z.im), cos(z.re) * sinh(z.im));
 }
 
-/// cos(z)
-/// = cos(re)cos(i im) - sin(re)sin(i im) = cos(re)cosh(im) - i sin(re)sinh(im)
+/// \f{align}{\cos(z) &= \cos(\Re{z})\cos(i \Im(z)) - \sin(\Re{z})\sin(i \Im{z}) \\
+/// &= \cos(\Re{z})\cosh(\Im(z)) - i \sin(\Re{z})\sinh(\Im(z))\f}
 template <typename T>
 inline Complex<T> cos(Complex<T> z) {
     return Complex<T>(cos(z.re) * cosh(z.im), -sin(z.re) * sinh(z.im));
 }
 
-/// tan(z) - rely on optimizer to simplify
+/// \f$\tan(z) = \frac{\sin(z)}{\cos(z)}\f$ - rely on optimizer to simplify
 template <typename T>
 inline Complex<T> tan(Complex<T> z) {
     return sin(z) / cos(z);
@@ -1497,43 +1494,43 @@ inline Complex<T> cosh(Complex<T> z) {
     return Complex<T>(cosh(z.re) * cos(z.im), sinh(z.re) * sin(z.im));
 }
 
-/// tanh(z)
+/// \f$\tanh(z)\f$
 template <typename T>
 inline Complex<T> tanh(Complex<T> z) {
     return sinh(z) / cosh(z);
 }
 
-/// arctan(z)
+/// \f$\arctan(z)\f$
 template <typename T>
 inline Complex<T> atan(Complex<T> z) {
     return -0.5 * I * (log((I - z) / (I + z)));
 }
 
-/// arcsin(z)
+/// \f$\arcsin(z)\f$
 template <typename T>
 inline Complex<T> asin(Complex<T> z) {
     return -I * (log(I * z + sqrt(1 - z * z)));
 }
 
-/// arccos(z)
+/// \f$\arccos(z)\f$
 template <typename T>
 inline Complex<T> acos(Complex<T> z) {
     return -I * (log(z + I * (sqrt(1 - z * z))));
 }
 
-/// artanh(z)
+/// \f$\text{artanh}(z)\f$
 template <typename T>
 inline Complex<T> atanh(Complex<T> z) {
     return 0.5 * log((1 + z) / (1 - z));
 }
 
-/// arsinh(z)
+/// \f$\text{arsinh}(z)\f$
 template <typename T>
 inline Complex<T> asinh(Complex<T> z) {
     return log(z + sqrt(1 + z * z));
 }
 
-/// arcosh(z)
+/// \f$\text{arcosh}(z)\f$
 template <typename T>
 inline Complex<T> acosh(Complex<T> z) {
     return log(z + sqrt(z * z - 1));
