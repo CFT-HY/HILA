@@ -4,8 +4,8 @@
  * @details This file contains definitions and methods for Complex numbers and Imaginary type.
  *
  * > NOTE: All overloads for operators +,-,/,* are not documented separately since there exists a
- * function > for each combinations of scalar,imaginary and complex number representations. All
- * versions are > documented in the Complex -- Complex definitions.
+ * > function for each combinations of scalar,imaginary and complex number representations. All
+ * > versions are documented in the Complex -- Complex definitions.
  *
  */
 
