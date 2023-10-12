@@ -657,15 +657,20 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
 
             // auto fd = ci.funcdecl;
             // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString()
-            //              << " is method: " << ci.is_method
-            //              << " parameters: ";
+            //              << " is method: " << ci.is_method << " parameters: ";
             // for (int i = 0; i < fd->getNumParams(); i++)
-            //     llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString()
-            //                  << ' ';
+            //     llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
 
-            // llvm::errs() << '\n';
+            // SourceRange sr = fd->getSourceRange();
+            // unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
+            // std::string name = srcMgr.getFilename(sr.getBegin()).str();
+            // llvm::errs() << "   -- on line " << linenumber << "   file " << name << '\n';
+
 
             backend_handle_loop_function(ci);
+
+            // FunctionDecl *proto;
+            // find_prototype(ci.funcdecl, proto);
         }
 
     } else if (ci.ctordecl != nullptr) {

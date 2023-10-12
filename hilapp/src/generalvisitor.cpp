@@ -6,6 +6,17 @@
 ///  For full list of generalvisitor commands, see generalvisitor.h
 //////////////////////////////////////////////////////////////////////////////////
 
+
+// Utility function for printing named Decl information
+void GeneralVisitor::print_decl_info(const NamedDecl *fd, const char *msg) {
+    SourceRange sr = fd->getSourceRange();
+    unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
+    std::string name = srcMgr.getFilename(sr.getBegin()).str();
+    llvm::errs() << " ---- " << msg << "  " << fd->getNameAsString() << " on line " << linenumber
+                 << "   file " << name << '\n';
+}
+
+
 /////////////////////////////////////////////////////////////////
 
 bool GeneralVisitor::is_duplicate_expr(const Expr *a, const Expr *b) {

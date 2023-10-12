@@ -2355,6 +2355,22 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
             writeBuf->insert(ST, SSBefore.str(), true, true);
         }
     }
+    
+    
+    // else if (!f->is()) {
+
+    //     auto * def = f->getDefinition();
+    //     prototype_vector.push_back({f, def, 0});
+
+    //     llvm::errs() << "*** GOT PROTO # " << prototype_vector.size() << ": " << f->getNameAsString();
+    //     SourceRange sr = f->getSourceRange();
+    //     unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
+    //     std::string name = srcMgr.getFilename(sr.getBegin()).str();
+    //     llvm::errs() << "   -- on line " << linenumber << "   file " << name << '\n';
+
+
+    // }
+
 
     return true;
 }
