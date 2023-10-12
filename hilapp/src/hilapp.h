@@ -566,4 +566,13 @@ extern std::list<selection_info> selection_info_list;
 extern std::vector<reduction_expr> reduction_list;
 
 
+// struct func_prototype_struct {
+//     FunctionDecl *decl;   // this is prototype decl
+//     FunctionDecl *def;    // this should be the definition
+//     int flag;             // use this for convenient information
+// };
+
+// extern std::vector<func_prototype_struct> prototype_vector;
+
+
 #endif
