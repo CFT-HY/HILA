@@ -1016,6 +1016,7 @@ class Field {
     const T set_element(const CoordinateVector &coord, const A &value) {
         T element;
         element = value;
+        assert(is_initialized(ALL) && "Field not initialized yet");
         if (lattice.is_on_mynode(coord)) {
             set_value_at(element, lattice.site_index(coord));
         }
@@ -1032,6 +1033,7 @@ class Field {
     const T get_element(const CoordinateVector &coord) const {
         T element;
 
+        assert(is_initialized(ALL) && "Field not initialized yet");
         int owner = lattice.node_rank(coord);
 
         if (hila::myrank() == owner) {
@@ -1091,6 +1093,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1103,6 +1106,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1115,6 +1119,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1127,6 +1132,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
