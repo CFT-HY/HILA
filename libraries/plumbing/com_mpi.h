@@ -111,14 +111,15 @@ MPI_Datatype get_MPI_number_type() {
 /// @return MPI_Datatype
 template <typename T>
 MPI_Datatype get_MPI_complex_type(size_t &siz) {
-    if constexpr (std::is_same<T,Complex<double>>::value) {
+    if constexpr (std::is_same<T, Complex<double>>::value) {
         siz = sizeof(Complex<double>);
         return MPI_C_DOUBLE_COMPLEX;
-    } else if constexpr (std::is_same<T,Complex<float>>::value) {
+    } else if constexpr (std::is_same<T, Complex<float>>::value) {
         siz = sizeof(Complex<float>);
         return MPI_C_FLOAT_COMPLEX;
     } else {
-        static_assert(sizeof(T) > 0, "get_MPI_complex_type<T>() called without T being a complex type");
+        static_assert(sizeof(T) > 0,
+                      "get_MPI_complex_type<T>() called without T being a complex type");
         return MPI_BYTE;
     }
 }
@@ -126,12 +127,27 @@ MPI_Datatype get_MPI_complex_type(size_t &siz) {
 
 namespace hila {
 
-///
-/// Broadcast the value of _var_ to all nodes from node _rank_ (default=0).
-/// Var must be trivial, i.e. plain data.
-/// Returns the broadcast value
-/// If var is modifiable, it is changed to the broadcast value
-///
+/**
+ * @brief Broadcast the value of _var_ to all MPI ranks from _rank_ (default=0).
+ *
+ * NOTE: the function must be called by all MPI ranks, otherwise the program will deadlock.
+ *
+ * The type of the variable _var_ can be any standard plain datatype (trivial type),
+ * std::string or std::vector.
+ *
+ * For trivial types, the input _var_ can be non-modifiable value.  In this case
+ * the broadcast value is obtained from the broadcast return value.
+ *
+ * Example:
+ * @code{.cpp}
+ *     auto rnd = hila::broadcast(hila::random());    // all MPI ranks get the same random value
+ * @endcode
+ *
+ * @param var    variable to be synchronized across the full
+ * @param rank   MPI rank from which the
+ * @return template <typename T>
+ */
+
 
 template <typename T>
 T broadcast(T &var, int rank = 0) {
