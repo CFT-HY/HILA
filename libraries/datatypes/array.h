@@ -40,7 +40,7 @@ class Array {
 #pragma hila loop_function
     inline Array(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++)
-            c[i] = static_cast<T>(0);
+            c[i] = 0;
     }
 
     /// Construct array automatically from right-size initializer list
@@ -118,6 +118,17 @@ class Array {
     const Vector<n, T> &asVector() const {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<const Vector<n, T> *>(this);
+    }
+
+    // Define also asVector(), although asMatrix() already includes this
+    DiagonalMatrix<n, T> &asDiagonalMatrix() const_function {
+        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
+        return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
+    }
+
+    const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
+        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
+        return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
     }
 
 
@@ -312,6 +323,31 @@ class Array {
         return result;
     }
 
+    /**
+     * @brief Find max or min value - only for arithmetic types
+     */
+
+    template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+    T max() const {
+        T res = c[0];
+        for (int i = 1; i < n * m; i++) {
+            if (res < c[i])
+                res = c[i];
+        }
+        return res;
+    }
+
+    template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+    T min() const {
+        T res = c[0];
+        for (int i = 1; i < n * m; i++) {
+            if (res > c[i])
+                res = c[i];
+        }
+        return res;
+    }
+
+
     /// Generate random elements
     Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
@@ -329,8 +365,21 @@ class Array {
     }
 
     /// Convert to string for printing
-    std::string str() const {
-        return this->asMatrix().str();
+    std::string str(int prec = 8, char separator = ' ') const {
+        return this->asMatrix().str(prec, separator);
+    }
+
+    /// implement sort as casting to array
+#pragma hila novector
+    template <int N>
+    Array<n, m, T> sort(Vector<N, int> &permutation,
+                        hila::sort order = hila::sort::ascending) const {
+        return this->asMatrix().sort(permutation, order).asArray();
+    }
+
+#pragma hila novector
+    Array<n, m, T> sort(hila::sort order = hila::sort::ascending) const {
+        return this->asMatrix().sort(order).asArray();
     }
 };
 
@@ -444,6 +493,14 @@ inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     return a;
 }
 
+
+/// Norm squared function
+template <int n, int m, typename T>
+inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
+    return rhs.squarenorm();
+}
+
+
 /// Stream operator
 template <int n, int m, typename T>
 std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
@@ -463,13 +520,6 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
 }
 
 } // namespace hila
-
-
-/// Norm squared function
-template <int n, int m, typename T>
-inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
-    return rhs.squarenorm();
-}
 
 
 ////////////////////////////////////////////////////////////////////////////////
