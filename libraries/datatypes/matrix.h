@@ -71,7 +71,8 @@ struct svd_result {
 /// @tparam M  - type of input matrix
 template <typename M>
 struct eigen_result {
-    static_assert(M::is_matrix() && M::rows() == M::columns(), "Eigenvalues only for square matrix");
+    static_assert(M::is_matrix() && M::rows() == M::columns(),
+                  "Eigenvalues only for square matrix");
     DiagonalMatrix<M::size(), hila::scalar_type<M>> eigenvalues;
     M eigenvectors;
 };
@@ -1428,11 +1429,23 @@ class Matrix_t {
 
 #pragma hila novector
     template <typename Et, typename Mt, typename MT>
-    int eigen_hermitean(out_only DiagonalMatrix<n, Et> &eigenvaluevec,
+    int eigen_hermitean(out_only DiagonalMatrix<n, Et> &eigenvalues,
                         out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
                         enum hila::sort sorted = hila::sort::unsorted) const;
 
     eigen_result<Mtype> eigen_hermitean(enum hila::sort sorted = hila::sort::unsorted) const;
+
+    // Temporary interface to eigenvalues, to be removed
+    template <typename Et, typename Mt, typename MT>
+    int eigen_jacobi(out_only Vector<n, Et> &eigenvaluevec,
+                     out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
+                     enum hila::sort sorted = hila::sort::unsorted) const {
+
+        DiagonalMatrix<n, Et> d;
+        int i = eigen_hermitean(d, eigenvectors, sorted);
+        eigenvaluevec = d.asArray().asVector();
+        return i;
+    }
 
 
 #pragma hila novector
