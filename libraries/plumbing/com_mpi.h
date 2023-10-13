@@ -158,7 +158,7 @@ T broadcast(T &var, int rank = 0) {
     assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
-    MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice.mpi_comm_lat);
+    MPI_Bcast(&var, sizeof(T), MPI_BYTE, rank, lattice.mpi_comm_lat);
     broadcast_timer.stop();
     return var;
 }
@@ -197,7 +197,7 @@ void broadcast(std::vector<T> &list, int rank = 0) {
 /// Bare pointers cannot be broadcast
 
 template <typename T>
-void broadcast(T *var) {
+void broadcast(T *var, int rank = 0) {
     static_assert(sizeof(T) > 0 &&
                   "Do not use pointers to broadcast()-function. Use 'broadcast_array(T* arr, "
                   "int size)' to broadcast an array");
