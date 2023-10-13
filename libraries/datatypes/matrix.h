@@ -15,6 +15,7 @@
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 
+// forward definitions of needed classes
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t;
 
@@ -23,6 +24,9 @@ class Array;
 
 template <int n, int m, typename T>
 class Matrix;
+
+template <int n, typename T>
+class DiagonalMatrix;
 
 /**
  * @brief Vector is defined as 1-column Matrix
@@ -49,6 +53,29 @@ using SquareMatrix = Matrix<n, n, T>;
 // #include "matrix_column.h"
 
 
+/// @brief  type to store the return combo of svd:
+///   {U, D, V} where U and V are nxn unitary / orthogonal,
+/// and D is real diagonal singular value matrices.
+/// @tparam M  - type of input matrix
+template <typename M>
+struct svd_result {
+    static_assert(M::is_matrix() && M::rows() == M::columns(), "SVD only for square matrix");
+    M U;
+    DiagonalMatrix<M::size(), hila::scalar_type<M>> singularvalues;
+    M V;
+};
+
+/// @brief  type to store the return value of eigen_hermitean():
+///   {E, U} where E is nxn DiagonalMatrix containing eigenvalues and
+/// U nxn unitary matrix, with eigenvector columns
+/// @tparam M  - type of input matrix
+template <typename M>
+struct eigen_result {
+    static_assert(M::is_matrix() && M::rows() == M::columns(), "Eigenvalues only for square matrix");
+    DiagonalMatrix<M::size(), hila::scalar_type<M>> eigenvalues;
+    M eigenvectors;
+};
+
 /**
  * @brief The main \f$ n \times m \f$ matrix type template Matrix_t. This is a base class type for
  * "useful" types which are derived from this.
@@ -62,8 +89,8 @@ using SquareMatrix = Matrix<n, n, T>;
  * class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
  * @endcode
  *
- * This pattern is used because stupid c++ makes it complicated to write generic code, in this case derived
- * functions to return derived type
+ * This pattern is used because stupid c++ makes it complicated to write generic code, in this case
+ * derived functions to return derived type
  *
  * @tparam n Number of rows
  * @tparam m Number of columns
@@ -158,14 +185,14 @@ class Matrix_t {
     }
 
     // cast to curious type
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator Mtype &() {
         return *reinterpret_cast<Mtype *>(this);
     }
 
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator const Mtype &() const {
@@ -173,11 +200,11 @@ class Matrix_t {
     }
 
     // automatically cast to generic matrix
-#pragma hila loop_function
+    // #pragma hila loop_function
     inline operator Matrix<n, m, T> &() {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
-#pragma hila loop_function
+    // #pragma hila loop_function
     inline operator const Matrix<n, m, T> &() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -311,10 +338,6 @@ class Matrix_t {
     const RowVector<m, T> &row(int r) const {
         return *(reinterpret_cast<const RowVector<m, T> *>(this) + r);
     }
-    // non const version of above
-    RowVector<m, T> &row(int r) {
-        return *(reinterpret_cast<RowVector<m, T> *>(this) + r);
-    }
 
     /**
      * @brief Set row of Matrix with #RowVector if types are assignable
@@ -335,7 +358,7 @@ class Matrix_t {
      * @param c index of column vector to be returned
      * @return const Vector<n, T>
      */
-    const Vector<n, T> column(int c) const {
+    Vector<n, T> column(int c) const {
         Vector<n, T> v;
         for (int i = 0; i < n; i++)
             v[i] = e(i, c);
@@ -366,9 +389,9 @@ class Matrix_t {
      *
      * @return Vector<n, T> returned vector.
      */
-    Vector<n, T> diagonal() {
+    DiagonalMatrix<n, T> diagonal() {
         static_assert(n == m, "diagonal() method defined only for square matrices");
-        Vector<n, T> res;
+        DiagonalMatrix<n, T> res;
         for (int i = 0; i < n; i++)
             res.e(i) = (*this).e(i, i);
         return res;
@@ -531,7 +554,7 @@ class Matrix_t {
      *      0, 1};
      * \endcode
      */
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only {
@@ -542,7 +565,7 @@ class Matrix_t {
     }
 
     // assign from 0
-#pragma hila loop_function
+    // #pragma hila loop_function
     inline Mtype &operator=(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
@@ -551,7 +574,7 @@ class Matrix_t {
     }
 
     // Assign from "scalar" for square matrix
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) out_only {
 
@@ -565,8 +588,26 @@ class Matrix_t {
         return *this;
     }
 
+    // Assign from diagonal matrix
+    // #pragma hila loop_function
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    inline Mtype &operator=(const DiagonalMatrix<n, S> &rhs) out_only {
+        static_assert(n == m,
+                      "Assigning DiagonalMatrix to Matrix possible only for square matrices");
+
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++) {
+                if (i == j)
+                    e(i, j) = rhs.e(i);
+                else
+                    e(i, j) = 0;
+            }
+        return *this;
+    }
+
+
     // Assign from initializer list
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(std::initializer_list<S> rhs) out_only {
         assert(rhs.size() == n * m && "Initializer list has a wrong size in assignment");
@@ -605,7 +646,7 @@ class Matrix_t {
      * @param rhs Matrix to multiply with
      * @return Mtype&
      */
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator+=(const Matrix_t<n, m, S, MT> &rhs) {
@@ -724,7 +765,7 @@ class Matrix_t {
     }
 
     // multiply assign with scalar
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const S rhs) {
@@ -754,7 +795,7 @@ class Matrix_t {
      * @return template <int p, typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
      */
-#pragma hila loop_function
+    // #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     Mtype &operator/=(const S rhs) {
@@ -763,6 +804,57 @@ class Matrix_t {
         }
         return *this;
     }
+
+    /**
+     * @brief add and sub assign a DiagonalMatrix
+     *
+     * This is possible only for square matrices
+     */
+    template <typename S,
+              std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
+    Mtype &operator+=(const DiagonalMatrix<n, S> &rhs) {
+        static_assert(n == m, "Assigning DiagonalMatrix possible only for square matrix");
+
+        for (int i = 0; i < n; i++)
+            e(i, i) += rhs.e(i);
+        return *this;
+    }
+
+    template <typename S,
+              std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
+    Mtype &operator-=(const DiagonalMatrix<n, S> &rhs) {
+        static_assert(n == m, "Assigning DiagonalMatrix possible only for square matrix");
+
+        for (int i = 0; i < n; i++)
+            e(i, i) -= rhs.e(i);
+        return *this;
+    }
+
+    /**
+     * @brief mult and divide assign a diagonal - cols must match diagonal matrix rows
+     */
+    template <typename S,
+              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
+    Mtype &operator*=(const DiagonalMatrix<m, S> &rhs) {
+
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++)
+                e(i, j) *= rhs.e(j);
+
+        return *this;
+    }
+
+    template <typename S,
+              std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
+    Mtype &operator/=(const DiagonalMatrix<m, S> &rhs) {
+
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++)
+                e(i, j) /= rhs.e(j);
+
+        return *this;
+    }
+
 
     /**
      * @brief Matrix fill
@@ -797,7 +889,7 @@ class Matrix_t {
     template <int mm = m,
               typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type,
               std::enable_if_t<(mm != 1), int> = 0>
-    inline const Rtype transpose() const {
+    inline Rtype transpose() const {
         Rtype res;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++) {
@@ -823,7 +915,7 @@ class Matrix_t {
      *
      * @return const Mtype
      */
-    inline const Mtype conj() const {
+    inline Mtype conj() const {
         Mtype res;
         for (int i = 0; i < n * m; i++) {
             res.c[i] = ::conj(c[i]);
@@ -839,7 +931,7 @@ class Matrix_t {
      * @return const Rtype
      */
     template <typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
-    inline const Rtype dagger() const {
+    inline Rtype dagger() const {
         Rtype res;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++) {
@@ -868,21 +960,10 @@ class Matrix_t {
      * @tparam M
      * @return Mtype
      */
-    template <typename M = T, std::enable_if_t<!hila::contains_complex<M>::value, int> = 0>
-    Mtype abs() const {
-        Mtype res;
-        for (int i = 0; i < n * m; i++) {
-            // need to use ::abs for generic real vars
-            res.c[i] = ::abs(c[i]);
-        }
-        return res;
-    }
-
-    template <typename M = T, std::enable_if_t<hila::contains_complex<M>::value, int> = 0>
     auto abs() const {
         Matrix<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < n * m; i++) {
-            res.c[i] = c[i].abs();
+            res.c[i] = ::abs(c[i]);
         }
         return res;
     }
@@ -991,6 +1072,30 @@ class Matrix_t {
         return sqrt(static_cast<double>(squarenorm()));
     }
 
+    /**
+     * @brief Find max or min value - only for arithmetic types
+     */
+
+    template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+    T max() const {
+        T res = c[0];
+        for (int i = 1; i < n * m; i++) {
+            if (res < c[i])
+                res = c[i];
+        }
+        return res;
+    }
+
+    template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+    T min() const {
+        T res = c[0];
+        for (int i = 1; i < n * m; i++) {
+            if (res > c[i])
+                res = c[i];
+        }
+        return res;
+    }
+
 
     // dot product - (*this).dagger() * rhs
     // could be done as well by writing the operation as above!
@@ -1029,7 +1134,7 @@ class Matrix_t {
 
         R r = 0;
         for (int i = 0; i < n; i++) {
-            r += ::conj(c[i]) * rhs.c[i];
+            r += ::conj(c[i]) * rhs.e(i);
         }
         return r;
     }
@@ -1072,7 +1177,7 @@ class Matrix_t {
         Matrix<n, p, R> res;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < p; j++) {
-                res.e(i, j) = c[i] * ::conj(rhs.c[j]);
+                res.e(i, j) = c[i] * ::conj(rhs.e(j));
             }
         }
         return res;
@@ -1144,13 +1249,13 @@ class Matrix_t {
     }
 
     /**
-     * @brief Reorder columns of Matrix
+     * @brief permute columns of Matrix
      * @details Reordering is done based off of permutation vector
      *
      * @param permutation Vector of integers to permute columns
      * @return Mtype
      */
-    Mtype reorder_columns(const Vector<m, int> &permutation) const {
+    Mtype permute_columns(const Vector<m, int> &permutation) const {
         Mtype res;
         for (int i = 0; i < m; i++)
             res.set_column(i, this->column(permutation[i]));
@@ -1158,13 +1263,13 @@ class Matrix_t {
     }
 
     /**
-     * @brief Reorder rows of Matrix
+     * @brief permute rows of Matrix
      * @details Reordering is done based off of permutation vector
      *
      * @param permutation Vector of integers to permute rows
      * @return Mtype
      */
-    Mtype reorder_rows(const Vector<n, int> &permutation) const {
+    Mtype permute_rows(const Vector<n, int> &permutation) const {
         Mtype res;
         for (int i = 0; i < n; i++)
             res.set_row(i, this->row(permutation[i]));
@@ -1173,17 +1278,17 @@ class Matrix_t {
 
 
     /**
-     * @brief Reorder vector elements
+     * @brief Permute elements of vector
      * @details Reordering is done based off of permutation vector
      *
      * @param permutation Vector of integers to permute rows
      * @return Mtype
      */
     template <int N>
-    Mtype reorder(const Vector<N, int> &permutation) const {
+    Mtype permute(const Vector<N, int> &permutation) const {
         static_assert(
             n == 1 || m == 1,
-            "reorder() only for vectors, use reorder_rows() or reorder_columns() for matrices");
+            "permute() only for vectors, use permute_rows() or permute_columns() for matrices");
         static_assert(N == Mtype::size(), "Incorrect size of permutation vector");
 
         Mtype res;
@@ -1195,7 +1300,7 @@ class Matrix_t {
 
     /**
      * @brief Sort method for #Vector
-     * @details  Two interfaces: first returns permutation vector, which can be used to reorder
+     * @details  Two interfaces: first returns permutation vector, which can be used to permute
      * other vectors/matrices second does only sort
      *
      * __Direct sort__:
@@ -1213,7 +1318,7 @@ class Matrix_t {
      * Vector<n,int> perm;
      * V.random();
      * V.sort(perm);
-     * V.reorder(perm); // V is sorted
+     * V.permute(perm); // V is sorted
      * @endcode
      *
      */
@@ -1228,7 +1333,7 @@ class Matrix_t {
 
         for (int i = 0; i < N; i++)
             permutation[i] = i;
-        if (hila::sort::nonsorted == order) {
+        if (hila::sort::unsorted == order) {
             return *this;
         }
 
@@ -1244,7 +1349,7 @@ class Matrix_t {
             }
         }
 
-        return this->reorder(permutation);
+        return this->permute(permutation);
     }
 
 #pragma hila novector
@@ -1320,135 +1425,33 @@ class Matrix_t {
      * @param eigenvectors Eigenvectors as columns of \f$ n \times n \f$ Matrix
      *
      */
+
 #pragma hila novector
-    template <typename Et, typename Mt, typename MT,
-              typename Dtype = typename std::conditional<hila::contains_complex<T>::value,
-                                                         Complex<double>, double>::type>
-    int eigen_jacobi(out_only Vector<n, Et> &eigenvaluevec,
-                     out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
-                     enum hila::sort sorted = hila::sort::nonsorted) const {
+    template <typename Et, typename Mt, typename MT>
+    int eigen_hermitean(out_only DiagonalMatrix<n, Et> &eigenvaluevec,
+                        out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
+                        enum hila::sort sorted = hila::sort::unsorted) const;
 
-        static_assert(!hila::contains_complex<T>::value || hila::contains_complex<Mt>::value,
-                      "Eigenvector matrix must be complex with complex original matrix");
+    eigen_result<Mtype> eigen_hermitean(enum hila::sort sorted = hila::sort::unsorted) const;
 
-        static_assert(n == m, "Eigensystem can be solved only for square matrices");
-        int rot;
-        SquareMatrix<n, Dtype> M, V;
-        Vector<n, double> eigenvalues;
 
-        // Do it in double prec; copy fields
-        V = 1;
-        M = (*this);
+#pragma hila novector
+    template <typename Et, typename Mt, typename MT>
+    int svd(out_only Matrix_t<n, n, Mt, MT> &_U, out_only DiagonalMatrix<n, Et> &_D,
+            out_only Matrix_t<n, n, Mt, MT> &_V,
+            enum hila::sort sorted = hila::sort::unsorted) const;
 
-        // don't need the imag. parts of diag (are zero)
-        eigenvalues = M.diagonal().real();
+    svd_result<Mtype> svd(enum hila::sort sorted = hila::sort::unsorted) const;
 
-        for (rot = 0; rot < 300; rot++) {
 
-            /* find the largest element */
-            int p, q;
-            double abs_mpq = -1.0; // this quarantees that even trivial matrix works
-            for (int i = 0; i < n - 1; i++) {
-                for (int j = i + 1; j < n; j++) {
-                    double t = ::squarenorm(M.e(i, j));
-                    if (abs_mpq < t) {
-                        abs_mpq = t;
-                        p = i;
-                        q = j;
-                    }
-                }
-            }
+#pragma hila novector
+    template <typename Et, typename Mt, typename MT>
+    int svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U, out_only DiagonalMatrix<n, Et> &_D,
+                  out_only Matrix_t<n, n, Mt, MT> &_V,
+                  enum hila::sort sorted = hila::sort::unsorted) const;
 
-            abs_mpq = ::sqrt(abs_mpq);
+    svd_result<Mtype> svd_pivot(enum hila::sort sorted = hila::sort::unsorted) const;
 
-            // if off-diag elements are tiny return
-
-            if (abs_mpq <= 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
-                if (sorted == hila::sort::nonsorted) {
-
-                    // return values and vectors as is
-                    eigenvaluevec = eigenvalues;
-                    eigenvectors = V;
-
-                } else {
-                    // bubble sort eigenvalues to decreasing order
-                    Vector<n, int> perm;
-                    eigenvaluevec = eigenvalues.sort(perm, sorted);
-                    eigenvectors = V.reorder_columns(perm);
-                }
-                return (rot);
-            }
-
-            Dtype mpq = M.e(p, q);
-
-            /* now do the p,q-rotation:
-             * M <- P^+ M P, where
-             *     | c   s    |  p
-             * P = |-s*  c*   |  q  = Ppq
-             *     |        1 |  r
-             *
-             * with P^+ = P^-1 ->  cc* + ss* = 1, det P = 1
-             * Thus, P is SU(2) or O(2) matrix
-             *
-             *     | c*  -s   | | mpp mpq mpr| | c   s   |
-             * M = | s*   c   |	| mqp mqq mqr| |-s*  c*  |
-             *     |         1|	| mrp mrq mrr| |        1|
-             *
-             *   = Pip* Mij Pjq,  mqp = mpq*
-             *
-             * Set now Mpq = (c*mpp - s mqp)s + (c*mpq -smqq)c* = 0
-             *             = c*^2 mpq - s^2 mpq* + c*s (mpp - mqq)
-             *             = |mpq| [ c*^2 e - s^2 e* + c*s (mpp-mqq)/|mpq| ]
-             * where e = exp(i arg(mpq)) = mpq/|mpq|, e* = 1/e
-             *
-             * Now the "rotation angle" (c~cos\phi, s~sin\phi)
-             * a = "cot2\phi" = c*^2 e - s^2 e* / 2c*s = (mqq - mpp) / 2|mpq|
-             * Def t = s/c*e, so that the above is
-             * t^2 + 2ta - 1 = 0 ->
-             * t = -a +- sqrt(a^2+1).  Choose one with smaller |t|!
-             * This is prone to cancellation, ~ a - a, so write it as
-             * t = sgn(a)/(|a| + sqrt(a^2 + 1).
-             * Now can choose real c*
-             * c* = 1/sqrt(t^2+1)
-             * s = t c* e   (and c*c + s*s = 1)
-             */
-
-            double a = (eigenvalues[q] - eigenvalues[p]) / (2 * abs_mpq);
-            double t = 1.0 / (std::abs(a) + std::sqrt(a * a + 1.0));
-            if (a < 0.0)
-                t = -t;
-            double c = 1.0 / std::sqrt(t * t + 1.0);
-
-            Dtype s = mpq * (t * c / abs_mpq);
-            Matrix<2, 2, Dtype> P;
-            P.e(0, 0) = P.e(1, 1) = 1.0 / std::sqrt(t * t + 1.0);
-            P.e(0, 1) = s;
-            P.e(1, 0) = -::conj(s);
-
-            M.mult_by_2x2_left(p, q, P.dagger());
-            M.mult_by_2x2_right(p, q, P);
-
-            eigenvalues[p] = ::real(M.e(p, p));
-            eigenvalues[q] = ::real(M.e(q, q));
-
-            // p,q -elements of m should be 0 - set explictly to avoid rounding erros
-            M.e(p, q) = 0;
-            M.e(q, p) = 0;
-
-            /* Now M done, take care of the ev's too ..
-             * V' = V P = |vpp vpq vpr| | c  s   | = V_ik P_kj
-             *            |vqp vqq vqr| |-s* c   |
-             * 	          |vrp vrq vrr| |       1|
-             * vip <- vip c - viq s*
-             * viq <- vip s + viq c
-             * vir <- vir
-             */
-
-            V.mult_by_2x2_right(p, q, P);
-        }
-
-        return (-1);
-    }
 
     /// Convert to string for printing
     ///
@@ -1591,6 +1594,8 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator-=;
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator*=;
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator/=;
+
+    using Matrix_t<n, m, T, Matrix<n, m, T>>::operator-;
 };
 
 namespace hila {
@@ -2520,19 +2525,6 @@ Complex<radix> det_lu(const Matrix_t<n, m, T, MT> &mat) {
         for (i = j; i < n; i++) {
             csum = a[i][j];
             for (k = 0; k < j; k++) {
-                csum -= a[i][k] * a[k][j];
-            }
-            a[i][j] = csum;
-            if ((dum = vv[i] * csum.abs()) >= big) {
-                big = dum;
-                imax = i;
-            }
-        }
-
-        if (j != imax) {
-            for (k = 0; k < n; k++) {
-                cdum = a[imax][k];
-                a[imax][k] = a[j][k];
                 a[j][k] = cdum;
             }
             d = -d;
@@ -2675,8 +2667,7 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
  *                    &= 1 + H\cdot(1 + (\frac{H}{2})\cdot (1 + (\frac{H}{3})\cdot(...))) \f}
  * Done backwards in order to reduce accumulation of errors
 
- * @tparam n Number of rows
- * @tparam m Number of columns
+ * @tparam n Number of rowsMa
  * @tparam T Matrix element type
  * @tparam MT Matrix type
  * @param mat Matrix to compute exponential for
@@ -2705,6 +2696,10 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
 }
 
 #include "datatypes/array.h"
+
+#include "datatypes/diagonal_matrix.h"
+
+#include "datatypes/matrix_linalg.h"
 
 // #include "datatypes/dagger.h"
 
