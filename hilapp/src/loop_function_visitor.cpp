@@ -669,8 +669,6 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
 
             backend_handle_loop_function(ci);
 
-            // FunctionDecl *proto;
-            // find_prototype(ci.funcdecl, proto);
         }
 
     } else if (ci.ctordecl != nullptr) {
