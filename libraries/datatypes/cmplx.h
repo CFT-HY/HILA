@@ -128,7 +128,7 @@ class Complex {
     // Remember to mark this explicit, we do not want this to be invoked
     // in automatic conversions (there should be methods)
 
-#pragma hila loop_function
+//#pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     explicit constexpr Complex<T>(const S val) : re(val), im(0) {}
 
@@ -138,7 +138,7 @@ class Complex {
     // constructor c(a,b)
     template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
               std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
-#pragma hila novector loop_function
+//#pragma hila novector loop_function
     explicit constexpr Complex<T>(const A &a, const B &b) : re(a), im(b) {
     }
 
@@ -217,7 +217,7 @@ class Complex {
         return *this;
     }
 
-#pragma hila loop_function
+// #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     inline Complex<T> &operator=(S s) {
         re = s;
@@ -374,7 +374,7 @@ class Complex {
      *
      *
      */
-#pragma hila loop_function
+//#pragma hila loop_function
     template <typename A>
     inline Complex<T> &operator+=(const Complex<A> &lhs) {
         re += lhs.re;
@@ -459,7 +459,7 @@ class Complex {
      *
      *
      */
-#pragma hila loop_function
+//#pragma hila loop_function
     template <typename A>
     inline Complex<T> &operator*=(const Complex<A> &lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
@@ -793,7 +793,7 @@ Complex<T> polar(T r, T arg) {
 //   return Complex<T>(a.re + b.re, a.im + b.im);
 // }
 
-#pragma hila loop_function
+//#pragma hila loop_function
 template <typename T1, typename T2, typename Tr = hila::type_plus<T1, T2>>
 inline Complex<Tr> operator+(const Complex<T1> &a, const Complex<T2> &b) {
     return Complex<Tr>(a.re + b.re, a.im + b.im);

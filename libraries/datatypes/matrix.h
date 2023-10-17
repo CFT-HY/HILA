@@ -1010,7 +1010,7 @@ class Matrix_t {
      * @return T
      */
     T trace() const {
-        static_assert(n == m, "trace not defined for non square matrices!");
+        static_assert(n == m, "trace not defined for non square matrices");
         T result(0);
         for (int i = 0; i < n; i++) {
             result += e(i, i);
@@ -1417,6 +1417,18 @@ class Matrix_t {
     }
 
 
+    //   Following methods are defined in matrix_linalg.h
+    //
+
+    /**
+     * @brief following calculate the determinant of a square matrix
+     * det() is the generic interface, using laplace for small matrices and LU for large
+     */
+
+    T det_lu() const;
+    T det_laplace() const;
+    T det() const;
+
     /**
      * @brief  Calculate eigenvalues and -vectors of an hermitean (or symmetric) matrix.
      * @details Returns the number of Jacobi iterations, or -1 if did not converge.
@@ -1465,6 +1477,8 @@ class Matrix_t {
 
     svd_result<Mtype> svd_pivot(enum hila::sort sorted = hila::sort::unsorted) const;
 
+
+    //////// matrix_linalg.h
 
     /// Convert to string for printing
     ///
@@ -1827,82 +1841,6 @@ inline auto imag(const Mtype &arg) {
     return arg.imag();
 }
 
-// templates needed for naive calculation of determinants
-template <
-    typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
-    typename Rtype = Matrix<Mtype::rows() - 1, Mtype::columns() - 1, hila::number_type<Mtype>>>
-Rtype Minor(const Mtype &bigger, int row, int col) {
-    constexpr int n = Mtype::rows();
-    constexpr int m = Mtype::columns();
-
-    Rtype result;
-    int ri = 0;
-    for (int i = 0; i < n; i++)
-        if (i != row) {
-            int ci = 0;
-            for (int j = 0; j < m; j++) {
-                if (j != col) {
-                    result.e(ri, ci) = bigger.e(i, j);
-                    ci++;
-                }
-            }
-            ri++;
-        }
-
-    return result;
-}
-
-/**
- * @brief Determinant of matrix
- * @details Defined only for square matrices
- *
- * For perfomance overloads exist for \f$ 1 \times 1 \f$, \f$ 2 \times 2 \f$  and \f$ 3 \times 3 \f$
- * matrices.
- *
- * @tparam Mtype Matrix type
- * @param mat matrix to compute determinant for
- * @return T result determinant
- */
-template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
-          typename T = hila::number_type<Mtype>, int n = Mtype::rows(), int m = Mtype::columns(),
-          std::enable_if_t<(n > 3), int> = 0>
-T det(const Mtype &mat) {
-    static_assert(n == m, "determinants defined only for square matrices");
-    T result(0);
-    hila::scalar_type<T> parity = 1, opposite = -1;
-    for (int i = 0; i < n; i++) {
-        Matrix<n - 1, m - 1, T> minor = Minor(mat, 0, i);
-        result += parity * det(minor) * mat.e(0, i);
-        parity *= opposite;
-    }
-    return result;
-}
-
-// 1 x 1 trivial determinant
-template <
-    typename Mtype,
-    std::enable_if_t<Mtype::is_matrix() && Mtype::rows() == 1 && Mtype::columns() == 1, int> = 0>
-auto det(const Mtype &mat) {
-    return mat.e(0, 0);
-}
-
-// 2x2 determinant
-template <
-    typename Mtype,
-    std::enable_if_t<Mtype::is_matrix() && Mtype::rows() == 2 && Mtype::columns() == 2, int> = 0>
-auto det(const Mtype &mat) {
-    return mat.e(0, 0) * mat.e(1, 1) - mat.e(1, 0) * mat.e(0, 1);
-}
-
-// 3x3 determinant
-template <
-    typename Mtype,
-    std::enable_if_t<Mtype::is_matrix() && Mtype::rows() == 3 && Mtype::columns() == 3, int> = 0>
-auto det(const Mtype &mat) {
-    return mat.e(0, 0) * (mat.e(1, 1) * mat.e(2, 2) - mat.e(2, 1) * mat.e(1, 2)) -
-           mat.e(0, 1) * (mat.e(1, 0) * mat.e(2, 2) - mat.e(1, 2) * mat.e(2, 0)) +
-           mat.e(0, 2) * (mat.e(1, 0) * mat.e(2, 1) - mat.e(1, 1) * mat.e(2, 0));
-}
 
 ///////////////////////////////////////////////////////////////////////////
 // Now matrix additions: matrix + matrix
@@ -2481,166 +2419,6 @@ inline auto norm(const Mt &rhs) {
     return rhs.norm();
 }
 
-
-/**
- * @brief Matrix determinant with LU decomposition
- * @details Algorithm: numerical Recipes, 2nd ed. p. 47 ff
- * Works for Real and Complex matrices
- * Defined only for square matrices
- * @tparam n Number of rows
- * @tparam m Number of columns
- * @tparam T Matrix element type
- * @tparam MT Matrix type
- * @tparam radix Matrix element scalar type in case Complex
- * @param mat Matrix to compute determinant for
- * @return Complex<radix> Determinant
- */
-template <int n, int m, typename T, typename MT, typename radix = hila::scalar_type<T>,
-          std::enable_if_t<hila::is_complex<T>::value, int> = 0>
-Complex<radix> det_lu(const Matrix_t<n, m, T, MT> &mat) {
-
-    static_assert(n == m, "Det_lu only for square matrix");
-
-    int i, imax, j, k;
-    radix big, d, temp, dum;
-    Complex<radix> cdum, csum, ctmp1;
-    radix vv[n];
-    Complex<radix> a[n][n];
-    Complex<radix> one;
-
-    one = Complex<radix>(1, 0);
-    d = 1;
-    imax = -1;
-
-    for (i = 0; i < n; i++)
-        for (j = 0; j < n; j++)
-            a[i][j] = mat.e(i, j);
-    for (i = 0; i < n; i++) {
-        big = 0;
-        for (j = 0; j < n; j++) {
-            if ((temp = a[i][j].abs()) > big)
-                big = temp;
-        }
-        assert(big != 0.0 && "Determinant does not exist\n");
-        vv[i] = 1.0 / big;
-    }
-
-    for (j = 0; j < n; j++) {
-        for (i = 0; i < j; i++) {
-            csum = a[i][j];
-            for (k = 0; k < i; k++) {
-                csum -= a[i][k] * a[k][j];
-            }
-            a[i][j] = csum;
-        }
-
-        big = 0;
-        for (i = j; i < n; i++) {
-            csum = a[i][j];
-            for (k = 0; k < j; k++) {
-                a[j][k] = cdum;
-            }
-            d = -d;
-            vv[imax] = vv[j];
-        }
-
-        if (a[j][j].abs() == static_cast<radix>(0.0))
-            a[j][j] = Complex<radix>(1e-20, 0);
-
-        if (j != n - 1) {
-            cdum = one / a[j][j];
-            for (i = j + 1; i < n; i++) {
-                a[i][j] = a[i][j] * cdum;
-            }
-        }
-    }
-
-    csum = Complex<radix>(d, 0.0);
-    for (j = 0; j < n; j++) {
-        csum = csum * a[j][j];
-    }
-
-    return (csum);
-}
-
-// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
-// p. 47 ff
-template <int n, int m, typename T, typename MT,
-          std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-T det_lu(const Matrix_t<n, m, T, MT> &mat) {
-    static_assert(n == m, "Det_lu only for square matrix");
-
-    int i, imax, j, k;
-    T big, d, temp, dum;
-    T cdum, csum, ctmp1;
-    T vv[n];
-    T a[n][n];
-    d = 1;
-    imax = -1;
-
-    for (i = 0; i < n; i++)
-        for (j = 0; j < n; j++)
-            a[i][j] = mat.e(i, j);
-    for (i = 0; i < n; i++) {
-        big = 0;
-        for (j = 0; j < n; j++) {
-            if ((temp = a[i][j]) > big)
-                big = temp;
-        }
-        assert(big != 0.0 && "Determinant does not exist\n");
-        vv[i] = 1.0 / big;
-    }
-
-    for (j = 0; j < n; j++) {
-        for (i = 0; i < j; i++) {
-            csum = a[i][j];
-            for (k = 0; k < i; k++) {
-                csum -= a[i][k] * a[k][j];
-            }
-            a[i][j] = csum;
-        }
-
-        big = 0;
-        for (i = j; i < n; i++) {
-            csum = a[i][j];
-            for (k = 0; k < j; k++) {
-                csum -= a[i][k] * a[k][j];
-            }
-            a[i][j] = csum;
-            if ((dum = vv[i] * csum) >= big) {
-                big = dum;
-                imax = i;
-            }
-        }
-
-        if (j != imax) {
-            for (k = 0; k < n; k++) {
-                cdum = a[imax][k];
-                a[imax][k] = a[j][k];
-                a[j][k] = cdum;
-            }
-            d = -d;
-            vv[imax] = vv[j];
-        }
-
-        if (a[j][j] == static_cast<T>(0.0))
-            a[j][j] = 1e-20;
-
-        if (j != n - 1) {
-            cdum = 1.0 / a[j][j];
-            for (i = j + 1; i < n; i++) {
-                a[i][j] = a[i][j] * cdum;
-            }
-        }
-    }
-
-    csum = d;
-    for (j = 0; j < n; j++) {
-        csum = csum * a[j][j];
-    }
-
-    return (csum);
-}
 
 // Cast operators to different number type
 // cast_to<double>(a);

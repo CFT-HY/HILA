@@ -90,7 +90,7 @@ SquareMatrix<2, Dtype> diagonalize_2x2(const double mpp, const double mqq, const
  * @brief Calculate eigenvalues and vectors of an hermitean or real symmetric matrix
  *
  * Algorithm uses fully pivoted Jacobi rotations.
- * 
+ *
  * Two interfaces:
  *
  *    H.eigen_hermitean(E, U, [optional: sort]);
@@ -101,22 +101,22 @@ SquareMatrix<2, Dtype> diagonalize_2x2(const double mpp, const double mqq, const
  *    This saves the trouble of defining E and U (see below)
  *
  * Thus, H = U E U^*   and   H U = U E
- * 
+ *
  * Both interfaces allow optional sorting according to eigenvalues:
  *    hila::sort::unsorted [default]
  *    hila::sort::ascending / descending
- * 
- * Example: 
+ *
+ * Example:
  * @code {.cpp}
  *   SquareMatrix<n,Complex<double>> M;
  *   M = ... // make unitary
  *   DiagonalMatrix<n,double> eigenvalues;
  *   SquareMatrix<n,Complex<double>> eigenvectors;
- * 
+ *
  *   int rotations = M.eigen_hermitean(eigenvalues,eigenvectors,hila::sort::ascending);
  * @endcode
- * 
- * @note The matrix has to be hermitean/symmetric  
+ *
+ * @note The matrix has to be hermitean/symmetric
  *
  * @param E   diagonal matrix of real eigenvalues
  * @param U   Unitary nxn matrix of eigenvectors
@@ -220,17 +220,17 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
  * @code {.cpp}
  *   Field<SquareMatrix<n,double>> M, sn;
  *   M[ALL] = .. // make symmetric
- * 
+ *
  *   onsites(ALL) {
  *       auto R = M[X].svd();
- *       
+ *
  *       // Use EV decomposition to evaluate function: sin(M) = U sin(eigenvals) U^T
  *       sn[X] = R.eigenvectors * sin(R.eigenvalues) * R.eigenvectors.dagger();
  *   }
  * @endcode
- * 
+ *
  * This interface saves the trouble of defining the eigenvalue and -vector variables.
- * 
+ *
  */
 template <int n, int m, typename T, typename Mtype>
 eigen_result<Mtype> Matrix_t<n, m, T, Mtype>::eigen_hermitean(enum hila::sort sorted) const {
@@ -247,7 +247,7 @@ eigen_result<Mtype> Matrix_t<n, m, T, Mtype>::eigen_hermitean(enum hila::sort so
  *
  * Use:
  *   M.svd_pivot(U, S, V, [sorted]);
- * 
+ *
  * The algorithm works by one-sided Jacobi rotations.
  *
  * - U = V = 1
@@ -264,7 +264,7 @@ eigen_result<Mtype> Matrix_t<n, m, T, Mtype>::eigen_hermitean(enum hila::sort so
  * Now A = U S, A^* A = S* S = S^2
  * - S_ii = A_ii / |A_i|     (norm of column i)
  * - U = A / S
- * 
+ *
  * @param U
  */
 
@@ -274,7 +274,7 @@ template <typename Et, typename Mt, typename MT>
 int Matrix_t<n, m, T, Mtype>::svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U,
                                         out_only DiagonalMatrix<n, Et> &_S,
                                         out_only Matrix_t<n, n, Mt, MT> &_V,
-                                       enum hila::sort sorted) const {
+                                        enum hila::sort sorted) const {
 
     static_assert(!hila::contains_complex<T>::value || hila::contains_complex<Mt>::value,
                   "SVD: diagonalizing matrix must be complex with complex original matrix");
@@ -369,9 +369,9 @@ int Matrix_t<n, m, T, Mtype>::svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U,
  *
  * Use:
  *   M.svd(U, S, V, [sorted]);
- * 
+ *
  * Result satisfies M = U S V.dagger()
- * 
+ *
  * The algorithm works by one-sided Jacobi rotations.
  *
  * - U = V = 1
@@ -499,7 +499,7 @@ int Matrix_t<n, m, T, Mtype>::svd(out_only Matrix_t<n, n, Mt, MT> &_U,
  *       now res.U : nxn unitary
  *           res.singularvalues : DiagonalMatrix of singular values
  *           res.V : nxn unitary
- * 
+ *
  * result satifies  M = res.U res.singularvalues res.V.dagger()
  */
 template <int n, int m, typename T, typename Mtype>
@@ -516,6 +516,204 @@ svd_result<Mtype> Matrix_t<n, m, T, Mtype>::svd_pivot(enum hila::sort sorted) co
     svd_result<Mtype> res;
     this->svd_pivot(res.U, res.singularvalues, res.V, sorted);
     return res;
+}
+
+
+namespace hila {
+namespace linalg {
+
+// templates needed for naive calculation of determinants
+template <
+    typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
+    typename Rtype = Matrix<Mtype::rows() - 1, Mtype::columns() - 1, hila::number_type<Mtype>>>
+Rtype Minor(const Mtype &bigger, int row, int col) {
+    constexpr int n = Mtype::rows();
+    constexpr int m = Mtype::columns();
+
+    Rtype result;
+    int ri = 0;
+    for (int i = 0; i < n; i++)
+        if (i != row) {
+            int ci = 0;
+            for (int j = 0; j < m; j++) {
+                if (j != col) {
+                    result.e(ri, ci) = bigger.e(i, j);
+                    ci++;
+                }
+            }
+            ri++;
+        }
+
+    return result;
+}
+
+} // namespace linalg
+} // namespace hila
+
+/**
+ * @brief Determinant of matrix, using Laplace method
+ * @details Defined only for square matrices
+ *
+ * For perfomance overloads exist for \f$ 1 \times 1 \f$, \f$ 2 \times 2 \f$  and \f$ 3 \times 3 \f$
+ * matrices.
+ *
+ * @param mat matrix to compute determinant for
+ * @return T result determinant
+ */
+
+template <int n, int m, typename T, typename Mtype>
+T Matrix_t<n, m, T, Mtype>::det_laplace() const {
+
+    static_assert(n == m, "determinants defined only for square matrices");
+
+    if constexpr (n == 1) {
+        return this->e(0.0);
+    }
+    if constexpr (n == 2) {
+        return this->e(0, 0) * this->e(1, 1) - this->e(1, 0) * this->e(0, 1);
+    }
+    if constexpr (n == 3) {
+        return this->e(0, 0) * (this->e(1, 1) * this->e(2, 2) - this->e(2, 1) * this->e(1, 2)) -
+               this->e(0, 1) * (this->e(1, 0) * this->e(2, 2) - this->e(1, 2) * this->e(2, 0)) +
+               this->e(0, 2) * (this->e(1, 0) * this->e(2, 1) - this->e(1, 1) * this->e(2, 0));
+    }
+
+    if constexpr (n > 3) {
+        T result(0);
+        hila::scalar_type<T> parity = 1, opposite = -1;
+        for (int i = 0; i < n; i++) {
+            Matrix<n - 1, m - 1, T> minor = hila::linalg::Minor(*this, 0, i);
+            result += parity * minor.det_laplace() * (*this).e(0, i);
+            parity *= opposite;
+        }
+        return result;
+    }
+}
+
+
+/**
+ * @brief Matrix determinant with LU decomposition
+ * @details Algorithm: numerical Recipes, 2nd ed. p. 47 ff
+ * Works for Real and Complex matrices
+ * Defined only for square matrices
+ *
+ * @return Complex<radix> Determinant
+ */
+
+template <int n, int m, typename T, typename Mtype>
+T Matrix_t<n, m, T, Mtype>::det_lu() const {
+
+    static_assert(n == m, "Determinant is defined only for square matrix");
+
+    Mtype a(*this); // copy this matrix to a, modify a in place
+    Vector<n, hila::scalar_type<T>> vv;
+
+    hila::scalar_type<T> d = 1, big, tmp;
+    int imax = -1;
+    T ret = 0;
+
+    for (int i = 0; i < n; i++) {
+        big = 0;
+        for (int j = 0; j < n; j++) {
+            if ((tmp = ::squarenorm(a.e(i, j))) > big)
+                big = tmp;
+        }
+
+        // If full row is 0 det must be 0 too
+        if (big == 0)
+            return ret;
+
+        // scaling saved
+        vv[i] = 1.0 / sqrt(big);
+    }
+
+    // loop over rows
+    for (int j = 0; j < n; j++) {
+
+        // build the lower diagonal (L)
+        for (int i = 0; i < j; i++) {
+            for (int k = 0; k < i; k++) {
+                a.e(i, j) -= a.e(i, k) * a.e(k, j);
+            }
+        }
+
+        big = 0;
+        // search for the pivot, and start upper triangle
+        for (int i = j; i < n; i++) {
+            auto csum = a.e(i, j);
+            for (int k = 0; k < j; k++) {
+                csum -= a.e(i, k) * a.e(k, j);
+            }
+            a.e(i, j) = csum;
+            auto dum = vv[i] * ::abs(csum);
+            if (dum >= big) {
+                imax = i;
+                big = dum;
+            }
+        }
+        // and swap rows if needed
+        if (j != imax) {
+            for (int k = 0; k < n; k++) {
+                hila::swap(a.e(imax, k), a.e(j, k));
+            }
+            d = -d;
+            vv[imax] = vv[j];
+        }
+
+        // det must be zero if diag is zero now
+        if (::abs(a.e(j, j)) == 0.0)
+            return ret; // ret still 0
+
+        // and divide by the pivot
+        if (j != n - 1) {
+            auto dum = 1 / a.e(j, j);
+            for (int i = j + 1; i < n; i++) {
+                a.e(i, j) *= dum;
+            }
+        }
+    }
+
+    // form the det
+    ret = d;
+    for (int j = 0; j < n; j++) {
+        ret *= a.e(j, j);
+    }
+
+    return (ret);
+}
+
+
+/**
+ * @brief determinant function - if matrix size is < 5, use Laplace, otherwise LU
+*/
+
+template <int n, int m, typename T, typename Mtype>
+T Matrix_t<n, m, T, Mtype>::det() const {
+    static_assert(n == m, "Determinant only for square matrix");
+    if constexpr (n < 5)
+        return this->det_laplace();
+    else
+        return this->det_lu();
+}
+
+
+/**
+ * @brief function (as opposed to method) interfaces to det-functions
+*/
+
+template <int n, int m, typename T, typename Mtype>
+T det_laplace(const Matrix_t<n, m, T, Mtype> &mat) {
+    return mat.det_laplace();
+}
+
+template <int n, int m, typename T, typename Mtype>
+T det_lu(const Matrix_t<n, m, T, Mtype> &mat) {
+    return mat.det_lu();
+}
+
+template <int n, int m, typename T, typename Mtype>
+T det(const Matrix_t<n, m, T, Mtype> &mat) {
+    return mat.det();
 }
 
 
