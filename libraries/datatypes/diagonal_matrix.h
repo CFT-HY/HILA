@@ -78,6 +78,14 @@ class DiagonalMatrix {
         return c[i];
     }
 
+    // For completeness, add e(i,j) - only for const
+    T e(const int i, const int j) const {
+        T ret(0);
+        if (i == j)
+            ret = c[i];
+        return ret;
+    }
+
 
     /**
      * @brief Return row from Diagonal matrix
