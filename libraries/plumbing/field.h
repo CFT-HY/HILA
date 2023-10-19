@@ -722,9 +722,8 @@ class Field {
 
     /**
      * @name Standard arithmetic operations
-     * @brief Standard arithmetic operations which fields should implement
-     *        Not all are always callable, e.g. division may not be
-     *        implemented by all field types
+     * @brief Not all are always callable, e.g. division may not be implemented by all field types
+     * since division is not defined for all @p Field::T types.
      *  @{
      */
     /**
@@ -850,16 +849,30 @@ class Field {
     }
 
     /**
-     * @brief -= Operator between two fields if A and Field type T are compatible
+     * @brief Subtraction assignment operator
+     * @details Subtraction assignment operator can be called in the following ways as long as types
+     * are convertible.
      *
-     * @tparam A Type of r.h.s element
-     * @param rhs Field to subtract
-     * @return Field<T>&
+     * __Subtraction assignment with field:__
+     *
      * \code{.cpp}
      * Field<MyType> f,g;
      * . . .
      * f -= g;
      * \endcode
+     *
+     * __Subtraction assignment with scalar:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a;
+     * . . .
+     * f -= a;
+     * \endcode
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to subtract
+     * @return Field<T>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
@@ -869,16 +882,30 @@ class Field {
     }
 
     /**
-     * @brief *= Operator between two fields if A and Field type T are compatible
+     * @brief Product assignment operator
+     * @details Product assignment operator can be called in the following ways as long as types
+     * are convertible.
      *
-     * @tparam A Type of r.h.s element
-     * @param rhs Field to compute product with
-     * @return Field<T>&
+     * __Product assignment with field:__
+     *
      * \code{.cpp}
      * Field<MyType> f,g;
      * . . .
      * f *= g;
      * \endcode
+     *
+     * __Product assignment with scalar:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a;
+     * . . .
+     * f *= a;
+     * \endcode
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to compute product with
+     * @return Field<T>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
@@ -888,16 +915,30 @@ class Field {
     }
 
     /**
-     * @brief /= Operator between two fields if A and Field type T are compatible
+     * @brief Division assignment operator
+     * @details Division assignment operator can be called in the following ways as long as types
+     * are convertible.
      *
-     * @tparam A Type of r.h.s element
-     * @param rhs Field to divide with
-     * @return Field<T>&
+     * __Division assignment with field:__
+     *
      * \code{.cpp}
      * Field<MyType> f,g;
      * . . .
      * f /= g;
      * \endcode
+     *
+     * __Division assignment with scalar:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a;
+     * . . .
+     * f /= a;
+     * \endcode
+     *
+     * @tparam A Type of r.h.s element
+     * @param rhs Field to divide with
+     * @return Field<T>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
@@ -923,17 +964,12 @@ class Field {
     }
 
     /**
-     * @brief -= Operator between element and field if type of rhs and Field type T are compatible
+     * @internal
+     * @brief -= Operator between scalar and field if type of rhs and Field type T are compatible
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to subtract
      * @return Field<T>&
-     * \code{.cpp}
-     * Field<MyType> f;
-     * MyType a
-     * . . .
-     * f -= a;
-     * \endcode
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
@@ -943,17 +979,12 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief *= Operator between element and field if type of rhs and Field type T are compatible
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to multiply with
      * @return Field<T>&
-     * \code{.cpp}
-     * Field<MyType> f;
-     * MyType a
-     * . . .
-     * f *= a;
-     * \endcode
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
@@ -963,17 +994,12 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief /= Operator between element and field if type of rhs and Field type T are compatible
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to divide with
      * @return Field<T>&
-     * \code{.cpp}
-     * Field<MyType> f;
-     * MyType a
-     * . . .
-     * f /= a;
-     * \endcode
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
@@ -996,7 +1022,7 @@ class Field {
     /**
      * @brief Unary - operator, acts as negation to all field elements
      *
-     * @return Field<T>
+     * @return Field<T> Returns negated version of itself
      */
     Field<T> operator-() const {
         Field<T> f;
@@ -1019,8 +1045,10 @@ class Field {
     }
 
     /**
-     * @brief Computes squarenorm of Field depending on how it is defined for Field type T
+     * @brief Squarenorm
+     * @details Squarenorm of Field \f$f\f$ is dependent on how it is defined for Field type T.
      *
+     * \f$|f|^2 = \sum_{\forall x \in f} |x|^2\f$
      * @return double
      */
     double squarenorm() const {
@@ -1093,7 +1121,7 @@ class Field {
     }
     /** @} */
 
-    /// Communication routines
+    // Communication routines. These are all internal.
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
     void wait_gather(Direction d, Parity p) const;
     void gather(Direction d, Parity p = ALL) const;
