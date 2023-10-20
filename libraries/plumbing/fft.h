@@ -405,14 +405,35 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
     FFT_field(input, result, dirs, fftdir);
 }
 
-//////////////////////////////////////////////////////////////////////////////////
-///
-/// Field method for performing FFT
-///   res = a.FFT();
-/// fftdir:  fft_direction::forward (default)  or fft_direction::back
-//////////////////////////////////////////////////////////////////////////////////
 
-
+/**
+ * @brief Field method for performing FFT
+ * @details
+ * By default calling without arguments will execute FFT in all directions.
+ * @code{.cpp}
+ * .
+ * . // Field f is defined
+ * .
+ * auto res = f.FFT() //Forward transform
+ * auto res_2 = res.FFT(fft_direction::back) // res_2 is same as f
+ * @endcode
+ *
+ * One can also specify the direction of the FFT with a coordinate vector:
+ * @code{.cpp}
+ * .
+ * . // Field f is defined
+ * .
+ * auto res = f.FFT(e_x) //Forward transform in x-direction
+ * auto res_2 = res.FFT(e_X,fft_direction::back) // res_2 is same as f
+ * @endcode
+ *
+ * With this in mind `f.FFT(e_x+e_y+e_z) = f.FFT()`
+ *
+ * @tparam T
+ * @param dirs Direction to perform FFT in, default is all directions
+ * @param fftdir fft_direction::forward (default)  or fft_direction::back
+ * @return Field<T> Transformed field
+ */
 template <typename T>
 Field<T> Field<T>::FFT(const CoordinateVector &dirs, fft_direction fftdir) const {
     Field<T> res;
