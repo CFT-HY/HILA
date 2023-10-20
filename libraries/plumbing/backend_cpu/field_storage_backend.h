@@ -54,7 +54,7 @@ template <typename T>
 void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
                                                const unsigned *RESTRICT index_list, int n,
                                                const lattice_struct &lattice) const {
-    if constexpr (has_unary_minus<T>::value) {
+    if constexpr (hila::has_unary_minus<T>::value) {
 #pragma omp parallel for
         for (unsigned j = 0; j < n; j++) {
             unsigned index = index_list[j];

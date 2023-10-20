@@ -585,8 +585,9 @@ class Field {
         // this section is just to generate loop function calls for unary-.  Will removed by hilapp
         // from final code.  If type T does not have -, give error
 
-        static_assert(has_unary_minus<T>::value, "BC possible only for types which implement unary "
-                                                 "minus (-) -operator and are not unsigned");
+        static_assert(hila::has_unary_minus<T>::value,
+                      "BC possible only for types which implement unary "
+                      "minus (-) -operator and are not unsigned");
 
         ensure_unary_minus_is_loop_function<T>();
 #endif
@@ -800,7 +801,6 @@ class Field {
     }
 
     /**
-     * @internal
      * @brief Move Assignment
      *
      * @param rhs
@@ -1129,39 +1129,24 @@ class Field {
     void cancel_comm(Direction d, Parity p) const;
 
     /**
-     * @name Shift operations
-     * @{
-     */
-
-    /**
      * @brief Create a periodically shifted copy of the field
      * @details  this is currently OK only for short moves, very inefficient for longer moves
-     * @param v CoordinateVector to shift field with
-     * @param r Field to store result in
-     * @param par Parity
-     * @return Field<T>&
+     * Example:
+     * @code{.cpp}
+     *
+     * @endcode
+     * @param v
+     * @param par
+     * @param r
+     * @return Field<T>& returns a reference to res
      */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
-    /**
-     * @brief Create a periodically shifted copy of the field
-     * @details this is currently OK only for short moves, very inefficient for longer moves.
-     * If Parity is not given to shift, then it is called with Parity ALL
-     * @param v CoordinateVector to shift field with
-     * @param r Field to store result in
-     * @return Field<T>&
-     */
+
     Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
         return shift(v, r, ALL);
     }
-    /**
-     * @brief Create a periodically shifted copy of the field
-     * @details This is currently OK only for short moves, very inefficient for longer moves
-     * @param v CoordinateVector to shift field with
-     * @param par Parity
-     * @return Field<T>
-     */
-    Field<T> shift(const CoordinateVector &v, Parity par) const;
-    /** @} */
+
+    Field<T> shift(const CoordinateVector &v) const;
 
     // General getters and setters
 
@@ -1169,13 +1154,15 @@ class Field {
     /// is sufficient to set the element locally
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
-    void set_element(const CoordinateVector &coord, const A &value) {
+    const T set_element(const CoordinateVector &coord, const A &value) {
+        T element;
+        element = value;
+        assert(is_initialized(ALL) && "Field not initialized yet");
         if (lattice.is_on_mynode(coord)) {
-            T element;
-            element = value;
             set_value_at(element, lattice.site_index(coord));
         }
         mark_changed(coord.parity());
+        return element;
     }
 
     /**
@@ -1187,14 +1174,14 @@ class Field {
     const T get_element(const CoordinateVector &coord) const {
         T element;
 
+        assert(is_initialized(ALL) && "Field not initialized yet");
         int owner = lattice.node_rank(coord);
 
         if (hila::myrank() == owner) {
             element = get_value_at(lattice.site_index(coord));
         }
 
-
-        MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice.mpi_comm_lat);
+        hila::broadcast(element, owner);
 
         return element;
     }
@@ -1241,9 +1228,13 @@ class Field {
     //     set_element(e, coord);
     // }
 
+    // Compound element ops - used in field element operations like F[cv] += smth;
+    // These are optimized so that do NOT return a value, thus cannot be chained.  This avoids MPI.
+
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1256,6 +1247,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1268,6 +1260,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1280,6 +1273,7 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
+        assert(is_initialized(ALL));
         if (lattice.is_on_mynode(coord)) {
             auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
@@ -1287,6 +1281,41 @@ class Field {
             set_value_at(v, i);
         }
         mark_changed(coord.parity());
+    }
+
+
+    // pre- and postfix ++ -- return value
+
+    inline const T increment_postfix_element(const CoordinateVector &coord) {
+        T r, v;
+        v = get_element(coord);
+        r = v;
+        v++;
+        set_element(coord, v);
+        return r;
+    }
+
+    inline const T increment_prefix_element(const CoordinateVector &coord) {
+        T v = get_element(coord);
+        ++v;
+        set_element(coord, v);
+        return v;
+    }
+
+    inline const T decrement_postfix_element(const CoordinateVector &coord) {
+        T r, v;
+        v = get_element(coord);
+        r = v;
+        v--;
+        set_element(coord, v);
+        return r;
+    }
+
+    inline const T decrement_prefix_element(const CoordinateVector &coord) {
+        T v = get_element(coord);
+        --v;
+        set_element(coord, v);
+        return v;
     }
 
 
@@ -1812,9 +1841,9 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
 
 
 template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v) const {
     Field<T> res;
-    shift(v, res, par);
+    shift(v, res, ALL);
     return res;
 }
 
@@ -1896,6 +1925,32 @@ void Field<T>::random() {
 #endif
 }
 
+template <typename T>
+void Field<T>::gaussian_random(double width) {
+
+#if defined(CUDA) || defined(HIP)
+
+    if (!hila::is_device_rng_on()) {
+
+        std::vector<T> rng_buffer(lattice.mynode.volume());
+        for (auto &element : rng_buffer)
+            hila::gaussian_random(element, width);
+        (*this).set_local_data(rng_buffer);
+
+    } else {
+        onsites(ALL) {
+            hila::gaussian_random((*this)[X], width);
+        }
+    }
+#else
+
+    onsites(ALL) {
+        hila::gaussian_random((*this)[X], width);
+    }
+
+#endif
+}
+
 
 #ifdef HILAPP
 
@@ -1951,7 +2006,7 @@ inline void ensure_field_operators_exist() {
     // make shift also explicit
     CoordinateVector v = 0;
     Field<T> f;
-    f = f.shift(v, ALL);
+    f = f.shift(v);
 }
 
 #endif

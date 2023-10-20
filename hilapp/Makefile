@@ -199,6 +199,7 @@ OBJECTS = \
   $(BUILDDIR)/toplevelvisitor.o \
   $(BUILDDIR)/loop_function.o \
   $(BUILDDIR)/loop_function_visitor.o \
+  $(BUILDDIR)/function_prototype.o \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site_visitor.o \
   $(BUILDDIR)/contains_random_visitor.o \
@@ -207,6 +208,7 @@ OBJECTS = \
   $(BUILDDIR)/function_contains_loop_visitor.o \
   $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \
+  $(BUILDDIR)/sourceloc_utils.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
 

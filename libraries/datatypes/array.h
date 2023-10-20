@@ -113,7 +113,7 @@ class Array {
 #pragma hila loop_function
     inline Array(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++)
-            c[i] = static_cast<T>(0);
+            c[i] = 0;
     }
 
     // Construct array automatically from right-size initializer list
@@ -617,8 +617,21 @@ class Array {
     }
 
     /// Convert to string for printing
-    std::string str() const {
-        return this->asMatrix().str();
+    std::string str(int prec = 8, char separator = ' ') const {
+        return this->asMatrix().str(prec, separator);
+    }
+
+    /// implement sort as casting to array
+#pragma hila novector
+    template <int N>
+    Array<n, m, T> sort(Vector<N, int> &permutation,
+                        hila::sort order = hila::sort::ascending) const {
+        return this->asMatrix().sort(permutation, order).asArray();
+    }
+
+#pragma hila novector
+    Array<n, m, T> sort(hila::sort order = hila::sort::ascending) const {
+        return this->asMatrix().sort(order).asArray();
     }
 };
 
