@@ -1049,6 +1049,9 @@ class Field {
      * @details Squarenorm of Field \f$f\f$ is dependent on how it is defined for Field type T.
      *
      * \f$|f|^2 = \sum_{\forall x \in f} |x|^2\f$
+     *
+     * If squarenorm is defined for type T then the definition can be seen on the types
+     * documentation page.
      * @return double
      */
     double squarenorm() const {
@@ -1060,8 +1063,13 @@ class Field {
     }
 
     /**
-     * @brief Computes norm of Field depending on how it is defined for Field type T
+     * @brief Norm
+     * @details Norm of Field depending on how it is defined for Field type T
      *
+     * \f$|f| = \sqrt{\sum_{\forall x \in f} |x|^2}\f$
+     *
+     * If norm is defined for type T then the definition can be seen on the types
+     * documentation page.
      * @return double
      */
     double norm() {
@@ -1069,7 +1077,7 @@ class Field {
     }
 
     /**
-     * @brief Computes conjugate of Field depending on how it is defined for Field type T
+     * @brief Returns field with all elements conjugated depending how conjugate is defined for type
      *
      * @return Field<T>
      */
@@ -1080,7 +1088,7 @@ class Field {
     }
 
     /**
-     * @brief Computes dagger or Hermitian conjugate of Field depending on how it is
+     * @brief Returns dagger or Hermitian conjugate of Field depending on how it is
      * defined for Field type T
      *
      * @return Field<T>
@@ -1131,9 +1139,15 @@ class Field {
     /**
      * @brief Create a periodically shifted copy of the field
      * @details  this is currently OK only for short moves, very inefficient for longer moves
-     * Example:
-     * @code{.cpp}
      *
+     * @code{.cpp}
+     * .
+     * . //Field<MyType> f is defined
+     * .
+     * CoordinateVector v = {1,1,0}
+     * f.shift(v) // Shift all elements of field once in the x direction and once in the y direction
+     * f.shift(v,EVEN) // Shift all EVEN elements of field once in the x direction and once in the y
+     * direction
      * @endcode
      * @param v
      * @param par
@@ -1153,6 +1167,14 @@ class Field {
     /// Set a single element. Assuming that each node calls this with the same value, it
     /// is sufficient to set the element locally
 
+    /**
+     * @brief Get singular element which will be broadcast to all nodes
+     * @details Works as long as `value` type A and field type T match
+     * @tparam A type
+     * @param coord Coordinate of element to be set
+     * @param value Value to be set
+     * @return const T
+     */
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
     const T set_element(const CoordinateVector &coord, const A &value) {
         T element;
@@ -1168,7 +1190,7 @@ class Field {
     /**
      * @brief Get singular element which will be broadcast to all nodes
      *
-     * @param coord coordinate of which the element is fetched with
+     * @param coord coordinate of fetched element
      * @return const T
      */
     const T get_element(const CoordinateVector &coord) const {
@@ -1187,6 +1209,7 @@ class Field {
     }
 
     /**
+     * @internal
      * @brief Set an array of elements in the field
      * @remark Assuming that each node calls this with the same value,
      * it is sufficient to set the elements locally
@@ -1197,6 +1220,7 @@ class Field {
     void set_elements(const std::vector<T> &elements,
                       const std::vector<CoordinateVector> &coord_list);
     /**
+     * @internal
      * @brief Retrieves list of elements to all nodes.
      * @param coord_list vector of coordinates which will be fetched
      * @param broadcast if true then elements retrieved to root node will be broadcast to all nodes
@@ -1228,9 +1252,9 @@ class Field {
     //     set_element(e, coord);
     // }
 
-    // Compound element ops - used in field element operations like F[cv] += smth;
-    // These are optimized so that do NOT return a value, thus cannot be chained.  This avoids MPI.
-
+    /// @internal
+    /// Compound element ops - used in field element operations like F[cv] += smth;
+    /// These are optimized so that do NOT return a value, thus cannot be chained.  This avoids MPI.
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
@@ -1285,7 +1309,7 @@ class Field {
 
 
     // pre- and postfix ++ -- return value
-
+    ///@internal
     inline const T increment_postfix_element(const CoordinateVector &coord) {
         T r, v;
         v = get_element(coord);
@@ -1295,6 +1319,7 @@ class Field {
         return r;
     }
 
+    ///@internal
     inline const T increment_prefix_element(const CoordinateVector &coord) {
         T v = get_element(coord);
         ++v;
@@ -1302,6 +1327,7 @@ class Field {
         return v;
     }
 
+    ///@internal
     inline const T decrement_postfix_element(const CoordinateVector &coord) {
         T r, v;
         v = get_element(coord);
@@ -1311,6 +1337,7 @@ class Field {
         return r;
     }
 
+    ///@internal
     inline const T decrement_prefix_element(const CoordinateVector &coord) {
         T v = get_element(coord);
         --v;
@@ -1319,7 +1346,7 @@ class Field {
     }
 
 
-    // Fourier transform declarations
+    // Fourier transform declaration
     Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
     Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
 
@@ -1848,6 +1875,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v) const {
 }
 
 
+///  @internal
 ///  drop_comms():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
 ///  only if there are "by-hand" start_gather operations and these are not needed
@@ -1870,7 +1898,6 @@ void Field<T>::drop_comms(Direction d, Parity p) const {
 }
 
 /// @internal cancel ongoing send and receive
-
 template <typename T>
 void Field<T>::cancel_comm(Direction d, Parity p) const {
     if (lattice.nn_comminfo[d].from_node.rank != hila::myrank()) {
