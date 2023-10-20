@@ -6,14 +6,33 @@
  */
 #include "hila.h"
 
+// unistd.h needed for isatty()
+#include <unistd.h>
+
 
 // report the result of the test -- TODO: nicer formatting?
 bool report_pass(std::string message, double eps, double limit) {
+
+    static int is_terminal = -1;
+    static std::string ok_string, fail_string;
+
+    if (is_terminal < 0) {
+        is_terminal = isatty(fileno(stdout));
+
+        if (is_terminal) {
+            ok_string = "\x1B[32m --- \033[0m ";
+            fail_string = "\x1B[31m *** \033[0m ";
+        } else {
+            ok_string = " ---  ";
+            fail_string = " ***  ";
+        }
+    }
+
     if (eps < limit) {
-        hila::out0 << "--- " << message << " passed" << std::endl;
+        hila::out0 << ok_string << message << " passed" << std::endl;
         return true;
     } else {
-        hila::out0 << "*** " << message << " FAILED: eps " << eps << " limit " << limit
+        hila::out0 << fail_string << message << " FAILED: eps " << eps << " limit " << limit
                    << std::endl;
         return false;
     }
@@ -456,6 +475,65 @@ void test_field_slices() {
 }
 
 
+//--------------------------------------------------------------------------------
+
+void test_matrix_algebra() {
+
+    using myMatrix = SquareMatrix<4, Complex<double>>;
+
+    Field<myMatrix> M;
+    Field<double> delta;
+
+    M.gaussian_random(2.0);
+
+    // eigenvalue test - show that  M = U D U^*, where D is diagonal eigenvalue matrix and U matrix
+    // of eigenvectors
+
+    onsites(ALL) {
+        auto H = M[X] * M[X].dagger(); // make hermitean
+
+        auto r = H.eigen_hermitean();
+        delta[X] = (H - r.eigenvectors * r.eigenvalues * r.eigenvectors.dagger()).norm();
+    }
+
+    auto max_delta = delta.max();
+
+    report_pass("Eigenvalue analysis with " + hila::prettyprint(myMatrix::rows()) + "x" +
+                    hila::prettyprint(myMatrix::columns()) + " Hermitean matrix",
+                max_delta, 1e-10);
+
+    // Singular value test - non-pivoted
+
+    onsites(ALL) {
+        auto r = M[X].svd();
+        delta[X] = (M[X] - r.U * r.singularvalues * r.V.dagger()).norm();
+    }
+
+    max_delta = delta.max();
+
+    report_pass("SVD with " + hila::prettyprint(myMatrix::rows()) + "x" +
+                    hila::prettyprint(myMatrix::columns()) + " Complex matrix",
+                max_delta, 1e-10);
+
+    // pivoted singular values
+
+    M.gaussian_random();
+
+    onsites(ALL) {
+        auto r = M[X].svd_pivot(hila::sort::ascending);
+        delta[X] = (M[X] - r.U * r.singularvalues * r.V.dagger()).norm();
+    }
+
+    max_delta = delta.max();
+
+    report_pass("Fully pivoted SVD with " + hila::prettyprint(myMatrix::rows()) + "x" +
+                    hila::prettyprint(myMatrix::columns()) + " Complex matrix",
+                max_delta, 1e-10);
+
+
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv) {
@@ -493,6 +571,8 @@ int main(int argc, char **argv) {
     fft_test();
 
     spectraldensity_test();
+
+    test_matrix_algebra();
 
     hila::finishrun();
 }

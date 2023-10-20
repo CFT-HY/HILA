@@ -1,13 +1,18 @@
 #ifndef SITEINDEX_H
 #define SITEINDEX_H
 
+#include "coordinates.h"
+#include "lattice.h"
 
-//////////////////////////////////////////////////////////////////////
-/// SiteIndex type - indexes all sites on the lattice, so that the
-/// first dimension runs fastest.  Equivalent to CoordinateVector in use.
-/// Implemented as size_t (unsigned int64).  Can access value directly
-/// by using a.value
-//////////////////////////////////////////////////////////////////////
+
+/**
+ * @brief Running index for locating sites on the lattice
+ *
+ * The index is computed as x + nx*(y + ny*(z + nz*t) (in 4d)
+ * Used sometimes instead of CoordinateVector, smaller storage.
+ * Can be directly accessed by .value
+ *
+ */
 
 class SiteIndex {
   public:
@@ -23,19 +28,27 @@ class SiteIndex {
 
     ~SiteIndex() = default;
 
+    /**
+     * @brief Construct from CoordinateVector
+     *
+     * Assumes cv is a valid lattice coordinate, undefined otherwise
+     */
     SiteIndex(const CoordinateVector &cv) {
         value = 0;
         size_t m = 1;
-        foralldir (d) {
+        foralldir(d) {
             value += m * cv[d];
             m *= lattice.size(d);
         }
     }
 
+    /**
+     * @brief Convert to lattice coordinates
+     */
     CoordinateVector coordinates() const {
         CoordinateVector res;
         size_t v = value;
-        foralldir (d) {
+        foralldir(d) {
             res.e(d) = v % lattice.size(d);
             v /= lattice.size(d);
         }
