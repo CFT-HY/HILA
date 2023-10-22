@@ -469,6 +469,14 @@ class DiagonalMatrix {
         return *(reinterpret_cast<const Array<n, 1, T> *>(this));
     }
 
+    Vector<n, T> &asVector() const_function {
+        return *(reinterpret_cast<Vector<n,T> *>(this));
+    }
+
+    const Vector<n, T> &asVector() const {
+        return *(reinterpret_cast<const Vector<n,T> *>(this));
+    }
+
     /// implement sort as casting to matrix
 #pragma hila novector
     template <int N>

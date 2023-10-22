@@ -435,6 +435,22 @@ class Matrix_t {
         return *reinterpret_cast<Array<n, m, T> *>(this);
     }
 
+    /**
+     * @brief Cast Vector to DiagonalMatrix
+     *
+     * @return DiagonalMatrix<n,T>
+     */
+    template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
+    const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
+        return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
+    }
+    // Same as above but with const_function, see const_function for details
+    template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
+    DiagonalMatrix<n, T> &asDiagonalMatrix() const_function {
+        return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
+    }
+
+
     /// casting from one Matrix (number) type to another: do not do this automatically.
     /// but require an explicit cast operator.  This makes it easier to write code.
     /// or should it be automatic?  keep/remove explicit?
@@ -910,6 +926,12 @@ class Matrix_t {
     inline const RowVector<n, T> &transpose() const {
         return *reinterpret_cast<const RowVector<n, T> *>(this);
     }
+
+    template <int nn = n, std::enable_if_t<nn == 1 && m != 1, int> = 0>
+    inline const Vector<n, T> &transpose() const {
+        return *reinterpret_cast<const Vector<n, T> *>(this);
+    }
+
 
     /**
      * @brief Returns complex conjugate of Matrix
@@ -1425,8 +1447,11 @@ class Matrix_t {
      * det() is the generic interface, using laplace for small matrices and LU for large
      */
 
+#pragma hila novector
     T det_lu() const;
+#pragma hila novector
     T det_laplace() const;
+#pragma hila novector
     T det() const;
 
     /**
