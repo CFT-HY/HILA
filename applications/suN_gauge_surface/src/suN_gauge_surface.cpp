@@ -726,7 +726,7 @@ int main(int argc, char **argv) {
     p.n_thermal = par.get("thermalization");
 
     // random seed = 0 -> get seed from time
-    long seed = par.get("random seed");
+    uint64_t seed = par.get("random seed");
     // save config and checkpoint
     p.n_save = par.get("traj/saved");
     // measure surface properties and print "profile"
