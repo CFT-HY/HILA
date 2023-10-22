@@ -6,7 +6,6 @@
 #include "sun_matrix.h"
 #include "su2.h"
 
-#ifdef 
 
 /**
  * @brief \f$ SU(N) \f$ Overrelaxation using SU(2) subgroups
