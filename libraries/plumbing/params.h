@@ -129,7 +129,7 @@
 //
 // GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 or undefined means that the thread block number is not
 // restricted and only a single histogram is used with atomic operations (atomicAdd).  This
-// can slow down tight loops, but the performance is GPU hardware/driver dependent.  In some
+// can be slower, but the performance is GPU hardware/driver dependent.  In some
 // cases GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 turns out to be faster.
 //
 // Default: 32 is currently OK compromise (32 thread blocks)
@@ -146,7 +146,8 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
-/** @brief GPU_SYNCHRONIZE_TIMERS : if set synchronize GPU on timer calls, in order to obtain meaningful timer values
+/** @brief GPU_SYNCHRONIZE_TIMERS : if set and !=0 synchronize GPU on timer calls, in order to obtain 
+ *  meaningful timer values
  * 
  * @details Because GPU kernel launch is asynchronous process, the timers by default may not measure
  * the actual time used in GPU kernel execution. Defining GPU_SYNCHRONIZE_TIMERS inserts GPU synchronization calls
@@ -154,7 +155,12 @@
  * accurately the time spent in different parts of the code.
  */ 
 
-// #define GPU_SYNCHRONIZE_TIMERS
+#ifdef GPU_SYNCHRONIZE_TIMERS
+#if GPU_SYNCHRONIZE_TIMERS == 0
+#undef GPU_SYNCHRNONIZE_TIMERS
+#endif
+#endif
+
 
 #endif // CUDA || HIP
 
