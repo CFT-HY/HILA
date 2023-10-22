@@ -1552,7 +1552,6 @@ auto operator/(Field<A> lhs, const B &rhs) {
 
 /**
  * @brief std:swap() for Fields
- *
  */
 namespace std {
 template <typename T>
@@ -1560,6 +1559,17 @@ void swap(Field<T> &A, Field<T> &B) {
     std::swap(A.fs, B.fs);
 }
 } // namespace std
+
+/**
+ * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
+ */
+namespace hila {
+template <typename T>
+void swap(Field<T> &A, Field<T> &B) {
+    std::swap(A.fs, B.fs);
+}
+} // namespace hila
+
 
 ///////////////////////////////////////////////////////////////////////
 /// Allow some arithmetic functions if implemented
