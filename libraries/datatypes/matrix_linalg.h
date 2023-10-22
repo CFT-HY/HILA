@@ -28,6 +28,73 @@ inline double find_largest_offdiag(const SquareMatrix<n, Mtype> &M, int &p, int 
     return ::sqrt(abs_mpq);
 }
 
+
+/** @internal GivensMatrix is a support class for 2x2 rotations, in SU(2)
+ *
+ *  Matrix is  | c    s |
+ *             | -s*  c |
+ * s complex or real, c real, and c^2 + |s|^2 = 1.
+ * 
+ * mult_by_Givens_left/right multiply matrices with Givens matrix left/right.
+ * where the "Givens" is taken to be unity except on row/col = p,q
+ */
+
+template <typename Dtype>
+struct GivensMatrix {
+    Dtype s;
+    double c;
+
+    GivensMatrix dagger() {
+        GivensMatrix res;
+        res.c = c;
+        res.s = -s;
+        return res;
+    }
+
+    Vector<2, Dtype> mult_vector_left(Vector<2, Dtype> v) const {
+        auto t0 = c * v.e(0) + s * v.e(1);
+        v.e(1) = c * v.e(1) - ::conj(s) * v.e(0);
+        v.e(0) = t0;
+        return v;
+    }
+
+    RowVector<2, Dtype> mult_row_right(RowVector<2, Dtype> v) const {
+        auto t0 = v.e(0) * c - ::conj(s) * v.e(1);
+        v.e(1) = v.e(0) * s + v.e(1) * c;
+        v.e(0) = t0;
+        return v;
+    }
+
+    template <typename Mtype>
+    void mult_by_Givens_left(Mtype &M, int p, int q) const {
+        Vector<2, Dtype> a;
+        for (int i = 0; i < M.columns(); i++) {
+            a.e(0) = M.e(p, i);
+            a.e(1) = M.e(q, i);
+
+            a = this->mult_vector_left(a);
+
+            M.e(p, i) = a.e(0);
+            M.e(q, i) = a.e(1);
+        }
+    }
+
+    template <typename Mtype>
+    void mult_by_Givens_right(Mtype &M, int p, int q) const {
+        RowVector<2, Dtype> a;
+        for (int i = 0; i < M.rows(); i++) {
+            a.e(0) = M.e(i, p);
+            a.e(1) = M.e(i, q);
+
+            a = this->mult_row_right(a);
+
+            M.e(i, p) = a.e(0);
+            M.e(i, q) = a.e(1);
+        }
+    }
+};
+
+
 /** @internal Do 2x2 eigenvalue analysis for hermitean matrix
  * return 2x2 unitary/orthogonal matrix which diagonalizes the input
  * input matrix is
@@ -62,24 +129,28 @@ inline double find_largest_offdiag(const SquareMatrix<n, Mtype> &M, int &p, int 
  * Now can choose real c*
  * c* = 1/sqrt(t^2+1)
  * s = t c* e   (and c*c + s*s = 1)
+ *
+ * Parametrize the result as a Givens matrix c, s.
  */
 
-template <typename Dtype>
-SquareMatrix<2, Dtype> diagonalize_2x2(const double mpp, const double mqq, const Dtype mpq) {
 
-    double abs_mpq = ::abs(mpq);
-    double a = (mqq - mpp) / (2 * abs_mpq);
-    double t = 1.0 / (std::abs(a) + std::sqrt(a * a + 1.0));
+template <typename Dtype>
+GivensMatrix<Dtype> diagonalize_2x2(const double mpp, const double mqq, const Dtype mpq) {
+
+    GivensMatrix<Dtype> res;
+    double mpq2 = squarenorm(mpq);
+
+    // leave / 2|mpq| away, avoid divby0
+    double a = (mqq - mpp);
+
+    // now t is above t / |mpq|
+    double t = 2.0 / (abs(a) + sqrt(a * a + 4 * mpq2));
     if (a < 0.0)
         t = -t;
-    double c = 1.0 / std::sqrt(t * t + 1.0);
+    res.c = 1.0 / sqrt(mpq2 * t * t + 1.0);
+    res.s = mpq * (t * res.c);
 
-    Dtype s = mpq * (t * c / abs_mpq);
-    SquareMatrix<2, Dtype> P;
-    P.e(0, 0) = P.e(1, 1) = 1.0 / std::sqrt(t * t + 1.0);
-    P.e(0, 1) = s;
-    P.e(1, 0) = -::conj(s);
-    return P;
+    return res;
 }
 
 
@@ -167,11 +238,10 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
         }
 
         // Find diagonalizing matrix
-        Matrix<2, 2, Dtype> P =
-            hila::linalg::diagonalize_2x2(eigenvalues.e(p), eigenvalues.e(q), M.e(p, q));
+        auto P = hila::linalg::diagonalize_2x2(eigenvalues.e(p), eigenvalues.e(q), M.e(p, q));
 
-        M.mult_by_2x2_left(p, q, P.dagger());
-        M.mult_by_2x2_right(p, q, P);
+        P.dagger().mult_by_Givens_left(M, p, q);
+        P.mult_by_Givens_right(M, p, q);
 
         eigenvalues.e(p) = ::real(M.e(p, p));
         eigenvalues.e(q) = ::real(M.e(q, q));
@@ -189,7 +259,7 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
          * vir <- vir
          */
 
-        V.mult_by_2x2_right(p, q, P);
+        P.mult_by_Givens_right(V, p, q);
     }
 
     // we usually enter here through break
@@ -313,8 +383,8 @@ int Matrix_t<n, m, T, Mtype>::svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U,
         auto P = hila::linalg::diagonalize_2x2(::real(B.e(p, p)), ::real(B.e(q, q)), B.e(p, q));
 
         // now do p,q rotation
-        M.mult_by_2x2_right(p, q, P); // only columns p,q change
-        V.mult_by_2x2_right(p, q, P);
+        P.mult_by_Givens_right(M, p, q); // only columns p,q change
+        P.mult_by_Givens_right(V, p, q);
 
         // update also B - could rotate B directly but accuracy suffers. Explicit computation
         // expensive, n^2
@@ -453,8 +523,8 @@ int Matrix_t<n, m, T, Mtype>::svd(out_only Matrix_t<n, n, Mt, MT> &_U,
                     auto P = hila::linalg::diagonalize_2x2(Bpp, Bqq, Bpq);
 
                     // now do p,q rotation
-                    M.mult_by_2x2_right(p, q, P); // only columns p,q change
-                    V.mult_by_2x2_right(p, q, P);
+                    P.mult_by_Givens_right(M, p, q); // only columns p,q change
+                    P.mult_by_Givens_right(V, p, q);
                 }
             }
         }
@@ -561,6 +631,7 @@ Rtype Minor(const Mtype &bigger, int row, int col) {
  * @return T result determinant
  */
 
+#pragma hila novector
 template <int n, int m, typename T, typename Mtype>
 T Matrix_t<n, m, T, Mtype>::det_laplace() const {
 
@@ -600,6 +671,7 @@ T Matrix_t<n, m, T, Mtype>::det_laplace() const {
  * @return Complex<radix> Determinant
  */
 
+#pragma hila novector
 template <int n, int m, typename T, typename Mtype>
 T Matrix_t<n, m, T, Mtype>::det_lu() const {
 
@@ -685,8 +757,9 @@ T Matrix_t<n, m, T, Mtype>::det_lu() const {
 
 /**
  * @brief determinant function - if matrix size is < 5, use Laplace, otherwise LU
-*/
+ */
 
+#pragma hila novector
 template <int n, int m, typename T, typename Mtype>
 T Matrix_t<n, m, T, Mtype>::det() const {
     static_assert(n == m, "Determinant only for square matrix");
@@ -699,7 +772,7 @@ T Matrix_t<n, m, T, Mtype>::det() const {
 
 /**
  * @brief function (as opposed to method) interfaces to det-functions
-*/
+ */
 
 template <int n, int m, typename T, typename Mtype>
 T det_laplace(const Matrix_t<n, m, T, Mtype> &mat) {
@@ -717,5 +790,38 @@ T det(const Matrix_t<n, m, T, Mtype> &mat) {
 }
 
 
+/**
+ * @brief Invert diagonal + const. matrix using Sherman-Morrison formula
+ *
+ *
+ * Sherman-Morrison formula (generalized to complex) is
+ *     (A + u v^*)^-1 = A^-1 - A^-1 u v^* A^-1/(1 + v^* A^-1 u)
+ * where A invertible matrix and u,v vectors.
+ *
+ * Specialize this here for the case where A is diagonal and
+ * u = v = sqrt(c) [1 1 1 ..]^T
+ * i.e. invert M = (A + C), where C is constant matrix.  Let now B = A^-1, result is
+ *    M^1_ij = B_i delta_ij - c B_i B_j / (1 + c Tr B)
+ * or
+ *    M^-1 = B - c Bv Bv^T / (1 + c Tr B)
+ *
+ * Inverse exists if (1 + c Tr B) != 0.
+ */
+
+namespace hila {
+namespace linalg {
+
+template <int N, typename T, typename C,
+          std::enable_if_t<hila::is_complex_or_arithmetic<C>::value, int> = 0>
+auto invert_diagonal_plus_constant_matrix(const DiagonalMatrix<N, T> &D, const C c) {
+
+    DiagonalMatrix<N, T> B = 1 / D;
+    auto tmul = c / (1 + c * trace(B));
+
+    return B - tmul * B.asVector() * B.asVector().transpose();
+}
+
+} // namespace linalg
+} // namespace hila
 
 #endif // MATRIX_LINALG_H
