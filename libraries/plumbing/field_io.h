@@ -253,7 +253,7 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
             if (hila::myrank() == 0) {
                 for (size_t k = 0; k < i; k++) {
-                    for (int l = 0; l < sizeof(T) / sizeof(hila::scalar_type<T>); l++) {
+                    for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
                         outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
                     }
                     outputfile << '\n';

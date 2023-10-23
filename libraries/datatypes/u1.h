@@ -18,7 +18,7 @@ class U1 {
     T phase;
 
     /// std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial

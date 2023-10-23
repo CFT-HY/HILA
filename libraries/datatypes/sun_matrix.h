@@ -191,7 +191,7 @@ template <int N, typename T>
 class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
   public:
     // std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     // storage for the diagonal and off-diag
