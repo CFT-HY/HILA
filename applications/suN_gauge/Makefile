@@ -1,6 +1,8 @@
 
 # Following line(s) are printed with "make help".  Use columns 8 and 30
-#%     make [suN_gauge]       - build suN_hmc program
+#% suN_gauge make options:
+#%     make [..] NCOL=<N>  - SU(N) gauge simulation program (default: 3)
+
 
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
@@ -18,6 +20,7 @@ endif
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk
+
 
 #HILAPP_OPTS += -insert-includes
 #HILAPP_OPTS += -comment-pragmas
