@@ -5,7 +5,7 @@
 
 #include <fftw3.h>
 
-using mygroup = SU<3, double>;
+using mygroup = SU<4, double>;
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -739,7 +739,8 @@ int main(int argc, char **argv) {
                 double mag;
                 // mag =
                 //     0.4 +
-                //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) / lattice.size(e_z)));
+                //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) /
+                //     lattice.size(e_z)));
                 if (X.z() <= lattice.size(e_z) / 2) {
                     mag = 1;
                 } else {

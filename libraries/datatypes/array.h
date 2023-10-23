@@ -1,3 +1,9 @@
+/**
+ * @file array.h
+ * @brief Definition of Array class
+ * @details This file contains the definitions of Array class and utility functions related to it.
+ */
+
 #ifndef ARRAY_H_
 #define ARRAY_H_
 
@@ -5,10 +11,33 @@
 
 /**
  * @brief \f$ n\times m \f$ Array type
+ * @details Acts as array class which stores data in a simple C style array.
  *
- * @tparam n - row length
- * @tparam m - column length
- * @tparam T Data type for Array
+ * Main functionality which the Array class offers is to supplement the fall backs of storing
+ * information in a Matrix data structure.
+ *
+ * For example assigning a value to each element with the Matrix class is not directly possible
+ * using the assignment operator=. This is because assignment with matrices is defined as
+ * \f$ M = a = a*I \f$ where M is a general matrix, a is a scalar and I an identity matrix. The
+ * result would only assign a to the diagonal elements.
+ *
+ * Unlike the Matrix object, the Array object assigns element wise. This allows filling the Array
+ * with the assignment operator. Additionally element wise operations are useable as long as they
+ * are defined for the Array type. For example the operation:
+ *
+ * \code
+ * Array<n,m,double> m.random();
+ * sin(m);
+ * \endcode
+ *
+ * is defined, since the \f$sin\f$ function is defined for doubles.
+ *
+ * The above operation would not work for matrices, but with casting operations. Matrix::asArray and
+ * Array::asMatrix one can take full advantage of element wise operations.
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
  */
 template <const int n, const int m, typename T>
 class Array {
@@ -16,19 +45,68 @@ class Array {
     static_assert(hila::is_complex_or_arithmetic<T>::value,
                   "Array requires Complex or arithmetic type");
 
-    /// Same data as Matrix, a one dimensional array
+    // Store Array contents in one dimensional C style array
     T c[n * m];
 
+<<<<<<< HEAD
     /// std incantation for field types
     using base_type = hila::arithmetic_type<T>;
+=======
+    // std incantation for field types
+    using base_type = hila::scalar_type<T>;
+>>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
     using argument_type = T;
 
-    /// define default constructors to ensure std::is_trivial
+    /**
+     * @brief Construct a new Matrix object
+     * @details The following ways of constructing a matrix are:
+     *
+     * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
+     *
+     * __Default constructor__:
+     *
+     * Allocates undefined \f$ n\times m\f$ Array.
+     *
+     * \code{.cpp}
+     * Array<n,m,MyType> A;
+     * \endcode
+     *
+     *
+     * __Scalar constructor__:
+     *
+     * Construct with given scalar which is assigned to all elements in array
+     *
+     * \code{.cpp}
+     * MyType x = hila::random();
+     * Array<n,m,MyType> A = x;
+     * \endcode
+     *
+     * __Copy constructor__:
+     *
+     * Construction from previously defined Array.
+     *
+     * \code{.cpp}
+     * Array<n,m,MyOtherType> A_0;
+     * //
+     * // A_0 is filled with content
+     * //
+     * Array<n,m,MyType> A = A_0;
+     * \endcode
+     *
+     * __Initializer list__:
+     *
+     * Construction from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Array<2,2,int> A = {1, 0
+     *                      0, 1};
+     * \endcode
+     */
     Array() = default;
     ~Array() = default;
     Array(const Array<n, m, T> &v) = default;
 
-    /// constructor from scalar - make this also explicit, consistency
+    // constructor from scalar - make this also explicit, consistency
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     explicit inline Array(const S rhs) {
         for (int i = 0; i < n * m; i++) {
@@ -43,8 +121,8 @@ class Array {
             c[i] = 0;
     }
 
-    /// Construct array automatically from right-size initializer list
-    /// This does not seem to be dangerous, so keep non-explicit
+    // Construct array automatically from right-size initializer list
+    // This does not seem to be dangerous, so keep non-explicit
 
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array(std::initializer_list<S> rhs) {
@@ -55,15 +133,30 @@ class Array {
         }
     }
 
-    /// Define constant methods rows(), columns() - may be useful in template code
+    /**
+     * @brief Returns number of rows
+     *
+     * @return constexpr int
+     */
     constexpr int rows() const {
         return n;
     }
+    /**
+     * @brief Returns number of columns
+     *
+     * @return constexpr int
+     */
     constexpr int columns() const {
         return m;
     }
 
-    // define also method size() for 'vector arrays' and square arrays only!
+    /**
+     * @brief Returns size of #Vector Array or square Array
+     *
+     * @tparam q Number of rows n
+     * @tparam p Number of columns m
+     * @return constexpr int
+     */
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     constexpr int size() const {
         return p;
@@ -79,17 +172,38 @@ class Array {
         return q;
     }
 
-    /// access operators .e(i,j) and .e(i) from Matrix
+    /**
+     * @brief Standard array indexing operation for 2D and 1D Arrays
+     *
+     * @details Accessing singular elements is insufficient, but matrix elements are often quite
+     * small.
+     *
+     * Exammple for 2D Array:
+     * \code
+     *  Array<n,m,MyType> A;
+     *  MyType a = A.e(i,j); \\ i <= n, j <= m
+     * \endcode
+     *
+     * Example for Vector Array:
+     * \code {.cpp}
+     *  Array1d<n,MyType> A;
+     * MyType a = A.e(i) \\ i <= n
+     * \endcode
+     *
+     * @param i row index
+     * @param j column index
+     * @return T matrix element type
+     */
     inline T e(const int i, const int j) const {
         return c[i * m + j];
     }
-    /// standard access ops m.e(i,j) - assume T is small, as it should
+    // standard access ops m.e(i,j) - assume T is small, as it should
     inline T &e(const int i, const int j) const_function {
         return c[i * m + j];
     }
 
-    /// declare single e here too in case we have a vector
-    /// (one size == 1)
+    // declare single e here too in case we have a vector
+    // (one size == 1)
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
@@ -100,7 +214,11 @@ class Array {
         return c[i];
     }
 
-    // cast from array to matrix
+    /**
+     * @brief Cast Array to Matrix
+     *
+     * @return Matrix<n, m, T>&
+     */
     Matrix<n, m, T> &asMatrix() const_function {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
@@ -109,7 +227,12 @@ class Array {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
 
-    // Define also asVector(), although asMatrix() already includes this
+    /**
+     * @brief Cast Array1D to Vector
+     * @details asMatrix will perform the same operation.
+     *
+     * @return Vector<n, T>&
+     */
     Vector<n, T> &asVector() const_function {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<Vector<n, T> *>(this);
@@ -120,20 +243,9 @@ class Array {
         return *reinterpret_cast<const Vector<n, T> *>(this);
     }
 
-    // Define also asVector(), although asMatrix() already includes this
-    DiagonalMatrix<n, T> &asDiagonalMatrix() const_function {
-        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
-        return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
-    }
 
-    const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
-        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
-        return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
-    }
-
-
-    /// casting from one Array (number) type to another
-    /// TODO: CHECK AVX CONVERSIONS
+    // casting from one Array (number) type to another
+    // TODO: CHECK AVX CONVERSIONS
     template <typename S, std::enable_if_t<hila::is_assignable<S &, T>::value, int> = 0>
     operator Array<n, m, S>() {
         Array<n, m, S> res;
@@ -143,7 +255,12 @@ class Array {
         return res;
     }
 
-    /// unary -
+    /**
+     * @brief Unary - operator
+     * @details Returns Array with the signs of all the elements in the Arrat flipped.
+     *
+     * @return Array<n,m,T>
+     */
     inline Array<n, m, T> operator-() const {
         Array<n, m, T> res;
         for (int i = 0; i < n * m; i++) {
@@ -152,12 +269,59 @@ class Array {
         return res;
     }
 
-    /// unary +
+    /**
+     * @brief Unary + operator
+     * @details Equivalent to identity operator meaning that Arrat stays as is.
+     *
+     * @return const Array<n, m, T>
+     */
     inline Array<n, m, T> operator+() const {
         return *this;
     }
 
-    /// Assign from scalar to array
+    /**
+     * @brief Assignment operator = to assign values to Array
+     * @details The following ways to assign an Array are:
+     *
+     *
+     * __Assignment from Array__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A_0;
+     * .
+     * . A_0 has values assigned to it
+     * .
+     * Array<n,m,MyType> A; \\ undefined matrix
+     * A = A_0; \\ Assignment from A_0
+     * \endcode
+     *
+     * __Assignment from 0__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A;
+     * A = 0; Zero matrix;
+     * \endcode
+     *
+     * __Assignment from scalar__:
+     *
+     * Assignment from scalar assigns the scalar to the diagonal elements as \f$ A = I\cdot a\f$
+     *
+     * \code {.cpp}
+     * MyType a = hila::random;
+     * Array<n,m,MyType> A;
+     * A = a; A = I*a
+     * \endcode
+     *
+     *__Initializer list__:
+     *
+     * Assignment from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Array<2,2,int> A ;
+     * A = {1, 0
+     *      0, 1};
+     * \endcode
+     */
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array<n, m, T> &operator=(const S rhs) {
@@ -168,9 +332,9 @@ class Array {
     }
 
     /**
-     * @brief Compare equality of arrays
+     * @brief Compare equality of Arrays
      *
-     * Two arrays are equal iff arrays are of same dimension and all elements compare to equal
+     * Two Arrays are equal iff Arrays are of same dimension and all elements compare to equal
      * Note: Complex == scalar if arithmetic value is equal
      *
      * @tparam S
@@ -192,7 +356,7 @@ class Array {
     }
 
     /**
-     * @brief Compare non-equality of two arrays
+     * @brief Compare non-equality of two Arrays
      *
      * Negation of operator==()
      *
@@ -209,7 +373,34 @@ class Array {
         return !(*this == rhs);
     }
 
-    /// add assign an Array
+    /**
+     * @brief Add assign operator with Array or scalar
+     * @details Add assign operator can be used in the following ways
+     *
+     * __Add assign Array__:
+     *
+     * Requires that Arrays have same dimensions
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A,B;
+     * A = 1;
+     * B = 1;
+     * A += B; \\ A is uniformly 2
+     * \endcode
+     *
+     * __Add assign scalar__:
+     *
+     * Adds scalar \f$ a \f$ to Array uniformly
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A = 1;
+     * A += 1 ; \\ A is uniformly 2
+     * \endcode
+     *
+     * @tparam S Element type of rhs
+     * @param rhs Array to add
+     * @return Array<n, m, T>
+     */
 #pragma hila loop_function
     template <typename S, std::enable_if_t<std::is_convertible<S, T>::value, int> = 0>
     Array<n, m, T> &operator+=(const Array<n, m, S> &rhs) {
@@ -219,7 +410,31 @@ class Array {
         return *this;
     }
 
-    /// subtract assign an Array
+    /**
+     * @brief Subtract assign operator with Array or scalar
+     * @details Subtract assign operator can be used in the following ways
+     *
+     * __Subtract assign Array__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A,B;
+     * A = 3;
+     * B = 1;
+     * A -= B; \\ A is uniformly 2
+     * \endcode
+     *
+     * __Subtract assign scalar__:
+     *
+     * Subtract scalar uniformly from square matrix
+     *
+     * \code {.cpp}
+     * A<n,m,MyType> A = 3;
+     * A -= 1 ; \\ A is uniformly 2
+     * \endcode
+     * @tparam S
+     * @param rhs
+     * @return Array<n, m, T>&
+     */
     template <typename S, std::enable_if_t<std::is_convertible<S, T>::value, int> = 0>
     Array<n, m, T> &operator-=(const Array<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
@@ -228,7 +443,7 @@ class Array {
         return *this;
     }
 
-    /// add assign type T and convertible
+    // add assign type T and convertible
     template <typename S,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator+=(const S rhs) {
@@ -238,7 +453,7 @@ class Array {
         return *this;
     }
 
-    /// subtract assign type T and convertible
+    // subtract assign type T and convertible
     template <typename S,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator-=(const S rhs) {
@@ -248,7 +463,32 @@ class Array {
         return *this;
     }
 
-    /// multiply assign with Array
+    /**
+     * @brief Multiply assign scalar or array
+     * @details Multiplication works element wise
+     *
+     * Multiply assign operator can be used in the following ways
+     *
+     * __Multiply assign Array__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A,B;
+     * A = 2;
+     * B = 2;
+     * A *= B; \\ A is uniformly 4
+     * \endcode
+     *
+     * __Multiply assign scalar__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A = 1;
+
+     * A *= 2 ; \\ A is uniformly 2
+     * \endcode
+     * @tparam S
+     * @param rhs
+     * @return Array<n, m, T>&
+     */
     template <typename S,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator*=(const Array<n, m, S> &rhs) {
@@ -268,7 +508,32 @@ class Array {
         return *this;
     }
 
-    /// divide assign by Array
+    /**
+     * @brief Division assign with array or scalar
+     * @details Division works element wise
+     *
+     * Division assign operator can be used in the following ways
+     *
+     * __Division assign Array__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A,B;
+     * A = 2;
+     * B = 2;
+     * A /= B; \\ A is uniformly 1
+     * \endcode
+     *
+     * __Division assign scalar__:
+     *
+     * \code {.cpp}
+     * Array<n,m,MyType> A = 2;
+
+     * A /= 2 ; \\ A is uniformly 1
+     * \endcode
+     * @tparam S
+     * @param rhs
+     * @return Array<n, m, T>&
+     */
     template <typename S,
               std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator/=(const Array<n, m, S> &rhs) {
@@ -278,7 +543,7 @@ class Array {
         return *this;
     }
 
-    /// divide assign with scalar
+    // divide assign with scalar
     template <typename S,
               std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator/=(const S rhs) {
@@ -288,7 +553,11 @@ class Array {
         return *this;
     }
 
-    /// complex conjugate
+    /**
+     * @brief Returns element wise Complex conjugate of Array
+     *
+     * @return Array<n, m, T>
+     */
     inline Array<n, m, T> conj() const {
         Array<n, m, T> res;
         for (int i = 0; i < n * m; i++) {
@@ -296,18 +565,34 @@ class Array {
         }
         return res;
     }
+<<<<<<< HEAD
     /// return real part
     inline Array<n, m, hila::arithmetic_type<T>> real() const {
         Array<n, m, hila::arithmetic_type<T>> res;
+=======
+    /**
+     * @brief Returns real part of Array
+     *
+     * @return Array<n, m, T>
+     */
+    inline Array<n, m, hila::scalar_type<T>> real() const {
+        Array<n, m, hila::scalar_type<T>> res;
+>>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
         return res;
     }
 
+<<<<<<< HEAD
     /// return imaginary part
     inline Array<n, m, hila::arithmetic_type<T>> imag() const {
         Array<n, m, hila::arithmetic_type<T>> res;
+=======
+    /// Returns imaginary part of Array
+    inline Array<n, m, hila::scalar_type<T>> imag() const {
+        Array<n, m, hila::scalar_type<T>> res;
+>>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -324,31 +609,10 @@ class Array {
     }
 
     /**
-     * @brief Find max or min value - only for arithmetic types
+     * @brief Fill Array with random elements
+     *
+     * @return Array<n, m, T>&
      */
-
-    template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    T max() const {
-        T res = c[0];
-        for (int i = 1; i < n * m; i++) {
-            if (res < c[i])
-                res = c[i];
-        }
-        return res;
-    }
-
-    template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    T min() const {
-        T res = c[0];
-        for (int i = 1; i < n * m; i++) {
-            if (res > c[i])
-                res = c[i];
-        }
-        return res;
-    }
-
-
-    /// Generate random elements
     Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
             hila::random(c[i]);
@@ -356,7 +620,12 @@ class Array {
         return *this;
     }
 
-    /// Generate gaussian random elements
+    /**
+     * @brief Fill Array with Gaussian random elements
+     *
+     * @param width
+     * @return Array<n, m, T>&
+     */
     Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
             hila::gaussian_random(c[i], width);
@@ -383,37 +652,128 @@ class Array {
     }
 };
 
-/// conjugate
+/**
+ * @brief Return conjugate Array
+ * @details Wrapper around Array::conj
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param arg Array to be conjugated
+ * @return Array<n, m, T>
+ */
 template <const int n, const int m, typename T>
 inline Array<n, m, T> conj(const Array<n, m, T> &arg) {
     return arg.conj();
 }
-/// real part
+/**
+ * @brief Return real part of Array
+ * @details Wrapper around Array::real
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param arg Array to return real part of
+ * @return Array<n, m, T>
+ */
 template <const int n, const int m, typename T>
 inline Array<n, m, hila::arithmetic_type<T>> real(const Array<n, m, T> &arg) {
     return arg.real();
 }
-/// imaginary part
+/**
+ * @brief Return imaginary part of Array
+ * @details Wrapper around Array::imag
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param arg Array to return real part of
+ * @return Array<n, m, T>
+ */
 template <const int n, const int m, typename T>
 inline Array<n, m, hila::arithmetic_type<T>> imag(const Array<n, m, T> &arg) {
     return arg.imag();
 }
 
-/// Now Array additions: Array + Array
+/**
+ * @brief Addition operator
+ * @details Defined for the following operations
+ *
+ * __Array + Array:__
+ *
+ * __NOTE__: Arrays must share same dimensionality
+ *
+ * \code {.cpp}
+ * Array<n,m,MyType> A, B, C;
+ * A = 1;
+ * B = 1;
+ * C = A + B; // C is uniformly 2
+ * \endcode
+ *
+ *
+ * __Scalar + Array / Array + Scalar:__
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ * *
+ * \code {.cpp}
+ * Array<n,m,MyType> A,B;
+ * A = 1;
+ * B = A + 1; // B is uniformly 2
+ * \endcode
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a
+ * @param b
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> operator+(Array<n, m, T> a, const Array<n, m, T> &b) {
     a += b;
     return a;
 }
 
-/// Array subtract
+/**
+ * @brief Subtraction operator
+ * @details Defined for the following operations
+ *
+ * __Array - Array:__
+ *
+ * __NOTE__: Arrays must share same dimensionality
+ *
+ * \code {.cpp}
+ * Array<n,m,MyType> A, B, C;
+ * A = 2;
+ * B = 1;
+ * C = A - B; // C is uniformly 2
+ * \endcode
+ *
+ *
+ * __Scalar - Array / Array - Scalar:__
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ * *
+ * \code {.cpp}
+ * Array<n,m,MyType> A,B;
+ * A = 2;
+ * B = A - 1; // B is uniformly 2
+ * \endcode
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a
+ * @param b
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> operator-(Array<n, m, T> a, const Array<n, m, T> &b) {
     a -= b;
     return a;
 }
 
-/// Array + scalar
+// Array + scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator+(Array<n, m, T> a, const S b) {
@@ -421,7 +781,7 @@ inline Array<n, m, T> operator+(Array<n, m, T> a, const S b) {
     return a;
 }
 
-/// scalar + Array
+// scalar + Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator+(const S b, Array<n, m, T> a) {
@@ -429,7 +789,7 @@ inline Array<n, m, T> operator+(const S b, Array<n, m, T> a) {
     return a;
 }
 
-/// Array - scalar
+// Array - scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
 Array<n, m, T> operator-(Array<n, m, T> a, const S b) {
@@ -437,7 +797,7 @@ Array<n, m, T> operator-(Array<n, m, T> a, const S b) {
     return a;
 }
 
-/// scalar - Array
+// scalar - Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_minus<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator-(const S b, Array<n, m, T> a) {
@@ -446,21 +806,85 @@ inline Array<n, m, T> operator-(const S b, Array<n, m, T> a) {
     return a;
 }
 
-/// and Array*Array
+/**
+ * @brief Multiplication operator
+ * @details Defined for the following operations
+ *
+ * __Array*Array:__
+ *
+ * __NOTE__: Arrays must share same dimensionality
+ *
+ * \code {.cpp}
+ * Array<n,m,MyType> A, B, C;
+ * A = 2;
+ * B = 3;
+ * C = A*B; // C is uniformly 6
+ * \endcode
+ *
+ *
+ * __Scalar * Array / Array * Scalar:__
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ * *
+ * \code {.cpp}
+ * Array<n,m,MyType> A,B;
+ * A = 2;
+ * B = A*3; // B is uniformly 6
+ * \endcode
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a
+ * @param b
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> operator*(Array<n, m, T> a, const Array<n, m, T> &b) {
     a *= b;
     return a;
 }
 
-/// and Array/Array
+/**
+ * @brief Division operator
+ * @details Defined for the following operations
+ *
+ * __Array/Array:__
+ *
+ * __NOTE__: Arrays must share same dimensionality
+ *
+ * \code {.cpp}
+ * Array<n,m,MyType> A, B, C;
+ * A = 4;
+ * B = 2;
+ * C = A/B; // C is uniformly 2
+ * \endcode
+ *
+ *
+ * __Scalar / Array / Array / Scalar:__
+ *
+ * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+ * *
+ * \code {.cpp}
+ * Array<n,m,MyType> A,B;
+ * A = 4;
+ * B = A/2; // B is uniformly 2
+ * \endcode
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a
+ * @param b
+ * @return Array<n, m, T>
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> operator/(Array<n, m, T> a, const Array<n, m, T> &b) {
     a /= b;
     return a;
 }
 
-/// Array * scalar
+// Array * scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
@@ -468,7 +892,7 @@ inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
     return a;
 }
 
-/// scalar * Array
+// scalar * Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
@@ -476,7 +900,7 @@ inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
     return a;
 }
 
-/// Array / scalar
+// Array / scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
@@ -484,7 +908,7 @@ inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
     return a;
 }
 
-/// scalar / Array
+// scalar / Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_div<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
@@ -493,6 +917,7 @@ inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     return a;
 }
 
+<<<<<<< HEAD
 
 /// Norm squared function
 template <int n, int m, typename T>
@@ -502,6 +927,20 @@ inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
 
 
 /// Stream operator
+=======
+/**
+ * @brief Stream operator
+ * @details Naive Stream operator for formatting Matrix for printing. Simply puts elements one after
+ * the other in row major order
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param strm OS stream
+ * @param A Array to write
+ * @return std::ostream&
+ */
+>>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
 template <int n, int m, typename T>
 std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
     return operator<<(strm, A.asMatrix());
@@ -509,6 +948,17 @@ std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
 
 namespace hila {
 
+/**
+ * @brief Converts Array object to string
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param A Array to convert to string
+ * @param prec Precision of T
+ * @param separator Separator between elements
+ * @return std::string
+ */
 template <int n, int m, typename T>
 std::string to_string(const Array<n, m, T> &A, int prec = 8, char separator = ' ') {
     return to_string(A.asMatrix(), prec, separator);
@@ -522,10 +972,37 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
 } // namespace hila
 
 
-////////////////////////////////////////////////////////////////////////////////
-/// Standard arithmetic functions - do element by element
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief Return square norm of Array
+ * @details Wrapper around Array::squarenrom
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param rhs Array to compute squarenorm of
+ * @return hila::scalar_type<T>
+ */
+template <int n, int m, typename T>
+inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
+    return rhs.squarenorm();
+}
 
+/** @name Arithmetic operations
+ *  @details all operations are applied linearly to the Array A
+ *
+ * Most functions are self explanitory, but if necessary function will have a detailed section with
+ * additional information.
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param a Input array
+ * @return Array<n, m, T>
+ *  @{
+ */
+
+/**
+ * @brief Square root
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> sqrt(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -533,6 +1010,9 @@ inline Array<n, m, T> sqrt(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Cuberoot
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> cbrt(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -540,6 +1020,9 @@ inline Array<n, m, T> cbrt(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Exponential
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> exp(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -547,6 +1030,9 @@ inline Array<n, m, T> exp(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Logarithm
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> log(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -554,6 +1040,9 @@ inline Array<n, m, T> log(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Sine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> sin(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -561,6 +1050,9 @@ inline Array<n, m, T> sin(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Cosine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> cos(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -568,6 +1060,9 @@ inline Array<n, m, T> cos(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Tangent
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> tan(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -575,6 +1070,9 @@ inline Array<n, m, T> tan(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Sine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> asin(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -582,6 +1080,9 @@ inline Array<n, m, T> asin(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Cosine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> acos(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -589,6 +1090,9 @@ inline Array<n, m, T> acos(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Tangent
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> atan(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -596,6 +1100,9 @@ inline Array<n, m, T> atan(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Hyperbolic Sine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> sinh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -603,6 +1110,9 @@ inline Array<n, m, T> sinh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Hyperbolic Cosine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> cosh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -610,6 +1120,9 @@ inline Array<n, m, T> cosh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Hyperbolic tangent
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> tanh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -617,6 +1130,9 @@ inline Array<n, m, T> tanh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Hyperbolic Sine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> asinh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -624,6 +1140,9 @@ inline Array<n, m, T> asinh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Hyperbolic Cosine
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> acosh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -631,6 +1150,9 @@ inline Array<n, m, T> acosh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Inverse Hyperbolic Tangent
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> atanh(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -638,6 +1160,14 @@ inline Array<n, m, T> atanh(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Power
+ *
+ * @details Array can be raised homogeneously to the power of a integer or scalar b or Array can be
+ * raised to the power of another Array b element wise.
+ *
+ * @param b Array, Integer or Real scalar to raise to the power of
+ */
 template <int n, int m, typename T>
 inline Array<n, m, T> pow(Array<n, m, T> a, int b) {
     for (int i = 0; i < n * m; i++)
@@ -659,6 +1189,11 @@ inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n, m, T> &b) {
     return a;
 }
 
+/**
+ * @brief Rounding
+ * @details Rounding function if T is arithmetic type
+ * @tparam T Array element type, must be arithmetic type
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> round(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -666,6 +1201,11 @@ inline Array<n, m, T> round(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Floor
+ * @details Flooring function if T is arithmetic type
+ * @tparam T Array element type, must be arithmetic type
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> floor(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -673,6 +1213,11 @@ inline Array<n, m, T> floor(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Ceiling
+ * @details Ceiling function if T is arithmetic type
+ * @tparam T Array element type, must be arithmetic type
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> ceil(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
@@ -680,19 +1225,33 @@ inline Array<n, m, T> ceil(Array<n, m, T> a) {
     return a;
 }
 
+/**
+ * @brief Truncation
+ * @details Truncation function if T is arithmetic type
+ * @tparam T Array element type, must be arithmetic type
+ */
 template <int n, int m, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Array<n, m, T> trunc(Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = trunc(a.c[i]);
     return a;
 }
+/** @} */
 
-
-// Cast operators to different number or Complex type
-// cast_to<double>(a);
-// Cast from number->number, number->Complex, Complex->Complex OK,
-//     Complex->number not.
-
+/**
+ * @brief Array casting operation
+ * @details Cast array to different number type or Complex type
+ *
+ * Allowed casting: number->number, number->Complex, Complex->Complex
+ *
+ * Not allowed casting: Complex->number
+ * @tparam Ntype Type to cast to
+ * @tparam T Input Array type
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @param mat Array to cast
+ * @return Array<n, m, Ntype>
+ */
 template <typename Ntype, typename T, int n, int m,
           std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
@@ -716,6 +1275,7 @@ Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
 template <int n, typename T = double>
 using Array1d = Array<n, 1, T>;
 
+/// Array1d and Array2d are just aliased to Array
 template <int n, int m, typename T = double>
 using Array2d = Array<n, m, T>;
 
