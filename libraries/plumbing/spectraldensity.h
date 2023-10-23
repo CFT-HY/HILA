@@ -193,7 +193,7 @@ class k_binning {
     template <typename T>
     std::vector<double> bin_k_field_squarenorm(const Field<T> &f) {
 
-        using float_t = hila::scalar_type<T>;
+        using float_t = hila::arithmetic_type<T>;
         constexpr int n_float = sizeof(T) / sizeof(float_t);
 
         binning_timer.start();
@@ -242,9 +242,9 @@ class k_binning {
     template <typename T, std::enable_if_t<!hila::contains_complex<T>::value, int> = 0>
     std::vector<double> spectraldensity(const Field<T> &f) {
 
-        using cmplx_t = Complex<hila::scalar_type<T>>;
+        using cmplx_t = Complex<hila::arithmetic_type<T>>;
 
-        if constexpr (sizeof(T) % sizeof(Complex<hila::scalar_type<T>>) == 0) {
+        if constexpr (sizeof(T) % sizeof(Complex<hila::arithmetic_type<T>>) == 0) {
             // real field, size is even -- cast the field to pseudo-complex
             // This works because layouts are compatible in all archs - if this changes
             // then need copy
@@ -261,7 +261,7 @@ class k_binning {
             onsites(ALL) {
 
                 cfield[X] = 0;
-                for (int i = 0; i < sizeof(T) / sizeof(hila::scalar_type<T>); i++) {
+                for (int i = 0; i < sizeof(T) / sizeof(hila::arithmetic_type<T>); i++) {
                     auto a = hila::get_number_in_var(f[X], i);
                     hila::set_number_in_var(cfield[X], i, a);
                 }

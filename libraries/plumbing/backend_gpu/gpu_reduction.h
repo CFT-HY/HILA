@@ -977,7 +977,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 //            "EVEN_SITES_FIRST neede for gpu reduction with parity");
 // #endif
 
-//     using base_t = hila::scalar_type<T>;
+//     using base_t = hila::arithmetic_type<T>;
 //     constexpr int n = sizeof(T) / sizeof(base_t);
 
 //     // fields are stored 1 after another on gpu fields

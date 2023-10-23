@@ -20,7 +20,7 @@ class Array {
     T c[n * m];
 
     /// std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial
@@ -297,8 +297,8 @@ class Array {
         return res;
     }
     /// return real part
-    inline Array<n, m, hila::scalar_type<T>> real() const {
-        Array<n, m, hila::scalar_type<T>> res;
+    inline Array<n, m, hila::arithmetic_type<T>> real() const {
+        Array<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
@@ -306,8 +306,8 @@ class Array {
     }
 
     /// return imaginary part
-    inline Array<n, m, hila::scalar_type<T>> imag() const {
-        Array<n, m, hila::scalar_type<T>> res;
+    inline Array<n, m, hila::arithmetic_type<T>> imag() const {
+        Array<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -315,8 +315,8 @@ class Array {
     }
 
     /// calculate square norm - sum of squared elements
-    hila::scalar_type<T> squarenorm() const {
-        hila::scalar_type<T> result = 0;
+    hila::arithmetic_type<T> squarenorm() const {
+        hila::arithmetic_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
             result += ::squarenorm(c[i]);
         }
@@ -390,12 +390,12 @@ inline Array<n, m, T> conj(const Array<n, m, T> &arg) {
 }
 /// real part
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::scalar_type<T>> real(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::arithmetic_type<T>> real(const Array<n, m, T> &arg) {
     return arg.real();
 }
 /// imaginary part
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::scalar_type<T>> imag(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::arithmetic_type<T>> imag(const Array<n, m, T> &arg) {
     return arg.imag();
 }
 
@@ -496,7 +496,7 @@ inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
 
 /// Norm squared function
 template <int n, int m, typename T>
-inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
+inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 

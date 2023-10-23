@@ -61,7 +61,7 @@ template <typename M>
 struct svd_result {
     static_assert(M::is_matrix() && M::rows() == M::columns(), "SVD only for square matrix");
     M U;
-    DiagonalMatrix<M::size(), hila::scalar_type<M>> singularvalues;
+    DiagonalMatrix<M::size(), hila::arithmetic_type<M>> singularvalues;
     M V;
 };
 
@@ -73,7 +73,7 @@ template <typename M>
 struct eigen_result {
     static_assert(M::is_matrix() && M::rows() == M::columns(),
                   "Eigenvalues only for square matrix");
-    DiagonalMatrix<M::size(), hila::scalar_type<M>> eigenvalues;
+    DiagonalMatrix<M::size(), hila::arithmetic_type<M>> eigenvalues;
     M eigenvectors;
 };
 
@@ -110,7 +110,7 @@ class Matrix_t {
                   "Matrix requires Complex or arithmetic type");
 
     // std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     // help for templates, can use T::is_matrix()
@@ -984,7 +984,7 @@ class Matrix_t {
      * @return Mtype
      */
     auto abs() const {
-        Matrix<n, m, hila::scalar_type<T>> res;
+        Matrix<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < n * m; i++) {
             res.c[i] = ::abs(c[i]);
         }
@@ -1001,10 +1001,10 @@ class Matrix_t {
     /**
      * @brief Returns real part of Matrix or #Vector
      *
-     * @return Matrix<n, m, hila::scalar_type<T>>
+     * @return Matrix<n, m, hila::arithmetic_type<T>>
      */
-    inline Matrix<n, m, hila::scalar_type<T>> real() const {
-        Matrix<n, m, hila::scalar_type<T>> res;
+    inline Matrix<n, m, hila::arithmetic_type<T>> real() const {
+        Matrix<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
@@ -1014,10 +1014,10 @@ class Matrix_t {
     /**
      * @brief Returns imaginary part of Matrix or #Vector
      *
-     * @return Matrix<n, m, hila::scalar_type<T>>
+     * @return Matrix<n, m, hila::arithmetic_type<T>>
      */
-    inline Matrix<n, m, hila::scalar_type<T>> imag() const {
-        Matrix<n, m, hila::scalar_type<T>> res;
+    inline Matrix<n, m, hila::arithmetic_type<T>> imag() const {
+        Matrix<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -1067,10 +1067,10 @@ class Matrix_t {
     /**
      * @brief Calculate square norm - sum of squared elements
      *
-     * @return hila::scalar_type<T>
+     * @return hila::arithmetic_type<T>
      */
-    hila::scalar_type<T> squarenorm() const {
-        hila::scalar_type<T> result(0);
+    hila::arithmetic_type<T> squarenorm() const {
+        hila::arithmetic_type<T> result(0);
         for (int i = 0; i < n * m; i++) {
             result += ::squarenorm(c[i]);
         }
@@ -1081,16 +1081,16 @@ class Matrix_t {
      * @brief Calculate vector norm - sqrt of squarenorm
      *
      * @tparam S
-     * @return hila::scalar_type<T>
+     * @return hila::arithmetic_type<T>
      */
     template <typename S = T,
-              std::enable_if_t<hila::is_floating_point<hila::scalar_type<S>>::value, int> = 0>
-    hila::scalar_type<T> norm() const {
+              std::enable_if_t<hila::is_floating_point<hila::arithmetic_type<S>>::value, int> = 0>
+    hila::arithmetic_type<T> norm() const {
         return sqrt(squarenorm());
     }
 
     template <typename S = T,
-              std::enable_if_t<!hila::is_floating_point<hila::scalar_type<S>>::value, int> = 0>
+              std::enable_if_t<!hila::is_floating_point<hila::arithmetic_type<S>>::value, int> = 0>
     double norm() const {
         return sqrt(static_cast<double>(squarenorm()));
     }
@@ -1229,7 +1229,7 @@ class Matrix_t {
      */
     Mtype &random() out_only {
 
-        static_assert(hila::is_floating_point<hila::scalar_type<T>>::value,
+        static_assert(hila::is_floating_point<hila::arithmetic_type<T>>::value,
                       "Matrix/Vector random() requires non-integral type elements");
 
         for (int i = 0; i < n * m; i++) {
@@ -1247,7 +1247,7 @@ class Matrix_t {
      */
     Mtype &gaussian_random(double width = 1.0) out_only {
 
-        static_assert(hila::is_floating_point<hila::scalar_type<T>>::value,
+        static_assert(hila::is_floating_point<hila::arithmetic_type<T>>::value,
                       "Matrix/Vector gaussian_random() requires non-integral type elements");
 
         // for Complex numbers gaussian_random fills re and im efficiently
@@ -1544,7 +1544,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
   public:
     /// std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     /**
@@ -1686,7 +1686,7 @@ using mat_x_mat_type = typename matrix_op_type_s<T1, T2>::type;
 template <typename Mt, typename S, typename Enable = void>
 struct matrix_scalar_op_s {
     using type = Matrix<Mt::rows(), Mt::columns(),
-                        Complex<hila::type_plus<hila::scalar_type<Mt>, hila::scalar_type<S>>>>;
+                        Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
 };
 
 template <typename Mt, typename S>
@@ -1696,9 +1696,9 @@ struct matrix_scalar_op_s<
                                                   hila::number_type<Mt>>::value>> {
     // using type = Mt;
     using type = typename std::conditional<
-        hila::is_floating_point<hila::scalar_type<Mt>>::value, Mt,
+        hila::is_floating_point<hila::arithmetic_type<Mt>>::value, Mt,
         Matrix<Mt::rows(), Mt::columns(),
-               hila::type_plus<hila::scalar_type<Mt>, hila::scalar_type<S>>>>::type;
+               hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>::type;
 };
 
 template <typename Mt, typename S>
@@ -2495,7 +2495,7 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
     static_assert(n == m, "exp() only for square matrices");
 
     Matrix_t<n, m, T, MT> r;
-    hila::scalar_type<T> one = 1.0;
+    hila::arithmetic_type<T> one = 1.0;
 
     r = mat * (one / order) + one;
 

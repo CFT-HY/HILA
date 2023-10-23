@@ -651,7 +651,7 @@ T Matrix_t<n, m, T, Mtype>::det_laplace() const {
 
     if constexpr (n > 3) {
         T result(0);
-        hila::scalar_type<T> parity = 1, opposite = -1;
+        hila::arithmetic_type<T> parity = 1, opposite = -1;
         for (int i = 0; i < n; i++) {
             Matrix<n - 1, m - 1, T> minor = hila::linalg::Minor(*this, 0, i);
             result += parity * minor.det_laplace() * (*this).e(0, i);
@@ -678,9 +678,9 @@ T Matrix_t<n, m, T, Mtype>::det_lu() const {
     static_assert(n == m, "Determinant is defined only for square matrix");
 
     Mtype a(*this); // copy this matrix to a, modify a in place
-    Vector<n, hila::scalar_type<T>> vv;
+    Vector<n, hila::arithmetic_type<T>> vv;
 
-    hila::scalar_type<T> d = 1, big, tmp;
+    hila::arithmetic_type<T> d = 1, big, tmp;
     int imax = -1;
     T ret = 0;
 
