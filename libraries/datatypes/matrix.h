@@ -660,7 +660,7 @@ class Matrix_t {
      *
      * @tparam S Element type of rhs
      * @tparam MT Matrix type of rhs
-     * @param rhs Matrix to multiply with
+     * @param rhs Matrix to add
      * @return Mtype&
      */
     // #pragma hila loop_function
@@ -688,13 +688,12 @@ class Matrix_t {
      *
      * __Subtract assign scalar__:
      *
-     * Adds scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
+     * Subtract scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M = 3;
      * M -= 1 ; \\ M = 2*I
      * \endcode
-
      *
      * @param rhs Matrix to subtract with
      * @return template <typename S, typename MT,
@@ -1385,14 +1384,23 @@ class Matrix_t {
 
 
     /**
-     * @brief Multiply (nxm)-matrix from left by a matrix which is 1 except for 4 elements on
-     * rows/columns p,q.
+     * @brief Multiply \f$ n \times m \f$-matrix from the left by  \f$ n \times m \f$ matrix defined
+     * by  \f$ 2 \times 2 \f$ sub matrix
+     * @details The multiplication is defined as follows, let \f$M\f$ as the \f$ 2 \times 2 \f$
+     * input matrix and \f$B\f$ be `(this)` matrix, being the matrix stored in the object this
+     * method is called for. Let \f$A = I\f$ be a \f$ n \times m \f$ unit matrix. We then set the
+     * values of A to be: \f{align}{ A_{p,p} = M_{0,0}, \hspace{5px} A_{p,q} = M_{0,1}, \hspace{5px}
+     * A_{q,p} = M_{1,0}, \hspace{5px} A_{q,q} = M_{1,1}. \f}
      *
-     * @tparam R
-     * @tparam Mt
-     * @param p
-     * @param q
-     * @param M
+     * Then the resulting matrix will be:
+     *
+     * \f{align}{ B = A \cdot B  \f}
+     *
+     * @tparam R Element type of M
+     * @tparam Mt Matrix type of M
+     * @param p First row and column
+     * @param q Second row and column
+     * @param M \f$ 2 \times 2\f$ Matrix to multiply with
      */
     template <typename R, typename Mt>
     void mult_by_2x2_left(int p, int q, const Matrix_t<2, 2, R, Mt> &M) {
@@ -1412,14 +1420,16 @@ class Matrix_t {
     }
 
     /**
-     * @brief Multiply (nxm)-matrix from right by a matrix which is 1 except for 4 elements on
-     * rows/columns p,q.
+     * @brief  Multiply \f$ n \times m \f$-matrix from the right by  \f$ n \times m \f$ matrix
+     * defined by  \f$ 2 \times 2 \f$ sub matrix
+     * @details See Matrix::mult_by_2x2_left, only difference being that the multiplication is from
+     * the right.
      *
-     * @tparam R
-     * @tparam Mt
-     * @param p
-     * @param q
-     * @param M
+     * @tparam R Element type of M
+     * @tparam Mt Matrix type of M
+     * @param p First row and column
+     * @param q Second row and column
+     * @param M \f$ 2 \times 2\f$ Matrix to multiply with
      */
     template <typename R, typename Mt>
     void mult_by_2x2_right(int p, int q, const Matrix_t<2, 2, R, Mt> &M) {
@@ -1948,7 +1958,7 @@ inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
 }
 
 /**
- * @brief Addition operator
+ * @brief Subtraction operator
  * @details Defined for the following operations
  *
  * __Matrix - Matrix:__
@@ -2111,7 +2121,7 @@ inline Mt operator*(const Mt &a, const Mt &b) {
  * auto S = N * M; // Results in a 3 x 3 Matrix since N.rows() = 3 and M.columns = 3
  * \endcode
  *
- * __ #RowVector * #Vector / #Vector * #RowVector:__
+ * __RowVector * #Vector / #Vector * #RowVector:__
  *
  * Defined as standard [dot product](https://en.wikipedia.org/wiki/Dot_product) between vectors as
  * long as vectors are of same length
@@ -2430,7 +2440,7 @@ inline auto squarenorm(const Mt &rhs) {
     return rhs.squarenorm();
 }
 
-/// Vector norm - sqrt of squarenorm()
+// Vector norm - sqrt of squarenorm()
 
 /**
  * @brief Returns vector norm of Matrix

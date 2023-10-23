@@ -10,13 +10,7 @@
 
 #include "plumbing/has_unary_minus.h"
 
-/**
- * Forward deceleration 
- * @class field_struct
- * @brief Stores Field class data and communication parameters for said data
- * 
- * @todo field-specific boundary conditions
-*/
+
 template <typename T>
 class field_struct;
 
