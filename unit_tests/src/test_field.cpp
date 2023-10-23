@@ -1,7 +1,7 @@
 #include "hila.h"
 #include "catch.hpp"
 
-using MyType = float;
+using MyType = double;
 
 class FieldTest {
 
@@ -133,8 +133,9 @@ TEST_CASE_METHOD(FieldTest, "Field mathematical operations", "[Field]") {
         REQUIRE(dummy_field.product() == 1);
     }
     SECTION("MinMax") {
-        dummy_field[{2, 2, 2}] = 2.0;
-        dummy_field[{2, 2, 2}] = 2.0;
+        fill_dummy_field(0);
+        dummy_field.set_element({2, 2, 2},2.0);
+        dummy_field.set_element({2, 2, 1},1.0);
         CoordinateVector loc_min, loc_max;
         REQUIRE(dummy_field.min() == 0.0);
         REQUIRE(dummy_field.max() == 2.0);

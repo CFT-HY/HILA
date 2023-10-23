@@ -241,7 +241,11 @@ int main(int argc, char **argv) {
         }
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+<<<<<<< HEAD
              checkpoint(U, trajectory, p);
+=======
+            checkpoint(U, trajectory, p);
+>>>>>>> documentation
         }
     }
 
