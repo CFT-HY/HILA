@@ -29,7 +29,7 @@
 # if LLVM_VERSION not given, try first llvm-config and 
 # then llvm-config-$(LLVM_DEFAULT_VERSION)
 
-LLVM_DEFAULT_VERSION := 14
+LLVM_DEFAULT_VERSION := 15
 
 ifdef LLVM_VERSION 
 

@@ -25,6 +25,7 @@ HILAPP_OPTS += -check-init
 
 APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL}
 
+#APP_HEADERS += twist_specific_methods.hpp checkpoint.h parameters.h
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 

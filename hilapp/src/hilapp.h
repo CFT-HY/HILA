@@ -100,7 +100,10 @@ extern bool compile_errors_occurred; // = false;
 
 extern llvm::cl::OptionCategory HilappCategory;
 
-/// class storing global state variables used in parsing
+/**
+ * @brief class storing global state variables used in parsing
+ *
+ */
 struct global_state {
     std::string main_file_name = "";
     bool assert_loop_parity = false;
@@ -493,9 +496,9 @@ struct reduction_expr {
     std::string type;           // type as string
     var_info *variable; // if this reduction is a variable in var_info_list, point to it, otherwise
                         // nullptr
-    reduction reduction_type;  // NONE or SUM
-    bool is_special_reduction; // true if special reduction var
-    vectorization_info vecinfo;  // is type avx vectorizable?
+    reduction reduction_type;   // NONE or SUM
+    bool is_special_reduction;  // true if special reduction var
+    vectorization_info vecinfo; // is type avx vectorizable?
 };
 
 
