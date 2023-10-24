@@ -567,7 +567,8 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
         or_timer.start();
         onsites(par) {
-            suN_overrelax(U[d][X], staples[X]);
+            suN_full_overrelax(U[d][X], staples[X], p.beta);
+            // suN_overrelax(U[d][X], staples[X]);
         }
         or_timer.stop();
 
