@@ -238,6 +238,16 @@ class Array {
         return *reinterpret_cast<const Vector<n, T> *>(this);
     }
 
+    DiagonalMatrix<n, T> &asDiagonalMatrix() const_function {
+        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
+        return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
+    }
+
+    const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
+        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
+        return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
+    }
+
 
     // casting from one Array (number) type to another
     // TODO: CHECK AVX CONVERSIONS
