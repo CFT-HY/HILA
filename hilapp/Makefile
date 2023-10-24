@@ -29,6 +29,11 @@
 # if LLVM_VERSION not given, try first llvm-config and 
 # then llvm-config-$(LLVM_DEFAULT_VERSION)
 
+
+help:
+	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
+
+
 LLVM_DEFAULT_VERSION := 15
 
 ifdef LLVM_VERSION 
@@ -49,7 +54,8 @@ else
 # llvm-config not found, next step...
 $(info "llvm-config" not found along PATH, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
 ifeq (, $(shell which llvm-config-$(LLVM_DEFAULT_VERSION)))
-$(error llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH!)
+$(info llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH! )
+$(error Use "make [..] LLVM_VERSION=<N>" )
 else
 LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
 endif
@@ -203,6 +209,7 @@ OBJECTS = \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site_visitor.o \
   $(BUILDDIR)/contains_random_visitor.o \
+  $(BUILDDIR)/contains_novector_visitor.o \
   $(BUILDDIR)/contains_loop_local_var_visitor.o \
   $(BUILDDIR)/contains_reduction_var.o \
   $(BUILDDIR)/function_contains_loop_visitor.o \
@@ -248,9 +255,6 @@ $(BUILDDIR)/stringops.o : $(SRCDIR)/stringops.cpp $(HEADERS) Makefile $(GIT_SHA_
 
 endif
 
-
-help:
-	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
 
 
 .PHONY: clean
