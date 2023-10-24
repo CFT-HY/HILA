@@ -48,13 +48,8 @@ class Array {
     // Store Array contents in one dimensional C style array
     T c[n * m];
 
-<<<<<<< HEAD
-    /// std incantation for field types
-    using base_type = hila::arithmetic_type<T>;
-=======
     // std incantation for field types
-    using base_type = hila::scalar_type<T>;
->>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     /**
@@ -565,34 +560,22 @@ class Array {
         }
         return res;
     }
-<<<<<<< HEAD
-    /// return real part
-    inline Array<n, m, hila::arithmetic_type<T>> real() const {
-        Array<n, m, hila::arithmetic_type<T>> res;
-=======
     /**
      * @brief Returns real part of Array
      *
      * @return Array<n, m, T>
      */
-    inline Array<n, m, hila::scalar_type<T>> real() const {
-        Array<n, m, hila::scalar_type<T>> res;
->>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
+    inline Array<n, m, hila::arithmetic_type<T>> real() const {
+        Array<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
         return res;
     }
 
-<<<<<<< HEAD
     /// return imaginary part
     inline Array<n, m, hila::arithmetic_type<T>> imag() const {
         Array<n, m, hila::arithmetic_type<T>> res;
-=======
-    /// Returns imaginary part of Array
-    inline Array<n, m, hila::scalar_type<T>> imag() const {
-        Array<n, m, hila::scalar_type<T>> res;
->>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -917,17 +900,7 @@ inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     return a;
 }
 
-<<<<<<< HEAD
 
-/// Norm squared function
-template <int n, int m, typename T>
-inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
-    return rhs.squarenorm();
-}
-
-
-/// Stream operator
-=======
 /**
  * @brief Stream operator
  * @details Naive Stream operator for formatting Matrix for printing. Simply puts elements one after
@@ -940,7 +913,6 @@ inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
  * @param A Array to write
  * @return std::ostream&
  */
->>>>>>> 2da3672e7e2e11fb234c9361ec5f5df32d383080
 template <int n, int m, typename T>
 std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
     return operator<<(strm, A.asMatrix());
@@ -980,10 +952,10 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
  * @tparam m Number of columns
  * @tparam T Array element type
  * @param rhs Array to compute squarenorm of
- * @return hila::scalar_type<T>
+ * @return hila::arithmetic_type<T>
  */
 template <int n, int m, typename T>
-inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
+inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 
