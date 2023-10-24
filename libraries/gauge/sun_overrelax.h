@@ -98,15 +98,15 @@ void suN_overrelax(SU<N, T> &U, const SU<N, T> &staple) {
  * This can be solved with the Sherman-Morrison formula
  */
 
-#define deForcrandJahn
+#define USE_deForcrandJahn
 
 template <typename T, int N, typename Btype>
-int suN_full_overrelax(SU<N, T> &U, const SU<N, T> &S, Btype beta) {
+int suN_overrelax_dFJ(SU<N, T> &U, const SU<N, T> &S, Btype beta) {
 
     auto svdS = S.svd();
     auto phiN = S.det().arg() / N;
 
-#ifdef deForcrandJahn
+#ifdef USE_deForcrandJahn
     // find smallest singular value
     int imin = 0;
     double smin = svdS.singularvalues.e(0);
