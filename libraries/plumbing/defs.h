@@ -115,7 +115,7 @@ extern int check_with_nodes;
 // optional input filename
 extern const char *input_file;
 
-enum sort { nonsorted, ascending, descending };
+enum sort { unsorted, ascending, descending };
 
 void initialize(int argc, char **argv);
 void finishrun();

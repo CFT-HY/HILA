@@ -4,8 +4,11 @@
 # application makefile
 #
 # Show option in "make help"
-#%     make [..] CUDA_VERSION=99.9 - set cuda version
-#
+#% ARCH=cuda options: use with make [...] options
+#%    CUDA_VERSION=99.9   - Set cuda version, if installed (default=11.6)
+#%    CUDA_ARCH=<version> - Compile with compute_NN and sm_NN (default=61)
+#%    DEBUG=on            - Compile with -g, for debugging
+#%
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
 ifndef CUDA_VERSION
@@ -52,5 +55,4 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 # These variables must be defined here
 HILAPP_OPTS := -target:CUDA 
 HILA_OPTS := -DCUDA $(MPI_INCLUDE_DIRS)
-
 

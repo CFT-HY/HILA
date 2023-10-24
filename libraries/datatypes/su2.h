@@ -225,37 +225,41 @@ class SU2 {
         return 2.0 * ret; // factor of 2 from normalization, $\lambda_a = 1/2 \sigma_a$
     }
     /// SU2 matrix exp
+    #pragma hila novector
     inline SU2<T> exp() const {
         // $exp(U) = e^d*(cos(r) + sin(r)/r *(a i\sigma_1 + b i\sigma_2 + c i\sigma_3))$
         // r = sqrt(a^2+b^2+c^2)
         SU2<T> ret;
-        T r = sqrt(a * a + b * b + c * c);
+        T r = ::sqrt(a * a + b * b + c * c);
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
-            ret = 1;
+            ret = ::exp(d);
             return ret;
         }
-        T ed = exp(d);
-        T sr = ed * sin(r) / r;
-        ret.d = ed * cos(r);
+        T ed = ::exp(d);
+        T sr = ed * ::sin(r) / r;
+        ret.d = ed * ::cos(r);
         ret.a *= sr;
         ret.b *= sr;
         ret.c *= sr;
         return ret;
     }
+
+    #pragma hila novector
     /// SU2 matrix log, returns SU2 algebra
     inline Algebra<SU2<T>> log() const {
         //$ exp(U) = A => U = log(A)$
         // (a,b,c) -> (a,b,c)*arcCos(r)/r
         Algebra<SU2<T>> ret;
-        T r = sqrt(a * a + b * b + c * c);
+        T r = ::sqrt(a * a + b * b + c * c);
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
             ret = 0;
             return ret;
         }
-        r = acos(d) / sqrt(r);
-        ret.a = r * this->a;
-        ret.b = r * this->b;
-        ret.c = r * this->c;
+        r = ::acos(d) / r;
+        // factor 2 for the algebra
+        ret.a = 2.0 * r * this->a;
+        ret.b = 2.0 * r * this->b;
+        ret.c = 2.0 * r * this->c;
         return ret;
     }
 
@@ -579,15 +583,7 @@ inline Algebra<SU2<R>> operator-(const Algebra<SU2<A>> &lhs, const Algebra<SU2<B
     ret.c = lhs.c - rhs.c;
     return ret;
 }
-/// multiply two Algebra<SU2>'s
-template <typename A, typename B, typename R = hila::type_mul<A, B>>
-inline Algebra<SU2<R>> operator*(const Algebra<SU2<A>> &x, const Algebra<SU2<B>> &y) {
-    Algebra<SU2<R>> ret;
-    ret.a = (-x.b * y.c + x.c * y.b);
-    ret.b = (-x.c * y.a + x.a * y.c);
-    ret.c = (-x.a * y.b + x.b * y.a);
-    return ret;
-}
+
 /// Algebra<SU2> * scalar
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_mul<A, B>>::value, int> = 0>

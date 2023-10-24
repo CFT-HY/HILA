@@ -98,7 +98,7 @@ template <typename matrix> class dirac_staggered {
     /// the fermion mass
     double mass;
     /// The SU(N) vector type
-    using vector_type = SU_vector<matrix::size, hila::scalar_type<matrix>>;
+    using vector_type = SU_vector<matrix::size, hila::arithmetic_type<matrix>>;
     /// The matrix type
     using matrix_type = matrix;
     /// A reference to the gauge links used in the dirac operator
@@ -202,7 +202,7 @@ template <typename matrix> class dirac_staggered_evenodd {
     /// the fermion mass
     double mass;
     /// The SU(N) vector type
-    using vector_type = SU_vector<matrix::size, hila::scalar_type<matrix>>;
+    using vector_type = SU_vector<matrix::size, hila::arithmetic_type<matrix>>;
     /// The matrix type
     using matrix_type = matrix;
 

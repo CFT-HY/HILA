@@ -236,18 +236,18 @@ inline int pmod(const int a, const int b) {
 }
 
 
-/////////////////////////////////////////////////////////////////////
-/// SiteIndex type: alternative to CoordinateVector, just unsigned long
-/// "running" index of site, so that lowest dimensions run fastest
-/////////////////////////////////////////////////////////////////////
-
-// class SiteIndex;
-
 /**
  * @brief Class for coordinate vector useful in indexing lattice
  *
  * @details Defined as Vector<NDIM, int> meaning that all operations from Matrix class are inherited
- *
+ * 
+ *  Note: this is defined as a template, with generic "int" type T, and the type is defined below as alias:
+*   @code{.cpp}
+ *  using CoordinateVector = CoordinateVector_t<int>
+ *  @endcode
+ *  Reason for this is that if CoordinateVector is used in Field variables (Field<CoordinateVector>)
+ *  hilapp is able to upgrade the int to vectorized int when vectorized compilation are used (AVX2, AVX512)
+ * 
  * @tparam T int
  */
 template <typename T>
@@ -255,7 +255,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
   public:
     // std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     // define these to ensure std::is_trivial

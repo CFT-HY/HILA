@@ -58,35 +58,35 @@ int get_next_msg_tag();
 /// Boolean flag "with_int" is used to return "type + int" - types of MPI, used
 /// in maxloc/minloc reductions
 ///
-/// @tparam T  hila type, hila::scalar_type<T> is converted into MPI_type
+/// @tparam T  hila type, hila::arithmetic_type<T> is converted into MPI_type
 /// @param size  (optional) size of the MPI_type in bytes
 /// @param with_int
 /// @return  MPI_datatype (e.g. MPI_INT, MPI_DOUBLE etc.)
 template <typename T>
 MPI_Datatype get_MPI_number_type(size_t &size, bool with_int = false) {
 
-    if (std::is_same<hila::scalar_type<T>, int>::value) {
+    if (std::is_same<hila::arithmetic_type<T>, int>::value) {
         size = sizeof(int);
         return with_int ? MPI_2INT : MPI_INT;
-    } else if (std::is_same<hila::scalar_type<T>, unsigned>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, unsigned>::value) {
         size = sizeof(unsigned);
         return with_int ? MPI_2INT : MPI_UNSIGNED; // MPI does not contain MPI_UNSIGNED_INT
-    } else if (std::is_same<hila::scalar_type<T>, long>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, long>::value) {
         size = sizeof(long);
         return with_int ? MPI_LONG_INT : MPI_LONG;
-    } else if (std::is_same<hila::scalar_type<T>, int64_t>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, int64_t>::value) {
         size = sizeof(int64_t);
         return with_int ? MPI_LONG_INT : MPI_INT64_T; // need to use LONG_INT
-    } else if (std::is_same<hila::scalar_type<T>, uint64_t>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, uint64_t>::value) {
         size = sizeof(uint64_t);
         return with_int ? MPI_LONG_INT : MPI_UINT64_T; // ditto
-    } else if (std::is_same<hila::scalar_type<T>, float>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, float>::value) {
         size = sizeof(float);
         return with_int ? MPI_FLOAT_INT : MPI_FLOAT;
-    } else if (std::is_same<hila::scalar_type<T>, double>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, double>::value) {
         size = sizeof(double);
         return with_int ? MPI_DOUBLE_INT : MPI_DOUBLE;
-    } else if (std::is_same<hila::scalar_type<T>, long double>::value) {
+    } else if (std::is_same<hila::arithmetic_type<T>, long double>::value) {
         size = sizeof(long double);
         return with_int ? MPI_LONG_DOUBLE_INT : MPI_LONG_DOUBLE;
     }
@@ -111,14 +111,15 @@ MPI_Datatype get_MPI_number_type() {
 /// @return MPI_Datatype
 template <typename T>
 MPI_Datatype get_MPI_complex_type(size_t &siz) {
-    if constexpr (std::is_same<T,Complex<double>>::value) {
+    if constexpr (std::is_same<T, Complex<double>>::value) {
         siz = sizeof(Complex<double>);
         return MPI_C_DOUBLE_COMPLEX;
-    } else if constexpr (std::is_same<T,Complex<float>>::value) {
+    } else if constexpr (std::is_same<T, Complex<float>>::value) {
         siz = sizeof(Complex<float>);
         return MPI_C_FLOAT_COMPLEX;
     } else {
-        static_assert(sizeof(T) > 0, "get_MPI_complex_type<T>() called without T being a complex type");
+        static_assert(sizeof(T) > 0,
+                      "get_MPI_complex_type<T>() called without T being a complex type");
         return MPI_BYTE;
     }
 }
@@ -126,12 +127,27 @@ MPI_Datatype get_MPI_complex_type(size_t &siz) {
 
 namespace hila {
 
-///
-/// Broadcast the value of _var_ to all nodes from node _rank_ (default=0).
-/// Var must be trivial, i.e. plain data.
-/// Returns the broadcast value
-/// If var is modifiable, it is changed to the broadcast value
-///
+/**
+ * @brief Broadcast the value of _var_ to all MPI ranks from _rank_ (default=0).
+ *
+ * NOTE: the function must be called by all MPI ranks, otherwise the program will deadlock.
+ *
+ * The type of the variable _var_ can be any standard plain datatype (trivial type),
+ * std::string or std::vector.
+ *
+ * For trivial types, the input _var_ can be non-modifiable value.  In this case
+ * the broadcast value is obtained from the broadcast return value.
+ *
+ * Example:
+ * @code{.cpp}
+ *     auto rnd = hila::broadcast(hila::random());    // all MPI ranks get the same random value
+ * @endcode
+ *
+ * @param var    variable to be synchronized across the full
+ * @param rank   MPI rank from which the
+ * @return template <typename T>
+ */
+
 
 template <typename T>
 T broadcast(T &var, int rank = 0) {
@@ -142,7 +158,7 @@ T broadcast(T &var, int rank = 0) {
     assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
-    MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice.mpi_comm_lat);
+    MPI_Bcast(&var, sizeof(T), MPI_BYTE, rank, lattice.mpi_comm_lat);
     broadcast_timer.stop();
     return var;
 }
@@ -181,7 +197,7 @@ void broadcast(std::vector<T> &list, int rank = 0) {
 /// Bare pointers cannot be broadcast
 
 template <typename T>
-void broadcast(T *var) {
+void broadcast(T *var, int rank = 0) {
     static_assert(sizeof(T) > 0 &&
                   "Do not use pointers to broadcast()-function. Use 'broadcast_array(T* arr, "
                   "int size)' to broadcast an array");
@@ -290,13 +306,13 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     reduction_timer.start();
     if (allreduce) {
         MPI_Allreduce((void *)value, (void *)recv_data,
-                      send_count * sizeof(T) / sizeof(hila::scalar_type<T>), dtype, MPI_SUM,
+                      send_count * sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype, MPI_SUM,
                       lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
         MPI_Reduce((void *)value, (void *)recv_data,
-                   send_count * sizeof(T) / sizeof(hila::scalar_type<T>), dtype, MPI_SUM, 0,
+                   send_count * sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype, MPI_SUM, 0,
                    lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
@@ -363,7 +379,7 @@ void hila_reduce_sums();
 template <typename T>
 void hila_reduce_sum_setup(T *value) {
 
-    using b_t = hila::scalar_type<T>;
+    using b_t = hila::arithmetic_type<T>;
     if (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
     } else if (std::is_same<b_t, float>::value) {

@@ -145,6 +145,16 @@ class GeneralVisitor {
     /// check if stmt contains random number generator
     bool contains_random(Stmt *s);
 
+    /// similarly if contains #pragma hila novector -functions, recursively
+    bool contains_novector(Stmt *s);
+
+    /// Find the SourceRange of a function decl prototype, if it exists
+    bool find_prototype(FunctionDecl *fd, FunctionDecl *&decl);
+
+    /// utility to print location info for FunctionDecl
+    void print_decl_info(const NamedDecl *fd, const char *msg);
+
+
     // shofthand for obtaining file buffer within this class
     srcBuf *get_file_srcBuf(SourceLocation sl) {
         return get_file_buffer(TheRewriter, TheRewriter.getSourceMgr().getFileID(sl));
@@ -221,7 +231,8 @@ class GeneralVisitor {
 
     bool is_simple_reduction(const std::string &opcode, Expr *assignee);
 
-    bool is_increment_expr(Stmt *s, Expr **assignee = nullptr);
+    bool is_increment_expr(Stmt *s, Expr **assignee = nullptr, bool *decrement = nullptr,
+                           bool *prefix = nullptr, SourceLocation *sl = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
 
@@ -306,8 +317,10 @@ class GeneralVisitor {
 
     /// Handle functions called in a loop
     void handle_loop_function_gpu(call_info_struct &ci);
+    void gpu_loop_function_marker(FunctionDecl *fd);
     void handle_loop_function_openacc(FunctionDecl *fd);
     void handle_loop_function_avx(call_info_struct &ci);
+
 
     /// Handle functions called in a loop
     void handle_loop_constructor_gpu(call_info_struct &ci);

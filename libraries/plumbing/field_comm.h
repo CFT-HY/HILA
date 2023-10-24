@@ -381,6 +381,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
+/// @internal
 ///  wait_gather(): Wait for communication at parity par from
 ///  Direction d completes the communication in the function.
 ///  If the communication has not started yet, also calls
@@ -711,6 +712,7 @@ std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const 
 
 
 //////////////////////////////////////////////////////////////////////////////////
+/// @internal
 /// Copy the local (mpi process) data to a "logical array"
 /// on gpu code, copies to host
 
@@ -745,6 +747,7 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
+/// @internal
 /// set the local data from an array
 
 template <typename T>

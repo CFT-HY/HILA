@@ -100,7 +100,10 @@ extern bool compile_errors_occurred; // = false;
 
 extern llvm::cl::OptionCategory HilappCategory;
 
-/// class storing global state variables used in parsing
+/**
+ * @brief class storing global state variables used in parsing
+ *
+ */
 struct global_state {
     std::string main_file_name = "";
     bool assert_loop_parity = false;
@@ -186,7 +189,7 @@ struct dir_ptr {
 /// Field<type> -expression.  Type is vectorizable if:
 /// a) just float, double, int  or
 /// b) is templated type, with float/double in template and  implements
-///    the method using base_type = hila::scalar_type<T>;
+///    the method using base_type = hila::arithmetic_type<T>;
 enum class number_type { INT, UNSIGNED, LONG, UNSIGNED_LONG, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN };
 
 // Collection of legal number types
@@ -493,9 +496,9 @@ struct reduction_expr {
     std::string type;           // type as string
     var_info *variable; // if this reduction is a variable in var_info_list, point to it, otherwise
                         // nullptr
-    reduction reduction_type;  // NONE or SUM
-    bool is_special_reduction; // true if special reduction var
-    vectorization_info vecinfo;  // is type avx vectorizable?
+    reduction reduction_type;   // NONE or SUM
+    bool is_special_reduction;  // true if special reduction var
+    vectorization_info vecinfo; // is type avx vectorizable?
 };
 
 
@@ -564,6 +567,15 @@ extern std::list<loop_const_expr_ref> loop_const_expr_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::list<selection_info> selection_info_list;
 extern std::vector<reduction_expr> reduction_list;
+
+
+// struct func_prototype_struct {
+//     FunctionDecl *decl;   // this is prototype decl
+//     FunctionDecl *def;    // this should be the definition
+//     int flag;             // use this for convenient information
+// };
+
+// extern std::vector<func_prototype_struct> prototype_vector;
 
 
 #endif
