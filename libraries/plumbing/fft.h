@@ -374,7 +374,7 @@ inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateV
                   "FFT_field argument fields must contain complex type");
 
     // get the type of the complex number here
-    using cmplx_t = Complex<hila::scalar_type<T>>;
+    using cmplx_t = Complex<hila::arithmetic_type<T>>;
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t);
 
     extern hila::timer fft_timer;
@@ -405,14 +405,35 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
     FFT_field(input, result, dirs, fftdir);
 }
 
-//////////////////////////////////////////////////////////////////////////////////
-///
-/// Field method for performing FFT
-///   res = a.FFT();
-/// fftdir:  fft_direction::forward (default)  or fft_direction::back
-//////////////////////////////////////////////////////////////////////////////////
 
-
+/**
+ * @brief Field method for performing FFT
+ * @details
+ * By default calling without arguments will execute FFT in all directions.
+ * @code{.cpp}
+ * .
+ * . // Field f is defined
+ * .
+ * auto res = f.FFT() //Forward transform
+ * auto res_2 = res.FFT(fft_direction::back) // res_2 is same as f
+ * @endcode
+ *
+ * One can also specify the direction of the FFT with a coordinate vector:
+ * @code{.cpp}
+ * .
+ * . // Field f is defined
+ * .
+ * auto res = f.FFT(e_x) //Forward transform in x-direction
+ * auto res_2 = res.FFT(e_X,fft_direction::back) // res_2 is same as f
+ * @endcode
+ *
+ * With this in mind `f.FFT(e_x+e_y+e_z) = f.FFT()`
+ *
+ * @tparam T
+ * @param dirs Direction to perform FFT in, default is all directions
+ * @param fftdir fft_direction::forward (default)  or fft_direction::back
+ * @return Field<T> Transformed field
+ */
 template <typename T>
 Field<T> Field<T>::FFT(const CoordinateVector &dirs, fft_direction fftdir) const {
     Field<T> res;
@@ -437,7 +458,7 @@ Field<T> Field<T>::FFT(fft_direction fftdir) const {
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-Field<Complex<hila::scalar_type<T>>> Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
+Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
 
     static_assert(hila::is_arithmetic<T>::value,
                   "FFT_real_to_complex can be applied only to Field<real-type> variable");
@@ -489,7 +510,7 @@ inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
 
 
 template <typename T>
-Field<hila::scalar_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
+Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
 
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
@@ -518,7 +539,7 @@ Field<hila::scalar_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) 
         rss += ::squarenorm(rf[X].real());
     }
 
-    Field<hila::scalar_type<T>> res;
+    Field<hila::arithmetic_type<T>> res;
     onsites(ALL) res[X] = rf[X].real();
     return res;
 }

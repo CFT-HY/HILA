@@ -145,9 +145,8 @@ class input {
             return val;
         }
 
-        template <typename T>
-        operator CoordinateVector_t<T>() {
-            CoordinateVector_t<T> val;
+        operator CoordinateVector() {
+            CoordinateVector val;
             if (!parent->get_value(val, label, true))
                 hila::finishrun();
             return val;

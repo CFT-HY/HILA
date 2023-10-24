@@ -25,20 +25,34 @@ extern std::string looping_var;
 extern std::string parity_name;
 
 
+// write __host__ __device__ to function decl
+void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
+
+    // SourceLocation sl = fd->getSourceRange().getBegin();
+    SourceLocation sl = fd->getInnerLocStart();
+    srcBuf *sb = get_file_srcBuf(sl);
+    if (sb == nullptr) {
+        // it's a system file -- should we do something?
+        return;
+    }
+
+    if (!sb->is_edited(sl))
+        sb->insert(sl, "__device__ __host__ ", true, true);
+
+}
+
+
 // Add the __host__ __device__ keywords to functions called a loop
 void GeneralVisitor::handle_loop_function_gpu(call_info_struct &ci) {
 
     if (ci.is_defaulted)
         return; // cuda can take care of these
 
-    // SourceLocation sl = ci.funcdecl->getSourceRange().getBegin();
-    SourceLocation sl = ci.funcdecl->getInnerLocStart();
-    srcBuf *sb = get_file_srcBuf(sl);
-    if (sb == nullptr) {
-        // it's a system file -- should we do something?
-        return;
+    gpu_loop_function_marker(ci.funcdecl);
+    FunctionDecl *proto;
+    if (find_prototype(ci.funcdecl,proto)) {
+        gpu_loop_function_marker(proto);
     }
-    sb->insert(sl, "__device__ __host__ ", true, true);
 }
 
 void GeneralVisitor::handle_loop_constructor_gpu(call_info_struct &ci) {

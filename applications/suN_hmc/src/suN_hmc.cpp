@@ -5,7 +5,7 @@
 
 #include <fftw3.h>
 
-using mygroup = SU<3, double>;
+using mygroup = SU<4, double>;
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -32,7 +32,7 @@ struct parameters {
 template <typename T>
 T get_ch_inv(const T &U) {
     T tB[2];
-    Complex<hila::scalar_type<T>> tc;
+    Complex<hila::arithmetic_type<T>> tc;
     int ip, iip;
     ip = 0;
     iip = 1;
@@ -146,7 +146,7 @@ void update_E_bp(const GaugeField<group> &U, VectorField<Algebra<group>> &E, con
                  double delta) {
 
     Field<group> plaqp;
-    hila::scalar_type<group> eps = delta * 2.0 * p.beta / group::size();
+    hila::arithmetic_type<group> eps = delta * 2.0 * p.beta / group::size();
 
     foralldir(d1) {
         foralldir(d2) if (d2 != d1) {
@@ -208,7 +208,7 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, const 
               double delta) {
 
     Field<group> staple;
-    hila::scalar_type<group> eps = delta * p.beta / group::size();
+    hila::arithmetic_type<group> eps = delta * p.beta / group::size();
 
     foralldir(d) {
         if (p.deltab != 0)
@@ -739,7 +739,8 @@ int main(int argc, char **argv) {
                 double mag;
                 // mag =
                 //     0.4 +
-                //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) / lattice.size(e_z)));
+                //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) /
+                //     lattice.size(e_z)));
                 if (X.z() <= lattice.size(e_z) / 2) {
                     mag = 1;
                 } else {

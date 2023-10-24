@@ -36,7 +36,10 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
     bool vectorizable = true;
     if (has_pragma(D, pragma_hila::NOVECTOR)) {
         vectorizable = false;
+    } else {
+        vectorizable = !contains_novector(D->getBody());
     }
+    
     if (has_pragma(D, pragma_hila::CONTAINS_RNG)) {
         contains_rng = true;
     } else if (D->hasBody()) {
@@ -62,6 +65,8 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
         loop_info.contains_random = true;
 
     ci.is_vectorizable = ci.is_vectorizable && vectorizable;
+
+    // llvm::errs() << "FUNC " << D->getNameAsString() << " vectorizable " << ci.is_vectorizable << '\n';
 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);

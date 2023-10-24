@@ -31,6 +31,8 @@ std::list<special_function_call> special_function_call_list = {};
 std::list<selection_info> selection_info_list = {};
 std::vector<reduction_expr> reduction_list = {};
 
+// std::vector<func_prototype_struct> prototype_vector = {};
+
 bool state::compile_errors_occurred = false;
 
 bool skip_this_translation_unit = false;

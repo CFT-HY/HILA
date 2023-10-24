@@ -15,8 +15,9 @@
 
 #ifdef RELEASE
 /**
- * @brief Turn off static assert which are on by default.
- * @details By defining either RELEASE or NDEBUG (No debug) static asserts will be turned off
+ * @brief Turn off asserts which are on by default.
+ * @details By defining either RELEASE or NDEBUG (No debug) asserts will be turned off.
+ * Static asserts naturally remain active
  */
 #ifndef NDEBUG
 #define NDEBUG
@@ -48,10 +49,14 @@
 #undef EVEN_SITES_FIRST
 #endif
 
-// NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK must be defined
-// Define NODE_LAYOUT_BLOCK to be the number of
-// MPI processes within a compute node - tries to maximize
-// locality somewhat
+/// NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK determine how MPI ranks are laid out on logical
+/// lattice.  TRIVIAL lays out the lattice on logical order where x-direction runs fastest etc.
+/// if NODE_LAYOUT_BLOCK is defined, NODE_LAYOUT_BLOCK consecutive MPI ranks are laid out so that
+/// these form a compact "block" of ranks logically close togeter.
+/// Define NODE_LAYOUT_BLOCK to be the number of
+/// MPI processes within one compute node - tries to maximize the use of fast local communications.
+/// Either one of these must be defined.
+
 #ifndef NODE_LAYOUT_TRIVIAL
 #ifndef NODE_LAYOUT_BLOCK
 #define NODE_LAYOUT_BLOCK 4
@@ -116,7 +121,7 @@
 // (temporarily) more memory. Example:
 //      ReductionVector<double> rv(100);
 //      Field<int> index;
-//      ...
+//      ... (set index to values 0 .. 99)
 //      onsites(ALL) {
 //           rv[index[X]] += ..
 //           ..
@@ -124,12 +129,14 @@
 //
 // GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 or undefined means that the thread block number is not
 // restricted and only a single histogram is used with atomic operations (atomicAdd).  This
-// can slow down tight loops, but in many cases this turns out to be actually faster.
+// can be slower, but the performance is GPU hardware/driver dependent.  In some
+// cases GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 turns out to be faster.
 //
-// Default: leave it off.  Otherwise 32 is currently OK compromise (32 thread blocks)
+// Default: 32 is currently OK compromise (32 thread blocks)
 
-// #define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
-
+#ifndef GPU_VECTOR_REDUCTION_THREAD_BLOCKS
+#define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
+#endif
 
 // GPUFFT_BATCH_SIZE:
 // How many complex fft's in parallel - large value faster, small less memory.
@@ -137,6 +144,21 @@
 // when sufficiently large.
 #ifndef GPUFFT_BATCH_SIZE
 #define GPUFFT_BATCH_SIZE 256
+#endif
+
+/** @brief GPU_SYNCHRONIZE_TIMERS : if set and !=0 synchronize GPU on timer calls, in order to obtain 
+ *  meaningful timer values
+ * 
+ * @details Because GPU kernel launch is asynchronous process, the timers by default may not measure
+ * the actual time used in GPU kernel execution. Defining GPU_SYNCHRONIZE_TIMERS inserts GPU synchronization calls
+ * to timers.  This is off by default, because this may slow down GPU code. Turn on in order to measure more
+ * accurately the time spent in different parts of the code.
+ */ 
+
+#ifdef GPU_SYNCHRONIZE_TIMERS
+#if GPU_SYNCHRONIZE_TIMERS == 0
+#undef GPU_SYNCHRNONIZE_TIMERS
+#endif
 #endif
 
 

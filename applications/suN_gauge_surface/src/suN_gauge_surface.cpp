@@ -8,7 +8,7 @@
 
 #include <fftw3.h>
 
-using mygroup = SU<NCOLOR, double>;
+using mygroup = SU<NCOLOR, float>;
 
 enum class poly_limit { OFF, RANGE, PARABOLIC };
 
@@ -176,6 +176,29 @@ std::vector<float> measure_polyakov_profile(Field<float> &pl, std::vector<float>
     }
     pro1 = p1.vector();
     return p.vector();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////
+
+template <typename group>
+void measure_plaq_profile(GaugeField<group> &U) {
+    ReductionVector<float> p(lattice.size(e_z));
+    p.allreduce(false);
+    p.delayed(true);
+    foralldir(dir1) foralldir(dir2) if (dir2 > dir1) {
+        onsites(ALL) {
+            p[X.z()] += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
+                                         U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
+                                  group::size();
+        }
+    }
+    p.reduce();
+
+    for (int z = 0; z < lattice.size(e_z); z++) {
+        hila::out0 << "PPLAQ " << z << ' '
+                   << p[z] / (NDIM * (NDIM - 1) / 2 * lattice.volume() / lattice.size(e_z)) << '\n';
+    }
 }
 
 
@@ -357,11 +380,26 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
         hila::out0 << std::setprecision(6);
 
-        std::vector<float> line;
-        for (int y = 0; y < lattice.size(e_y); y++)
-            for (int x = 0; x < lattice.size(e_x); x++) {
-                line = plz.get_slice({x, y, -1, 0});
-                if (hila::myrank() == 0) {
+        std::vector<float> poly;
+        std::vector<float> line(lattice.size(e_z));
+
+        // get full xyz-volume t=0 slice to main node
+        // poly = plz.get_slice({-1, -1, -1, 0});
+
+        for (int y = 0; y < lattice.size(e_y); y++) {
+            // get now full xz-plane polyakov line to main node
+            // reduces MPI calls compared with doing line-by-line
+            poly = plz.get_slice({-1, y, -1, 0});
+            if (hila::myrank() == 0) {
+                for (int x = 0; x < lattice.size(e_x); x++) {
+                    // line = plz.get_slice({x, y, -1, 0});
+
+                    // copy ploop data to line - x runs fastest
+                    for (int z = 0; z < lattice.size(e_z); z++) {
+                        line[z] = poly[x + lattice.size(e_x) * (z)];
+                    }
+
+                    // if (hila::myrank() == 0) {
                     // start search of the surface from the center between min and max
                     int z = startloc;
 
@@ -403,6 +441,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                         (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
                 }
             }
+        }
 
         if (hila::myrank() == 0) {
             constexpr int pow_size = 200;
@@ -528,7 +567,8 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
         or_timer.start();
         onsites(par) {
-            suN_overrelax(U[d][X], staples[X]);
+            suN_full_overrelax(U[d][X], staples[X], p.beta);
+            // suN_overrelax(U[d][X], staples[X]);
         }
         or_timer.stop();
 
@@ -687,7 +727,7 @@ int main(int argc, char **argv) {
     p.n_thermal = par.get("thermalization");
 
     // random seed = 0 -> get seed from time
-    long seed = par.get("random seed");
+    uint64_t seed = par.get("random seed");
     // save config and checkpoint
     p.n_save = par.get("traj/saved");
     // measure surface properties and print "profile"
@@ -784,6 +824,7 @@ int main(int argc, char **argv) {
 
             if (p.n_profile && (trajectory + 1) % p.n_profile == 0) {
                 measure_polyakov_surface(U, p, trajectory);
+                measure_plaq_profile(U);
             }
 
             if (p.n_dump_polyakov && (trajectory + 1) % p.n_dump_polyakov == 0) {
