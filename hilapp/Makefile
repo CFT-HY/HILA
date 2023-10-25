@@ -30,9 +30,6 @@
 # then llvm-config-$(LLVM_DEFAULT_VERSION)
 
 
-help:
-	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
-
 
 LLVM_DEFAULT_VERSION := 15
 
@@ -255,6 +252,9 @@ $(BUILDDIR)/stringops.o : $(SRCDIR)/stringops.cpp $(HEADERS) Makefile $(GIT_SHA_
 
 endif
 
+
+help:
+	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
 
 
 .PHONY: clean
