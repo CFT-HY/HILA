@@ -5,9 +5,13 @@
 #
 #
 
+$(info ############################################################## )
+$(info Use "/opt/local/cuda-aware-mpi/bin/mpirun" to run MPI program! )
+$(info ############################################################## )
+
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
 ifndef CUDA_VERSION
-	CUDA_VERSION = 11.8
+	CUDA_VERSION = 12
 endif
 CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
 # CC = /usr/bin/nvcc
