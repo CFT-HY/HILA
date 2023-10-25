@@ -30,8 +30,8 @@
 # then llvm-config-$(LLVM_DEFAULT_VERSION)
 
 
-
-LLVM_DEFAULT_VERSION := 15
+# keep 14 as default for now
+LLVM_DEFAULT_VERSION := 14
 
 ifdef LLVM_VERSION 
 
