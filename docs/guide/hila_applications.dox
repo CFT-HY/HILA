@@ -1,4 +1,6 @@
-# HILA Applications 
+/**
+
+\page hila_applications HILA applications
 
 __List of documented applications/simulations offered by HILA.__
 
@@ -10,3 +12,4 @@ hila_simple_example.cpp:
 
 >  Simple HILA example application which computes laplacian of Gaussian random complex field 
 
+*/

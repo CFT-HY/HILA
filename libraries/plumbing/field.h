@@ -39,7 +39,7 @@ void ensure_field_operators_exist();
  * @brief The field class implements the standard methods for accessing Fields. Hilapp replaces the
  * parity access patterns, Field[par] with a loop over the appropriate sites. Since the Field class
  * is one of the more important functionalities of HILA, extensive general instructions on the Field
- * class can be read at [HILA Functionality](@ref Field_documentation) documentation.
+ * class can be read at [HILA Functionality](@ref field_documentation) documentation.
  *
  * @details The Field class contains member functions used by hilapp, which are marked internal, as
  * well as members that are useful for application developers.
