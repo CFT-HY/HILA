@@ -1,6 +1,6 @@
-/**
+/** 
 
-\page hila_applications HILA applications
+ \page hila_applications HILA Applications 
 
 __List of documented applications/simulations offered by HILA.__
 
@@ -11,5 +11,9 @@ hila_healthcheck.cpp:
 hila_simple_example.cpp:
 
 >  Simple HILA example application which computes laplacian of Gaussian random complex field 
+
+suN_gauge.cpp:
+
+>  Application to simulate \\f$ SU(N) \\f$ Gauge field. 
 
 */
