@@ -1,0 +1,65 @@
+
+/**
+
+\page makefile Makefile
+
+The Makefile defines variables that allow control of the make compilation process and HILA applications. All the variables and example use are listed below, with the default options given as `VAR=default_option`.
+
+`HILA_DIR:=../..`:
+
+> Path to HILA directory with respect to application folder where the Makefile is defined. Default PATH is according to application folders being defined in `HILA/applications`, but by redefining `HILA_DIR` one can place application folder outside of `HILA` directory.
+
+`ARCH:=vanilla`:
+
+> Defines target architecture to build HILA application for. Default `vanilla` produces a CPU-MPI application. Architectures are listed on [Description and Installation](./README.md.md) page.
+
+`CXX:=clang++`:
+
+> Chosen application compiler. Any c++ compiler is viable, but only `clang++` is guaranteed to work.
+
+`HILAPP_OPTS`:
+
+> _hilapp_ options that can be appended to with for example `HILAPP_OPTS+= -check-init`
+> <details>
+> <summary> Option list </summary>
+> 
+> ```
+>   --AVXinfo=<int>           - AVX vectorization information level 0-2. 0 quiet, 1 not vectorizable loops, 2 all loops
+>   -D <macro[=value]>        - Define name/macro for preprocessor
+>   -I <directory>            - Directory for include file search
+>   --allow-func-globals      - Allow using global or extern variables in functions called from site loops.
+>                               This will not work in kernelized code (for example GPUs)
+>   --check-init              - Insert checks that Field variables are appropriately initialized before use
+>   --comment-pragmas         - Comment out '#pragma hila' -pragmas in output
+>   --dump-ast                - Dump AST tree
+>   --function-spec-no-inline - Do not mark generated function specializations "inline"
+>   --gpu-slow-reduce         - Use slow (but memory economical) reduction on gpus
+>   --ident-functions         - Comment function call types in output
+>   --insert-includes         - Insert all project #include files in .cpt -files (portable)
+>   --method-spec-no-inline   - Do not mark generated method specializations "inline"
+>   --no-include              - Do not insert any '#include'-files (for debug, may not compile)
+>   --no-interleave           - Do not interleave communications with computation
+>   --no-output               - No output file, for syntax check
+>   -o <filename>             - Output file (default: <file>.cpt, write to stdout: -o - 
+>   --syntax-only             - Same as no-output
+>   --target:AVX              - Generate AVX vectorized loops
+>   --target:AVX512           - Generate AVX512 vectorized loops
+>   --target:CUDA             - Generate CUDA kernels
+>   --target:HIP              - Generate HIP kernels
+>   --target:openacc          - Offload to GPU using openACC
+>   --target:openmp           - Hybrid OpenMP - MPI
+>   --target:vanilla          - Generate loops in place
+>   --target:vectorize=<int>  - Generate vectorized loops with given vector size 
+>                               For example -target:vectorize=32 is equivalent to -target:AVX
+>   --verbosity=<int>         - Verbosity level 0-2.  Default 0 (quiet)
+> ```
+> 
+> </details>
+> 
+`APP_OPTS`:
+
+> The makefile offers triggers that are defined in the application during compilation using -D opts. The options are control by the use of the `APP_OPTS` variable. All variables are documented in `params.h` of which the most notable is `NDIM`.
+>
+> For example if we wanted to set dimensionality at compilation it would be done as: ` APP_OPTS+="-DNDIM=4" `
+
+*/
