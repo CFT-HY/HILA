@@ -1,5 +1,7 @@
 
 #include <cstring>
+#include <map>
+#include <regex>
 #include "hila.h"
 
 // define these global var here - somehow NULL needed for ostream
@@ -88,6 +90,80 @@ class cmdlineargs {
         return (nullptr);
     }
 
+    std::vector<std::string> arg_vector(const char *flag)
+    {
+        std::vector<std::string> uargs;
+
+        int u_ind[argc];
+        for (int i = 0; i < argc; i++) u_ind[i] = -1;
+        int *p_ind = u_ind;
+
+        const std::regex forbidden_user_input("^-[a-zA-Z].*");
+
+        for (int i = 0; i < argc; i++)
+        {
+            const char *p = argv[i];
+            // check if user option flag
+            if (std::strcmp(p, flag) == 0)
+            {
+                // Slate for removal and move onto the
+                // options
+                *(p_ind++) = 1;
+                i++;
+                if (i < argc)
+                        p = argv[i];
+                else
+                {
+                    hila::out0 << "Flag " << flag << " is missing an entry!\n";
+                    hila::out0 << "Aborting run.\n";
+                    hila::terminate(0);
+                    break;
+                }
+                // Check if the string is a valid input
+                // (Not of type ^-[a-zA-Z].*)
+                // and push into vector uargs
+                //while (p[0] != '-')
+                while (!std::regex_match(p, forbidden_user_input))
+                {
+                    *(p_ind++) = 1;
+                    uargs.push_back(std::string(p));
+                    i++;
+                    if (i < argc)
+                        p = argv[i];
+                    else
+                        break;
+                }
+                // If we stopped on another 'flag' for whatever
+                // reason, set the current index to be removed
+                // and compensate for the for loop increase in
+                // i and p_ind
+                if (std::strcmp(p, flag) == 0)
+                {
+                    *(p_ind--) = 1;
+                    i--;
+                }
+            }
+            p_ind++;
+        }
+        // Effectively remove user arguments from argv
+        int j = 0;
+        for (int i = 0; i < argc; i++) if (u_ind[i] < 0) argv[j++] = argv[i];
+        argc = j;
+
+        return uargs;
+    }
+
+    void user_argument_map(std::map<std::string, std::vector<std::string>> *uargs)
+    {
+        // Loop through the flags (keys of the map)
+        for (auto const& p : *uargs)
+        {
+            // Get corresponding input and set it to uarg[flag]
+            std::vector<std::string> arg_vec = arg_vector(p.first.c_str());
+            (*uargs)[std::string(p.first)] = arg_vec;
+        }
+    }
+
     long get_int(const char *flag) {
         const char *p = get_cstring(flag);
         char *end;
@@ -166,13 +242,29 @@ class cmdlineargs {
 
 void setup_partitions(cmdlineargs &cl);
 
+std::map<std::string, std::vector<std::string>> hila::init_user_arguments(
+        const std::vector<std::string> flags)
+{
+    std::map<std::string, std::vector<std::string>> argmap;
+
+    // Initialise each key to an empty vector of strings
+    for (int i = 0; i < flags.size(); i++)
+    {
+        argmap["-" + flags[i]] = std::vector<std::string>();
+    }
+    return argmap;
+}
+
 /**
  * @brief Read in command line arguments. Initialise default stream and MPI communication
  *
  * @param argc Number of command line arguments
  * @param argv List of command line arguments
  */
-void hila::initialize(int argc, char **argv) {
+//void hila::initialize(int argc, char **argv,
+//                      std::vector<std::string> *custom_args) {
+void hila::initialize(int argc, char **argv,
+                      std::map<std::string, std::vector<std::string>> *custom_args) {
 
 #if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_)) // || defined(__bg__)
     /* First, adjust malloc so that glibc free() does not
@@ -209,6 +301,19 @@ void hila::initialize(int argc, char **argv) {
     // Init command line - after MPI has been started, so
     // that all nodes do this
     cmdlineargs commandline(argc, argv);
+
+    //// Start by parsing out custom options specified by flag -u
+    //std::vector<std::string> cargs = commandline.get_user_arguments();
+    //if (custom_args != nullptr)
+    //    *custom_args = cargs;
+
+    // Start by parsing out custom options specified by the user flags in cargs
+    // Fill the keys
+    if (custom_args != nullptr)
+    {
+        commandline.user_argument_map(custom_args);
+    }
+
 
     // check the "-check" -input early
     // do it only with 1 node
