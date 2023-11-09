@@ -18,6 +18,7 @@
 #include <type_traits>
 #include <cmath>
 #include <iomanip>
+#include <map>
 
 
 #ifdef HILAPP
@@ -117,7 +118,15 @@ extern const char *input_file;
 
 enum sort { unsorted, ascending, descending };
 
-void initialize(int argc, char **argv);
+//void initialize(int argc, char **argv,
+//                std::vector<std::string> *custom_args = nullptr);
+
+std::map<std::string, std::vector<std::string>> init_user_arguments(
+                         const std::vector<std::string> flags);
+
+void initialize(int argc, char **argv,
+                std::map<std::string, std::vector<std::string>> *custom_args = nullptr);
+
 void finishrun();
 void terminate(int status);
 void error(const std::string &msg);
