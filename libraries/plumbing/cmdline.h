@@ -5,6 +5,7 @@ struct argmap_val
 {
     std::vector<std::string> val_strings;
     std::string help_text;
+    bool used;
 };
 
 class cmdlinearguments {
@@ -27,6 +28,7 @@ class cmdlinearguments {
     void add_flag(std::string flag, std::string help_text);
     void print_help();
     int flag_set(const char *flag);
+    bool flag_used(const char *flag);
     long get_int(const char *flag, int i = 0);
     double get_double(const char *flag, int i = 0);
     std::string get_string(const char *flag, int i = 0);

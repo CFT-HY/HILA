@@ -19,16 +19,7 @@ void cmdlinearguments::quit_with_help()
 cmdlinearguments GLOB_ARGS;
 
 cmdlinearguments::cmdlinearguments() {
-    // Set default flags and their documentation when initializing
-    add_flag("-t","cpu time limit\n");
-    add_flag("-o","output filename (default: stdout)");
-    add_flag("-i","input filename (overrides the 1st hila::input() name)\nuse '-i -' for standard input");
-    add_flag("-device","in GPU runs using only 1 GPU, choose this GPU number (default 0)");
-    add_flag("-check","check input & layout with <nodes>-nodes & exit\nonly with 1 real MPI node (without mpirun)");
-    add_flag("-n","number of nodes used in layout check, only relevant with -check");
-    add_flag("-partitions","number of partitioned lattice streams");
-    add_flag("-sync","synchronize partition runs (on/off) (default = off)");
-}
+    }
 
 void cmdlinearguments::initialise_args(int argc0, char **argv0) {
     argc = argc0;
@@ -39,21 +30,33 @@ void cmdlinearguments::initialise_args(int argc0, char **argv0) {
 
 strvec cmdlinearguments::values(std::string flag)
 {
-    return argmap[flag].val_strings;
+    strvec valvec = argmap[flag].val_strings;
+    if (argmap.count(flag) == 0)
+    {
+        hila::out0 << "Flag '" << flag << "' is not recognized!\n";
+        quit_with_help();
+    }
+
+    if (valvec.size() == 0)
+    {
+        hila::out0 << "\n\nFlag '" << flag << "' has no entries"
+                   << " and the associated vector of strings is of length zero!\n\n";
+    }
+    return valvec;
 }
 
 void cmdlinearguments::add_flag(std::string flag, std::string help_text)
 {
     if (argmap.count(flag) > 0)
     {
-        hila::out0 << "###################################################\n";
+        hila::out0 << "\n###################################################\n";
         hila::out0 << "# Flag " << flag << " is already set! Terminating.\n";
-        hila::out0 << "###################################################\n";
+        hila::out0 << "###################################################\n\n";
         quit_with_help();
     }
     else
     {
-        argmap[flag] = {std::vector<std::string>(), help_text};
+        argmap[flag] = {std::vector<std::string>(), help_text, false};
     }
 }
 
@@ -74,6 +77,8 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
         // check if its the flag
         if (std::strcmp(p, flag) == 0)
         {
+            // Indicate that the flag has been spotted on the command-line
+            argmap[flag].used = true;
             // Slate for removal and move onto the
             // options
             *(p_ind++) = 1;
@@ -82,15 +87,11 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
                     p = argv[i];
             else
             {
-                hila::out0 << "Flag " << flag << " is missing an entry!\n";
-                hila::out0 << "Terminating.\n";
-                hila::finishrun();
                 break;
             }
             // Check if the string is a valid input
             // (Not of type ^-[a-zA-Z].*)
             // and push into vector uargs
-            //while (p[0] != '-')
             while (!std::regex_match(p, forbidden_user_input))
             {
                 *(p_ind++) = 1;
@@ -101,6 +102,7 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
                 else
                     break;
             }
+
             // If we stopped on another 'flag' for whatever
             // reason, set the current index to be removed
             // and compensate for the for loop increase in
@@ -129,6 +131,15 @@ void cmdlinearguments::fill_argmap()
         // Get corresponding input and set it to uarg[flag]
         std::vector<std::string> arg_vec = read_arg_vector(p.first.c_str());
         argmap[std::string(p.first)].val_strings = arg_vec;
+    }
+    if (argc > 1)
+    {
+        hila::out0 << "There remain unprocessed command-line arguments:\n";
+        for (int i = 1; i < argc; i++)
+            hila::out0 << "'" << argv[i] << "', ";
+        hila::out0 << "\n";
+        hila::out0 << "Terminating.\n";
+        quit_with_help();
     }
 }
 
@@ -173,6 +184,11 @@ int cmdlinearguments::flag_set(const char *flag)
     else return 0;
 }
 
+bool cmdlinearguments::flag_used(const char *flag)
+{
+    return argmap[flag].used;
+}
+
 long cmdlinearguments::get_int(const char *flag, int i)
 {
     // If flag is found and non-empty
@@ -186,7 +202,7 @@ long cmdlinearguments::get_int(const char *flag, int i)
             hila::out0 << "Flag '" << flag << "' has only " << set + 1
                        << " entries. Can't return index " << i << ".\n";
             hila::out0 << "Terminating.\n";
-            hila::finishrun();
+            quit_with_help();
         }
 
         long val = 0;
@@ -204,8 +220,9 @@ long cmdlinearguments::get_int(const char *flag, int i)
         return val;
     }
     else {
-        hila::out0 << "Requested flag '" << flag << "' is missing an entry!\n";
-        return LONG_MAX;
+        hila::out0 << "Flag '" << flag << "' is missing an entry!\n";
+        hila::out0 << "Terminating.\n";
+        quit_with_help();
     }
 }
 
@@ -219,10 +236,10 @@ double cmdlinearguments::get_double(const char *flag, int i)
         if (i < set)
             opt = argmap[flag].val_strings[i];
         else {
-            hila::out0 << "Flag '" << flag << "' has only " << set + 1
+            hila::out0 << "Flag '" << flag << "' has only " << set
                        << " entries. Can't return index " << i << ".\n";
             hila::out0 << "Terminating.\n";
-            hila::finishrun();
+            quit_with_help();
             return -1;
         }
 
@@ -241,7 +258,13 @@ double cmdlinearguments::get_double(const char *flag, int i)
         return val;
     }
     // if not found
-    else return -1;
+    else
+    {
+        hila::out0 << "Flag '" << flag << "' is missing an entry!\n";
+        hila::out0 << "Terminating.\n";
+        quit_with_help();
+        return -1;
+    }
 }
 
 std::string cmdlinearguments::get_string(const char *flag, int i)
@@ -255,7 +278,7 @@ std::string cmdlinearguments::get_string(const char *flag, int i)
             hila::out0 << "Flag '" << flag << "' has only " << set + 1
                        << " entries. Can't return index " << i << ".\n";
             hila::out0 << "Terminating.\n";
-            hila::finishrun();
+            quit_with_help();
             return "";
         }
     }
@@ -263,7 +286,7 @@ std::string cmdlinearguments::get_string(const char *flag, int i)
     {
         hila::out0 << "Flag '" << flag << "' is missing an entry!\n";
         hila::out0 << "Terminating.\n";
-        hila::finishrun();
+        quit_with_help();
         return "";
     }
 }

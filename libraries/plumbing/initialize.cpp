@@ -99,21 +99,33 @@ void hila::initialize(int argc, char **argv) {
     if (hila::myrank() == 0)
         hila::out0.rdbuf(std::cout.rdbuf());
 
+    // Set the inbuilt command-line flags and their help texts
+    GLOB_ARGS.add_flag("-t","cpu time limit");
+    GLOB_ARGS.add_flag("-o","output filename (default: stdout)");
+    GLOB_ARGS.add_flag("-i","input filename (overrides the 1st hila::input() name)\nuse '-i -' for standard input");
+    GLOB_ARGS.add_flag("-device","in GPU runs using only 1 GPU, choose this GPU number (default 0)");
+    GLOB_ARGS.add_flag("-check","check input & layout with <nodes>-nodes & exit\nonly with 1 real MPI node (without mpirun)");
+    GLOB_ARGS.add_flag("-n","number of nodes used in layout check, only relevant with -check");
+    GLOB_ARGS.add_flag("-partitions","number of partitioned lattice streams");
+    GLOB_ARGS.add_flag("-sync","synchronize partition runs (on/off) (default = off)");
 
     // Init command line - after MPI has been started, so
     // that all nodes do this. First feed argc and argv to the
     // command-line class
     GLOB_ARGS.initialise_args(argc, argv);
-    // Parse for the preset flags. The values can now be requested from
-    // the class.
+    // Parse for the preset flags.
     GLOB_ARGS.fill_argmap();
+    // The values can now be requested from the class.
 
     // check the "-check" -input early
     // do it only with 1 node
     if (lattice.nodes.number == 1) {
-        if (GLOB_ARGS.flag_set("-check")) {
-            long nodes = GLOB_ARGS.get_int("-n");
-            if (nodes == LONG_MAX)
+        // Check whether '-check' was found and only then search for '-n'
+        if (GLOB_ARGS.flag_used("-check")) {
+            long nodes;
+            if (GLOB_ARGS.flag_set("-n"))
+                long nodes = GLOB_ARGS.get_int("-n");
+            else
                 nodes = 1;
 
             hila::check_input = true;
@@ -130,8 +142,10 @@ void hila::initialize(int argc, char **argv) {
 
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input) {
-        long device = GLOB_ARGS.get_int("-device");
-        if (device == LONG_MAX)
+        long device;
+        if (GLOB_ARGS.flag_set("-device"))
+            long device = GLOB_ARGS.get_int("-device");
+        else
             device = 0;
 
         initialize_gpu(lattice.mynode.rank, device);
@@ -144,18 +158,18 @@ void hila::initialize(int argc, char **argv) {
     if (hila::partitions.number() == 1) {
         int do_exit = 0;
         if (hila::myrank() == 0) {
-            if (GLOB_ARGS.flag_set("-o")) {
+            if (GLOB_ARGS.flag_used("-o")) {
+                // Quits if '-o' was left without an argument
                 std::string name = GLOB_ARGS.get_string("-o");
-                // Open file for append
-                if (name.length() == 0) {
-                    hila::out << "Filename must be given with option '-o'\n";
-                    do_exit = 1;
-                } else if (!hila::check_input) {
+                // If found, open the file for the output
+                if (!hila::check_input) {
                     hila::output_file.open(name, std::ios::out | std::ios::app);
                     if (hila::output_file.fail()) {
                         hila::out << "Cannot open output file " << name << '\n';
                         do_exit = 1;
                     } else {
+                        hila::out0 << "Output is now directed to the file '"
+                                   << name << "'.\n";
                         hila::out.flush();
                         hila::out.rdbuf(
                             hila::output_file.rdbuf()); // output now points to output_redirect
@@ -201,7 +215,8 @@ void hila::initialize(int argc, char **argv) {
     }
 
     // Check if flag set and parse
-    if (GLOB_ARGS.flag_set("-t")) {
+    if (GLOB_ARGS.flag_used("-t")) {
+        // Following quits if '-t' is given without an integer argument
         long cputime = GLOB_ARGS.get_int("-t");
         if ((cputime > 0) and (cputime < LONG_MAX)) {
             hila::out0 << "CPU time limit " << cputime << " seconds\n";
@@ -213,8 +228,9 @@ void hila::initialize(int argc, char **argv) {
     }
 
 
-    if (GLOB_ARGS.flag_set("-i"))
+    if (GLOB_ARGS.flag_used("-i"))
     {
+        // Quits if '-i' given without a string argument
         hila::input_file = GLOB_ARGS.get_string("-i").c_str();
         hila::out0 << "Input file from command line: " << hila::input_file << '\n';
     }
@@ -379,7 +395,8 @@ FILE *open_parameter_file()
 void setup_partitions() {
 
     // get partitions cmdlinearg first
-    if (GLOB_ARGS.flag_set("-partitions")) {
+    if (GLOB_ARGS.flag_used("-partitions")) {
+        // Following quits if '-partitions' is given without an integer argument
         long lnum = GLOB_ARGS.get_int("-partitions");
         if (lnum <= 0) {
             hila::out0 << "partitions=<number> command line argument value must be positive "
@@ -413,7 +430,7 @@ void setup_partitions() {
         split_into_partitions(hila::partitions.mylattice());
 #endif
     std::string fname;
-    if (GLOB_ARGS.flag_set("-o"))
+    if (GLOB_ARGS.flag_used("-o"))
     {
         std::string opt = GLOB_ARGS.get_string("-o");
         fname = opt + std::to_string(hila::partitions.mylattice());
@@ -454,7 +471,7 @@ void setup_partitions() {
 
 
     /* Default sync is no */
-    if (GLOB_ARGS.flag_set("-sync"))
+    if (GLOB_ARGS.flag_used("-sync"))
     {
         std::string onoffopt = GLOB_ARGS.get_string("-sync");
         if (get_onoff(onoffopt) == 1)
