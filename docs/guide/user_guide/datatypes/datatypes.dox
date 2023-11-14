@@ -13,7 +13,7 @@ List of datatypes offered by HILA
 
 # Basic types: {#basic}
 
-- Complex\<S\>
+- \subpage complex
 - #Vector\<n,T\>
 - #RowVector\<n,T\>
 - Matrix\<n,m,T\>
