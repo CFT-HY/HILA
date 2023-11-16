@@ -1,7 +1,5 @@
 
 #include <cstring>
-#include <map>
-#include <regex>
 #include "hila.h"
 
 // define these global var here - somehow NULL needed for ostream
@@ -19,7 +17,6 @@ void vector_type_info();
 
 #include <limits.h>
 #include <errno.h>
-#include "cmdline.h"
 
 int get_onoff(std::string flag)
 {
@@ -64,8 +61,7 @@ void setup_partitions();
  * @param argc Number of command line arguments
  * @param argv List of command line arguments
  */
-//void hila::initialize(int argc, char **argv,
-//                      std::vector<std::string> *custom_args) {
+
 void hila::initialize(int argc, char **argv) {
 
 #if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_)) // || defined(__bg__)
@@ -110,19 +106,17 @@ void hila::initialize(int argc, char **argv) {
 
     // Init command line - after MPI has been started, so
     // that all nodes do this. First feed argc and argv to the
-    // global cmdline class instance
+    // global cmdline class instance and parse for the preset flags.
     hila::cmdline.initialise_args(argc, argv);
-    // Parse for the preset flags.
-    hila::cmdline.fill_argmap();
     // The values can now be requested from hila::cmdline.
 
     // check the "-check" -input early
     // do it only with 1 node
     if (lattice.nodes.number == 1) {
         // Check whether '-check' was found and only then search for '-n'
-        if (hila::cmdline.flag_used("-check")) {
+        if (hila::cmdline.flag_present("-check")) {
             long nodes;
-            if (hila::cmdline.flag_used("-n")) {
+            if (hila::cmdline.flag_present("-n")) {
                 nodes = hila::cmdline.get_int("-n");
             }
             else
@@ -159,7 +153,7 @@ void hila::initialize(int argc, char **argv) {
     if (hila::partitions.number() == 1) {
         int do_exit = 0;
         if (hila::myrank() == 0) {
-            if (hila::cmdline.flag_used("-o")) {
+            if (hila::cmdline.flag_present("-o")) {
                 // Quits if '-o' was left without an argument
                 std::string name;
                 if (hila::cmdline.flag_set("-o"))
@@ -223,10 +217,10 @@ void hila::initialize(int argc, char **argv) {
     }
 
     // Check if flag set and parse
-    if (hila::cmdline.flag_used("-t")) {
+    if (hila::cmdline.flag_present("-t")) {
         // Following quits if '-t' is given without an integer argument
         long cputime = hila::cmdline.get_int("-t");
-        if ((cputime > 0) and (cputime < LONG_MAX)) {
+        if (cputime > 0) {
             hila::out0 << "CPU time limit " << cputime << " seconds\n";
             hila::setup_timelimit(cputime);
         }
@@ -237,7 +231,7 @@ void hila::initialize(int argc, char **argv) {
 
 
     hila::input_file = nullptr;
-    if (hila::cmdline.flag_used("-i"))
+    if (hila::cmdline.flag_present("-i"))
     {
         // Quits if '-i' given without a string argument
         // Copy to a static variable to preserve the memory address
@@ -407,7 +401,7 @@ FILE *open_parameter_file()
 void setup_partitions() {
 
     // get partitions cmdlinearg first
-    if (hila::cmdline.flag_used("-partitions")) {
+    if (hila::cmdline.flag_present("-partitions")) {
         // Following quits if '-partitions' is given without an integer argument
         long lnum = hila::cmdline.get_int("-partitions");
         if (lnum <= 0) {
@@ -442,7 +436,7 @@ void setup_partitions() {
         split_into_partitions(hila::partitions.mylattice());
 #endif
     std::string fname;
-    if (hila::cmdline.flag_used("-o"))
+    if (hila::cmdline.flag_present("-o"))
     {
         std::string opt = hila::cmdline.get_string("-o");
         fname = opt + std::to_string(hila::partitions.mylattice());
@@ -483,7 +477,7 @@ void setup_partitions() {
 
 
     /* Default sync is no */
-    if (hila::cmdline.flag_used("-sync"))
+    if (hila::cmdline.flag_present("-sync"))
     {
         std::string onoffopt = hila::cmdline.get_string("-sync");
         if (get_onoff(onoffopt) == 1)
