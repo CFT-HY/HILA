@@ -2,9 +2,25 @@
 /**
 \page field_documentation Field
 
-Field is the most important Datatype offered by HILA. The Field defines the lattice, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
+Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
 
 To see all the possible methods of a Field see the class page which lists comprehensive documentation.
+
+# Constructors and assignments
+
+By default Field variables are constructed uninitialized. Fields can also be constructed with a constant or another Field:
+
+~~~cpp
+  Field<Complex<double>> f;       // Default constructor assigns the fields to `nullptr`
+  Field<Complex<double>> g(1);    // Each elements becomes (1,0)
+  Field<Complex<double>> h = 1;   // Equivalent to above
+  Field<Complex<double>> m(g);    // Copy constructor: content of g is copied
+  m = f;                          // ERROR: trying to use the value of the uninitialized Field f
+  f = 2 + g;                      // This initializes f
+~~~
+Assginment to Field variables is possible either from another Field or from a single element which are assignment compatible.  Assignment from 0 is always possible.  
+
+Uninitialized Field does not take any storage, it is automatically allocated on first use.  Fields are destructed when they run out of scope.
 
 # Access and Traversal
 
@@ -16,7 +32,7 @@ To illustrate how looping over a Field object works we will first define a few f
 ~~~cpp
   using mytype = Matrix<3,3,Complex<double>>;   // use type alias
   Field<mytype> f,g,h; // Default constructor assigns the fields to `nullptr`
-  g = 2 // Assigning g to be 2*Id throughout the field
+  g = 2 // Assigning g to be 2*I throughout the field
 ~~~
 
 For a field comprised of square-matrix elements, real numbers are algebraically interpreted as \f$ 2 = 2\cdot\mathbb{1}\f$, multiples of identity matrix.
@@ -24,13 +40,12 @@ For a field comprised of square-matrix elements, real numbers are algebraically 
 We can now iterate over the fields with the onsites loop:
 
 ~~~cpp
-  onsites(ALL) f[X] = 2 + g[X];          // 2 acts as 2*I for square matrices
+  onsites(ALL) f[X] = 2 + g[X];          // 2 acts as 2* unit matrix for square matrices
 ~~~
 
-Above we linearly add each element at `X` from g to each element at `X` in f with an additional \f$2\cdot\mathbb{1}\f$ at each site. The ALL statement is a ::Parity which indicates that we will iterate over the whole Field. Other options are EVEN and ODD which indicate that we only iterate over the even or odd elements of the field.
+Above we linearly add each element at `X` from g to each element at `X` in f with an additional \f$2\cdot\mathbb{1}\f$ at each site. The ALL statement is a ::Parity which indicates that we will iterate over the whole Field. Other options are EVEN and ODD which indicate that we only iterate over the even or odd sites.
 
 Similarly we can write this same statement in the following short form:
-
 
 ~~~cpp
   f[ALL] = 2 + g[X];                     // equivalent shorter form for simple 1-line assignments
@@ -48,7 +63,7 @@ Now to demonstrate a more complicated onsites loop we will apply neighboring eff
       auto t = g[X + d];                 // fetch from neighboring site in the e_x direction
       f[X] += t + t*t;                   // can define variables in the loop   
 
-      h[X] = g[X + e_x - 2*e_y];         // non-nearest neighbour fetch (TODO:optimize!)
+      h[X] = g[X + e_x - 2*e_y];         // non-nearest neighbour fetch
 
       if (X.coordinate(e_t) == 0) {      // Do this on 1st timeslice only
           h[X] *= 0.5;
@@ -64,9 +79,36 @@ On line 6 of the onsites loop we can also see that if statements can be used to 
 
 Because `f[X]` is of type field element (in this case mytype), the methods defined for the element type can be used. Within onsites loop `f[X].dagger()` is ok, `f.dagger()` is not. `f[X]` also serves as a visual identifier for a field variable access.
 
-# Additional features
+External non-Field variables cannot be changed inside onsites loops (except in reductions, see below)
+~~~cpp
+double d = 2;
+onsites(ALL) {
+    d = f[X];              // ERROR: cannot change the value of variables defined outside onsites
+    double a = f[X] + d;   // OK, a defined inside loop and d is constant
+}
+~~~
+
+ # Additional features
 
 ## Reductions
+
+Standard reduction is done by using operators `+=` or `*=` and regular variables:
+~~~cpp
+    Field<Complex<double>> f,g;
+    ...
+    Complex<double> s = 0, d = 0;
+    onsites(ALL) {
+        s += f[X] + g[X];
+        d += f[X] + g[X];
+    }
+    hila::out0 << "Average of f+g is " << s / lattice.volume() 
+               << " and f-g " << d / lattice.volume() >>'\n';
+~~~
+By default the reduction is sent to all MPI ranks (`MPI_Allreduce()`). If reduction only to rank 0 is needed,
+`hila::set_allreduce(false);` can be added before `onsites()` (uses `MPI_Reduce()`).  This may give higher performance.
+
+Reduction can use 
+
 
 The Field object has the following reductions defined:
 
@@ -74,6 +116,15 @@ The Field object has the following reductions defined:
 - Field::product
 - Field::min
 - Field::max
+
+~~~cpp
+    Field<double> f;
+    f.random();
+    hila::out0 << "Sum of elements of f is " << f.sum() << '\n';
+~~~
+
+Min and max methods 
+
 
 Also sum and product reductions can be performed withing the onsites loops as:
 
