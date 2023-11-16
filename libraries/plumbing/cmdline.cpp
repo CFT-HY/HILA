@@ -4,9 +4,8 @@
 #include <map>
 #include <vector>
 #include <regex>
-#include <limits.h>
-#include "cmdline.h"
 #include "hila.h"
+
 using strvec = std::vector<std::string>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -29,17 +28,17 @@ void cmdlinearguments::quit_with_help()
 /// @var std::string argmap_val::help_text
 /// @brief A string describing the use of the flag
 ///
-/// @var bool argmap_val::used
+/// @var bool argmap_val::present
 /// @brief A boolean telling whether the flag was found in argv
 ////////////////////////////////////////////////////////////////////////////////
 struct argmap_val
 {
     strvec val_strings;
     std::string help_text;
-    bool used;
+    bool present;
 };
 
-// By importing cmdline 
+// class instance cmdline is globally available through hila.h
 namespace hila {
 cmdlinearguments cmdline;
 }
@@ -57,6 +56,9 @@ void cmdlinearguments::initialise_args(int argc0, char **argv0) {
     argv = (const char **)malloc(argc * sizeof(const char *));
     for (int i = 0; i < argc; i++)
         argv[i] = argv0[i];
+
+    // Proceed to parse argv
+    fill_argmap();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -137,7 +139,7 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
         if (std::strcmp(p, flag) == 0)
         {
             // Indicate that the flag has been spotted in argv
-            argmap[flag].used = true;
+            argmap[flag].present = true;
             // Slate for removal and move onto the
             // options
             *(p_ind++) = 1;
@@ -264,9 +266,9 @@ int cmdlinearguments::flag_set(const char *flag)
 ///
 /// @return Boolean indicating the statement.
 ////////////////////////////////////////////////////////////////////////////////
-bool cmdlinearguments::flag_used(const char *flag)
+bool cmdlinearguments::flag_present(const char *flag)
 {
-    return argmap[flag].used;
+    return argmap[flag].present;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

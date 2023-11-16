@@ -18,7 +18,6 @@
 #include <type_traits>
 #include <cmath>
 #include <iomanip>
-#include <map>
 
 
 #ifdef HILAPP
@@ -119,7 +118,6 @@ extern const char *input_file;
 enum sort { unsorted, ascending, descending };
 
 void initialize(int argc, char **argv);
-
 void finishrun();
 void terminate(int status);
 void error(const std::string &msg);
