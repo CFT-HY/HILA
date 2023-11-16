@@ -1,12 +1,7 @@
 #ifndef CMDLINE_H
 #define CMDLINE_H
 
-struct argmap_val
-{
-    std::vector<std::string> val_strings;
-    std::string help_text;
-    bool used;
-};
+
 
 class cmdlinearguments {
   private:
@@ -14,7 +9,8 @@ class cmdlinearguments {
     const char **argv;
     
     // map to hold the flag-sorted command line arguments
-    std::map<std::string, argmap_val> argmap;
+    // argmap_val is defined in cmdline.cpp
+    std::map<std::string, struct argmap_val> argmap;
     
     std::vector<std::string> read_arg_vector(const char *flag);
     std::vector<std::string> parse_help(std::string);
@@ -35,6 +31,8 @@ class cmdlinearguments {
 
 };
 
-extern cmdlinearguments GLOB_ARGS;
+namespace hila{
+extern cmdlinearguments cmdline;
+}
 
 #endif
