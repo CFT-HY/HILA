@@ -94,20 +94,42 @@ onsites(ALL) {
 
 Standard reduction is done by using operators `+=` or `*=` and regular variables:
 ~~~cpp
-    Field<Complex<double>> f,g;
+    Field<Complex<double>> f;
+    Field<double> g;
     ...
-    Complex<double> s = 0, d = 0;
+    Complex<double> s = 0;
+    double d = 0;
     onsites(ALL) {
-        s += f[X] + g[X];
-        d += f[X] + g[X];
+        s += f[X];
+        d *= g[X];
     }
-    hila::out0 << "Average of f+g is " << s / lattice.volume() 
-               << " and f-g " << d / lattice.volume() >>'\n';
+    hila::out0 << "Average of f = " << s / lattice.volume() 
+               << " and product of the elements of g = " << d << '\n';
 ~~~
 By default the reduction is sent to all MPI ranks (`MPI_Allreduce()`). If reduction only to rank 0 is needed,
 `hila::set_allreduce(false);` can be added before `onsites()` (uses `MPI_Reduce()`).  This may give higher performance.
 
-Reduction can use 
+Sum reduction can be of any hila built-in type, product reduction only for floating point or integer variables.
+
+Reduction variable can be used for several reductions, accumulating the result:
+~~~cpp
+    double s = 5;        // initializing, for some reason, to 5
+    onsites(ALL) {
+        s += f[X];
+        s += 3*g[X];
+    }
+    onsites(EVEN) {
+        s += h[X];
+    }
+    // s will now contain 5 + sum of the contents of f, 3*g and h on even sites
+~~~
+
+### Special reduction variable
+
+More control of reductions can be had by using a special reduction variable:
+
+
+### ReductionVector
 
 
 The Field object has the following reductions defined:
