@@ -38,7 +38,6 @@ void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
 
     if (!sb->is_edited(sl))
         sb->insert(sl, "__device__ __host__ ", true, true);
-
 }
 
 
@@ -50,7 +49,7 @@ void GeneralVisitor::handle_loop_function_gpu(call_info_struct &ci) {
 
     gpu_loop_function_marker(ci.funcdecl);
     FunctionDecl *proto;
-    if (find_prototype(ci.funcdecl,proto)) {
+    if (find_prototype(ci.funcdecl, proto)) {
         gpu_loop_function_marker(proto);
     }
 }
@@ -626,8 +625,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         kernel << r.type << " " << r.loop_name << "sum;\n";
         // Initialize only the local element
         if (r.reduction_type == reduction::SUM) {
-            kernel << r.loop_name << "sum = 0; \n";
-            kernel << r.loop_name << "sh[threadIdx.x] = 0;\n";
+            // OLD method - using operator=, which is not necessarily loop func!
+            // kernel << r.loop_name << "sum = 0; \n";
+            // kernel << r.loop_name << "sh[threadIdx.x] = 0;\n";
+            kernel << "_hila_kernel_set_zero(" << r.loop_name << "sum);\n";
+            kernel << "_hila_kernel_set_zero(" << r.loop_name << "sh[threadIdx.x]);\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             kernel << r.loop_name << "sum = 1; \n";
             kernel << r.loop_name << "sh[threadIdx.x] = 1;\n";
@@ -828,7 +830,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     // Assign reductions to shared memory
     for (reduction_expr &r : reduction_list) {
-        kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
+        // OLD
+        // kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
+        kernel << "_hila_kernel_copy_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name << "sum);\n";
     }
 
     // Handle reductions: Need to sync threads once, then do reduction
@@ -855,8 +859,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (r.reduction_type == reduction::SUM) {
             kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
                    << " < d_lattice.loop_end) {\n";
-            kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
-                   << "sh[threadIdx.x+_H_i];\n";
+            // STD
+            // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
+            //        << "sh[threadIdx.x+_H_i];\n";
+            kernel << "_hila_kernel_add_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
+                   << "sh[threadIdx.x + _H_i]);\n";
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
@@ -871,7 +878,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // kernel << "}\n";
 
         kernel << "if(threadIdx.x == 0) {\n"
-               << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+               // << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+               << "_hila_kernel_copy_var(" << r.loop_name << "[blockIdx.x], " << r.loop_name
+               << "sh[0]);\n";
         kernel << "}\n";
     }
     // Reduction end handling stops here

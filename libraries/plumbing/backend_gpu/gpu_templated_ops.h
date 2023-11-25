@@ -44,6 +44,61 @@ T cuda_reduce_sum(  T * vector, int N ){
 }
 */
 
+// Functions used by hilapp in reductions
+// (cannot guarantee operator= and operator+= are marked __device__)
+
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+__device__ static void _hila_kernel_set_zero(T &v) {
+    v = 0;
+}
+
+template <typename T, std::enable_if_t<!hila::is_arithmetic<T>::value, int> = 0>
+__device__ static void _hila_kernel_set_zero(T &v) {
+    using ntype = hila::arithmetic_type<T>;
+    constexpr int N = sizeof(T) / sizeof(ntype);
+
+    ntype *arr = reinterpret_cast<ntype *>(&v);
+    for (int i = 0; i < N; i++)
+        arr[i] = 0;
+}
+
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+__device__ static void _hila_kernel_copy_var(T &a, const T &b) {
+    a = b;
+}
+
+template <typename T, std::enable_if_t<!hila::is_arithmetic<T>::value, int> = 0>
+__device__ static void _hila_kernel_copy_var(T &a, const T &b) {
+    using ntype = hila::arithmetic_type<T>;
+    constexpr int N = sizeof(T) / sizeof(ntype);
+
+    ntype *ar = reinterpret_cast<ntype *>(&a);
+    const ntype *br = reinterpret_cast<const ntype *>(&b);
+
+    for (int i = 0; i < N; i++)
+        ar[i] = br[i];
+}
+
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+__device__ static void _hila_kernel_add_var(T &a, const T &b) {
+    a += b;
+}
+
+template <typename T, std::enable_if_t<!hila::is_arithmetic<T>::value, int> = 0>
+__device__ static void _hila_kernel_add_var(T &a, const T &b) {
+    using ntype = hila::arithmetic_type<T>;
+    constexpr int N = sizeof(T) / sizeof(ntype);
+
+    ntype *ar = reinterpret_cast<ntype *>(&a);
+    const ntype *br = reinterpret_cast<const ntype *>(&b);
+
+    for (int i = 0; i < N; i++)
+        ar[i] += br[i];
+}
+
+
+////////////////////////////////////////////////////////////
+
 // A simple hand-written reduction that does not require a library
 template <typename T>
 __global__ void gpu_reduce_sum_kernel(T *vector, int vector_size, int new_size, int elems) {
@@ -51,7 +106,8 @@ __global__ void gpu_reduce_sum_kernel(T *vector, int vector_size, int new_size, 
     if (Index < new_size) {
         for (int i = 1; i < elems; i++) {
             int ind = Index + i * new_size;
-            vector[Index] += vector[ind];
+            // vector[Index] += vector[ind];
+            _hila_kernel_add_var(vector[Index], vector[ind]);
         }
     }
 }
@@ -261,7 +317,7 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// NOTE: IF YOU DEFINE ALT_VECTOR_REDUCTION YOU NEED TO DEFINE THE SAME IN 
+// NOTE: IF YOU DEFINE ALT_VECTOR_REDUCTION YOU NEED TO DEFINE THE SAME IN
 // codegen_gpu.cpp!
 
 // #define ALT_VECTOR_REDUCTION
@@ -366,6 +422,7 @@ void gpu_set_value(T *vec, const T &val, size_t N) {
 //     int blocks = N / N_threads + 1;
 //     gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 // }
+
 
 #endif // !HILAPP
 
