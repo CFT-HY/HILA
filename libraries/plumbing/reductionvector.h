@@ -261,7 +261,7 @@ class ReductionVector {
     }
 
     /// For delayed reduction, reduce starts or completes the reduction operation
-    void reduce() {
+    void start_reduce() {
         if (delay_is_on) {
             delay_is_on = false;
 
@@ -270,6 +270,12 @@ class ReductionVector {
             else
                 reduce_operation(MPI_PROD);
         }
+    }
+
+    /// Complete non-blocking or delayed reduction
+    void reduce() {
+        start_reduce();
+        wait();
     }
 
     /// data() returns ptr to the raw storage
