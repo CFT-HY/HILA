@@ -5,44 +5,22 @@
 
 
 //////////////////////////////////////////////////////////////////////////////////
-/// Special reduction class: declare a reduction variable which
-/// can be used in site loops
-/// Example:
-///    Reduction<Complex<double>> rv = 0;
-///    onsites(ALL) rv += fv[X];
-///
-///    ...  // possibly do something not involving rv
-///
-/// Reduction can be modified to on/off: allreduce(), nonblocking(), delayed()
-/// Example:
-///    rv.allreduce(false).delayed();
-///
-/// Delayed reduction can be used e.g. in expressions like
-///
-///   Reduction<double> rv = 0;
-///   rv.allreduce(false).delayed();
-///   foralldir(d) {
-///       onsites(ALL) rv += a[X+d]*a[X];
-///   }
-///   rv.reduce();
-///
-/// This does only one reduction operation, not for every onsites() -loop.
-/// Result is the same
-///
-/// Reduction variable can be used again
+/// @brief Special reduction class: enables delayed and non-blocking reductions, which
+/// are not possible with the standard reduction. See [user guide](@ref reduction_type_guide) 
+/// for details
 ///
 
 template <typename T>
 class Reduction {
 
   private:
+    // value holder
     T val;
-    // Value is derived from class T
 
-    /// comm_is_on is true if non-blocking MPI communications are under way.
+    // comm_is_on is true if non-blocking MPI communications are under way.
     bool comm_is_on = false;
 
-    /// Reduction status : is this allreduce, nonblocking, or delayed
+    // Reduction status : is this allreduce, nonblocking, or delayed
     bool is_allreduce_ = true;
     bool is_nonblocking_ = false;
     bool is_delayed_ = false;
@@ -122,11 +100,18 @@ class Reduction {
     /// Initialize to zero by default (? exception to other variables)
     /// allreduce = true by default
     Reduction() {
-        (T &)*this = 0;
+        val = 0;
         comm_is_on = false;
     }
-    Reduction(const T &v) {
-        (T &)*this = v;
+    /// Initialize to value only on rank 0 - ensures expected result for delayed reduction
+    /// 
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    Reduction(const S &v) {
+        if (hila::myrank() == 0) {
+            val = v;
+        } else {
+            val = 0;
+        }
         comm_is_on = false;
     }
 
@@ -171,33 +156,37 @@ class Reduction {
     /// Return value of the reduction variable.  Wait for the comms if needed.
     const T value() {
         reduce();
-        wait();
         return val;
     }
 
 
     /// Method set is the same as assignment, but without return value
-    /// No need to complete comms if going on
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    void set(S &rhs) {
-        if (comm_is_on)
-            MPI_Cancel(&request);
-
-        comm_is_on = false;
-        val = rhs;
+    void set(const S &rhs) {
+        *this = rhs;
     }
 
     /// Assignment is used only outside site loops - drop comms if on, no need to wait
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    T &operator=(const S &rhs) {
-        set(rhs);
-        return val;
+    T operator=(const S &rhs) {
+        if (comm_is_on)
+            MPI_Cancel(&request);
+
+        comm_is_on = false;
+        T ret = rhs;
+        if (hila::myrank() == 0) {
+            val = ret;
+        } else {
+            val = 0; 
+        }
+        // all ranks return the same value
+        return ret;
     }
 
-    ///  Make compound ops return void, unconventionally:
+    /// Compound operator += is used in reduction but can be used outside onsites too.
+    /// returns void, unconventionally:
     /// these are used within site loops but their value is not well-defined.
     /// Thus  a = (r += b); is disallowed
-    /// Within site loops hilapp will change operations
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value,
                                int> = 0>
@@ -205,19 +194,12 @@ class Reduction {
         val += rhs;
     }
 
-    template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value,
-                               int> = 0>
-    void operator-=(const S &rhs) {
-        val -= rhs;
-    }
-
-    template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value,
-                               int> = 0>
-    void operator*=(const S &rhs) {
-        val *= rhs;
-    }
+    // template <typename S,
+    //           std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value,
+    //                            int> = 0>
+    // void operator*=(const S &rhs) {
+    //     val *= rhs;
+    // }
 
     // template <typename S,
     //           std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value,
@@ -226,8 +208,8 @@ class Reduction {
     //     val /= rhs;
     // }
 
-    /// Start sum reduction -- works only if the type T addition == element-wise
-    /// addition. This is true for all hila predefined data types
+    // Start sum reduction -- works only if the type T addition == element-wise
+    // addition. This is true for all hila predefined data types
     void reduce_sum_node(const T &v) {
 
         wait(); // wait for possible ongoing
@@ -253,29 +235,29 @@ class Reduction {
     /// For Complex, Matrix and Vector data product is not element-wise.
     /// TODO: Array or std::array ?
     /// TODO: implement using custom MPI ops (if needed)
-    void reduce_product_node(const T &v) {
+    // void reduce_product_node(const T &v) {
 
-        wait();
+    //     reduce();
 
-        if (hila::myrank() == 0 || is_delayed_)
-            val *= v;
-        else
-            val = v;
+    //     if (hila::myrank() == 0 || is_delayed_)
+    //         val *= v;
+    //     else
+    //         val = v;
 
-        if (is_delayed_) {
-            if (delay_is_on && is_delayed_sum == true) {
-                assert(0 && "Cannot mix sum and product reductions!");
-            }
-            delay_is_on = true;
-            is_delayed_sum = false;
-        } else {
-            do_reduce_operation(MPI_PROD);
-        }
-    }
+    //     if (is_delayed_) {
+    //         if (delay_is_on && is_delayed_sum == true) {
+    //             assert(0 && "Cannot mix sum and product reductions!");
+    //         }
+    //         delay_is_on = true;
+    //         is_delayed_sum = false;
+    //     } else {
+    //         do_reduce_operation(MPI_PROD);
+    //     }
+    // }
 
 
-    /// For delayed reduction, reduce starts or completes the reduction operation
-    void reduce() {
+    /// For delayed reduction, start_reduce starts or completes the reduction operation
+    void start_reduce() {
         if (!comm_is_on) {
             if (delay_is_on) {
                 delay_is_on = false;
@@ -287,6 +269,13 @@ class Reduction {
             }
         }
     }
+
+    /// Complete the reduction - start if not done, and wait if ongoing
+    void reduce() {
+        start_reduce();
+        wait();
+    }
+
 };
 
 
