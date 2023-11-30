@@ -2,7 +2,7 @@
 #include <time.h>
 #include <chrono>
 
-#include "timing.h"
+#include "defs.h"
 
 //////////////////////////////////////////////////////////////////
 /// Time related routines (runtime - timing - timelimit)
@@ -66,6 +66,10 @@ double timer::start() {
         timer_list.push_back(this);
     }
 
+#ifdef GPU_SYNCHRONIZE_TIMERS
+    gpuStreamSynchronize(0);
+#endif
+
     t_start = hila::gettime();
     return t_start;
 }
@@ -74,6 +78,10 @@ double timer::stop() {
     if (!is_on)
         error();
     is_on = false;
+
+#ifdef GPU_SYNCHRONIZE_TIMERS
+    gpuStreamSynchronize(0);
+#endif
 
     double e = hila::gettime();
     t_total += (e - t_start);
@@ -119,6 +127,17 @@ void timer::report(bool print_not_timed) {
 void report_timers() {
     if (hila::myrank() == 0) {
         if (timer_list.size() > 0) {
+
+#if defined(CUDA) || defined(HIP)
+#if defined(GPU_SYNCHRONIZE_TIMERS)
+            hila::out << "TIMERS: synchronized to GPU kernel execution (GPU_SYNCHRONIZE_TIMERS "
+                         "defined)\n";
+#else
+            hila::out << "TIMERS: GPU_SYNCHRONIZE_TIMERS not defined, fine-grained timing "
+                         "likely to be incorrect\n";
+#endif
+#endif
+
             hila::out << "TIMER REPORT:             total(sec)          calls     "
                          "time/call  fraction\n";
             hila::out << "------------------------------------------------------------"

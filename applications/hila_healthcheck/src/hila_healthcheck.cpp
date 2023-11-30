@@ -116,6 +116,42 @@ void test_minmax() {
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// test random number properties
+// rough test, testing spectrum of gaussians
+
+void test_random() {
+
+    constexpr int n_loops = 100;
+
+    Field<double> f;
+
+    double fsum = 0, fsqr = 0;
+    for (int i=0; i<n_loops; i++) {
+        f.gaussian_random();
+        double s = 0, s2 = 0;
+        onsites(ALL) {
+            f[X] = hila::gaussrand();
+            s += f[X];
+            s2 += sqr(f[X]);
+        }
+        fsum += s/lattice.volume();
+        fsqr += s2/lattice.volume();
+    }
+
+    fsum /= n_loops;
+    fsqr /= n_loops;
+
+    report_pass("Gaussian random average (6 sigma limit) " + hila::prettyprint(fsum), 
+    abs(fsum), 6/sqrt(((double)n_loops)*lattice.volume()));
+
+    report_pass("Gaussian random width^2 " + hila::prettyprint(fsqr),
+    fsqr - 1, 6/sqrt(((double)n_loops)*lattice.volume()));
+
+}
+
+
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // test access to a list of sites
 
 void test_set_elements_and_select() {
@@ -563,6 +599,8 @@ int main(int argc, char **argv) {
     test_site_access();
 
     test_minmax();
+
+    test_random();
 
     test_set_elements_and_select();
 

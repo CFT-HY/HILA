@@ -1,18 +1,17 @@
-# Platform specific makefile for cuda code.  Tuned for "puhti" computer at CSC
+# Platform specific makefile for cuda code.  Tuned for CFT group server (Nvidia RTX A4000)
 #
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
 #
-# Show option in "make help"
-#% ARCH=cuda options: use with make [...] options
-#%    CUDA_VERSION=99.9   - Set cuda version, if installed (default=11.6)
-#%    CUDA_ARCH=<version> - Compile with compute_NN and sm_NN (default=61)
-#%    DEBUG=on            - Compile with -g, for debugging
-#%
+#
+
+$(info ############################################################## )
+$(info Use "/opt/local/cuda-aware-mpi/bin/mpirun" to run MPI program! )
+$(info ############################################################## )
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
 ifndef CUDA_VERSION
-	CUDA_VERSION = 11.6
+	CUDA_VERSION = 12
 endif
 CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
 # CC = /usr/bin/nvcc
@@ -20,17 +19,10 @@ LD := $(CC) -std c++17
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
 ifndef CUDA_ARCH
-	CUDA_ARCH = 61
+	CUDA_ARCH = 86
 endif
-
-CXXFLAGS := -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --restrict
-ifndef DEBUG
-	CXXFLAGS += -O3 --use_fast_math
-else
-	CXXFLAGS += -g
-endif
-
-# -gencode arch=compute_52,code=sm_52
+CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
+CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --use_fast_math --restrict
 
 #
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
@@ -41,18 +33,18 @@ CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress
 LDLIBS := -L/usr/local/cuda-${CUDA_VERSION}/targets/x86_64-linux/lib/ -lcudart -lcufft -lm 
 
 # Need to give include directory to mpi for hilapp and nvcc - here 2 common ones
-MPI_INCLUDE_DIRS := -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
-MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
+MPI_INCLUDE_DIRS := -I/opt/local/cuda-aware-mpi/include
+MPI_LIBS := -L/opt/local/cuda-aware-mpi/lib -lmpi
 
 LDLIBS += $(MPI_LIBS)
 LDFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
-
 ################
 
 # These variables must be defined here
 HILAPP_OPTS := -target:CUDA 
 HILA_OPTS := -DCUDA $(MPI_INCLUDE_DIRS)
+
 
