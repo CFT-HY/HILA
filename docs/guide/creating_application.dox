@@ -1,16 +1,17 @@
-Creating your first HILA application
-==========
+/**
+
+\page first_application First application
 
 This section goes over how to get started with HILA and creating your first HILA application
 
-## Table of contents
+# Table of contents
 
 1. [Application file structure](#application-file-structure)
 2. [Makefile system](#makefile-system)
 3. [Simple HILA application](#simple-hila-application)
 4. [Conclusion](#conclusion)
 
-## Application file structure {#application-file-structure}
+# Application file structure {#application-file-structure}
 
 Like most c++ applications, HILA applications require two things, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined default application structure is introduced:
 
@@ -89,7 +90,7 @@ The only point of note is the definition for the respective object file location
     build/{own application srouce name}: Makefile build/{own application srouce name}.o $(HILA_OBJECTS) $(HEADERS)
         $(LD) -o $@ build/{own application srouce name}.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
-### Target backends
+## Target backends
 
 The target backends are defined in the folder HILA/libraries/target_arch. There are two types of target backends. General ones defined for specific paralellization technologies:
 
@@ -112,7 +113,7 @@ And ones which are defined for specific HPC platforms:
 
 The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.
 
-## Simple HILA application {#simple-hila-application}
+# Simple HILA application {#simple-hila-application}
 
 Now that we have discussed the appropriate makefile we can move on to a simple HILA application.
 
@@ -267,6 +268,8 @@ hila::out0 << "Average of g is " << average << '\n';
 
 Lastly we wrap up the HILA application with the `hila::finishrun` command which cleans up MPI and performs a safe exit with a memory cleanup step. Additionally it prints out useful timing information coupled with a timestamp. Like `hila::initialize`, `lattice.setup` and `hila::seed_random`, this is a necessary method to call in any HILA application, especially when running with MPI.
 
-## Conclusion {#conclusion}
+# Conclusion {#conclusion}
 
 This concludes the section on creating your first HILA application. We have gone through the basic structure of HILA applications, and how they are built and compiled. Additionally we have discussed basic functionality that HILA offers. With this foundational knowledge one can move on to reading the comprehensive guide on [HILA functionality](./hila_functionality.md)
+
+*/

@@ -1,0 +1,31 @@
+/**
+\mainpage
+
+# Description
+
+HILA (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
+
+* **Purpose**: make writing applications straightforward and intuitive, while producing optimized executables for 
+different (super)computing platforms (parallelization with MPI, GPU computing with CUDA or HIP, AVX vectorization, 
+etc.).  Details of the parallelization and computing architecture are hidden from the user's view, and 
+all applications automatically run on present or future platform.
+Write once -- run anywhere.
+
+Hila is based on HILA preprocessor (_hilapp_), which is a C++ source-to-source transformer using the 
+[libtooling](https://clang.llvm.org/docs/LibTooling.html) toolbox of the
+[Clang](https://clang.llvm.org/) compiler.
+It converts application C++ to platform-specific C++ code,
+which is passed to appropriate compilers for the platforms.
+
+Behind the scenes HILA takes care of MPI layout and communications.  It lays out the 
+lattice fields differently for different computing platforms: 'array of structures' (standard),
+'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
+
+# Documentation contents
+
+- \subpage dependencies_and_installation
+- \subpage first_application
+- \subpage user_guide
+- \subpage hila_applications
+
+*/

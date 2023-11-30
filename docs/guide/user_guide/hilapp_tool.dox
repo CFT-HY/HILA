@@ -1,0 +1,25 @@
+/**
+
+\page hilapp_tool Hila pre-processor tool
+
+The _hilapp_ tool is not something that generally the user should worry about, but to get a better understanding of what happens under the hood we offer the following explanation.
+
+In short, the workflow with the _hilapp_ tool works in the following manner: 
+
+1. Write c++ code using the syntax and datatypes described above
+
+2. Use the _hilapp_ executable to convert this code into .cpt code 
+
+~~~bash
+bin/hilapp path/to/program.cpp
+~~~
+
+This will create a `cpt` file which is essentially standard C++.
+
+3. Compile the new .cpt code into the final executable
+
+The `cpt` can be compiled with any c++ compiler, but must be linked against the headers and c++ files in the plumbing directory.
+
+![Workflow illustration](./images/workflowV1.png)
+
+*/
