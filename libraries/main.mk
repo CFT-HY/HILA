@@ -6,13 +6,27 @@
 # -----------------------------------------------------------------------------
 # options (added to the app makefile options):
 # Use columns 8 and 30 (for -)
+#% general make options:
 #%     make [..] ARCH=<arch> - compile to architecture 'arch'
-#%     make [..] OPTS=".."   - add to compiler command line, e.g. OPTS="-DGPU_AWARE_MPI"
+#%     make [..] OPTS=".."   - add options to compiler command line, e.g. OPTS="-DGPU_AWARE_MPI"
 #%     make list             - list available make targets/arguments
 #%     make list-archs       - list machine architectures
 #%     make clean            - remove .o and .cpt -files
 #%     make cleanall         - clean build directory
 #%     make help             - print this help message
+#%     Use 'make help ARCH=<arch>'  in order to obtain possible ARCH-specific help
+#%
+#% Further tunable options:
+#%   HILA_DIR=<path>         - path to main hila directory 
+#%   DEBUG=1                 - compile with -g, for debugging symbols (if implemented)
+#%   EVEN_SITES_FIRST=0      - store sites in logical "typewriter" order, mixing EVEN and ODD
+#%         sites. Default layout stores even lattice sites first, enabling efficient
+#%         looping over parities (EVEN/ODD).
+#%   NO_INTERLEAVE=1         - turn off compute during MPI communications (default: on)
+#% GPU-relevant options:
+#%   GPU_AWARE_MPI=0         - turn off GPU aware MPI (default: on) 
+#%   GPU_SYNCHRONIZE_TIMERS=1 - Synchronize timers with GPU kernels.
+#%         Provides accurate timing but possibly slightly slower (default: off)
 
 
 # If "make clean", don't worry about targets, platforms and options
@@ -38,7 +52,7 @@ endif
 
 help:
 	@echo "-----------------------------------------------------------------------------"
-	@echo "make options"
+	@echo "hila make options"
 	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
 	@echo "-----------------------------------------------------------------------------"
 
@@ -75,6 +89,7 @@ endif
 HILA_OBJECTS = \
 	build/initialize.o \
 	build/input.o \
+	build/cmdline.o \
 	build/mersenne_inline.o \
 	build/random.o \
 	build/lattice.o \
@@ -116,6 +131,26 @@ $(LASTMAKE): $(MAKEFILE_LIST)
 	make clean
 	touch ${LASTMAKE}
 
+# Then generic makefile options
+ifdef EVEN_SITES_FIRST
+ifeq (EVEN_SITES_FIRST,0)
+HILA_OPTS += -DEVEN_SITES_FIRST=0
+endif
+endif
+
+ifdef NO_INTERLEAVE
+HILAPP_OPTS += --no-interleave
+endif
+
+ifdef GPU_SYNCHRONIZE_TIMERS
+HILA_OPTS += -DGPU_SYNCHRONIZE_TIMERS
+endif
+
+ifdef GPU_AWARE_MPI
+ifeq (GPU_AWARE_MPI,0)
+HILA_OPTS += -DGPU_AWARE_MPI=0
+endif
+endif
 
 
 # Use all headers inside libraries for dependencies
@@ -123,7 +158,7 @@ HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h) $(wildcard $(HILA_DIR)/l
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 
-HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing -I$(HILA_INCLUDE_DIR)/datatypes
+HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing -I$(HILA_INCLUDE_DIR)/datatypes -I$(HILA_INCLUDE_DIR)/tools
 
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += $(CUSTOM_HILAPP_OPTS)
@@ -169,6 +204,10 @@ build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $(APP_OPTS) $(HILA_OPTS) $< -c -o $@
 
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
+	@mkdir -p build
+	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
+
+build/%.cpt: $(LIBRARIES_DIR)/tools/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	@mkdir -p build
 	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
 

@@ -49,7 +49,7 @@ class Array {
     T c[n * m];
 
     // std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     /**
@@ -236,6 +236,16 @@ class Array {
     const Vector<n, T> &asVector() const {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<const Vector<n, T> *>(this);
+    }
+
+    DiagonalMatrix<n, T> &asDiagonalMatrix() const_function {
+        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
+        return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
+    }
+
+    const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
+        static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
+        return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
     }
 
 
@@ -565,17 +575,17 @@ class Array {
      *
      * @return Array<n, m, T>
      */
-    inline Array<n, m, hila::scalar_type<T>> real() const {
-        Array<n, m, hila::scalar_type<T>> res;
+    inline Array<n, m, hila::arithmetic_type<T>> real() const {
+        Array<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
         return res;
     }
 
-    /// Returns imaginary part of Array
-    inline Array<n, m, hila::scalar_type<T>> imag() const {
-        Array<n, m, hila::scalar_type<T>> res;
+    /// return imaginary part
+    inline Array<n, m, hila::arithmetic_type<T>> imag() const {
+        Array<n, m, hila::arithmetic_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -583,8 +593,8 @@ class Array {
     }
 
     /// calculate square norm - sum of squared elements
-    hila::scalar_type<T> squarenorm() const {
-        hila::scalar_type<T> result = 0;
+    hila::arithmetic_type<T> squarenorm() const {
+        hila::arithmetic_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
             result += ::squarenorm(c[i]);
         }
@@ -660,7 +670,7 @@ inline Array<n, m, T> conj(const Array<n, m, T> &arg) {
  * @return Array<n, m, T>
  */
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::scalar_type<T>> real(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::arithmetic_type<T>> real(const Array<n, m, T> &arg) {
     return arg.real();
 }
 /**
@@ -674,7 +684,7 @@ inline Array<n, m, hila::scalar_type<T>> real(const Array<n, m, T> &arg) {
  * @return Array<n, m, T>
  */
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::scalar_type<T>> imag(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::arithmetic_type<T>> imag(const Array<n, m, T> &arg) {
     return arg.imag();
 }
 
@@ -900,6 +910,7 @@ inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     return a;
 }
 
+
 /**
  * @brief Stream operator
  * @details Naive Stream operator for formatting Matrix for printing. Simply puts elements one after
@@ -951,10 +962,10 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
  * @tparam m Number of columns
  * @tparam T Array element type
  * @param rhs Array to compute squarenorm of
- * @return hila::scalar_type<T>
+ * @return hila::arithmetic_type<T>
  */
 template <int n, int m, typename T>
-inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
+inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 
