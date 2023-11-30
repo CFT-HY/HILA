@@ -1,0 +1,9 @@
+/**
+
+\page utility Utility
+
+Collection of Lattice Field Theory utility packages offered by HILA
+
+- \subpage gauge_theory
+- \subpage multi_canonical
+*/

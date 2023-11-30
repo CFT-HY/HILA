@@ -1,0 +1,143 @@
+/**
+
+\page test_input_and_layout Test input and layout
+
+# Check input and layout
+
+The input files and the lattice layout can be checked with the 
+commands (after the application program has been built)
+~~~bash
+   <hila-program-name> -check
+   <hila-program-name> -check -n <number-of-nodes>       # without spaces
+~~~
+This runs the program without initializing MPI, Cuda or other hardware features and
+exits at `lattice.setup()` before any large memory allocations are made.  If the 
+number-of-nodes argument is given, program reports how the node layout is done.
+
+__Example__: 
+
+Running `hila_example` in directory `hila/applications/hila_example` with the command `build/hila_example -check -n 32` checks the input file and the layout for 32 nodes.
+
+~~~bash
+cd applications/hila_example
+make -j4 hila_simple_example
+./build/hila_simple_example -check -n 32
+~~~
+
+<details> 
+<summary> Expected output </summary>
+
+~~~bash
+$ ./build/hila_example -check -n 32
+****** INPUT AND LAYOUT CHECK ******
+----- HILA ⩩ lattice framework ---------------------------
+Running program ./build/hila_example
+with command line arguments '-check -n 32 '
+Code version: git SHA d117618b
+Compiled Jun 21 2023 at 11:28:48
+with options: EVEN_SITES_FIRST
+Starting -- date Wed Jun 21 11:30:25 2023  run time 0.0005546s
+No runtime limit given
+GNU c-library performance: not returning allocated memory
+----- Reading file parameters ------------------------------
+lattice size         128,128,128
+smear loops          100
+smear coefficient    0.1
+expansion order      12
+random seed          3324565456
+------------------------------------------------------------
+------------------------------------------------------------
+LAYOUT: lattice size  128 x 128 x 128  =  2097152 sites
+Dividing to 32 nodes
+
+Sites on node: 64 x 32 x 32  =  65536
+Processor layout: 2 x 4 x 4  =  32 nodes
+Node remapping: NODE_LAYOUT_BLOCK with blocksize 4
+Node block size 2 2 1  block division 1 2 4
+------------------------------------------------------------
+***** Input check done *****
+No timers defined
+ No communications done from node 0
+Finishing -- date Wed Jun 21 11:30:25 2023  run time 0.02263s
+------------------------------------------------------------
+~~~
+
+</details>
+
+If the application source had a typo in parameter reading, for example `lsize = par.get("latticesize");` then the output will notify the following:
+
+<details> 
+<summary> Expected output </summary>
+
+~~~bash
+$ ./build/hila_example -check -n 32
+****** INPUT AND LAYOUT CHECK ******
+----- HILA ⩩ lattice framework ---------------------------
+Running program ./build/hila_example
+with command line arguments '-check -n 32 '
+Code version: git SHA d117618b
+Compiled Jun 21 2023 at 11:28:48
+with options: EVEN_SITES_FIRST
+Starting -- date Wed Jun 21 11:34:54 2023  run time 0.0002599s
+No runtime limit given
+GNU c-library performance: not returning allocated memory
+----- Reading file parameters ------------------------------
+ lattice size       128,128,128
+Error: expecting key 'latticesize'
+Error: expecting 3 comma-separated ints after 'latticesize'
+No timers defined
+Finishing -- date Wed Jun 21 11:34:54 2023  run time 0.0005286s
+------------------------------------------------------------
+~~~
+
+</details>
+
+Additionally if the node layout is insufficient then the output would be:
+
+<details> 
+<summary> Expected output </summary>
+
+~~~bash
+$ ./build/hila_example -check -n 7
+****** INPUT AND LAYOUT CHECK ******
+----- HILA ⩩ lattice framework ---------------------------
+Running program ./build/hila_example
+with command line arguments '-check -n 7 '
+Code version: git SHA d117618b
+Compiled Jun 21 2023 at 11:28:48
+with options: EVEN_SITES_FIRST
+Starting -- date Wed Jun 21 11:36:22 2023  run time 0.0003294s
+No runtime limit given
+GNU c-library performance: not returning allocated memory
+----- Reading file parameters ------------------------------
+lattice size         128,128,128
+smear loops          100
+smear coefficient    0.1
+expansion order      12
+random seed          3324565456
+------------------------------------------------------------
+------------------------------------------------------------
+LAYOUT: lattice size  128 x 128 x 128  =  2097152 sites
+Dividing to 7 nodes
+
+Using uneven node division to direction 0:
+Lengths: 2 * (19 sites) + 5 * (18 sites)
+Divisions: 19 - 18 - 18 - 19 - 18 - 18 - 18
+Filling efficiency: 96.2406%
+NOTE: number of smaller nodes > large nodes 
+
+Sites on node: (18-19) x 128 x 128  =  294912 - 311296
+Processor layout: 7 x 1 x 1  =  7 nodes
+Node remapping: NODE_LAYOUT_BLOCK with blocksize 4
+Node block size 1 1 1  block division 7 1 1
+------------------------------------------------------------
+***** Input check done *****
+No timers defined
+ No communications done from node 0
+Finishing -- date Wed Jun 21 11:36:22 2023  run time 0.06517s
+------------------------------------------------------------
+~~~
+
+</details>
+
+*/
