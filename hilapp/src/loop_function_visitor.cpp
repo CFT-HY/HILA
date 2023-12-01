@@ -296,6 +296,14 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
         if (contains_rng)
             loop_info.contains_random = true;
 
+        if (ci.is_vectorizable) {
+            if (has_pragma(D,pragma_hila::NOVECTOR)) {
+                ci.is_vectorizable = false;
+            } else {
+                ci.is_vectorizable = contains_novector(D->getBody());
+            }
+        }
+
         /// add to function calls to be checked ...
         loop_function_calls.push_back(ci);
     }

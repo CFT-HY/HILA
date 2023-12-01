@@ -278,12 +278,12 @@ class Field {
 
         // put here some implementation checks for field vars
 #ifdef VECTORIZED
-        static_assert(sizeof(hila::scalar_type<T>) == 4 || sizeof(hila::scalar_type<T>) == 8,
+        static_assert(sizeof(hila::arithmetic_type<T>) == 4 || sizeof(hila::arithmetic_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
 #if defined(CUDA) || defined(HIP)
-        static_assert(!std::is_same<hila::scalar_type<T>, long double>::value,
+        static_assert(!std::is_same<hila::arithmetic_type<T>, long double>::value,
                       "Type 'long double' numbers in Field<> not supported by cuda/hip");
 #endif
 
@@ -1040,7 +1040,7 @@ class Field {
      * @return false
      */
     bool operator==(const Field<T> &rhs) const {
-        hila::scalar_type<T> epsilon = 0;
+        hila::arithmetic_type<T> epsilon = 0;
         return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
@@ -1350,9 +1350,9 @@ class Field {
     Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
     Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
 
-    Field<Complex<hila::scalar_type<T>>>
+    Field<Complex<hila::arithmetic_type<T>>>
     FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
-    Field<hila::scalar_type<T>>
+    Field<hila::arithmetic_type<T>>
     FFT_complex_to_real(fft_direction fdir = fft_direction::forward) const;
 
 
@@ -1720,7 +1720,6 @@ auto operator/(Field<A> lhs, const B &rhs) {
 
 /**
  * @brief std:swap() for Fields
- *
  */
 namespace std {
 template <typename T>
@@ -1728,6 +1727,17 @@ void swap(Field<T> &A, Field<T> &B) {
     std::swap(A.fs, B.fs);
 }
 } // namespace std
+
+/**
+ * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
+ */
+namespace hila {
+template <typename T>
+void swap(Field<T> &A, Field<T> &B) {
+    std::swap(A.fs, B.fs);
+}
+} // namespace hila
+
 
 ///////////////////////////////////////////////////////////////////////
 // Allow some arithmetic functions if implemented

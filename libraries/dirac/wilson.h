@@ -154,7 +154,7 @@ template <typename matrix> class Dirac_Wilson {
     /// Size of the gauge matrix and color dimension of the Wilson vector
     static constexpr int N = matrix::size;
 
-    using radix = hila::scalar_type<matrix>;
+    using radix = hila::arithmetic_type<matrix>;
     /// The wilson vector type
     using vector_type = Wilson_vector<N, radix>;
     /// The matrix type
@@ -242,7 +242,7 @@ template <typename matrix> class Dirac_Wilson_evenodd {
     /// Size of the gauge matrix and color dimension of the Wilson vector
     static constexpr int N = matrix::size;
     /// The wilson vector type
-    using radix = hila::scalar_type<matrix>;
+    using radix = hila::arithmetic_type<matrix>;
     using vector_type = Wilson_vector<N, radix>;
     /// The matrix type
     using matrix_type = matrix;

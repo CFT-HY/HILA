@@ -34,7 +34,7 @@ struct is_field_type<T, typename std::enable_if_t<is_field_class_type<T>::value 
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Utility for obtaining the numeric base type of a class
-/// Use as  "hila::scalar_type<T>"
+/// Use as  "hila::arithmetic_type<T>"
 /// which returns the underlying arithmetic type used in class T (e.g. float, double
 /// etc.)  if it is field class type.  For other types returns the input type
 /// 
@@ -53,7 +53,7 @@ struct base_type_struct<T, typename std::enable_if_t<is_field_class_type<T>::val
 };
 
 template <typename T>
-using scalar_type = typename base_type_struct<T>::type;
+using arithmetic_type = typename base_type_struct<T>::type;
 
 //////////////////////////////////////////////////////////////////////////////
 /// Get the inner type in nesting templates:
@@ -115,12 +115,12 @@ using type_div = decltype(std::declval<A>() / std::declval<B>());
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline hila::scalar_type<T> get_number_in_var(const T &var, int i) {
-    return *(reinterpret_cast<const hila::scalar_type<T> *>(&var) + i);
+inline hila::arithmetic_type<T> get_number_in_var(const T &var, int i) {
+    return *(reinterpret_cast<const hila::arithmetic_type<T> *>(&var) + i);
 }
 template <typename T>
-inline void set_number_in_var(T &var, int i, const hila::scalar_type<T> val) {
-    *(reinterpret_cast<hila::scalar_type<T> *>(&var) + i) = val;
+inline void set_number_in_var(T &var, int i, const hila::arithmetic_type<T> val) {
+    *(reinterpret_cast<hila::arithmetic_type<T> *>(&var) + i) = val;
 }
 
 

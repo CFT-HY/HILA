@@ -22,7 +22,7 @@ class DiagonalMatrix {
                   "DiagonalMatrix requires Complex or arithmetic type");
 
     // std incantation for field types
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     T c[n];
@@ -333,7 +333,7 @@ class DiagonalMatrix {
      * Returns a real DiagonalMatrix even if the original is complex
      */
     auto abs() const {
-        DiagonalMatrix<n, hila::scalar_type<T>> res;
+        DiagonalMatrix<n, hila::arithmetic_type<T>> res;
         for (int i = 0; i < n; i++) {
             res.c[i] = ::abs(c[i]);
         }
@@ -346,7 +346,7 @@ class DiagonalMatrix {
      * Returns a real DiagonalMatrix even if the original is complex
      */
     auto real() const {
-        DiagonalMatrix<n, hila::scalar_type<T>> res;
+        DiagonalMatrix<n, hila::arithmetic_type<T>> res;
         for (int i = 0; i < n; i++) {
             res.c[i] = ::real(c[i]);
         }
@@ -354,7 +354,7 @@ class DiagonalMatrix {
     }
 
     auto imag() const {
-        DiagonalMatrix<n, hila::scalar_type<T>> res;
+        DiagonalMatrix<n, hila::arithmetic_type<T>> res;
         for (int i = 0; i < n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -400,13 +400,13 @@ class DiagonalMatrix {
     }
 
     auto squarenorm() const {
-        hila::scalar_type<T> res(0);
+        hila::arithmetic_type<T> res(0);
         for (int i = 0; i < n; i++)
             res += ::squarenorm(c[i]);
         return res;
     }
 
-    hila::scalar_type<T> norm() const {
+    hila::arithmetic_type<T> norm() const {
         return sqrt(squarenorm());
     }
 
@@ -416,7 +416,7 @@ class DiagonalMatrix {
      */
     DiagonalMatrix &random() out_only {
 
-        static_assert(hila::is_floating_point<hila::scalar_type<T>>::value,
+        static_assert(hila::is_floating_point<hila::arithmetic_type<T>>::value,
                       "DiagonalMatrix random() requires non-integral type elements");
         for (int i = 0; i < n; i++) {
             hila::random(c[i]);
@@ -426,7 +426,7 @@ class DiagonalMatrix {
 
     DiagonalMatrix &gaussian_random(double width = 1.0) out_only {
 
-        static_assert(hila::is_floating_point<hila::scalar_type<T>>::value,
+        static_assert(hila::is_floating_point<hila::arithmetic_type<T>>::value,
                       "DiagonaMatrix gaussian_random() requires non-integral type elements");
         for (int i = 0; i < n; i++) {
             hila::gaussian_random(c[i], width);
@@ -467,6 +467,14 @@ class DiagonalMatrix {
 
     const Array<n, 1, T> &asArray() const {
         return *(reinterpret_cast<const Array<n, 1, T> *>(this));
+    }
+
+    Vector<n, T> &asVector() const_function {
+        return *(reinterpret_cast<Vector<n,T> *>(this));
+    }
+
+    const Vector<n, T> &asVector() const {
+        return *(reinterpret_cast<const Vector<n,T> *>(this));
     }
 
     /// implement sort as casting to matrix
@@ -555,7 +563,7 @@ template <typename Mt, typename S, typename Enable = void>
 struct diagonalmatrix_scalar_op_s {
     using type =
         DiagonalMatrix<Mt::rows(),
-                       Complex<hila::type_plus<hila::scalar_type<Mt>, hila::scalar_type<S>>>>;
+                       Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
 };
 
 template <typename Mt, typename S>
@@ -565,9 +573,9 @@ struct diagonalmatrix_scalar_op_s<
                                                   hila::number_type<Mt>>::value>> {
     // using type = Mt;
     using type = typename std::conditional<
-        hila::is_floating_point<hila::scalar_type<Mt>>::value, Mt,
+        hila::is_floating_point<hila::arithmetic_type<Mt>>::value, Mt,
         DiagonalMatrix<Mt::rows(),
-                       hila::type_plus<hila::scalar_type<Mt>, hila::scalar_type<S>>>>::type;
+                       hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>::type;
 };
 
 template <typename Mt, typename S>
