@@ -54,7 +54,7 @@ class Complex {
     // This incantation is needed to make Field<Complex<>> vectorized
 
   public:
-    using base_type = hila::scalar_type<T>;
+    using base_type = hila::arithmetic_type<T>;
     using argument_type = T;
 
     // and the content of the complex number
@@ -663,13 +663,13 @@ struct contains_complex : std::integral_constant<bool, false> {};
 
 template <typename T>
 struct contains_complex<T, typename std::enable_if_t<hila::is_field_class_type<T>::value>>
-    : std::integral_constant<bool, hila::contains_type<T, Complex<hila::scalar_type<T>>>::value> {};
+    : std::integral_constant<bool, hila::contains_type<T, Complex<hila::arithmetic_type<T>>>::value> {};
 
 /////////////////////////////////////////////////////////////////////////
 // Utility hila::number_type<T>  returns complex or arithmetic type
 // depending on the type
 
-template <typename T, typename Enable = void, typename N = hila::scalar_type<T>>
+template <typename T, typename Enable = void, typename N = hila::arithmetic_type<T>>
 struct complex_or_arithmetic_type_struct {
     using type = N;
 };
@@ -677,7 +677,7 @@ struct complex_or_arithmetic_type_struct {
 template <typename T>
 struct complex_or_arithmetic_type_struct<
     T, typename std::enable_if_t<hila::contains_complex<T>::value>> {
-    using type = Complex<hila::scalar_type<T>>;
+    using type = Complex<hila::arithmetic_type<T>>;
 };
 
 template <typename T>
@@ -690,7 +690,7 @@ using number_type = typename complex_or_arithmetic_type_struct<T>::type;
 
 template <typename T1, typename T2, typename Enable = void>
 struct ntype_op_s {
-    using type = hila::type_plus<hila::scalar_type<T1>, hila::scalar_type<T2>>;
+    using type = hila::type_plus<hila::arithmetic_type<T1>, hila::arithmetic_type<T2>>;
 };
 
 // if one type is complex?
@@ -698,7 +698,7 @@ template <typename T1, typename T2>
 struct ntype_op_s<T1, T2,
                   typename std::enable_if_t<(hila::contains_complex<T1>::value ||
                                              hila::contains_complex<T2>::value)>> {
-    using type = Complex<hila::type_plus<hila::scalar_type<T1>, hila::scalar_type<T2>>>;
+    using type = Complex<hila::type_plus<hila::arithmetic_type<T1>, hila::arithmetic_type<T2>>>;
 };
 
 template <typename T1, typename T2>
@@ -735,14 +735,14 @@ using complex_x_scalar_type = typename complex_x_scalar_s<A, B>::type;
 
 // #pragma hila loop_function
 // template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-// inline const Complex<hila::scalar_type<T>> * as_complex_array(const T &var) {
-//     return (const Complex<hila::scalar_type<T>> *)(void *)&var;
+// inline const Complex<hila::arithmetic_type<T>> * as_complex_array(const T &var) {
+//     return (const Complex<hila::arithmetic_type<T>> *)(void *)&var;
 // }
 
 // #pragma hila loop_function
 // template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-// inline Complex<hila::scalar_type<T>> * as_complex_array(T &var) {
-//     return (Complex<hila::scalar_type<T>> *)(void *)&var;
+// inline Complex<hila::arithmetic_type<T>> * as_complex_array(T &var) {
+//     return (Complex<hila::arithmetic_type<T>> *)(void *)&var;
 // }
 
 ////////////////////////////////////////////////////////////////////////
@@ -753,13 +753,13 @@ using complex_x_scalar_type = typename complex_x_scalar_s<A, B>::type;
 ////////////////////////////////////////////////////////////////////////
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline Complex<hila::scalar_type<T>> get_complex_in_var(const T &var, int i) {
-    return *(reinterpret_cast<const Complex<hila::scalar_type<T>> *>(&var) + i);
+inline Complex<hila::arithmetic_type<T>> get_complex_in_var(const T &var, int i) {
+    return *(reinterpret_cast<const Complex<hila::arithmetic_type<T>> *>(&var) + i);
 }
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline void set_complex_in_var(T &var, int i, const Complex<hila::scalar_type<T>> &val) {
-    *(reinterpret_cast<Complex<hila::scalar_type<T>> *>(&var) + i) = val;
+inline void set_complex_in_var(T &var, int i, const Complex<hila::arithmetic_type<T>> &val) {
+    *(reinterpret_cast<Complex<hila::arithmetic_type<T>> *>(&var) + i) = val;
 }
 
 } // namespace hila
@@ -1336,9 +1336,9 @@ __device__
 // Imaginary * object containing complex
 template <typename A, typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 inline auto operator*(const Imaginary_t<A> &i, const T &c) {
-    Complex<hila::scalar_type<T>> ca, cb;
+    Complex<hila::arithmetic_type<T>> ca, cb;
     T res;
-    constexpr int n_cmplx = sizeof(T) / sizeof(Complex<hila::scalar_type<T>>);
+    constexpr int n_cmplx = sizeof(T) / sizeof(Complex<hila::arithmetic_type<T>>);
     for (int k = 0; k < n_cmplx; k++) {
         ca = hila::get_complex_in_var(c, k);
         cb.re = -ca.im * i.imag();

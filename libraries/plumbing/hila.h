@@ -28,6 +28,7 @@
 
 #include "plumbing/gaugefield.h"
 #include "plumbing/input.h"
+#include "plumbing/cmdline.h"
 #include "plumbing/fft.h"
 
 #include "plumbing/spectraldensity.h"

@@ -2,9 +2,25 @@
 /**
 \page field_documentation Field
 
-Field is the most important Datatype offered by HILA. The Field defines the lattice, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
+Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
 
 To see all the possible methods of a Field see the class page which lists comprehensive documentation.
+
+# Constructors and assignments
+
+By default Field variables are constructed uninitialized. Fields can also be constructed with a constant or another Field:
+
+~~~cpp
+  Field<Complex<double>> f;       // Default constructor assigns the fields to `nullptr`
+  Field<Complex<double>> g(1);    // Each elements becomes (1,0)
+  Field<Complex<double>> h = 1;   // Equivalent to above
+  Field<Complex<double>> m(g);    // Copy constructor: content of g is copied
+  m = f;                          // ERROR: trying to use the value of the uninitialized Field f
+  f = 2 + g;                      // This initializes f
+~~~
+Assginment to Field variables is possible either from another Field or from a single element which are assignment compatible.  Assignment from 0 is always possible.  
+
+Uninitialized Field does not take any storage, it is automatically allocated on first use.  Fields are destructed when they run out of scope.
 
 # Access and Traversal
 
@@ -16,7 +32,7 @@ To illustrate how looping over a Field object works we will first define a few f
 ~~~cpp
   using mytype = Matrix<3,3,Complex<double>>;   // use type alias
   Field<mytype> f,g,h; // Default constructor assigns the fields to `nullptr`
-  g = 2 // Assigning g to be 2*Id throughout the field
+  g = 2 // Assigning g to be 2*I throughout the field
 ~~~
 
 For a field comprised of square-matrix elements, real numbers are algebraically interpreted as \f$ 2 = 2\cdot\mathbb{1}\f$, multiples of identity matrix.
@@ -24,13 +40,12 @@ For a field comprised of square-matrix elements, real numbers are algebraically 
 We can now iterate over the fields with the onsites loop:
 
 ~~~cpp
-  onsites(ALL) f[X] = 2 + g[X];          // 2 acts as 2*I for square matrices
+  onsites(ALL) f[X] = 2 + g[X];          // 2 acts as 2* unit matrix for square matrices
 ~~~
 
-Above we linearly add each element at `X` from g to each element at `X` in f with an additional \f$2\cdot\mathbb{1}\f$ at each site. The ALL statement is a ::Parity which indicates that we will iterate over the whole Field. Other options are EVEN and ODD which indicate that we only iterate over the even or odd elements of the field.
+Above we linearly add each element at `X` from g to each element at `X` in f with an additional \f$2\cdot\mathbb{1}\f$ at each site. The ALL statement is a ::Parity which indicates that we will iterate over the whole Field. Other options are EVEN and ODD which indicate that we only iterate over the even or odd sites.
 
 Similarly we can write this same statement in the following short form:
-
 
 ~~~cpp
   f[ALL] = 2 + g[X];                     // equivalent shorter form for simple 1-line assignments
@@ -48,7 +63,7 @@ Now to demonstrate a more complicated onsites loop we will apply neighboring eff
       auto t = g[X + d];                 // fetch from neighboring site in the e_x direction
       f[X] += t + t*t;                   // can define variables in the loop   
 
-      h[X] = g[X + e_x - 2*e_y];         // non-nearest neighbour fetch (TODO:optimize!)
+      h[X] = g[X + e_x - 2*e_y];         // non-nearest neighbour fetch
 
       if (X.coordinate(e_t) == 0) {      // Do this on 1st timeslice only
           h[X] *= 0.5;
@@ -64,29 +79,281 @@ On line 6 of the onsites loop we can also see that if statements can be used to 
 
 Because `f[X]` is of type field element (in this case mytype), the methods defined for the element type can be used. Within onsites loop `f[X].dagger()` is ok, `f.dagger()` is not. `f[X]` also serves as a visual identifier for a field variable access.
 
-# Additional features
+External non-Field variables cannot be changed inside onsites loops (except in reductions, see below)
+~~~cpp
+double d = 2;
+onsites(ALL) {
+    d = f[X];              // ERROR: cannot change the value of variables defined outside onsites
+    double a = f[X] + d;   // OK, a defined inside loop and d is constant
+}
+~~~
 
-## Reductions
+# Reductions
 
-The Field object has the following reductions defined:
+## Field reduction methods {#field_reduction_methods_guide}
 
-- Field::sum
-- Field::product
-- Field::min
-- Field::max
+Reduction on a single Field variable can be done with functions:
+- `T Field<T>::sum()` : sum of all field elements. 
+- `T Field<T>::product()` : product of field elements.
+- `T Field<T>::min()` : minimum element
+- `T Field<T>::max()` : maximum
 
-Also sum and product reductions can be performed withing the onsites loops as:
+`sum()` and `product()` take optional arguments:
+`sum(Parity par = ALL)` or `sum(Parity par = ALL ,bool allreduce = true)`. Parity gives the parity of sites over which the reduction is done, and if allreduce = false the reduction result is only sent to rank 0. Defaults are parity=ALL and allreduce = true.  
 
 ~~~cpp
-    mytype s = 0;
-    mytype p = 1;
-    onsites(ALL) {
-      s += f[X] - g[X+e_x];
-      p *= f[X] - g[X+e_x];
-
-    hila::out0 << "The sum reduction is" << s << std::endl;
-    hila::out0 << "The product reduction is" << s << std::endl;
+    Field<Complex<double>> f;
+    f.random();
+    hila::out0 << "Sum of elements of f = " << f.sum() << '\n';
+    hila::out0 << "Sum over even sites = " << f.sum(EVEN) << '\n';
+    // following result goes only to rank 0, but it is OK because
+    // the result is printed from that rank
+    hila::out0 << "Sum over odd sites = " << f.sum(ODD,false) << '\n';
 ~~~
+
+
+`min()` and `max()` have signatures
+- `T Field<T>::min(Parity p)` : minimum over Parity
+- `T Field<T>::min(CoordinateVector &loc)` : also location of the min value
+- `T Field<T>::min(Parity p, CoordinateVector &loc)` : location over parity
+
+~~~cpp
+    Field<double> f;
+    f.random();
+    CoordinateVector cv;
+    hila::out0 << "Max of f is " << f.max(cv) << " at location " << cv << '\n';
+~~~
+
+> NOTE: sum() can be used for any allowed Field variable, product(), min() and max() only over integer or floating point Fields (C++ arithmetic types).
+
+
+## Standard reduction in onsites() {#standard_reduction_guide}
+
+Standard reduction is done by using compound operators `+=` or `*=` and regular variables in onsites()-loops:
+~~~cpp
+    Field<Complex<double>> f;
+    ...
+    Complex<double> s2 = 0, s4 = 0;
+    onsites(ALL) {
+        auto sqn = f[X].squarenorm();
+        s2 += sqn;
+        s4 += sqr(sqn);
+    }
+    hila::out0 << "Average of |f|^2 = " << s2 / lattice.volume() 
+               << " and |f|^4 = " << s4 / lattice.volume() << '\n';
+~~~
+
+
+By default the reduction is sent to all MPI ranks (`allreduce`, implemented with `MPI_Allreduce()`). If reduction only to rank 0 is needed,
+`hila::set_allreduce(false)` can be inserted before `onsites()` (uses `MPI_Reduce()`).  This may give higher performance.
+~~~cpp
+    hila::set_allreduce(false);
+    onsites(ALL) s += f[X];
+    // at this point only rank 0 contains valid reduction
+~~~
+Allreduce remains off only for the immediately following onsites()-loop, thus `hila::set_allreduce(false)` has to be inserted on each reduction loop where one wishes to have allreduce off.
+
+Sum reduction `+=` can use any hila Field element type, product reduction `*=` only floating point or integer variables (C++ arithmetic types).
+~~~cpp
+    Field<double> f;
+    ...
+    double p = 1;  // note initialization to 1
+    onsites(ALL) p *= f[X];
+    // now p contains the product of all elements of f
+~~~
+
+Reductions can be accumulated using the same reduction variable:
+~~~cpp
+    double s = 5;        // initializing, for some reason, to 5
+    onsites(ALL) {
+        s += f[X];
+        if (g[X] > 0) 
+            s += g[X];
+    }
+    onsites(EVEN) {
+        s += h[X];
+    }
+    // s will now contain 5 + sum of operations above
+~~~
+As an implementation detail, the initial value of the reduction variable is taken from rank 0, i.e. it is zeroed on other ranks.
+
+Individual data elements of a reduction variable can be accumulated independently:
+~~~cpp
+    Field<int> intf;
+    intf[ALL] = 1111*hila::random();
+
+    // Do the histogram of the last decimal digit in Field intf
+    Vector<10,int> dvec = 0;
+    onsites(ALL) {
+        dvec[intf[X] % 10] += 1;
+    }
+    hila::out0 << "Histogram is " << dvec << '\n';
+~~~
+> Using Vector<T> -types for histograms (as above) is inefficient for longer vectors. Use [ReductionVector](@ref redutionvector_guide) instead.
+
+
+
+## Reduction< T > -type  {#reduction_type_guide}
+
+
+Using type `Reduction<T>`,
+where `T` can be any hila Field element type, enables delayed and non-blocking reductions
+which are not possible with the standard reductions.  These are optimisations, the results of the reductions are not affected.  This type implements only the sum reduction (`+=`).
+
+The class `Reduction<T>` implements the following methods (see examples below):
+
+- Option setting, called before reduction loop:
+    + `Reduction<T> & Reduction<T>::allreduce(bool on = true)`: set allreduce on/off (default: on)
+    + `Reduction<T> & Reduction<T>::delayed(bool on = true)`: set delayed on/off (default: off)
+    + `Reduction<T> & Reduction<T>::nonblocking(bool on = true)`: set nonblocking on/off (default: off)
+
+  These return a reference to the reduction variable, so that these can be chained.
+
+- Option values can be inquired with functions 
+     + `bool Reduction<T>::is_allreduce()`
+     + `bool Reduction<T>::is_delayed()`
+     + `bool Reduction<T>::is_nonblocking()`
+
+- `T Reduction<T>::value()` : get the final value of the reduction.
+- `void Reduction<T>::reduce()` : complete the reduction for non-blocking and/or delayed reduction. For other reductions does nothing. Is implicitly called by `value()` if not called before.
+- `void Reduction<T>::start_reduce()` : start the non-blocking reduction (if non-blocking is on). Must be called by all MPI ranks.
+- Assignment operator `=` : initializes or resets the value.
+- Compound add operator `+=` : reduction operator inside `onsites()`.
+
+The first call of `value()` or `reduce()` must be called by all ranks, otherwise the program deadlocks. Subsequent calls to `value()` just return the previously reduced value.
+
+
+**Delayed reduction** means that the MPI reduction is delayed until the final result is desired:
+~~~cpp
+    Field<Complex<double>> f[NDIM];
+    ...
+
+    Reduction<Complex<double>> r;  // definition of reduction variable
+    r = 0; 
+    r.allreduce(false).delayed();  // set delay, and allreduce = off
+    foralldir(d) {
+        onsites(ALL) {
+            r += exp(f[d][X]);
+        }  
+        // MPI reduction is not yet done here, as with the std. reduction
+    }
+    // r.value() gives the result. Could also call r.reduce() before r.value().
+    hila::out0 << "Sum is " << r.value() << '\n';
+~~~
+Reduction across MPI ranks is done in call `r.value()`. Thus, there is only
+one (MPI) reduction operation, whereas the standard method (using `Complex<double> r`) would perform MPI reduction after each `onsites()`. A
+The function `r.value()` must be called by all ranks or program deadlocks.
+The result of the reduction is not affected.
+
+**Non-blocking reduction** enables overlapping MPI communication and computation (implemented using `MPI_Ireduce()`).  This potentially gives higher performance.
+~~~cpp
+    Reduction<Complex<double>> r(0);
+    r.nonblocking();
+    onsites(ALL) {
+        r += f[X] + g[X];
+    }
+    // reduction starts automatically after onsites()
+
+    // do some computations here not involving r
+    ...
+
+    // reduction is completed when value()-method is called
+    hila::out0 << "Reduction is " << r.value() << '\n';
+~~~
+
+Non-blocking and delayed reduction can be combined. In this case, the reduction should
+be started with `start_reduce()`-method:
+~~~cpp
+    Reduction<Complex<double>> r(0);
+    r.allreduce(false).nonblocking().delayed();
+    foralldir(d) {
+        onsites(ALL) {
+            r += f[d][X];
+        }  
+    }
+    // start reduction across ranks
+    r.start_reduce();
+
+    // do something else
+    ... 
+
+    // reduction is completed with value()-method. Could also call .reduce() 
+    hila::out0 << "Result is " << r.value() << '\n';
+~~~
+If `r.start_reduce()` is omitted, it is implicitly done at `r.value()`, ensuring correct results.  However, the possible benefit of overlapping communication and computation is lost.
+
+## ReductionVector< T > {#reductionvector_guide}
+
+ReductionVector enables (weighted) histogramming or general reduction to arrays. As an example, measuring "wall-to-wall" correlation function
+~~~cpp
+    Field<Complex<double>> F;
+    ...
+    // allocate ReductionVector of length lattice.size(e_z)
+    ReductionVector<Complex<double>> wall(lattice.size(e_z));
+    wall.allreduce(false);
+    wall = 0;
+
+    // average values of F on each z-plane
+    onsites(ALL) {
+        wall[X.coordinate(e_z)] += F[X];
+    }
+
+    // reduction done, calculate periodic correlation function
+    if (hila::myrank() == 0) {
+        for (int dist = 0; dist <= lattice.size(e_z)/2; dist++) {
+            Complex<double> corr = 0;
+            for (int z = 0; z < lattice.size(e_z); z++) {
+                corr += wall[z].dagger() * wall[(z + dist) % lattice.size(e_z)];
+            }
+            hila::out0 << dist << ' ' << corr << '\n';
+        }
+    }
+~~~
+
+The type implements the methods (for clarity, using placeholder variable name a)
+- Constructor `ReductionVector<T> a(int size)` : initializes and allocates vector of size elements
+- Option setting, called before reduction loop:
+    + `a.allreduce(bool on = true)`: set allreduce on/off (default: on)
+    + `a.delayed(bool on = true)`: set delayed on/off (default: off)
+
+- Boolean query methods `a.is_allreduce()`, `a.is_delayed()`.
+- `a[i]` where i is int : access the element number i.
+- `a.reduce()` : in delayed reduction completes the reduction.  This must be called before the the result is used.
+- Assignment `a = <value>` : fills in a with the value
+- `std::vector<T> a.vector()` : returns std::vector of the data
+- Methods directly analogous to `std::vector<T>`:
+    + `size_t a.size()` : size of a
+    + `a.clear()` : zero all elements (equivalent to `a = 0`)
+    + `a.resize(new_size)` : resize vector a
+    + `a.push_back(T val)` : insert value val, increasing size of a
+    + `a.pop_back()` : remove last element, decreasing size of a
+    + `T & front()` : first element
+    + `T & back()` : last element
+
+Example of delayed ReductionVector use: make a histogram with 100 bins of
+N fields G[N], where we know the field values are between 0 and fmax:
+~~~cpp
+    Field<double> G[N];
+    double fmax = ...
+    ...
+
+    ReductionVector<long> rv(100);     // 100 bins
+    rv = 0;
+    rv.allreduce(false).delayed(true);
+    for (int i = 0; i < N; i++) {
+        onsites(ALL) {
+            rv[ G[i][X] / fmax * 100] += 1;
+        }
+    }
+    // do the reduction - without .reduce() result is undefined!
+    rv.reduce();
+    for (int i = 0; i < rv.size(); i++) {
+        hila::out0 << i << ' ' << rv[i] << '\n';
+    }
+~~~
+> NOTE: ReductionVector indexing has no protection. Using index past the 
+> ends of the array will cause trouble!
+
 
 ## Other features
 

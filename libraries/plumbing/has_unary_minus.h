@@ -21,7 +21,7 @@ class has_unary_minus {
 
 template <typename T>
 class has_unary_minus<
-    T, typename std::enable_if_t<!std::is_unsigned<hila::scalar_type<T>>::value &&
+    T, typename std::enable_if_t<!std::is_unsigned<hila::arithmetic_type<T>>::value &&
                                  hila::is_assignable<T &, decltype(-std::declval<T>())>::value>> {
   public:
     static constexpr bool value = true;

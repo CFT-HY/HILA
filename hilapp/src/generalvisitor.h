@@ -145,6 +145,9 @@ class GeneralVisitor {
     /// check if stmt contains random number generator
     bool contains_random(Stmt *s);
 
+    /// similarly if contains #pragma hila novector -functions, recursively
+    bool contains_novector(Stmt *s);
+
     /// Find the SourceRange of a function decl prototype, if it exists
     bool find_prototype(FunctionDecl *fd, FunctionDecl *&decl);
 
