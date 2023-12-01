@@ -25,7 +25,7 @@ using gpurandState = curandState_t;
 #elif defined(HIP)
 
 #include <hip/hip_runtime.h>
-#include <hiprand_kernel.h>
+#include <hiprand/hiprand_kernel.h>
 
 using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
