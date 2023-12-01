@@ -244,7 +244,7 @@ class Field {
 
     /**
      * @brief Field constructor
-     * @details The following ways of constructing a Field object are the following:
+     * @details The following ways of constructing a Field object are:
      *
      * __Default constructor__:
      *
