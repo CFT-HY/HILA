@@ -278,8 +278,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
     // use "static" instead??
+    // Switch to static here for now
     // Add __launch_bounds__ directive here
-    kernel << "inline __global__ void __launch_bounds__(N_threads) " << kernel_name
+    kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
     code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
