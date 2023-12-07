@@ -2,7 +2,7 @@
 /**
 \page field_documentation Field
 
-Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed above.
+Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed on the \subpage datatypes page.
 
 To see all the possible methods of a Field see the class page which lists comprehensive documentation.
 
@@ -88,15 +88,55 @@ onsites(ALL) {
 }
 ~~~
 
+## External variables
+
+Assignment and manipulation of variables defined outside of onsites loops are illustrated below:
+~~~cpp
+    double a = 3, b = 5;
+    Field<double> f, g=0;
+
+    onsites(ALL) {
+        f[X] = (a + b);            // ok, loop extern variables a,b do not change within the loop
+        b = f[X];                  // ERROR: cannot change a loop external non-field variable (except reductions)
+        double c = sin(f[X]);      // ok, variable c defined within the loop
+        f[X] = c + g;              // ERROR: using field variable g without [X]
+    }
+~~~
+
+## Accessing field elements outside of loop
+
+There are a few ways of accessing Field elements which exclusively are to be used outside of onsites loops.
+
+* **Access field at a single point:**
+
+~~~cpp
+  CoordinateVector v = {2,3,4,5};
+  auto value = f[v];              // "value" is broadcast to all nodes!
+  f[v] = 1;                       // In assignment, values are not broadcast: the node which
+                                  // owns site v must have correct rhs.
+~~~
+
+* **Accessing multiple elements:**
+
+This is done by using Field::get_elements and Field::set_elements which take in a std::vector of coordinates.
+
+~~~cpp
+    std::vector<CoordinateVector> coordinates = {{2,3,4,5}, {1,3,4,5}}; // 4 Dimensional field
+    std::vector<MyType> values = f.get_elements(coordinates); // Returns std::vector of elements that were fetched
+    g.set_elements(values, coordinates); // Sets values fetched from f
+~~~
+
+Additionally Field::get_elements takes in an additional argument broadcast get_elements(coordinates, broadcast). If set to true then the gotten elements are broadcasted to all MPI ranks, by default it is set to false.
+
 # Reductions
 
 ## Field reduction methods {#field_reduction_methods_guide}
 
 Reduction on a single Field variable can be done with functions:
-- `T Field<T>::sum()` : sum of all field elements. 
-- `T Field<T>::product()` : product of field elements.
-- `T Field<T>::min()` : minimum element
-- `T Field<T>::max()` : maximum
+- `T Field::sum()` : sum of all field elements. 
+- `T Field::product()` : product of field elements.
+- `T Field::min()` : minimum element
+- `T Field::max()` : maximum
 
 `sum()` and `product()` take optional arguments:
 `sum(Parity par = ALL)` or `sum(Parity par = ALL ,bool allreduce = true)`. Parity gives the parity of sites over which the reduction is done, and if allreduce = false the reduction result is only sent to rank 0. Defaults are parity=ALL and allreduce = true.  
@@ -354,21 +394,7 @@ N fields G[N], where we know the field values are between 0 and fmax:
 > NOTE: ReductionVector indexing has no protection. Using index past the 
 > ends of the array will cause trouble!
 
-
-## Other features
-
-Assignment and manipulation of external variables are illustrated below:
-~~~cpp
-    double a = 3, b = 5;
-    Field<double> f, g=0;
-
-    onsites(ALL) {
-        f[X] = (a + b);            // ok, loop extern variables a,b do not change within the loop
-        b = f[X];                  // ERROR: cannot change a loop extern non-field variable (except reductions)
-        double c = sin(f[X]);      // ok, variable c defined within the loop
-        f[X] = c + g;              // ERROR: using field variable g without [X]
-    }
-~~~
+# Shift operators
 
 Field::shift operations allow shifting all elements by a certain displacement vector v. Even and Odd elements cannot be shifted with Field::shift method
 ~~~cpp
@@ -381,13 +407,5 @@ Field::shift operations allow shifting all elements by a certain displacement ve
     f[EVEN] = g[X + v];            // Cannot be done with g.shift() alone
 ~~~
 
-Access field at a single point: `f[CoordinateVector]`.  This can be used only outside site loops.
-
-~~~cpp
-  CoordinateVector v = {2,3,4,5};
-  auto value = f[v];              // "value" is broadcast to all nodes!
-  f[v] = 1;                       // In assignment, values are not broadcast: the node which
-                                  // owns site v must have correct rhs.
-~~~
 
 */
