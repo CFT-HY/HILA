@@ -140,14 +140,10 @@ T random() {
     hila::random(val);
     return val;
 }
-
-
+  
 ///
 /// Template function
 ///     const T & hila::gaussian_random(T & variable,double width=1)
-/// Sets the argument to a gaussian random value, and return a constant reference to it.
-/// Optional second argument width sets the variance=width^2 (default=1)
-///
 /// Example:
 ///     Complex<double> c;
 ///     auto n = sqr(hila::gaussian_random(c));
@@ -158,6 +154,19 @@ T random() {
 /// Advantage over class function T::random() is that the argument can be
 /// of elementary arithmetic type.
 
+/**
+ * @brief Template function const T & hila::gaussian_random(T & variable,double width=1)
+ * @details Sets the argument to a gaussian random value, and return a constant reference to it.
+ * Optional second argument width sets the variance=width^2 (default=1)
+ * \code {.cpp}
+ * Complex<double> c;
+ * auto n = sqr(hila::gaussian_random(c));
+ * \endcode
+ *
+ * @return double
+ */
+  
+  
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 T gaussian_random(out_only T &val, double w = 1.0) {
     val = hila::gaussrand() * w;
