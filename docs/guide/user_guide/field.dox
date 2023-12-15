@@ -2,7 +2,7 @@
 /**
 \page field_documentation Field
 
-Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed on the \subpage datatypes page.
+Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed on the [datatypes](#datatypes) page.
 
 To see all the possible methods of a Field see the class page which lists comprehensive documentation.
 
@@ -427,7 +427,7 @@ onsites(ALL) f[X].gaussian_random();
 
 # FFT
 
-# Standard arithmetic methods and mathematical functions
+# Standard mathematical methods
 
 The standard arithmetic methods defined for fields are:
 
@@ -443,8 +443,13 @@ And arithmetic assignment methods:
 -  `Field::operator*=`
 -  `Field::operator/=`
 
-The following mathematical methods which are defined for the field, use the definition of the element type of the Field:
+The following mathematical methods which are defined for the field, use the definition of the element type T of the Field<T>:
 
+-  `Field::exp`
+-  `Field::log`
 -  `Field::sin`
+-  `Field::cos`
+-  `Field::tan`
+-  `Field::`
 
 */
