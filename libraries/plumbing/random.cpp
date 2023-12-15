@@ -177,6 +177,14 @@ double hila::gaussrand2(double &out2) {
 
 #if !defined(CUDA) && !defined(HIP)
 
+/**
+ * @brief Gaussian random generation routine 
+ * @details By default these give random numbers with variance 1.0, i.e.
+ * probability distribution is
+ * \f{align}{exp( -x*x/2 )\f}, so \f{align} < x^2 > = 1\f}
+ *
+ * @return double
+ */
 double hila::gaussrand() {
     static double second;
     static bool draw_new = true;
