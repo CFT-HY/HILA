@@ -266,10 +266,11 @@ __device__ inline T atomicAdd(T *dp, B v) {
 /// requires that hila::arithmetic_type is defined
 template <
     typename T, typename B,
-    std::enable_if_t<!std::is_arithmetic<T>::value && std::is_convertible<B, T>::value, int> = 0>
+    std::enable_if_t<!std::is_arithmetic<T>::value && std::is_assignable<T &, T>::value, int> = 0>
 __device__ inline void atomicAdd(T *d, const B &bv) {
 
-    T v = bv;
+    T v;
+    v = bv;
     hila::arithmetic_type<T> *dp;
     const hila::arithmetic_type<T> *dv;
     constexpr int N = sizeof(T) / sizeof(hila::arithmetic_type<T>);
