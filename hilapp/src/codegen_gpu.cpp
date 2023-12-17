@@ -496,6 +496,16 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             code << ", " << ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
+            // kernel variable name for size of array
+            std::string array_size_varname;
+            if (loop_has_reductionvector_blocks) {
+                // in this case need to pass the size of the vector (original!) to the kernel
+                array_size_varname = ar.new_name + "_size";
+
+                code << ", " << ar.size_expr;
+                kernel << ", const int " << array_size_varname;
+            }
+
 
             for (bracket_ref_t &br : ar.refs) {
                 // change the name
@@ -549,12 +559,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     //    new_name[static_cast<int>(ind)*N_threads_total + thread_idx] += val
                     // static cast is added if the type of the index is not of int type
 
-                    // in this case pass the size of the vector (original!) to the kernel
-                    std::string ar_size_varname(ar.new_name + "_size");
-
-                    code << ", " << ar.size_expr;
-                    kernel << ", const int " << ar_size_varname;
-
                     // Now have to be careful not to insert on the index variable "area",
                     // go in front of it
 
@@ -578,7 +582,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 #ifndef ALT_VECTOR_REDUCTION
                     // Normal simpler way to accumulate vectorreductions
-                    loopBuf.insert(l, " ) + _HILA_thread_id * " + ar_size_varname);
+                    loopBuf.insert(l, " ) + _HILA_thread_id * " + array_size_varname);
 
 #else
                     // ALT of above is below
@@ -833,7 +837,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     for (reduction_expr &r : reduction_list) {
         // OLD
         // kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
-        kernel << "_hila_kernel_copy_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name << "sum);\n";
+        kernel << "_hila_kernel_copy_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
+               << "sum);\n";
     }
 
     // Handle reductions: Need to sync threads once, then do reduction
