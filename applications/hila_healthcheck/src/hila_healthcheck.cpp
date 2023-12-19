@@ -66,6 +66,30 @@ void check_reductions() {
             expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
     }
     report_pass("Vector reduction, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+    // do a combined reduction too
+    sum = 0;
+    rv = 0;
+    onsites(ALL) {
+        rv[X.x()] += f[X];
+        rv[0] += 1;
+        rv[1] += -0.01;
+
+        sum += f[X];
+    }
+
+    sum /= lattice.volume();
+    Complex<double> sum2 = 0;
+    rv[0] -= lattice.volume();
+    rv[1] += 0.01 * lattice.volume();
+
+    for (int i = 0; i < lattice.size(e_x); i++) {
+        sum2 +=
+            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
+    }
+    report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
+                    hila::prettyprint(sum2),
+                abs(sum) + abs(sum2), 1e-4);
 }
 
 
@@ -126,7 +150,7 @@ void test_random() {
     Field<double> f;
 
     double fsum = 0, fsqr = 0;
-    for (int i=0; i<n_loops; i++) {
+    for (int i = 0; i < n_loops; i++) {
         f.gaussian_random();
         double s = 0, s2 = 0;
         onsites(ALL) {
@@ -134,21 +158,19 @@ void test_random() {
             s += f[X];
             s2 += sqr(f[X]);
         }
-        fsum += s/lattice.volume();
-        fsqr += s2/lattice.volume();
+        fsum += s / lattice.volume();
+        fsqr += s2 / lattice.volume();
     }
 
     fsum /= n_loops;
     fsqr /= n_loops;
 
-    report_pass("Gaussian random average (6 sigma limit) " + hila::prettyprint(fsum), 
-    abs(fsum), 6/sqrt(((double)n_loops)*lattice.volume()));
+    report_pass("Gaussian random average (6 sigma limit) " + hila::prettyprint(fsum), abs(fsum),
+                6 / sqrt(((double)n_loops) * lattice.volume()));
 
-    report_pass("Gaussian random width^2 " + hila::prettyprint(fsqr),
-    fsqr - 1, 6/sqrt(((double)n_loops)*lattice.volume()));
-
+    report_pass("Gaussian random width^2 " + hila::prettyprint(fsqr), fsqr - 1,
+                6 / sqrt(((double)n_loops) * lattice.volume()));
 }
-
 
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -565,8 +587,6 @@ void test_matrix_algebra() {
     report_pass("Fully pivoted SVD with " + hila::prettyprint(myMatrix::rows()) + "x" +
                     hila::prettyprint(myMatrix::columns()) + " Complex matrix",
                 max_delta, 1e-10);
-
-
 }
 
 
