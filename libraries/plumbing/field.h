@@ -723,12 +723,6 @@ class Field {
 #endif
 
     /**
-     * @name Standard arithmetic operations
-     * @brief Not all are always callable, e.g. division may not be implemented by all field types
-     * since division is not defined for all @p Field::T types.
-     *  @{
-     */
-    /**
      * @brief Assignment operator.
      *
      * @details Assignment can be performed in the following ways:
@@ -1128,7 +1122,6 @@ class Field {
         f[ALL] = ::imag((*this)[X]);
         return f;
     }
-    /** @} */
 
     // Communication routines. These are all internal.
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
@@ -1743,6 +1736,11 @@ void swap(Field<T> &A, Field<T> &B) {
 ///////////////////////////////////////////////////////////////////////
 // Allow some arithmetic functions if implemented
 
+
+/**
+ * @brief Exponential
+ * @memberof Field
+ */
 template <typename T, typename R = decltype(exp(std::declval<T>()))>
 Field<R> exp(const Field<T> &arg) {
     Field<R> res;
@@ -1866,7 +1864,6 @@ template <typename T, typename A = decltype(::imag(std::declval<T>()))>
 Field<A> imag(const Field<T> &arg) {
     return arg.imag();
 }
-
 
 template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
 double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
