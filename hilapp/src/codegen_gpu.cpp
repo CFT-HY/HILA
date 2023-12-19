@@ -700,31 +700,39 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     }
                 }
             } else {
+
                 // now local var dependent neighbour
+                // Two methods, either fetch all neighbours to vars and use them in loop,
+                // or fetch element every time it is used. Clearly case-by-case either one
+                // can be better.  Use the latter for now.
+                // TODO: make selection automatic? At least tunable by pragma?
 
-                // std::string loop_array_name = l.new_name + "_dirs";
-                // kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
-                // kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
-                //           "++_HILAdir_) {\n"
-                //        << loop_array_name << "[_HILAdir_] = " << l.new_name <<
-                //        ".get("
-                //        << l.new_name << ".neighbours[_HILAdir_][" << looping_var
-                //        << "], d_lattice.field_alloc_size);\n}\n";
+#ifdef BUILD_VARIABLE_NB_DIR_ELEMENTS
 
-                // // and replace references in loop body
-                // for (dir_ptr &d : l.dir_list) {
-                //     std::string dirname;
-                //     if (d.is_constant_direction)
-                //         dirname = d.direxpr_s; // orig. string
-                //     else
-                //         dirname = remove_X(loopBuf.get(
-                //             d.parityExpr->getSourceRange())); // mapped name was
 
-                //     for (field_ref *ref : d.ref_list) {
-                //         loopBuf.replace(ref->fullExpr,
-                //                         loop_array_name + "[" + dirname + "]");
-                //     }
-                // }
+                std::string loop_array_name = l.new_name + "_dirs";
+                kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
+                kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
+                          "++_HILAdir_) {\n"
+                       << loop_array_name << "[_HILAdir_] = " << l.new_name << ".get(" << l.new_name
+                       << ".neighbours[_HILAdir_][" << looping_var
+                       << "], d_lattice.field_alloc_size);\n}\n";
+
+                // and replace references in loop body
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr, loop_array_name + "[" + dirname + "]");
+                    }
+                }
+
+#else
 
                 // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
@@ -742,6 +750,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                                                            "], d_lattice.field_alloc_size)");
                     }
                 }
+#endif
             }
         }
 
