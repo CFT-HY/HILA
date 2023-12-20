@@ -6,42 +6,40 @@ namespace hila {
 constexpr bool device_rng_off = false;
 constexpr bool device_rng_on = true;
 
-/// Seed random generators with 64-bit unsigned value. On MPI shuffles the seed so that different
-/// MPI ranks are seeded with different values.
-///
-/// The optional 2nd argument indicates whether to initialize the RNG on GPU device:
-/// hila::device_rng_on (default) or hila::device_rng_off.  This argument does nothing if not GPU
-/// platform.  If hila::device_rng_off is used, onsites() -loops cannot contain random number calls
-/// (Runtime error will be flagged and program exits).
 
+/**
+ *@brief Seed random generators with 64-bit unsigned value. 
+ *       On MPI shuffles the seed so that different MPI ranks are seeded with different values.
+ */  
 void seed_random(uint64_t seed, bool device_rng = true);
 
-/// @brief Check if RNG is seeded already
+/**
+ *@brief Check if RNG is seeded already
+ */
 bool is_rng_seeded();
 
-///
-/// Initialize host (CPU) random number generator separately, done implicitly by seed_random()
-/// Parameter random number seed.  On MPI shuffles different seed values for all MPI ranks.
-
+/**
+ *@brief Initialize host (CPU) random number generator separately, done implicitly by `seed_random()`
+ */
 void initialize_host_rng(uint64_t seed);
 
-///
-/// Initialize device random number generator on GPUs, if on GPU platform.  No effect on other
-/// archs. On MPI shuffles the seed for different MPI ranks.  Called by seed_random() unless its 2nd
-/// argument is hila::device_rng_off.  This can reinitialize device RNG free'd by free_device_rng().
-
+/**
+ *@brief Initialize device random number generator on GPUs, if application run on GPU platform. 
+ *       No effect on other archs.
+ */
 void initialize_device_rng(uint64_t seed);
 
-///
-/// Free GPU RNG state, hila::random() does not work inside onsites() after this
-/// (unless seeded again using initialize_device_rng()).  Frees the memory RNG takes on the device.
-/// Does nothing on non-GPU archs.
-
+/**
+ *@brief Free GPU RNG state, does nothing on non-GPU archs.
+ */  
 void free_device_rng();
 
 ///
-/// Check if the RNG on GPU is allocated and ready to use.  Returns true on non-GPU archs.
+/// 
 
+/**
+ *@brief Check if the RNG on GPU is allocated and ready to use. 
+ */  
 bool is_device_rng_on();
 
 
@@ -53,11 +51,11 @@ bool is_device_rng_on();
 
 
 /**
- * @brief Real valued uniform random number generator
- * @details Returns a uniform double precision random number in interval [0,1).  Can be
- * called from outside or inside site loops (on GPU if the device rng is initialized).
+ * @brief Real valued uniform random number generator.
+ * @details Returns an uniform double precision random number in interval \f$[0,1)\f$.  
+ * This function can be called from outside or inside site loops (on GPU if the device rng is initialized).
  *
- *  Uses
+ * Uses
  * [std::uniform_real_distribution](https://en.cppreference.com/w/cpp/numeric/random/uniform_real_distribution)
  *
  * @return double
@@ -69,49 +67,45 @@ double random();
 // routine is not normally needed in user code, instead use standard hila::random().
 double host_random();
 
-///
-/// hila::gaussrand() returns a Gaussian distributed random number with variance 1.0, i.e.
-/// the probability distribution is
-///           exp( -x*x/2 ), so < x^2 > = 1
-/// If you want random numbers with variance sigma, multiply the
-/// result by  sqrt(sigma):
-///       sqrt(sigma) * gaussrand();
-
 #pragma hila contains_rng loop_function
+
+/**
+ * @brief Gaussian random generation routine 
+ */  
 double gaussrand();
 
-/// hila::gaussrand2 returns 2 Gaussian distributed random numbers with variance 1.0.
-/// Useful because Box-Muller algorithm computes 2 values at the same time.
 
+/**
+ *@brief `hila::gaussrand2` returns 2 Gaussian distributed random numbers with variance \f$1.0\f$.
+ *@details Useful because Box-Muller algorithm computes 2 values at the same time.
+ */
 #pragma hila contains_rng loop_function
 double gaussrand2(double &out2);
 
-///
-/// do what the name says - program quits with error message if RNG is not initialized and on GPU
-/// archs the device RNG is not initialized.
-
+/**
+ *@brief Check if RNG is initialized, do what the name says.
+ */  
 void check_that_rng_is_initialized();
 
-
-///
-/// Template function
-///     const T & hila::random(T & var)
-/// Sets the argument to a random value, and return a constant reference to it.
-/// Example:
-///     Complex<double> c;
-///     auto n = hila::random(c).abs();
-/// sets the variable c to complex random value and calculates its absolute value.
-/// c.real() and c.imag() will be \in [0,1)
-///
-/// For hila classes relies on the existence of method T::random() (i.e. var.random())
-///
-/// Typically sets the argument real numbers to interval [0,1), but not
-/// always: for example, if T is SU<N,T> -matrix sets the argument to
-/// valid random SU<N,T>.
-///
-/// Advantage over class function T::random() is that the argument can be
-/// of elementary arithmetic type.
-
+/**
+ *@brief Template function `const T & hila::random(T & var)`
+ *       sets the argument to a random value, and return a constant reference to it.
+ *@details For example 
+ *\code{.cpp}
+ *   Complex<double> c;
+ *   auto n = hila::random(c).abs();
+ *\endcode
+ *sets the variable `c` to complex random value and calculates its absolute value.
+ *`c.real()` and `c.imag()` will be \f$\in [0,1)\f$.
+ *
+ *For hila classes relies on the existence of method `T::random()` (i.e. `var.random()`),
+ *this function typically sets the argument real numbers to interval \f$[0,1)\f$ if `type T` is arithmatic.
+ *if T is more commplicated classes such as `SU<N,T>`-matrix, this function sets the argument to
+ * valid random `SU<N,T>`.
+ *
+ * Advantage of this function over class function `T::random()` is that the argument can be
+ * of elementary arithmetic type.
+ */  
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 T random(out_only T &val) {
     val = hila::random();
@@ -124,16 +118,16 @@ T &random(out_only T &val) {
     return val;
 }
 
-///
-/// Template function
-///     T hila::random<T>();
-/// without argument.  This is used to generate random value for T without defined variable.
-/// Example:
-///     auto n = hila::random<Complex<double>>().abs();
-/// calculates the norm of a random complex value.
-///
-/// hila::random<double>() is functionally equivalent to hila::random()
-
+/**
+ *@brief Template function `T hila::random<T>()` without argument.  
+ *@details This is used to generate random value for `type T` without defined variable.
+ *Example:
+ *\code{.cpp}
+ *    auto n = hila::random<Complex<double>>().abs();
+ *\endcode
+ *  calculates the norm of a random complex value.
+ *`hila::random<double>()` is functionally equivalent to `hila::random()`
+ */
 template <typename T>
 T random() {
     T val;
@@ -141,55 +135,50 @@ T random() {
     return val;
 }
   
-///
-/// Template function
-///     const T & hila::gaussian_random(T & variable,double width=1)
-/// Example:
-///     Complex<double> c;
-///     auto n = sqr(hila::gaussian_random(c));
-/// sets the variable c to complex gaussian random value and stores its square in n.
-///
-/// For hila classes relies on the existence of method T::gaussian_random().
-///
-/// Advantage over class function T::random() is that the argument can be
-/// of elementary arithmetic type.
 
 /**
- * @brief Template function const T & hila::gaussian_random(T & variable,double width=1)
+ * @brief Template function 
+ *        `const T & hila::gaussian_random(T & variable,double width=1)`
  * @details Sets the argument to a gaussian random value, and return a constant reference to it.
- * Optional second argument width sets the variance=width^2 (default=1)
+ * Optional second argument width sets the \f$variance=width^{2}\f$ (\f$default==1\f$)
+ *
+ * For example:
  * \code {.cpp}
  * Complex<double> c;
  * auto n = sqr(hila::gaussian_random(c));
  * \endcode
+ * sets the variable `c` to complex gaussian random value and stores its square in `n`.
  *
- * @return double
- */
-  
-  
+ * This function is for hila classes relies on the existence of method `T::gaussian_random()`.
+ * The advantage for this function over class function `T::random()` is that the argument can be
+ * of elementary arithmetic type.
+ * @return T by reference
+ */    
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 T gaussian_random(out_only T &val, double w = 1.0) {
     val = hila::gaussrand() * w;
     return val;
 }
-
+  
 template <typename T, std::enable_if_t<!std::is_arithmetic<T>::value, int> = 0>
 T &gaussian_random(out_only T &val, double w = 1.0) {
     val.gaussian_random(w);
     return val;
 }
 
-///
-/// Template function
-///     T hila::gaussian_random<T>();
-/// generates gaussian random value of type T, with variance 1.
-/// Example:
-///     auto n = hila::gaussian_random<Complex<double>>().abs();
-/// calculates the norm of a gaussian random complex value.
-///
-/// Note: there is no width/variance parameter, because of danger of confusion
-/// with above hila::gaussian_random(value)
 
+/**
+ *@brief Template function
+ *       `T hila::gaussian_random<T>()`,generates gaussian random value of `type T`, with variance \f$1\f$.
+ *@details For example,
+ *\code{.cpp}
+ *  auto n = hila::gaussian_random<Complex<double>>().abs();
+ *\endcode
+ *calculates the norm of a gaussian random complex value.
+ *  
+ *@note there is no width/variance parameter, because of danger of confusion
+ *with above `hila::gaussian_random(value)`
+ */  
 template <typename T>
 T gaussian_random() {
     T val;
