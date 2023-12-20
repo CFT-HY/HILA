@@ -2,7 +2,7 @@
 /**
 \page field_documentation Field
 
-Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed on the \subpage datatypes page.
+Field is the most important Datatype offered by HILA. The Field is a container of lattice fields, and is the general object we evolve and iterate over. The Field can be comprised of either [Standard types](#standard) or [Basic types](#basic) listed on the [datatypes](#datatypes) page.
 
 To see all the possible methods of a Field see the class page which lists comprehensive documentation.
 
@@ -126,7 +126,7 @@ This is done by using Field::get_elements and Field::set_elements which take in 
     g.set_elements(values, coordinates); // Sets values fetched from f
 ~~~
 
-Additionally Field::get_elements takes in an additional argument broadcast `get_elements(coordinates, broadcast)`. If set to true then the gotten elements are broadcasted to all MPI ranks, by default it is set to false.
+Additionally Field::get_elements takes in an additional argument broadcast `get_elements(coordinates, broadcast)`. If set to true then the fetched elements are broadcasted to all MPI ranks, by default it is set to false.
 
 # Reductions
 
@@ -427,24 +427,65 @@ onsites(ALL) f[X].gaussian_random();
 
 # FFT
 
-# Standard arithmetic methods and mathematical functions
+# Mathematical methods {#mathematical_methods_field}
 
-The standard arithmetic methods defined for fields are:
+Standard arithmetic methods:
 
 -  `Field::operator+`
 -  `Field::operator-`
 -  `Field::operator*`
 -  `Field::operator/`
 
-And arithmetic assignment methods:
+Arithmetic assignment methods:
 
 -  `Field::operator+=`
 -  `Field::operator-=`
 -  `Field::operator*=`
 -  `Field::operator/=`
 
-The following mathematical methods which are defined for the field, use the definition of the element type of the Field:
+Mathematical functions:
 
+-  `Field::exp`
+-  `Field::log`
 -  `Field::sin`
+-  `Field::cos`
+-  `Field::tan`
+-  `Field::asin`
+-  `Field::acos`
+-  `Field::atan`
+-  `Field::abs`
+-  `Field::pow`
+-  `Field::squarenrom`
+-  `Field::norm`
+-  `Field::conj`
+-  `Field::dagger`
+-  `Field::real`
+-  `Field::imag`
+-  `Field::squarenorm_relative`
+
+Let `func` be a mathematical method defined above, then usage is:
+
+~~~cpp
+Field<MyType> f;
+f = func(f)
+~~~
+
+Additionally norm, conj, dagger, real and imag can be used as member functions `f.fun()`.
+Exceptions to this are pow and squarenorm_relative which take in additional arguments, see respective documentation for details.
+
+
+All mathematical functions are operated element wise on the Field using the definition of the element type T of the Field<T>:
+
+~~~cpp
+Field<R> res;
+onsites(ALL) {
+    res[X] = func(arg[X]);
+}
+return res;
+~~~
+
+if `func` is not defined for type T then an error is thrown.
+
+
 
 */
