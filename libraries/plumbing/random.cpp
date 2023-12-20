@@ -36,13 +36,14 @@ double hila::host_random() {
 
 static bool rng_is_initialized = false;
 
-///
-/// Random shuffling of rng seed for MPI nodes
-/// Do it in a manner makes it difficult to give the same seed by mistake
-/// and also avoids giving the same seed for 2 nodes
-/// For single MPI node seed remains unchanged
-
 namespace hila {
+
+/**
+ * @brief Random shuffling of rng seed for MPI nodes.
+ * @details Do it in a manner makes it difficult to give the same seed by mistake
+ * and also avoids giving the same seed for 2 nodes
+ * For single MPI node seed remains unchanged
+ */
 uint64_t shuffle_rng_seed(uint64_t seed) {
 
     uint64_t n = hila::myrank();
@@ -53,6 +54,10 @@ uint64_t shuffle_rng_seed(uint64_t seed) {
 }
 
 
+/**
+ *@param seed unsigned int_64  
+ *@note On MPI, this function shuffles different seed values for all MPI ranks.  
+ */
 void initialize_host_rng(uint64_t seed) {
 
     seed = hila::shuffle_rng_seed(seed);
@@ -67,11 +72,17 @@ void initialize_host_rng(uint64_t seed) {
 
 } // namespace hila
 
-/// Seed random number generators
-/// Seed is shuffled so that different nodes
-/// get different rng seeds.  If seed == 0,
-/// generate seed using the time() -function.
 
+/**
+ *@details The optional 2nd argument indicates whether to initialize the RNG on GPU device:
+ * `hila::device_rng_on` (default) or `hila::device_rng_off`.  This argument does nothing if no GPU
+ * platform.  If `hila::device_rng_off` is used, `onsites()` -loops cannot contain random number calls
+ * (Runtime error will be flagged and program exits).
+ * 
+ * Seed is shuffled so that different nodes
+ * get different rng seeds.  If `seed == 0`,
+ * seed is generated through using the `time()` -function.
+ */  
 void hila::seed_random(uint64_t seed, bool device_init) {
 
     rng_is_initialized = true;
@@ -134,29 +145,32 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 }
 
 ////////////////////////////////////////////////////////////////////
-/// Def here gpu rng functions for non-gpu
+// Def here gpu rng functions for non-gpu
 ////////////////////////////////////////////////////////////////////
 
 #if !(defined(CUDA) || defined(HIP))
 
+/**
+ *@details `hila::random()` does not work inside `onsites()` after this, 
+ *unless seeded again using `initialize_device_rng()`. Frees the memory RNG takes on the device. 
+ */  
 void hila::free_device_rng() {}
+
+/**
+ *@details Returns `true` on non-GPU archs.
+ */
 bool hila::is_device_rng_on() {
     return true;
 }
+
+/**
+ *@details This function shuffles the seed for different MPI ranks on MPI.  Called by `seed_random()` unless its 2nd
+ *argument is `hila::device_rng_off`. This can reinitialize device RNG free'd by `free_device_rng()`.
+ */
 void hila::initialize_device_rng(uint64_t seed) {}
 
 #endif
 
-
-///////////////////////////////////////////////////////////////////
-/// gaussian rng generation routines
-/// By default these give random numbers with variance 1.0, i.e.
-/// probability distribution is
-///           exp( -x*x/2 ), so < x^2 > = 1
-/// If you want random numbers with variance sigma, multiply the
-/// result by  sqrt(sigma):
-///       sqrt(sigma) * gaussrand();
-////////////////////////////////////////////////////////////////////
 
 #define VARIANCE 1.0
 
@@ -178,13 +192,23 @@ double hila::gaussrand2(double &out2) {
 #if !defined(CUDA) && !defined(HIP)
 
 /**
- * @brief Gaussian random generation routine 
- * @details By default these give random numbers with variance 1.0, i.e.
- * probability distribution is
- * \f{align}{exp( -x*x/2 )\f}, so \f{align} < x^2 > = 1\f}
+ * @details By default these gives random numbers with variance \f$1.0\f$ and expectation value \f$0.0\f$, i.e.
+ * \f[
+ *    e^{-(\frac{x^{2}}{2})}
+ * \f]
+ * with variance
+ * \f[
+ *    < x^{2}-0.0> = 1
+ * \f] 
+ *
+ * If you want random numbers with variance \f$ \sigma^{2} \f$, multiply the
+ * result by \f$ \sqrt{\sigma^{2}} \f$ i.e.,
+ * \code {.cpp}
+ *       sqrt(sigma * sigma) * gaussrand();
+ * \endcode
  *
  * @return double
- */
+ */  
 double hila::gaussrand() {
     static double second;
     static bool draw_new = true;
@@ -209,19 +233,22 @@ double hila::gaussrand() {
 
 #endif
 
-///////////////////////////////////////////////////////////////
-/// Check if RNG is seeded already
-///////////////////////////////////////////////////////////////
-
+/**
+ *@returns bool
+ */
 bool hila::is_rng_seeded() {
     return rng_is_initialized;
 }
 
 
 ///////////////////////////////////////////////////////////////
-/// RNG initialization check - emitted on loops
+// RNG initialization check - emitted on loops
 ///////////////////////////////////////////////////////////////
 
+/**
+ *@details program quits with error message if RNG is not initialized.
+ *It also quit with error messages if the device RNG is not initialized.
+ */
 void hila::check_that_rng_is_initialized() {
     bool isinit;
 
@@ -239,3 +266,9 @@ void hila::check_that_rng_is_initialized() {
     }
 #endif
 }
+
+
+
+
+
+
