@@ -244,7 +244,7 @@ class Field {
 
     /**
      * @brief Field constructor
-     * @details The following ways of constructing a Field object are the following:
+     * @details The following ways of constructing a Field object are:
      *
      * __Default constructor__:
      *
@@ -278,7 +278,8 @@ class Field {
 
         // put here some implementation checks for field vars
 #ifdef VECTORIZED
-        static_assert(sizeof(hila::arithmetic_type<T>) == 4 || sizeof(hila::arithmetic_type<T>) == 8,
+        static_assert(sizeof(hila::arithmetic_type<T>) == 4 ||
+                          sizeof(hila::arithmetic_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
@@ -722,12 +723,6 @@ class Field {
 #endif
 
     /**
-     * @name Standard arithmetic operations
-     * @brief Not all are always callable, e.g. division may not be implemented by all field types
-     * since division is not defined for all @p Field::T types.
-     *  @{
-     */
-    /**
      * @brief Assignment operator.
      *
      * @details Assignment can be performed in the following ways:
@@ -1127,7 +1122,6 @@ class Field {
         f[ALL] = ::imag((*this)[X]);
         return f;
     }
-    /** @} */
 
     // Communication routines. These are all internal.
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
@@ -1742,6 +1736,22 @@ void swap(Field<T> &A, Field<T> &B) {
 ///////////////////////////////////////////////////////////////////////
 // Allow some arithmetic functions if implemented
 
+
+/**
+ * @name Mathematical methods.
+ * @tparam T Field element type of arg
+ * @tparam R Field return type
+ * @param arg input Field
+ * @return Field<R>
+ * @memberof Field
+ * @details See [field documentation](@ref mathematical_methods_field)
+ *
+ * @{
+ */
+
+/**
+ * @brief Exponential
+ */
 template <typename T, typename R = decltype(exp(std::declval<T>()))>
 Field<R> exp(const Field<T> &arg) {
     Field<R> res;
@@ -1751,6 +1761,9 @@ Field<R> exp(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Logarithm
+ */
 template <typename T, typename R = decltype(log(std::declval<T>()))>
 Field<R> log(const Field<T> &arg) {
     Field<R> res;
@@ -1760,6 +1773,9 @@ Field<R> log(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Sine
+ */
 template <typename T, typename R = decltype(sin(std::declval<T>()))>
 Field<R> sin(const Field<T> &arg) {
     Field<R> res;
@@ -1769,6 +1785,9 @@ Field<R> sin(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Cosine
+ */
 template <typename T, typename R = decltype(cos(std::declval<T>()))>
 Field<R> cos(const Field<T> &arg) {
     Field<R> res;
@@ -1778,6 +1797,9 @@ Field<R> cos(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Tangent
+ */
 template <typename T, typename R = decltype(tan(std::declval<T>()))>
 Field<R> tan(const Field<T> &arg) {
     Field<R> res;
@@ -1787,6 +1809,9 @@ Field<R> tan(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Arcsine
+ */
 template <typename T, typename R = decltype(asin(std::declval<T>()))>
 Field<R> asin(const Field<T> &arg) {
     Field<R> res;
@@ -1796,6 +1821,9 @@ Field<R> asin(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Arccosine
+ */
 template <typename T, typename R = decltype(acos(std::declval<T>()))>
 Field<R> acos(const Field<T> &arg) {
     Field<R> res;
@@ -1805,6 +1833,9 @@ Field<R> acos(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Arctangent
+ */
 template <typename T, typename R = decltype(atan(std::declval<T>()))>
 Field<R> atan(const Field<T> &arg) {
     Field<R> res;
@@ -1814,6 +1845,9 @@ Field<R> atan(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Absolute value
+ */
 template <typename T, typename R = decltype(abs(std::declval<T>()))>
 Field<R> abs(const Field<T> &arg) {
     Field<R> res;
@@ -1823,6 +1857,10 @@ Field<R> abs(const Field<T> &arg) {
     return res;
 }
 
+/**
+ * @brief Power
+ * @param p exponent to which Field element is raised to.
+ */
 template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
 Field<R> pow(const Field<T> &arg, const P p) {
     Field<R> res;
@@ -1832,6 +1870,9 @@ Field<R> pow(const Field<T> &arg, const P p) {
     return res;
 }
 
+/**
+ * @brief Squared norm \f$|f|^2\f$
+ */
 template <typename T>
 double squarenorm(const Field<T> &arg) {
     double r = 0;
@@ -1840,6 +1881,7 @@ double squarenorm(const Field<T> &arg) {
     }
     return r;
 }
+
 
 template <typename T>
 double norm(const Field<T> &arg) {
@@ -1866,7 +1908,15 @@ Field<A> imag(const Field<T> &arg) {
     return arg.imag();
 }
 
-
+/**
+ * @brief Squarenorm relative \f$|a-b|^2\f$
+ *
+ * @tparam A Element type of Field a
+ * @tparam B Element type of Field b
+ * @param a Field a
+ * @param b Field b
+ * @return double
+ */
 template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
 double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
     double res = 0;
@@ -1876,6 +1926,7 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
     return res;
 }
 
+/// @}
 
 template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v) const {
