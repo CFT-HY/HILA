@@ -429,7 +429,7 @@ onsites(ALL) f[X].gaussian_random();
 
 # Mathematical methods {#mathematical_methods_field}
 
-Standard arithmetic methods:
+* **Standard arithmetic methods:**
 
 -  `Field::operator+`
 -  `Field::operator-`
@@ -448,7 +448,7 @@ f = f @ g; // Field operated with other field
 f = f @ a; // Field operated with scalar 
 ~~~
 
-Arithmetic assignment methods:
+* **Arithmetic assignment methods:**
 
 -  `Field::operator+=`
 -  `Field::operator-=`
@@ -467,7 +467,7 @@ f @= g; // Field operated with other field
 f @= a; // Field operated with scalar 
 ~~~
 
-Mathematical functions:
+* **Mathematical functions:**
 
 -  `Field::exp`
 -  `Field::log`
