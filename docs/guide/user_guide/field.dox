@@ -427,6 +427,35 @@ onsites(ALL) f[X].gaussian_random();
 
 # FFT
 
+Fast Fourier transform on the Field can be performed with Field::FFT. Field::FFT is defined only for `Field<Complex> ` \f$\rightarrow\f$ `Field<Complex> ` transforms. By default calling without arguments will execute FFT in all directions.
+
+@code{.cpp}
+.
+. // Field f is defined
+.
+auto res = f.FFT() //Forward transform
+auto res_2 = res.FFT(fft_direction::back) // res_2 is same as f
+@endcode
+
+Above the argument `fft_direction::back` indicates to perform the inverse transform \f$\mathcal{F}^{-1}\f$. By default the arugment `fftdir` is `fft_direction::forward`.
+
+
+One can also specify the direction of the FFT with a coordinate vector:
+
+@code{.cpp}
+.
+. // Field f is defined
+.
+auto res = f.FFT(e_x) //Forward transform in x-direction
+auto res_2 = res.FFT(e_X,fft_direction::back) // res_2 is same as f
+@endcode
+
+With this in mind `f.FFT(e_x+e_y+e_z) = f.FFT()`.
+
+## Real to Complex / Complex to Real
+
+Is this necessary information for user?
+
 # Mathematical methods {#mathematical_methods_field}
 
 * **Standard arithmetic methods:**
