@@ -455,7 +455,7 @@ Mathematical functions:
 -  `Field::atan`
 -  `Field::abs`
 -  `Field::pow`
--  `Field::squarenrom`
+-  `Field::squarenorm`
 -  `Field::norm`
 -  `Field::conj`
 -  `Field::dagger`
