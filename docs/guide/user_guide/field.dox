@@ -436,12 +436,36 @@ Standard arithmetic methods:
 -  `Field::operator*`
 -  `Field::operator/`
 
+The standard arithmetic methods above operate element wise. Both fields must have compatible types. All operators are also defined for scalars. Let @ be one of the four operators above, then the operator works in the following ways:
+
+~~~cpp
+Field<MyType> f,g;
+MyType a;
+.
+.
+.
+f = f @ g; // Field operated with other field
+f = f @ a; // Field operated with scalar 
+~~~
+
 Arithmetic assignment methods:
 
 -  `Field::operator+=`
 -  `Field::operator-=`
 -  `Field::operator*=`
 -  `Field::operator/=`
+
+The same which holds for the arithmetic operators hold also for the assignment operators.
+
+~~~cpp
+Field<MyType> f,g;
+MyType a;
+.
+.
+.
+f @= g; // Field operated with other field
+f @= a; // Field operated with scalar 
+~~~
 
 Mathematical functions:
 
