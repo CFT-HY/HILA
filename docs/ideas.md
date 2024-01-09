@@ -16,3 +16,5 @@
     - reflect
     - mathematical operations
     - gaussian_random?
+
+- Finish mathematical operations

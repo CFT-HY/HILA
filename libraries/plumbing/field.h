@@ -1004,20 +1004,88 @@ class Field {
     }
 
     // Unary + and -
-
     /**
-     * @brief Unary + operator, acts as Identity
+     * @memberof Field
+     * @brief Summation operator
+     * @details Summation operator can be called in the following ways as long as types are
+     * convertible.
      *
-     * @return Field<T> Returns itself
+     * __unary operator:__
+     *
+     * Acts as identity of field
+     *
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f =  +f;
+     * \endcode
+     *
+     * __Summation with field:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f = f + g;
+     * \endcode
+     *
+     * __Summation with scalar:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a;
+     * . . .
+     * f = f + a;
+     * \endcode
+     *
+     * @tparam A Type of lhs Field
+     * @tparam B Type of rhs field
+     * @param lhs First (left) Field
+     * @param rhs Second (right) Field
+     * @return Field<hila::type_plus<A, B>> Summed Field
      */
     Field<T> operator+() const {
         return *this;
     }
 
     /**
-     * @brief Unary - operator, acts as negation to all field elements
+     * @memberof Field
+     * @brief Subtraction operator
+     * @details Subtraction operator can be called in the following ways as long as types are
+     * convertible.
      *
-     * @return Field<T> Returns negated version of itself
+     * __unary operator:__
+     *
+     * Acts as negation of field
+     *
+     *  * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f =  -f;
+     * \endcode
+     *
+     * __Subtraction with field:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f,g;
+     * . . .
+     * f = f - g;
+     * \endcode
+     *
+     * __Subtraction with scalar:__
+     *
+     * \code{.cpp}
+     * Field<MyType> f;
+     * MyType a;
+     * . . .
+     * f = f - a;
+     * f = a - f;
+     * \endcode
+     *
+     * @tparam A Type of lhs Field
+     * @tparam B Type of rhs field
+     * @param lhs First (left) Field
+     * @param rhs Second (right) Field
+     * @return Field<hila::type_plus<A, B>> Subtracted Field
      */
     Field<T> operator-() const {
         Field<T> f;
@@ -1449,8 +1517,8 @@ class Field {
 // Field or scalar, and if the return type is the same as the Field argument.  This can
 // enable the compiler to avoid extra copies of the args
 
-///////////////////////////////
-/// operator +  (Field + Field) -generic
+// operator +  (Field + Field) -generic
+
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value &&
                                !std::is_same<hila::type_plus<A, B>, B>::value,
@@ -1480,7 +1548,7 @@ auto operator+(const Field<A> &lhs, Field<B> rhs) {
 }
 
 //////////////////////////////
-/// operator + (Field + scalar)
+// operator + (Field + scalar)
 
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
@@ -1515,7 +1583,8 @@ Field<B> operator+(const A &lhs, Field<B> rhs) {
 
 
 //////////////////////////////
-/// operator - Field - Field -generic
+// operator - Field - Field -generic
+
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value &&
                                !std::is_same<hila::type_minus<A, B>, B>::value,
@@ -1563,7 +1632,7 @@ Field<A> operator-(Field<A> lhs, const B &rhs) {
 }
 
 //////////////////////////////
-/// operator - (scalar - Field)
+// operator - (scalar - Field)
 
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_minus<A, B>, B>::value, int> = 0>
@@ -1581,8 +1650,38 @@ Field<B> operator-(const A &lhs, Field<B> rhs) {
 }
 
 ///////////////////////////////
-/// operator * (Field * Field)
-/// generic
+// operator * (Field * Field)
+// generic
+/**
+ * @memberof Field
+ * @brief Multiplication operator
+ * @details Multiplication operator can be called in the following ways as long as types are
+ * convertible.
+ *
+ * __Multiplication with field:__
+ *
+ * \code{.cpp}
+ * Field<MyType> f,g;
+ * . . .
+ * f = f * g;
+ * \endcode
+ *
+ * __Multiplication with scalar:__
+ *
+ * \code{.cpp}
+ * Field<MyType> f;
+ * MyType a;
+ * . . .
+ * f = f * a;
+ * f = a * f;
+ * \endcode
+ *
+ * @tparam A Type of lhs Field
+ * @tparam B Type of rhs field
+ * @param lhs First (left) Field
+ * @param rhs Second (right) Field
+ * @return Field<hila::type_plus<A, B>> Multiplied Field
+ */
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value &&
                                !std::is_same<hila::type_mul<A, B>, B>::value,
@@ -1593,7 +1692,7 @@ auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul
     return tmp;
 }
 
-/// reuse 1st
+// reuse 1st
 template <typename A, typename B,
           std::enable_if_t<std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
 Field<A> operator*(Field<A> lhs, const Field<B> &rhs) {
@@ -1601,7 +1700,7 @@ Field<A> operator*(Field<A> lhs, const Field<B> &rhs) {
     return lhs;
 }
 
-/// reuse 2nd
+// reuse 2nd
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value &&
                                std::is_same<hila::type_mul<A, B>, B>::value,
@@ -1612,7 +1711,7 @@ Field<B> operator*(const Field<A> &lhs, Field<B> rhs) {
 }
 
 /////////////////////////////////
-/// operator * (scalar * field)
+// operator * (scalar * field)
 
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_mul<A, B>, B>::value, int> = 0>
@@ -1648,8 +1747,38 @@ Field<A> operator*(Field<A> lhs, const B &rhs) {
 }
 
 ///////////////////////////////
-/// operator / (Field / Field)
-/// generic
+// operator / (Field / Field)
+// generic
+/**
+ * @memberof Field
+ * @brief Division operator
+ * @details Division operator can be called in the following ways as long as types are
+ * convertible.
+ *
+ * __Division with field:__
+ *
+ * \code{.cpp}
+ * Field<MyType> f,g;
+ * . . .
+ * f = f / g;
+ * \endcode
+ *
+ * __Division with scalar:__
+ *
+ * \code{.cpp}
+ * Field<MyType> f;
+ * MyType a;
+ * . . .
+ * f = f / a;
+ * f = a / f;
+ * \endcode
+ *
+ * @tparam A Type of lhs Field
+ * @tparam B Type of rhs field
+ * @param lhs First (left) Field
+ * @param rhs Second (right) Field
+ * @return Field<hila::type_plus<A, B>> Subtracted Field
+ */
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value &&
                                !std::is_same<hila::type_div<A, B>, B>::value,
@@ -1660,7 +1789,7 @@ auto operator/(const Field<A> &l, const Field<B> &r) -> Field<hila::type_div<A, 
     return tmp;
 }
 
-/// reuse 1st
+// reuse 1st
 template <typename A, typename B,
           std::enable_if_t<std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
 Field<A> operator/(Field<A> l, const Field<B> &r) {
@@ -1668,7 +1797,7 @@ Field<A> operator/(Field<A> l, const Field<B> &r) {
     return l;
 }
 
-/// reuse 2nd
+// reuse 2nd
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value &&
                                std::is_same<hila::type_div<A, B>, B>::value,
@@ -1679,7 +1808,7 @@ Field<B> operator/(const Field<A> &l, Field<B> r) {
 }
 
 //////////////////////////////////
-/// operator /  (scalar/Field)
+// operator /  (scalar/Field)
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_div<A, B>, B>::value, int> = 0>
 auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
