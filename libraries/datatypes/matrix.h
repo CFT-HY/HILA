@@ -504,8 +504,11 @@ class Matrix_t {
      * @return true
      * @return false
      */
-    template <typename S>
-    bool operator==(const Matrix<n, m, S> &rhs) const {
+    template <typename S, int n2, int m2>
+    bool operator==(const Matrix<n2, m2, S> &rhs) const {
+        if constexpr (n != n2 || m != m2)
+            return false;
+
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++) {
                 if (e(i, j) != rhs.e(i, j))
