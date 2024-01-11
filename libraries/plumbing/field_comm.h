@@ -675,7 +675,7 @@ std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord
 }
 
 
-/// get a subvolume of the field elements to all nodes
+/// Get a subvolume of the field elements to all nodes
 template <typename T>
 std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                        bool bcast) const {
@@ -696,7 +696,7 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
 }
 
 
-/// and get a slice (subvolume)
+/// Get a slice (subvolume)
 template <typename T>
 std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
     CoordinateVector cmin, cmax;

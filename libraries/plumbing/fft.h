@@ -550,6 +550,26 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
 /// This is here because it uses similar communications as fft
 /// TODO: refactorise so that there is separate "make columns" class!
 
+/**
+ * @brief  Reflect the Field around the desired axis
+ * @details Can be called in the following ways:
+ *
+ * __Reflect on all axes:__
+ *
+ * \code {.cpp}
+ * Field<MyType> f;
+ * .
+ * .
+ * .
+ * f.reflect()
+ * \endcode
+ *
+ * @todo refactorise so that there is separate "make columns" class!
+ * @tparam T
+ * @param dirs
+ * @return Field<T>
+ */
+
 template <typename T>
 Field<T> Field<T>::reflect(const CoordinateVector &dirs) const {
 

@@ -1729,7 +1729,7 @@ Field<B> operator*(const A &lhs, Field<B> rhs) {
 }
 
 /////////////////////////////////
-/// operator * (field * scalar)
+// operator * (field * scalar)
 
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
@@ -1825,7 +1825,7 @@ Field<B> operator/(const A &lhs, Field<B> rhs) {
 }
 
 //////////////////////////////////
-/// operator /  (Field/scalar)
+// operator /  (Field/scalar)
 template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
 auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>> {
