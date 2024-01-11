@@ -451,10 +451,10 @@ class Matrix_t {
     }
 
 
-    /// casting from one Matrix (number) type to another: do not do this automatically.
-    /// but require an explicit cast operator.  This makes it easier to write code.
-    /// or should it be automatic?  keep/remove explicit?
-    /// TODO: CHECK AVX CONVERSIONS
+    // casting from one Matrix (number) type to another: do not do this automatically.
+    // but require an explicit cast operator.  This makes it easier to write code.
+    // or should it be automatic?  keep/remove explicit?
+    // TODO: CHECK AVX CONVERSIONS
 
     // template <typename S, typename Rtype,
     //           std::enable_if_t<
@@ -471,10 +471,53 @@ class Matrix_t {
     // }
 
     /**
-     * @brief Unary - operator
-     * @details Returns matrix with the signs of all the elements in the Matrix flipped.
+     * @brief Subtraction operator
+     * @memberof Matrix_t
+     * @details Defined for the following operations
      *
-     * @return Mtype
+     * __Unary:__
+     *
+     * Negation operation
+     *
+     * \code {.cpp}
+     * M == -M;
+     * \endcode
+     *
+     * __Matrix - Matrix:__
+     *
+     * Subtraction operator between matrices is defined in the usual way (element wise).
+     *
+     * __NOTE__: Matrices must share same dimensionality.
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M, N, S;
+     * M.fill(1);
+     * N.fill(1);
+     * S = M - N; // Resulting matrix is uniformly 0
+     * \endcode
+     *
+     *
+     * __Scalar - Matrix / Matrix - Scalar:__
+     *
+     * Subtraction operator between matrix and scalar is defined in the usual way, where the scalar
+     * is subtracted from the diagonal elements.
+     *
+     * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+     *
+     * \f$ M - 2 = M - 2\cdot\mathbb{1} \f$
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M,S;
+     * M = 2; // M = 2*I
+     * S = M - 1; // Resulting matrix is identity matrix
+     * \endcode
+     *
+     *
+     * @tparam Mtype1 Matrix type for a
+     * @tparam Mtype2 Matrix type for b
+     * @param a Left matrix or scalar
+     * @param b Right matrix or scalar
+     * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
      */
     inline Mtype operator-() const {
         Mtype res;
@@ -485,10 +528,53 @@ class Matrix_t {
     }
 
     /**
-     * @brief Unary + operator
-     * @details Equivalent to identity operator meaning that matrix stays as is.
+     * @brief Addition operator
+     * @memberof Matrix_t
+     * @details Defined for the following operations
      *
-     * @return const Mtype&
+     * __Unary:__
+     *
+     * Identity operation
+     *
+     * \code {.cpp}
+     * M == +M;
+     * \endcode
+     *
+     * __Matrix + Matrix:__
+     *
+     * Addition operator between matrices is defined in the usual way (element wise).
+     *
+     * __NOTE__: Matrices must share same dimensionality.
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M, N, S;
+     * M.fill(1);
+     * N.fill(1);
+     * S = M + N; // Resulting matrix is uniformly 2
+     * \endcode
+     *
+     *
+     * __Scalar + Matrix / Matrix + Scalar:__
+     *
+     * Addition operator between matrix and scalar is defined in the usual way, where the scalar is
+     * added to the diagonal elements.
+     *
+     * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
+     *
+     * \f$ M + 2 = M + 2\cdot\mathbb{1} \f$
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M,S;
+     * M.fill(0);
+     * S = M + 1; // Resulting matrix is identity matrix
+     * \endcode
+     *
+     *
+     * @tparam Mtype1 Matrix type for a
+     * @tparam Mtype2 Matrix type for b
+     * @param a Left matrix or scalar
+     * @param b Right matrix or scalar
+     * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
      */
     inline const Mtype &operator+() const {
         return *this;
@@ -1695,8 +1781,9 @@ using mat_x_mat_type = typename matrix_op_type_s<T1, T2>::type;
 
 template <typename Mt, typename S, typename Enable = void>
 struct matrix_scalar_op_s {
-    using type = Matrix<Mt::rows(), Mt::columns(),
-                        Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
+    using type =
+        Matrix<Mt::rows(), Mt::columns(),
+               Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
 };
 
 template <typename Mt, typename S>
@@ -1880,46 +1967,7 @@ inline auto imag(const Mtype &arg) {
 ///////////////////////////////////////////////////////////////////////////
 // Now matrix additions: matrix + matrix
 
-/**
- * @brief Addition operator
- * @details Defined for the following operations
- *
- * __Matrix + Matrix:__
- *
- * Addition operator between matrices is defined in the usual way (element wise).
- *
- * __NOTE__: Matrices must share same dimensionality.
- *
- * \code {.cpp}
- * Matrix<n,m,MyType> M, N, S;
- * M.fill(1);
- * N.fill(1);
- * S = M + N; // Resulting matrix is uniformly 2
- * \endcode
- *
- *
- * __Scalar + Matrix / Matrix + Scalar:__
- *
- * Addition operator between matrix and scalar is defined in the usual way, where the scalar is
- * added to the diagonal elements.
- *
- * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
- *
- * \f$ M + 2 = M + 2\cdot\mathbb{1} \f$
- *
- * \code {.cpp}
- * Matrix<n,m,MyType> M,S;
- * M.fill(0);
- * S = M + 1; // Resulting matrix is identity matrix
- * \endcode
- *
- *
- * @tparam Mtype1 Matrix type for a
- * @tparam Mtype2 Matrix type for b
- * @param a Left matrix or scalar
- * @param b Right matrix or scalar
- * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
- */
+
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
@@ -1957,46 +2005,6 @@ inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
     return a;
 }
 
-/**
- * @brief Subtraction operator
- * @details Defined for the following operations
- *
- * __Matrix - Matrix:__
- *
- * Subtraction operator between matrices is defined in the usual way (element wise).
- *
- * __NOTE__: Matrices must share same dimensionality.
- *
- * \code {.cpp}
- * Matrix<n,m,MyType> M, N, S;
- * M.fill(1);
- * N.fill(1);
- * S = M - N; // Resulting matrix is uniformly 0
- * \endcode
- *
- *
- * __Scalar - Matrix / Matrix - Scalar:__
- *
- * Subtraction operator between matrix and scalar is defined in the usual way, where the scalar is
- * subtracted from the diagonal elements.
- *
- * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
- *
- * \f$ M - 2 = M - 2\cdot\mathbb{1} \f$
- *
- * \code {.cpp}
- * Matrix<n,m,MyType> M,S;
- * M = 2; // M = 2*I
- * S = M - 1; // Resulting matrix is identity matrix
- * \endcode
- *
- *
- * @tparam Mtype1 Matrix type for a
- * @tparam Mtype2 Matrix type for b
- * @param a Left matrix or scalar
- * @param b Right matrix or scalar
- * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
- */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>>
@@ -2105,6 +2113,7 @@ inline Mt operator*(const Mt &a, const Mt &b) {
 
 /**
  * @brief Multiplication operator
+ * @memberof Matrix_t
  * @details Multiplication type depends on the original types of the multiplied matrices. Defined
  * for the following operations.
  *
@@ -2241,8 +2250,8 @@ inline Rt operator*(const S &rhs, const Mt &mat) {
 
 /**
  * @brief Division operator
- *
- * Defined for following operations
+ * @memberof Matrix_t
+ * @details Defined for following operations
  *
  * __ Matrix / Scalar: __
  *
@@ -2300,6 +2309,7 @@ inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
 // Stream operator
 /**
  * @brief Stream operator
+ * @memberof Matrix
  * @details Naive Stream operator for formatting Matrix for printing. Simply puts elements one after
  * the other in row major order
  *
@@ -2486,13 +2496,13 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
 
 /**
  * @brief Calculate exp of a square matrix
+ * @memberof Matrix
  * @details Computes up to certain order given as argument
  *
  * __Evaluation is done as__:
  * \f{align}{ \exp(H) &= 1 + H + \frac{H^2}{2!} + \frac{H^2}{2!} + \frac{H^3}{3!} \\
  *                    &= 1 + H\cdot(1 + (\frac{H}{2})\cdot (1 + (\frac{H}{3})\cdot(...))) \f}
  * Done backwards in order to reduce accumulation of errors
-
  * @tparam n Number of rowsMa
  * @tparam T Matrix element type
  * @tparam MT Matrix type

@@ -663,7 +663,8 @@ struct contains_complex : std::integral_constant<bool, false> {};
 
 template <typename T>
 struct contains_complex<T, typename std::enable_if_t<hila::is_field_class_type<T>::value>>
-    : std::integral_constant<bool, hila::contains_type<T, Complex<hila::arithmetic_type<T>>>::value> {};
+    : std::integral_constant<bool,
+                             hila::contains_type<T, Complex<hila::arithmetic_type<T>>>::value> {};
 
 /////////////////////////////////////////////////////////////////////////
 // Utility hila::number_type<T>  returns complex or arithmetic type
@@ -818,6 +819,7 @@ Complex<T> polar(T r, T arg) {
 
 /**
  * @brief Addition operator Complex + Complex
+ * @memberof Complex
  * @details Addition between Complex numbers is defined in the usual way
  * @tparam T1 Arithmetic type of a
  * @tparam T2 Arithmetic type of b
@@ -865,6 +867,7 @@ inline auto operator+(const A &a, const Complex<T> &c) {
 
 /**
  * @brief Subtraction operator Complex - Complex
+ * @memberof Complex
  * @details Subtraction between Complex numbers is defined in the usual way
  * @tparam T1 Arithmetic type of a
  * @tparam T2 Arithmetic type of b
@@ -909,6 +912,7 @@ inline auto operator-(const A &a, const Complex<T> &c) {
 
 /**
  * @brief Multiplication operator Complex * Complex
+ * @memberof Complex
  * @details Defined in the usual way
  *
  * \f{align}{z &= x + iy, w = x' + iy' \in \mathbb{C} \\
@@ -969,6 +973,7 @@ inline auto operator*(const A &a, const Complex<T> &c) {
 
 /**
  * @brief Division operator Complex / Complex
+ * @memberof Complex
  * @details Defined in the usual way
  * \f{align}{ a,b &\in \mathbb{C} \\
  * \frac{a}{b} &= \frac{a\cdot b^{*}}{|b|^2} \f}
