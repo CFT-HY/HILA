@@ -40,6 +40,22 @@ bool report_pass(std::string message, double eps, double limit) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+void test_functions() {
+
+    Field<double> df = 0;
+    report_pass("Field functions: real exp", exp(df).sum() - lattice.volume(), 1e-8);
+
+    Field<Complex<double>> cf = 0;
+    report_pass("Field functions: complex exp", abs(exp(cf).sum() - lattice.volume()), 1e-8);
+
+    df[ALL] = sin(X.x() *2*M_PI/lattice.size(e_x) );
+    report_pass("Field functions: sin", df.sum(), 1e-8);
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+
 void check_reductions() {
 
 
@@ -154,7 +170,6 @@ void test_random() {
         f.gaussian_random();
         double s = 0, s2 = 0;
         onsites(ALL) {
-            f[X] = hila::gaussrand();
             s += f[X];
             s2 += sqr(f[X]);
         }
@@ -615,6 +630,8 @@ int main(int argc, char **argv) {
     // start tests
 
     check_reductions();
+
+    test_functions();
 
     test_site_access();
 
