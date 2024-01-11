@@ -103,7 +103,7 @@ Assignment and manipulation of variables defined outside of onsites loops are il
     }
 ~~~
 
-## Accessing field elements outside of loop
+## Loop external field access
 
 There are a few ways of accessing Field elements which exclusively are to be used outside of onsites loops.
 
@@ -118,7 +118,7 @@ There are a few ways of accessing Field elements which exclusively are to be use
 
 * **Accessing multiple elements:**
 
-This is done by using Field::get_elements and Field::set_elements which take in a std::vector of coordinates.
+Accessing multiple elements is done by using Field::get_elements and Field::set_elements which take in a std::vector of coordinates.
 
 ~~~cpp
     std::vector<CoordinateVector> coordinates = {{2,3,4,5}, {1,3,4,5}}; // 4 Dimensional field
@@ -127,6 +127,13 @@ This is done by using Field::get_elements and Field::set_elements which take in 
 ~~~
 
 Additionally Field::get_elements takes in an additional argument broadcast `get_elements(coordinates, broadcast)`. If set to true then the fetched elements are broadcasted to all MPI ranks, by default it is set to false.
+
+For getting a sub volume there are the following methods:
+
+- `Field::get_slice`
+- `Field::get_subvolume` 
+
+
 
 # Reductions
 
@@ -394,18 +401,29 @@ N fields G[N], where we know the field values are between 0 and fmax:
 > NOTE: ReductionVector indexing has no protection. Using index past the 
 > ends of the array will cause trouble!
 
-# Shift operators
+# Shift and reflect operators
 
 Field::shift operations allow shifting all elements by a certain displacement vector v. Even and Odd elements cannot be shifted with Field::shift method
 ~~~cpp
     CoordinateVector v = {0,1,1,0};
 
     f = g.shift(v);                // these three
-    g.shift(v,f);                   //
+    g.shift(v,f);                  //
     f[ALL] = g[X + v];             // are equivalent
 
     f[EVEN] = g[X + v];            // Cannot be done with g.shift() alone
 ~~~
+
+Field::reflect operations reflect the field along a certain axis. Let g be an existing field of MyType, then we have: 
+
+~~~cpp
+    Field<MyType> f;
+    f = g.reflect() // reflects the Filed g along all axes
+    f = g.reflect(e_x) // reflect the Field g along the x-axis
+    f = g.reflect({1,0,0,0}) // also reflect the Field g along the x-axis
+~~~
+
+with this in mind `g.reflect() == g.reflect(e_x + e_y + e_z + e_t) == g.reflect({1,1,1,1})`.
 
 # Random number generators
 
@@ -458,7 +476,7 @@ Is this necessary information for user?
 
 # Mathematical methods {#mathematical_methods_field}
 
-* **Standard arithmetic methods:**
+## Standard arithmetic methods:
 
 -  `Field::operator+`
 -  `Field::operator-`
@@ -477,7 +495,7 @@ f = f @ g; // Field operated with other field
 f = f @ a; // Field operated with scalar 
 ~~~
 
-* **Arithmetic assignment methods:**
+## Arithmetic assignment methods:
 
 -  `Field::operator+=`
 -  `Field::operator-=`
@@ -496,7 +514,9 @@ f @= g; // Field operated with other field
 f @= a; // Field operated with scalar 
 ~~~
 
-* **Mathematical functions:**
+## Mathematical functions:
+
+* **Element wise functions:**
 
 -  `Field::exp`
 -  `Field::log`
@@ -508,13 +528,10 @@ f @= a; // Field operated with scalar
 -  `Field::atan`
 -  `Field::abs`
 -  `Field::pow`
--  `Field::squarenorm`
--  `Field::norm`
 -  `Field::conj`
 -  `Field::dagger`
 -  `Field::real`
 -  `Field::imag`
--  `Field::squarenorm_relative`
 
 Let `func` be a mathematical method defined above, then usage is:
 
@@ -523,8 +540,7 @@ Field<MyType> f;
 f = func(f)
 ~~~
 
-Additionally norm, conj, dagger, real and imag can be used as member functions `f.fun()`.
-Exceptions to this are pow and squarenorm_relative which take in additional arguments, see respective documentation for details.
+An exception to this is pow which takes in additional arguments, see `Field::pow` documentation for details. Additionally norm, conj, dagger, real and imag can be used as member functions `f.fun()`.
 
 
 All mathematical functions are operated element wise on the Field using the definition of the element type T of the Field<T>:
@@ -539,6 +555,20 @@ return res;
 
 if `func` is not defined for type T then an error is thrown.
 
+* **Scalar returning functions**
 
+- `Field::norm`
+- `Field::squarenorm`
+- `Field::squarenorm_relative`
+
+All of these mathematical methods return a scalar metric of the Field. Let `func` be a mathematical method defined above, then usage is:
+
+~~~cpp
+Field<MyType> f;
+double a;
+a = func(f)
+~~~
+
+An exception to this is pow which takes in additional arguments, see `Field::squarenorm_relative` documentation for details.
 
 */

@@ -11,10 +11,8 @@
 - other features as own titles
 
 - add these:
-    - get slice 
-    - get_subvolume
     - reflect
-    - mathematical operations
     - gaussian_random?
 
 - Finish mathematical operations
+    - * **Lattice operation:** is this a good category?
