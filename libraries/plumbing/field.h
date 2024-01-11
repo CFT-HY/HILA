@@ -1032,17 +1032,24 @@ class Field {
 
     /**
      * @brief Field comparison operator.
-     * @details Computes squarenorm of difference of two fields and checks if squarenorm is less
-     * than tolerance epsilon=0.
-     *
+     * @details Fields are equal if their content is element-by-element equal
+     * 
      * @param rhs Field to compare Field with
      * @return true
      * @return false
      */
-    bool operator==(const Field<T> &rhs) const {
-        hila::arithmetic_type<T> epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Field<S> &rhs) const {
+        double s = 0;
+        onsites(ALL) s += !((*this)[X] == rhs[X]);
+        return (s == 0);
     }
+
+    template <typename S>
+    bool operator!=(const Field<S> &rhs) const {
+        return !(*this == rhs);
+    }
+
 
     /**
      * @brief Squarenorm

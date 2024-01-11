@@ -127,36 +127,6 @@ class DiagonalMatrix {
         return *this;
     }
 
-    /**
-     * @brief Boolean operator == to determine if two matrices are exactly the same
-     */
-    template <typename S>
-    bool operator==(const DiagonalMatrix<n, S> &rhs) const {
-        for (int i = 0; i < n; i++) {
-            if (e(i) != rhs.e(i))
-                return false;
-        }
-        return true;
-    }
-
-    /**
-     * @brief Boolean operator == to compare with square matrix
-     */
-    template <typename S, typename Mtype>
-    bool operator==(const Matrix_t<n, n, S, Mtype> &rhs) const {
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (i == j) {
-                    if (e(i) != rhs.e(i, i))
-                        return false;
-                } else {
-                    if (rhs.e(i, j) != 0)
-                        return false;
-                }
-            }
-        }
-        return true;
-    }
 
 
     /**
@@ -470,11 +440,11 @@ class DiagonalMatrix {
     }
 
     Vector<n, T> &asVector() const_function {
-        return *(reinterpret_cast<Vector<n,T> *>(this));
+        return *(reinterpret_cast<Vector<n, T> *>(this));
     }
 
     const Vector<n, T> &asVector() const {
-        return *(reinterpret_cast<const Vector<n,T> *>(this));
+        return *(reinterpret_cast<const Vector<n, T> *>(this));
     }
 
     /// implement sort as casting to matrix
@@ -492,6 +462,51 @@ class DiagonalMatrix {
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @brief Boolean operator == to determine if two diagonal matrices are exactly the same
+ */
+template <typename A, typename B, int n, int m>
+inline bool operator==(const DiagonalMatrix<n, A> &lhs, const DiagonalMatrix<m, B> &rhs) {
+    if constexpr (m != n)
+        return false;
+
+    for (int i = 0; i < n; i++) {
+        if (lhs.e(i) != rhs.e(i))
+            return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Boolean operator == to compare with square matrix
+ * Matrices are equal if diagonals are equal and off-diag is zero
+ */
+template <typename A, typename S, typename Mtype, int n, int m1, int m2>
+inline bool operator==(const DiagonalMatrix<n, A> &lhs, const Matrix_t<m1, m2, S, Mtype> &rhs) {
+    if constexpr (m1 != n || m2 != n)
+        return false;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) {
+                if (lhs.e(i) != rhs.e(i, i))
+                    return false;
+            } else {
+                if (rhs.e(i, j) != 0)
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+template <typename A, typename S, typename Mtype, int n, int m1, int m2>
+inline bool operator==(const Matrix_t<m1, m2, S, Mtype> &lhs, const DiagonalMatrix<n, A> &rhs) {
+    return rhs == lhs;
+}
+
+// Compiler generates operator!= automatically
 
 template <int n, typename T>
 inline const auto &transpose(const DiagonalMatrix<n, T> &arg) {
@@ -561,9 +576,8 @@ namespace hila {
 
 template <typename Mt, typename S, typename Enable = void>
 struct diagonalmatrix_scalar_op_s {
-    using type =
-        DiagonalMatrix<Mt::rows(),
-                       Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
+    using type = DiagonalMatrix<
+        Mt::rows(), Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
 };
 
 template <typename Mt, typename S>
