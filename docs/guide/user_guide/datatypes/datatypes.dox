@@ -14,32 +14,66 @@ List of datatypes offered by HILA
 # Basic types: {#basic}
 
 - \subpage complex
-- #Vector\<n,T\>
-- #RowVector\<n,T\>
 - Matrix\<n,m,T\>
-- #SquareMatrix\<n,T\>
+    - #Vector\<n,T\>
+    - #RowVector\<n,T\>
+    - #SquareMatrix\<n,T\>
+    - SU\<n,T>
 - Array\<n,m,T\>
-- SU\<n,T>
 
-Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not
-AVX vectorizable). See respective links for documented functions/methods.
+Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not AVX vectorizable). Many of the methods defined for the Basic types are commonly defined for multiple basic types. Thus for organizational purposes we will list all of the commonly found methods and which type they are defined for. Class specific functionality will be listed on the Basic types respective page listed above.
 
-> __NOTE__: Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #HorizontalVector and #SquareMatrix are special alias cases of Matrix Class, so all methods are inherited.
+> __NOTE__: Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #RowVector and #SquareMatrix are special alias cases of Matrix Class and SU is a special case of Matrix_t, thus most methods are inherited. For this reason most methods and operators will link to the same definition defined for Matrix. For example since `operator+` is defined similarly for all Matrix cases they all link to the same definition.
+
+## Standard arithmetic methods:
+| Operation | Type defined for |
+|:---------:|:--------:|
+|`operator+`| `Complex::operator+` \n `Matrix::operator+` \n `Vector::operator+` \n `RowVector::operator+` \n `SquareMatrix::operator+` \n `SU::operator+` |
+|`operator-`| `Complex::operator-` \n `Matrix::operator-` \n `Vector::operator-` \n `RowVector::operator-` \n `SquareMatrix::operator-` \n `SU::operator-` |
+|`operator*`| `Complex::operator*` \n `Matrix::operator*` \n `Vector::operator*` \n `RowVector::operator*` \n `SquareMatrix::operator*` \n `SU::operator*` |
+|`operator/`| `Complex::operator/` \n `Matrix::operator/` \n `Vector::operator/` \n `RowVector::operator/` \n `SquareMatrix::operator/` \n `SU::operator/` |
+
+## Arithmetic assignment methods:
+
+-  `Field::operator+=`
+-  `Field::operator-=`
+-  `Field::operator*=`
+-  `Field::operator/=`
+
+## Mathematical functions:
+
+-  `Field::exp`
+-  `Field::log`
+-  `Field::sin`
+-  `Field::cos`
+-  `Field::tan`
+-  `Field::asin`
+-  `Field::acos`
+-  `Field::atan`
+-  `Field::abs`
+-  `Field::pow`
+-  `Field::conj`
+-  `Field::dagger`
+-  `Field::real`
+-  `Field::imag`
 
 # Special types
 
 ::Parity :
 
-> enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site (x,y,z,t) is even if `(x+y+z+t)` is even, odd otherwise.
+enum with values EVEN, ODD, ALL; refers to parity of the site. Parity of site (x,y,z,t) is even if
+`(x+y+z+t)` is even, odd otherwise.
 
-::Direction: 
+::Direction:
 
-> Conceptually a unit vector with values `±e_x, ±e_y, ±e_z, ±e_t`  (if NDIM==4). Implemented as an enum class.  Can be used to index arrays of size NDIM.
+Conceptually a unit vector with values `±e_x, ±e_y, ±e_z, ±e_t`  (if NDIM==4). Implemented as an
+enum class.  Can be used to index arrays of size NDIM.
 
 #CoordinateVector:
 
-> Acts as a Coordinate Vector for indexing Field. All Vector algebra is well defined, since CoordinateVector inherits from #Vector which inherits from Matrix 
->
+Acts as a Coordinate Vector for indexing Field. All Vector algebra is well defined, since
+CoordinateVector inherits from #Vector which inherits from Matrix
+
 > __NOTE__: See CoordinateVector_t
 
 ### Example of CoordinateVector and Direction usage:
@@ -54,12 +88,13 @@ Direction d = e_x
 Direction objects act as unit vectors when cast to CoordinateVector.
 Additionally algebra acts as defined according to vector algebra:
 
-~~~cpp       
+~~~cpp
 v = d;             // v = [1,0,0,0]
-v += e_y - 3*d;    // v = [-2,1,0,0] 
+v += e_y - 3*d;    // v = [-2,1,0,0]
 ~~~
 
-CoordinateVectors can be assigned with initializer list, where indices of list are aligned with CoordinateVector dimensions. Unit vector form with Direction's is also given:
+CoordinateVectors can be assigned with initializer list, where indices of list are aligned with
+CoordinateVector dimensions. Unit vector form with Direction's is also given:
 
 ~~~cpp
 v = {0,1,-1,0};    // v = [0,1,-1,0]
@@ -78,12 +113,14 @@ int j = d;         // ok
 d = j;             // ERROR: cannot assign int to Direction
 ~~~
 
-The ++d operator is also defined for Direction where it increase the direction in order \f$ \{e_x,e_y,e_z,e_t\} \f$. While --d operator is not defined
+The ++d operator is also defined for Direction where it increase the direction in order \f$
+\{e_x,e_y,e_z,e_t\} \f$. While --d operator is not defined
 
 ~~~cpp
 ++d;               // e_x -> e_y
-is_up_dir(d);      // true if d is along positive x,y,z,t-dir. 
+is_up_dir(d);      // true if d is along positive x,y,z,t-dir.
 ~~~
 
-These are only some of the examples of what the CoordinateVector and Direction objects are capable of. For all definitions see coordinates.h, CoordinateVector and Direction pages.
+These are only some of the examples of what the CoordinateVector and Direction objects are capable
+of. For all definitions see coordinates.h, CoordinateVector and Direction pages.
 */
