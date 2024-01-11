@@ -26,8 +26,8 @@ Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Comp
 > __NOTE__: Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #RowVector and #SquareMatrix are special alias cases of Matrix Class and SU is a special case of Matrix_t, thus most methods are inherited. For this reason most methods and operators will link to the same definition defined for Matrix. For example since `operator+` is defined similarly for all Matrix cases they all link to the same definition.
 
 ## Standard arithmetic methods:
-| Operation | Type defined for |
-|:---------:|:--------:|
+| Operation | Type|
+|:---------:|:--------|
 |`operator+`| `Complex::operator+` \n `Matrix::operator+` \n `Vector::operator+` \n `RowVector::operator+` \n `SquareMatrix::operator+` \n `SU::operator+` |
 |`operator-`| `Complex::operator-` \n `Matrix::operator-` \n `Vector::operator-` \n `RowVector::operator-` \n `SquareMatrix::operator-` \n `SU::operator-` |
 |`operator*`| `Complex::operator*` \n `Matrix::operator*` \n `Vector::operator*` \n `RowVector::operator*` \n `SquareMatrix::operator*` \n `SU::operator*` |
@@ -35,8 +35,8 @@ Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Comp
 
 ## Arithmetic assignment methods:
 
-| Operation | Type defined for |
-|:---------:|:--------:|
+| Operation | Type |
+|:---------:|:--------|
 |`operator+=`| `Complex::operator+=` \n `Matrix::operator+=` \n `Vector::operator+=` \n `RowVector::operator+=` \n `SquareMatrix::operator+=` \n `SU::operator+=` |
 |`operator-=`| `Complex::operator-=` \n `Matrix::operator-=` \n `Vector::operator-=` \n `RowVector::operator-=` \n `SquareMatrix::operator-=` \n `SU::operator-=` |
 |`operator*=`| `Complex::operator*=` \n `Matrix::operator*=` \n `Vector::operator*=` \n `RowVector::operator*=` \n `SquareMatrix::operator*=` \n `SU::operator*=` |
