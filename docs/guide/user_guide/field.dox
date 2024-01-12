@@ -477,6 +477,21 @@ f = f.FFT();
 
 Above the argument `fft_direction::back` indicates to perform the inverse transform \f$\mathcal{F}^{-1}\f$. By default the arugment `fftdir` is `fft_direction::forward`.
 
+HILA provides a convenience function `Vector<NDIM, double > CoordinateVector::convert_to_k()` which converts the momentum lattice coordinate `n` to wave vector `k` so that
+\f$~ k_i = 2\pi n_i / N_i ~\f$ if \f$~ 0 \le n_i \le N_i/2 ~\f$, and  \f$~ k_i = 2\pi (n_i - N_i)/N_i ~\f$ if \f$~ n_i > N_i / 2~ \f$.
+Now \f$ ~ \frac \pi 2 < k_i \le \frac \pi 2 ~ \f$.
+
+For example, if we want to generate a field where the wave numbers are random but with magnitude \f$~ \exp(-k^2/\sigma^2)~\f$:
+
+@code{.cpp}
+Field<Complex<double>> f;
+onsites(ALL) {
+    // sigma2 is the variance in k-space
+    double width = exp(-X.coordinates().convert_to_k().squarenorm() / sigma2 );
+    f[X].gaussian_random(width);
+}
+f = f.fft(fft_direction::back);  // convert to x-space
+@endcode
 
 One can also specify the coordinate directions along which FFT is done with a CoordinateVector or Direction.
 FFT is done only to directions where the CoordinateVector is non-zero: 
@@ -502,7 +517,7 @@ With this in mind `f.FFT(e_x + e_y + e_z) == f.FFT()` if the lattice is 3-dimens
 Real-to-complex FFT can only be done for Fields of type `Field<float>` or `Field<double>`. As opposed to complex-to-complex FFT the element types cannot be composites.  
 
 Real-to-complex FFT is done with function `Field<T>::FFT_real_to_complex([coordinate directions],[FFT direction])`, where
-the coordinate directions and FFT direction are optional:
+the coordinate directions and FFT direction are optional.  The result is a `Field<Complex<float>>` or `Field<Complex<double>>`, depending on the input Field.
 
 @code{.cpp}
 Field<float> g;
@@ -512,11 +527,40 @@ auto gt = g.FFT_real_to_complex();   // gt is type Field<Complex<float>>
 
 The result obeys `gt[-n] == gt[n].conj()`, where negative `n` is understood to be shifted to the opposite side of the lattice \f$ -n_i = N_i - n_i\f$ (i.e mod to interval \f$N_i\f$). 
 
-Complex-to-real FFT works so that 
+In complex-to-real FFT only half of the degrees of freedom of the complex Field are used. The routine implicitly symmetrizes the field (`f[-n] = f[n].conj()`) so that the user does not have to do it.
 
+@code{.cpp}
+Field<float> g;
+g = ...
 
+auto gt = g.FFT_real_to_complex();       // gt is type Field<Complex<float>>
 
-Is this necessary information for user?
+// transform back, now g_new = g * lattice.volume()
+auto g_new = gt.FFT_complex_to_real(fft_direction::back);
+@endcode
+
+Helper routine `hila::FFT_complex_to_real_site(CoordinateVector &cv)` can be used to find out which sites are significant in complex-to-real transform:
+
+```
+hila::FFT_complex_to_real_site(cv) =  1 :  both real and imaginary parts significant at site cv
+                                   =  0 :  only real part is significant
+                                   = -1 :  value ignored on this site
+```
+
+As an example, sites on 2 dimensions on a 8x8 lattice: (+ and - refer to values +1 and -1, and * is origin (0,0), which has value 0)
+
+```
+   - + + + - - - -                          - - - 0 + + + 0
+   - + + + - - - -                          - - - + + + + +
+   - + + + - - - -    after centering       - - - + + + + +
+   0 + + + 0 - - -    (0,0) to center       - - - + + + + +
+   + + + + + - - -    ----------------->    - - - * + + + 0
+   + + + + + - - -                          - - - - + + + -
+   + + + + + - - -                          - - - - + + + -
+   * + + + 0 - - -                          - - - - + + + -
+```
+
+The value on sites with - are reconstructed from + -sites using `f[-n] = f[n].conj()`.
 
 # Mathematical methods {#mathematical_methods_field}
 

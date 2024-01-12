@@ -483,7 +483,7 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 /// half of the values in input field are significant, the routine does the appropriate
 /// symmetrization.
 ///
-/// Routine FFT_complex_to_real_loc(CoordinateVector cv) gives the significant values at
+/// Routine hila::FFT_complex_to_real_site(CoordinateVector cv) gives the significant values at
 /// location cv:
 ///   = +1  significant complex value,
 ///   =  0  significant real part, imag ignored
@@ -501,7 +501,8 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 ///
 //////////////////////////////////////////////////////////////////////////////////
 
-inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
+namespace hila {
+inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
 
     // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
     foralldir(d) {
@@ -514,6 +515,7 @@ inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
     return 0;
 }
 
+} // namespace hila
 
 template <typename T>
 Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
@@ -525,7 +527,7 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
     auto rf = this->reflect();
     // And symmetrize the field appropriately - can use rf
     onsites(ALL) {
-        int type = FFT_complex_to_real_loc(X.coordinates());
+        int type = hila::FFT_complex_to_real_site(X.coordinates());
         if (type == 1) {
             rf[X] = (*this)[X];
         } else if (type == -1) {
