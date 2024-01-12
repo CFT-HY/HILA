@@ -23,10 +23,13 @@
 /// convert lattice vector to to k-vector (needs lattice.size() so defined in fft.h)
 /// Note: mods the CoordinateVector to lattice
 
-inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
+
+#pragma hila novector
+template<typename T>
+inline Vector<NDIM, double> CoordinateVector_t<T>::convert_to_k() const {
     Vector<NDIM, double> k;
     foralldir(d) {
-        int n = pmod(cv.e(d), lattice.size(d));
+        int n = pmod((*this).e(d), lattice.size(d));
         if (n > lattice.size(d) / 2)
             n -= lattice.size(d);
 
@@ -35,6 +38,9 @@ inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     return k;
 }
 
+inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
+    return cv.convert_to_k();
+}
 
 // hold static fft node data structures
 struct pencil_struct {

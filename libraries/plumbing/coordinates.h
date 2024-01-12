@@ -435,6 +435,15 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return r;
     }
 
+    /// @brief Convert momentum space CoordinateVector to wave number k, where -pi/2 < k_i <= pi_2
+    /// Utility function for FFT
+    /// wave vector k_i = 2 pi n_i / N_i, where N_i = lattice.size(i) and
+    /// where n_i is the coordinate modded to interval -N_i/2 < n_i <= N_i/2, or
+    /// if n_i > N_i/2 then n_i = n_i - N_i.
+    /// 
+    /// @return wave number vector k
+    inline Vector<NDIM,double> convert_to_k() const;
+
     /// Return site index of the coordinate vector -- assumes a valid lattice vector
 
     // #pragma hila loop_function
