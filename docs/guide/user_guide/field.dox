@@ -445,32 +445,76 @@ onsites(ALL) f[X].gaussian_random();
 
 # FFT
 
-Fast Fourier transform on the Field can be performed with Field::FFT. Field::FFT is defined only for `Field<Complex> ` \f$\rightarrow\f$ `Field<Complex> ` transforms. By default calling without arguments will execute FFT in all directions.
+HILA has built-in Fast Fourier Transform for Field variables, using method `Field::FFT`.  Complex-to-complex,
+complex-to-real and real-to-complex transformations are implemented.
+
+## Complex-to-complex FFT
+
+The complex-to-complex FFT is defined for `Field<T>` -variables where 
+`T` is a type which contains complex numbers, for example `Complex<float>`, `Vector<4,Complex<double>>`, `SU<3,float>` (SU<n> matrix is built with complex numbers).
+The result of the FFT is a `Field<T>` of the type of the input. 
+
+Forward and inverse FFTs are defined as
+
+> \f$ \tilde f[\mathbf{n}] = \sum_{\mathbf{x}} f[\mathbf{x}] \exp(i \mathbf{k}\cdot\mathbf{x}), 
+ ~~~~~
+ f'[\mathbf{x}] = \sum_{\mathbf{n}} \tilde f[\mathbf{n}] \exp(-i \mathbf{k}\cdot\mathbf{x}) = 
+    \mbox{Volume} \times f[\mathbf{x}] \f$
+
+where \f$ n_i = 0 \ldots (N_i-1)\f$, \f$ ~ N_i\f$ is the lattice size to direction \f$i\f$ and \f$ k_i \equiv 2\pi n_i/N_i\f$.
+
+> NOTE: as often in numerical FFTs,  FFT followed by inverse FFT gives the original field multiplied by the lattice volume.
+
+Example:
 
 @code{.cpp}
-.
-. // Field f is defined
-.
-auto res = f.FFT() //Forward transform
-auto res_2 = res.FFT(fft_direction::back) // res_2 is same as f
+Field<Vector<3,Complex<double>>> f;
+f = ...
+auto res = f.FFT()         // Forward transform
+auto res_2 = res.FFT(fft_direction::back) / lattice.volume();  // res_2 is same as f
+f = f.FFT();               
 @endcode
 
 Above the argument `fft_direction::back` indicates to perform the inverse transform \f$\mathcal{F}^{-1}\f$. By default the arugment `fftdir` is `fft_direction::forward`.
 
 
-One can also specify the direction of the FFT with a coordinate vector:
+One can also specify the coordinate directions along which FFT is done with a CoordinateVector or Direction.
+FFT is done only to directions where the CoordinateVector is non-zero: 
 
 @code{.cpp}
-.
-. // Field f is defined
-.
-auto res = f.FFT(e_x) //Forward transform in x-direction
-auto res_2 = res.FFT(e_X,fft_direction::back) // res_2 is same as f
+auto res = f.FFT(e_x);                                              //Forward transform only to x-direction
+auto res_2 = res.FFT(e_x,fft_direction::back) / lattice.size(e_x);  // res_2 is same as f
+
+CoordinateVector d;
+d.fill(1);
+d[e_y] = 0;
+res = f.FFT(d);     // FFT is done to other directions except to y
+
 @endcode
 
-With this in mind `f.FFT(e_x+e_y+e_z) = f.FFT()`.
+With this in mind `f.FFT(e_x + e_y + e_z) == f.FFT()` if the lattice is 3-dimensional.
 
-## Real to Complex / Complex to Real
+
+
+
+## Real-to-complex / complex-to-real FFT
+
+Real-to-complex FFT can only be done for Fields of type `Field<float>` or `Field<double>`. As opposed to complex-to-complex FFT the element types cannot be composites.  
+
+Real-to-complex FFT is done with function `Field<T>::FFT_real_to_complex([coordinate directions],[FFT direction])`, where
+the coordinate directions and FFT direction are optional:
+
+@code{.cpp}
+Field<float> g;
+g = ...
+auto gt = g.FFT_real_to_complex();   // gt is type Field<Complex<float>>
+@endcode
+
+The result obeys `gt[-n] == gt[n].conj()`, where negative `n` is understood to be shifted to the opposite side of the lattice \f$ -n_i = N_i - n_i\f$ (i.e mod to interval \f$N_i\f$). 
+
+Complex-to-real FFT works so that 
+
+
 
 Is this necessary information for user?
 
