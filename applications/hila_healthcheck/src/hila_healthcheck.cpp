@@ -410,7 +410,8 @@ void fft_test() {
             kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
         }
 
-        kv = convert_to_k(kx);
+        kv = kx.convert_to_k();
+
 
         onsites(ALL) {
             double d = kv.dot(X.coordinates());
@@ -449,8 +450,9 @@ void fft_test() {
     //-----------------------------------------------------------------
     // Check fft norm
 
+
     onsites(ALL) {
-        p[X] = hila::random() * exp(-convert_to_k(X.coordinates()).squarenorm());
+        p[X] = hila::random() * exp(-X.coordinates().convert_to_k().squarenorm());
     }
     f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
 
@@ -493,7 +495,7 @@ void spectraldensity_test() {
         foralldir(d) {
             kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
         }
-        kv = convert_to_k(kx);
+        kv = kx.convert_to_k();
         auto absk = kv.norm();
 
         // test first std. binning (normally )
