@@ -20,8 +20,14 @@
 #define WRK_GATHER_TAG 42
 #define WRK_SCATTER_TAG 43
 
-/// convert lattice vector to to k-vector (needs lattice.size() so defined in fft.h)
-/// Note: mods the CoordinateVector to lattice
+
+/**
+ * @brief Convert momentum space CoordinateVector to wave number k, where -pi/2 < k_i <= pi/2
+ * 
+ * CoordinateVector is (periodically) modded to valid lattice coordinate,
+ * and folded so that if n_i > lattice.size(i), n_i = n_i - lattice.size(i)
+ * now  k_i = 2 pi n_i / lattice.size(i)
+ */
 
 inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     Vector<NDIM, double> k;
