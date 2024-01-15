@@ -334,8 +334,14 @@ class Complex {
 
     /**
      * @brief Unary + operator
-     * @details Leaves Complex number unchanged
-     * @return Complex<T>
+     * @details Identity operation
+     *
+     * \code {.cpp}
+     * Complex<MyType> z;
+     * z == +z;
+     * \endcode
+     *
+     * @return Complex<Tr>
      */
     inline Complex<T> operator+() const {
         return *this;
@@ -344,6 +350,11 @@ class Complex {
     /**
      * @brief Unary - operator
      * @details Negates Complex number
+     *
+     * \code {.cpp}
+     * Complex<MyType> z;
+     * z = -z; // Results in -Re.z and -Im.z
+     * \endcode
      *
      * @return Complex<T>
      */
@@ -355,10 +366,8 @@ class Complex {
     // in reductions implicitly
 
     /**
-     * @brief += addition assignment operator
-     * @details Addition assignment for Complex numbers can be performed in the following ways
-     *
-     * __Complex addition assignment:__
+     * @brief Complex addition assignment operator
+     * @details
      *
      * \code{.cpp}
      * Complex<double> z(0,0);
@@ -366,7 +375,19 @@ class Complex {
      * z += w; // z.re = 1, z.im = 1
      * \endcode
      *
-     * __Real addition assignment:__
+     * @tparam A Typpe of Complex number to add
+     * @param lhs Complex number to add
+     * @return Complex<T>&
+     */
+    template <typename A>
+    inline Complex<T> &operator+=(const Complex<A> &lhs) {
+        re += lhs.re;
+        im += lhs.im;
+        return *this;
+    }
+
+    /**
+     * @brief Real addition assignment operator
      *
      * Add assign only to real part of Complex number
      *
@@ -375,16 +396,10 @@ class Complex {
      * z += 1; // z.re = 1, z.im = 0
      * \endcode
      *
-     *
+     * @tparam A Type for real value a
+     * @param a Real value to add
+     * @return Complex<T>&
      */
-    //#pragma hila loop_function
-    template <typename A>
-    inline Complex<T> &operator+=(const Complex<A> &lhs) {
-        re += lhs.re;
-        im += lhs.im;
-        return *this;
-    }
-
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator+=(const A &a) {
         re += a;
@@ -392,10 +407,8 @@ class Complex {
     }
 
     /**
-     * @brief -= subtraction assignment operator
-     * @details Subtraction assignment for Complex numbers can be performed in the following ways
-     *
-     * __Complex subtract assign:__
+     * @brief Complex subtraction assignment operator
+     * @details
      *
      * \code{.cpp}
      * Complex<double> z(0,0);
@@ -403,16 +416,9 @@ class Complex {
      * z -= w; // z.re = -1, z.im = -1
      * \endcode
      *
-     * __Real subtract assign:__
-     *
-     * Subtract assign only to real part of Complex number
-     *
-     * \code {.cpp}
-     * Complex<double> z(0,0);
-     * z -= 1; // z.re = -1, z.im = 0
-     * \endcode
-     *
-     *
+     * @tparam A Type for complex number to subtract
+     * @param lhs Complex number to subtract
+     * @return Complex<T>&
      */
     template <typename A>
     inline Complex<T> &operator-=(const Complex<A> &lhs) {
@@ -421,6 +427,19 @@ class Complex {
         return *this;
     }
 
+    /**
+     * @brief Real subtraction assignment operator
+     * Subtract assign only to real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(0,0);
+     * z -= 1; // z.re = -1, z.im = 0
+     * \endcode
+     *
+     * @tparam A Type for real value a
+     * @param a Real value to subtract
+     * @return Complex<T>&
+     */
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator-=(const A &a) {
         re -= a;
@@ -435,11 +454,8 @@ class Complex {
     // }
 
     /**
-     * @brief *= multiply assignment operator
-     * @details Multiply assignment for Complex numbers can be performed in the following ways
-     *
-     * __Complex multiply assign:__
-     *
+     * @brief Complex multiply assignment operator
+     * @details
      * Standard Complex number multiplication
      *
      * \f{align}{z &= x + iy, w = x' + iy' \\
@@ -451,18 +467,13 @@ class Complex {
      * //
      * z*=w; // z = zw as defined above
      * \endcode
-     * __Real multiply assign:__
      *
-     * Multiply assign by real number to both components of Complex number
-     *
-     * \code {.cpp}
-     * Complex<double> z(1,1);
-     * z *= 2; // z.re = 2, z.im = 2
-     * \endcode
-     *
-     *
+     * @tparam A Type for Complex number multiply
+     * @param lhs Complex number to multiply
+     * @return Complex<T>&
      */
     //#pragma hila loop_function
+
     template <typename A>
     inline Complex<T> &operator*=(const Complex<A> &lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
@@ -471,6 +482,18 @@ class Complex {
         return *this;
     }
 
+    /**
+     * @brief Real multiply assign operator
+     * @details Multiply assign by real number to both components of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(1,1);
+     * z *= 2; // z.re = 2, z.im = 2
+     * \endcode
+     * @tparam A Type for real value a
+     * @param a  Real value to multiply
+     * @return Complex<T>&
+     */
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator*=(const A a) {
         re *= a;
@@ -488,10 +511,8 @@ class Complex {
     // }
 
     /**
-     * @brief /= divide assignment operator
-     * @details Divide assignment for Complex numbers can be performed in the following ways
-     *
-     * __Complex divide assign:__
+     * @brief Complex divide assignment operator
+     * @details
      *
      * Standard Complex number division
      *
@@ -504,16 +525,10 @@ class Complex {
      * //
      * z/=w; // z = z/w as defined above
      * \endcode
-     * __Real divide assign:__
      *
-     * Divide assign by real number to both components of Complex number
-     *
-     * \code {.cpp}
-     * Complex<double> z(2,2);
-     * z /= 2; // z.re = 1, z.im = 1
-     * \endcode
-     *
-     *
+     * @tparam A Type for Complex number divide
+     * @param lhs Complex number to divide
+     * @return Complex<T>&
      */
     template <typename A>
     inline Complex<T> &operator/=(const Complex<A> &lhs) {
@@ -524,6 +539,18 @@ class Complex {
         return *this;
     }
 
+    /**
+     * @brief Real divide assignment operator
+     * @details Divide assign by real number to both components of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(2,2);
+     * z /= 2; // z.re = 1, z.im = 1
+     * \endcode
+     * @tparam A Type for real value to divide
+     * @param a Real value to divide
+     * @return Complex<T>&
+     */
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator/=(const A &a) {
         re /= a;
@@ -534,7 +561,7 @@ class Complex {
     // define also increment and decrement operators (though not so intuitive for complex)
 
     /**
-     * @brief ++ increment operator
+     * @brief Single increment operator
      *
      * Increments real part of Complex number
      *
@@ -551,7 +578,7 @@ class Complex {
         return *this;
     }
     /**
-     * @brief -- decrement operator
+     * @brief Single decrement operator
      *
      * Decrement real part of Complex number
      *
@@ -567,13 +594,38 @@ class Complex {
         this->re--;
         return *this;
     }
-
+    /**
+     * @brief Multiple increment operator
+     *
+     * Increments real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(2,1);
+     * z++2; // z.re = 4, z.im = 1
+     * \endcode
+     *
+     *
+     * @return Complex<T>&
+     */
     inline Complex<T> operator++(int) {
         Complex<T> a = *this;
         this->re++;
         return a;
     }
 
+    /**
+     * @brief Multiple decrement operator
+     *
+     * Decrement real part of Complex number
+     *
+     * \code {.cpp}
+     * Complex<double> z(2,1);
+     * z--2; // z.re = 0, z.im = 1
+     * \endcode
+     *
+     *
+     * @return Complex<T>&
+     */
     inline Complex<T> operator--(int) {
         Complex<T> a = *this;
         this->re--;
@@ -817,18 +869,26 @@ Complex<T> polar(T r, T arg) {
 // }
 
 
+#pragma hila loop_function
 /**
  * @brief Addition operator Complex + Complex
  * @memberof Complex
- * @details Addition between Complex numbers is defined in the usual way
- * @tparam T1 Arithmetic type of a
- * @tparam T2 Arithmetic type of b
- * @tparam Tr Resulting type after addition
- * @param a
- * @param b
+ * @details Addition between Complex numbers is defined in the usual way:
+ *
+ * \f{align}{ z_1, z_2 &\in \mathbf{C} \\ z_1 + z_2 &= \Re(z_1) + \Re(z_2) + [\Im(z_1) + \Im(z_2)]i
+ * \f}
+ *
+ * \code {.cpp}
+ * z = z_1 + z_2;
+ * \endcode
+ *
+ * @tparam T1 Type for first complex number
+ * @tparam T2 Type for second complex number
+ * @tparam Tr Conversion type between T1 and T2
+ * @param a First complex number
+ * @param b Second complex number
  * @return Complex<Tr>
  */
-#pragma hila loop_function
 template <typename T1, typename T2, typename Tr = hila::type_plus<T1, T2>>
 inline Complex<Tr> operator+(const Complex<T1> &a, const Complex<T2> &b) {
     return Complex<Tr>(a.re + b.re, a.im + b.im);
@@ -836,10 +896,12 @@ inline Complex<Tr> operator+(const Complex<T1> &a, const Complex<T2> &b) {
 
 // TODO: for avx vector too -- #define new template macro
 /**
- * @overload
  * @brief Addition operator Complex + Scalar
- * @details Defined in the usual way
- *
+ * @memberof Complex
+ * @details Defined in the usual way. \f$z,z_1 \in \mathbb{C}, a \in \mathbb{R}\f$
+ * \code {.cpp}
+ * z = z_1 + a;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
  * @param c Complex number to sum
@@ -852,8 +914,12 @@ inline auto operator+(const Complex<T> &c, const A &a) {
 }
 
 /**
- * @overload
  * @brief Addition operator Scalar + Complex
+ * @memberof Complex
+ * @details Defined in the usual way.  \f$z,z_1 \in \mathbb{C}, a \in \mathbb{R}\f$
+ * \code {.cpp}
+ * z = a + z_1;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
  * @param a Scalar to sum
@@ -869,11 +935,18 @@ inline auto operator+(const A &a, const Complex<T> &c) {
  * @brief Subtraction operator Complex - Complex
  * @memberof Complex
  * @details Subtraction between Complex numbers is defined in the usual way
+ * \f{align}{  z_1, z_2 &\in \mathbf{C} \\ z_1 - z_2 &= \Re(z_1) - \Re(z_2) + [\Im(z_1) -
+ * \Im(z_2)]i\f}
+ *
+ * \code {.cpp}
+ * z = z_1 - z_2;
+ * \endcode
+ *
  * @tparam T1 Arithmetic type of a
  * @tparam T2 Arithmetic type of b
  * @tparam Tr Resulting type after subtraction
- * @param a
- * @param b
+ * @param a First complex number
+ * @param b Second complex number to subtract
  * @return Complex<Tr>
  */
 template <typename T1, typename T2, typename Tr = hila::type_plus<T1, T2>>
@@ -882,12 +955,15 @@ inline Complex<Tr> operator-(const Complex<T1> &a, const Complex<T2> &b) {
 }
 
 /**
- * @overload
  * @brief Subtraction operator Complex - Scalar
- * @details Defined in the usual way
+ * @memberof Complex
+ * @details Defined in the usual way.  \f$z,z_1 \in \mathbb{C}, a \in \mathbb{R}\f$
+ * \code {.cpp}
+ * z = z_1 - a;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
- * @param c Complex number to subtract
+ * @param c Complex number
  * @param a Scalar to subtract
  * @return auto
  */
@@ -897,11 +973,15 @@ inline auto operator-(const Complex<T> &c, const A &a) {
 }
 
 /**
- * @overload
+ * @memberof Complex
  * @brief Subtraction operator Scalar - Complex
+ * @details Defined in the usual way.  \f$z,z_1 \in \mathbb{C}, a \in \mathbb{R}\f$
+ * \code {.cpp}
+ * z = a - z_1;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
- * @param a Scalar to subtract
+ * @param a Scalar
  * @param c Complex number to subtract
  * @return auto
  */
@@ -915,9 +995,11 @@ inline auto operator-(const A &a, const Complex<T> &c) {
  * @memberof Complex
  * @details Defined in the usual way
  *
- * \f{align}{z &= x + iy, w = x' + iy' \in \mathbb{C} \\
- * z w &= (x + iy)(x' + iy') = (xx'-yy') + i(xy' + yx')\f}
- *
+ * \f{align}{z, z_1 &= x + iy, z_2 = x' + iy' \in \mathbb{C} \\
+ * z_1 z_2 &= (x + iy)(x' + iy') = (xx'-yy') + i(xy' + yx')\f}
+ * \code {.cpp}
+ * z = z_1 * z_2;
+ * \endcode
  * @tparam T1 Arithmetic type of a
  * @tparam T2 Arithmetic type of b
  * @tparam Tr Resulting type after multiplication
@@ -932,10 +1014,13 @@ inline Complex<Tr> operator*(const Complex<T1> &a, const Complex<T2> &b) {
 
 /**
  * @brief Multiplication operator Complex * Scalar
- * @overload
+ * @memberof Complex
  * @details Multiplication between Complex and scalar is defined in the usual way
- * \f{align}{z &= x + iy \in \mathbb{C}, a \in \mathbb{R} \\
- * z * a &= (x\cdot a + iy\cdot a)\f}
+ * \f{align}{z,z_1 &= x + iy \in \mathbb{C}, a \in \mathbb{R} \\
+ * z_1 * a &= (x\cdot a + iy\cdot a)\f}
+ * \code {.cpp}
+ * z = z_1 * a;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
  * @param c Complex number to multiply
@@ -949,10 +1034,13 @@ inline auto operator*(const Complex<T> &c, const A &a) {
 
 /**
  * @brief Multiplication operator Scalar * Complex
- * @overload
+ * @memberof Complex
  * @details Multiplication between Complex and scalar is defined in the usual way
- * \f{align}{z &= x + iy \in \mathbb{C}, a \in \mathbb{R} \\
+ * \f{align}{z,z_1 &= x + iy \in \mathbb{C}, a \in \mathbb{R} \\
  * z * a &= (x\cdot a + iy\cdot a)\f}
+ * \code {.cpp}
+ * z = a * z_1;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
  * @param c Complex number to multiply
@@ -975,9 +1063,11 @@ inline auto operator*(const A &a, const Complex<T> &c) {
  * @brief Division operator Complex / Complex
  * @memberof Complex
  * @details Defined in the usual way
- * \f{align}{ a,b &\in \mathbb{C} \\
- * \frac{a}{b} &= \frac{a\cdot b^{*}}{|b|^2} \f}
- *
+ * \f{align}{ z,z_1,z_2 &\in \mathbb{C} \\
+ * \frac{z_1}{z_2} &= \frac{z_1\cdot z_2^{*}}{|z_2|^2} \f}
+ * \code {.cpp}
+ * z =z_1 / z_2;
+ * \endcode
  * @tparam T1 Arithmetic type of a
  * @tparam T2 Arithmetic type of b
  * @tparam Tr Resulting type after division
@@ -992,12 +1082,14 @@ inline Complex<Tr> operator/(const Complex<T1> &a, const Complex<T2> &b) {
 }
 
 /**
- * @overload
+ * @memberof Complex
  * @brief Division operator Complex / Scalar
  * @details Defined in the usual way
- * \f{align}{ z=x + iy &\in \mathbb{C}, a \in \mathbb{R} \\
- * \frac{z}{a} &= \frac{x}{a} + i\cdot \frac{y}{a} \f}
- *
+ * \f{align}{z, z_1=x + iy &\in \mathbb{C}, a \in \mathbb{R} \\
+ * \frac{z_1}{a} &= \frac{x}{a} + i\cdot \frac{y}{a} \f}
+ * \code {.cpp}
+ * z = z_1 / a;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
  * @param c Complex number to divide
@@ -1011,12 +1103,14 @@ inline auto operator/(const Complex<T> &c, const A &a) {
 
 // a/c = ac*/|c|^2
 /**
- * @overload
+ * @memberof Complex
  * @brief Division operator Scalar / Complex
  * @details Defined in the usual way
- * \f{align}{ z=x + iy &\in \mathbb{C}, a \in \mathbb{R} \\
- * \frac{a}{z} &= \frac{az^*}{|z|^2} \f}
- *
+ * \f{align}{ z,z_1=x + iy &\in \mathbb{C}, a \in \mathbb{R} \\
+ * \frac{a}{z_1} &= \frac{az^*}{|z|^2} \f}
+ * \code {.cpp}
+ * z = a / z_1;
+ * \endcode
  * @tparam T Arithmetic type of c
  * @tparam A Arithmetic type of a
  * @param c Complex number to divide
@@ -1031,6 +1125,7 @@ inline auto operator/(const A &a, const Complex<T> &c) {
 
 /**
  * @brief Multiply add with Complex numbers
+ * @memberof Complex
  * @details Defined as
  *
  * \code{.cpp}
@@ -1055,7 +1150,7 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Comple
 
 /**
  * @brief Compare equality of two complex numbers
- *
+ * @memberof Complex
  * Two numbers are equal, if the real and imaginary components are respectively equal
  *
  * @tparam A Arithmetic type of a
@@ -1071,7 +1166,7 @@ inline bool operator==(const Complex<A> &a, const Complex<B> &b) {
 }
 
 /**
- * @overload
+ * @memberof Complex
  * @brief Compare equality of Complex and scalar
  *
  * Two numbers are equal, if the arithmetic values are equal: thus,
@@ -1090,7 +1185,7 @@ inline bool operator==(const Complex<A> &a, const B b) {
 }
 
 /**
- * @overload
+ * @memberof Complex
  * @brief Compare equality of Scalar and Complex
  *
  * Two numbers are equal, if the arithmetic values are equal: thus,
@@ -1110,8 +1205,8 @@ inline bool operator==(const A a, const Complex<B> &b) {
 
 /**
  * @brief Compare non-equality of two complex numbers
- *
- * Negation of operator==()
+ * @memberof Complex
+ * @details Negation of operator==()
  *
  * @tparam A Arithmetic type of a
  * @tparam B Arithmetic type of b
@@ -1126,8 +1221,8 @@ inline bool operator!=(const Complex<A> &a, const Complex<B> &b) {
 
 /**
  * @brief Compare non-equality of Complex number and Scalar
- *
- * Negation of operator==()
+ * @memberof Complex
+ * @details Negation of operator==()
  *
  * @tparam A Arithmetic type of a
  * @tparam B Arithmetic type of b
@@ -1142,8 +1237,8 @@ inline bool operator!=(const Complex<A> &a, const B b) {
 
 /**
  * @brief Compare non-equality of Scalar and Complex number
- *
- * Negation of operator==()
+ * @memberof Complex
+ * @details Negation of operator==()
  *
  * @tparam A Arithmetic type of a
  * @tparam B Arithmetic type of b
@@ -1402,7 +1497,13 @@ inline auto operator/(const Imaginary_t<A> &a, const Imaginary_t<B> &b) {
 ///////////////////////////////////////////////////////////////////////////////
 // Set of complex functions
 ///////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @name Mathematical functions
+ * @return Complex T
+ * @memberof Complex
+ *
+ * @{
+ */
 /// \f$\exp(z)\f$
 template <typename T>
 inline Complex<T> exp(const Complex<T> z) {
@@ -1415,7 +1516,7 @@ inline Complex<T> expi(T a) {
     return Complex<T>(cos(a), sin(a));
 }
 
-// exp(imaginary)
+/// \f$\exp(\Im(z))\f$
 template <typename T>
 inline Complex<T> exp(const Imaginary_t<T> im) {
     return expi(im.imag());
@@ -1451,13 +1552,13 @@ inline auto pow(Complex<A> z, Complex<B> p) {
     return exp(p * log(z));
 }
 
-// pow(z.p) with scalar power
+/// pow(z.p) with scalar power
 template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
 inline Complex<T> pow(Complex<T> z, S p) {
     return exp(p * log(z));
 }
 
-// pow(z.p) with scalar base
+/// pow(z.p) with scalar base
 template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
 inline Complex<T> pow(S z, Complex<T> p) {
     return exp(p * log(z));
@@ -1539,6 +1640,8 @@ template <typename T>
 inline Complex<T> acosh(Complex<T> z) {
     return log(z + sqrt(z * z - 1));
 }
+
+/** @} */
 
 
 //////////////////////////////////////////////////////////////////////////////////

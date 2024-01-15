@@ -1,5 +1,15 @@
 /**
- * @page complex Complex\<S\>
- * Complex datatype
- *
+@page complex Complex\<S\>
+
+User guide for custom HILA Complex class
+
+# Construction and assignment
+
+# Mathematical methods
+
+## Standard arithmetic methods:
+
+## Arithmetic assignment methods:
+
+## Mathematical functions:
  */
