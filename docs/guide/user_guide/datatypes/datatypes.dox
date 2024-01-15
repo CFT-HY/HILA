@@ -14,33 +14,17 @@ List of datatypes offered by HILA
 # Basic types: {#basic}
 
 - \subpage complex
-- Matrix\<n,m,T\>
+- \subpage matrix
     - #Vector\<n,T\>
     - #RowVector\<n,T\>
     - #SquareMatrix\<n,T\>
     - SU\<n,T>
 - Array\<n,m,T\>
 
-Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not AVX vectorizable). Many of the methods defined for the Basic types are commonly defined for multiple basic types. Thus for organizational purposes we will list all of the commonly found methods and which type they are defined for. Class specific functionality will be described on the Basic types respective page listed above.
+Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not AVX vectorizable).
 
-> __NOTE__: Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #RowVector and #SquareMatrix are special alias cases of Matrix Class and SU is a special case of Matrix_t, thus most methods are inherited. For this reason most methods and operators will link to the same definition defined for Matrix. For example since `operator+` is defined similarly for all Matrix cases they all link to the same definition.
+> __NOTE__: Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #RowVector and #SquareMatrix are special alias cases of Matrix Class and SU is a special case of Matrix_t, thus most methods are inherited.
 
-## Standard arithmetic methods:
-| Operation | Type|
-|:---------:|:--------|
-|`operator+`| `Complex::operator+` \n `Matrix::operator+` \n `Vector::operator+` \n `RowVector::operator+` \n `SquareMatrix::operator+` \n `SU::operator+` |
-|`operator-`| `Complex::operator-` \n `Matrix::operator-` \n `Vector::operator-` \n `RowVector::operator-` \n `SquareMatrix::operator-` \n `SU::operator-` |
-|`operator*`| `Complex::operator*` \n `Matrix::operator*` \n `Vector::operator*` \n `RowVector::operator*` \n `SquareMatrix::operator*` \n `SU::operator*` |
-|`operator/`| `Complex::operator/` \n `Matrix::operator/` \n `Vector::operator/` \n `RowVector::operator/` \n `SquareMatrix::operator/` \n `SU::operator/` |
-
-## Arithmetic assignment methods:
-
-| Operation | Type |
-|:---------:|:--------|
-|`operator+=`| `Complex::operator+=` \n `Matrix::operator+=` \n `Vector::operator+=` \n `RowVector::operator+=` \n `SquareMatrix::operator+=` \n `SU::operator+=` |
-|`operator-=`| `Complex::operator-=` \n `Matrix::operator-=` \n `Vector::operator-=` \n `RowVector::operator-=` \n `SquareMatrix::operator-=` \n `SU::operator-=` |
-|`operator*=`| `Complex::operator*=` \n `Matrix::operator*=` \n `Vector::operator*=` \n `RowVector::operator*=` \n `SquareMatrix::operator*=` \n `SU::operator*=` |
-|`operator/=`| `Complex::operator/=` \n `Matrix::operator/=` \n `Vector::operator/=` \n `RowVector::operator/=` \n `SquareMatrix::operator/=` \n `SU::operator/=` |
 
 # Special types
 
