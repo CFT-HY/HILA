@@ -30,8 +30,15 @@
 # then llvm-config-$(LLVM_DEFAULT_VERSION)
 
 
+# First, let's find out what distro we have
+DISTRO := $(shell cat /etc/*-release | grep -iE "^(ID=)" | cut -f2 -d"=")
+
+$(info --------------------------------------------------------------)
+$(info We are on $(DISTRO) ditribution)
+$(info --------------------------------------------------------------)
+
 # keep 14 as default for now
-LLVM_DEFAULT_VERSION := 14
+LLVM_DEFAULT_VERSION := 13
 
 ifdef LLVM_VERSION 
 
@@ -113,7 +120,17 @@ else
 # Now static target
 # option --ignore-libllvm gives all libs as .a -files and libLLVM.so is not included
 
-LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
+# llvim-config --system-libs return libz3.so on Debian GNU/linux, which causes link failure
+# for static building of hilapp. The first conditional directive remove this unwanted shared object file.
+
+  ifeq ($(DISTRO), debian)
+  LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs \
+                   | sed 's/\/usr\/lib\/x86_64-linux-gnu\/libz3.so/ /'`
+  else
+
+  LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
+  endif
+
 STATIC := -static
 
 # and target "static" depends only on hilapp
