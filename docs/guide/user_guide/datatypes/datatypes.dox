@@ -3,7 +3,7 @@
 
 List of datatypes offered by HILA
 
-# Standard types \<S\>: {#standard}
+# Standard types \<S\> {#standard}
 
 - `int`
 - `int64_t`
@@ -11,7 +11,7 @@ List of datatypes offered by HILA
 - `double`
 - (`long double`?)
 
-# Basic types: {#basic}
+# Basic types {#basic}
 
 - \subpage complex
 - \subpage matrix

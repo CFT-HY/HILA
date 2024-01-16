@@ -3,13 +3,180 @@
 
 User guide for custom HILA Complex class
 
-# Construction and assignment
+# Construction
+
+> __NOTE__: Construction is possible only when the assignable values type is compatible with the type S of the Complex\<S\> variable.
+
+The following ways of constructing a Complex object are
+
+__Default constructor:__
+
+\code{.cpp}
+Complex<S> C;
+\endcode
+
+The default constructor initializes \p Complex#re and \p Complex#im to 0
+
+__Complex constructor:__
+
+Initialize both real and imaginary element
+
+\code{.cpp}
+S a,b;
+a = hila::random();
+b = hila::random();
+Complex<S> C(a,b); // C.re = a, C.im = b
+\endcode
+
+__Copy constructor:__
+
+Initialize form already existing Complex number
+
+\code {.cpp}
+S a,b;
+a = hila::random();
+b = hila::random();
+Complex<S> C(a,b);
+Complex<S> B = C; // B.re = a, B.im = b
+\endcode
+
+Equivalent initializing is `Complex<S> B(C)`
+
+__Real constructor:__
+
+Initialize only real element and sets imaginary to 0
+
+\code {.cpp}
+S a = hila::random();
+Complex<S> C(a); // C.re = a, C.im = 0
+\endcode
+
+Not equivalent to `Complex<S> C = a`
+
+__Zero constructor:__
+
+Initialize to zero with nullpointer trick
+
+\code {.cpp}
+Complex<S> C = 0; // C.re = 0, C.im = 0
+\endcode
+
+Equivalent to `Complex<S> C` and `Complex<S> C(0)`
+
+# Assignment 
+
+> __NOTE__: Assignment is possible only when the assignable values type is compatible with the type S of the Complex\<S\> variable.
+
+The following ways of assigning a Complex object are
+
+__Assignment for Complex:__
+
+\code {.cpp}
+Complex<S> C(hila::random(),hila::random());
+Complex<S> B;
+B = C; // B.re = C.re, B.im = C.im
+\endcode
+
+__Assignment from real:__
+
+Assigns real part and imaginary part to zero
+
+\code {.cpp}
+Complex<S> B;
+S a = hila::random;
+B = a; // B.re = a, B.im = 0
+\endcode
+
+# Access
+
+Accessing the real and complex components of a Complex type can be done by either accessing the components directly
+
+~~~cpp
+Complex<S> C(hila::random(),hila::random());
+hila::out0 << C.re << " " << C.im;
+~~~
+
+or by using the std like accessors
+
+~~~cpp
+Complex<S> C(hila::random(),hila::random());
+hila::out0 << C.real() << " " << C.imag();
+~~~
 
 # Mathematical methods
 
-## Standard arithmetic methods:
+## Standard arithmetic methods
 
-## Arithmetic assignment methods:
+The following standard arithmetic methods are defined in the usual way for Complex numebrs.
 
-## Mathematical functions:
+-  `Complex::operator+`
+-  `Complex::operator-`
+-  `Complex::operator*`
+-  `Complex::operator/`
+
+## Arithmetic assignment methods
+
+-  `Field::operator+=`
+-  `Field::operator-=`
+-  `Field::operator*=`
+-  `Field::operator/=`
+
+## Arithmetic increment operators
+
+- `Complex::operator++`
+- `Complex::operator--`
+
+## Comparison operators
+
+- `Complex::operator==`
+- `Complex::operator!=`
+
+## Mathematical functions
+
+- `Complex::abs`
+- `Complex::arg`
+- `Complex::conj`
+- `Complex::dagger`
+- `Complex::polar`
+- `Complex::squarenorm`
+- `Complex::acos`
+- `Complex::acosh`
+- `Complex::asin`
+- `Complex::asinh`
+- `Complex::atan`
+- `Complex::atanh`
+- `Complex::cbrt`
+- `Complex::cos`
+- `Complex::cosh`
+- `Complex::exp`
+- `Complex::expi`
+- `Complex::log`
+- `Complex::pow`
+- `Complex::sin`
+- `Complex::sinh`
+- `Complex::sqrt`
+- `Complex::tan`
+- `Complex::tanh`
+
+## Random number generators
+
+There are two random number generators available for the Complex type. 
+
+- `Complex::random`
+- `Complex::gaussian_random`
+
+__Uniform distribution:__
+
+~~~cpp
+Complex<S> a.random();
+~~~
+
+__Gaussian distribution:__
+
+~~~cpp
+Complex<S> f.gaussian_random();
+~~~
+
+More detailed description on the functionality for both functions can be read on the Class page.
+
  */

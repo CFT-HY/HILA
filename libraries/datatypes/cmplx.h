@@ -72,17 +72,13 @@ class Complex {
      *
      * The default constructor initializes \p Complex#re and \p Complex#im to 0
      *
-     * __Complex constructor:__
-     *
-     * Initialize both real and imaginary element
-     *
-     * \code{.cpp}
-     * MyType a,b;
-     * a = hila::random();
-     * b = hila::random();
-     * Complex<MyType> C(a,b); // C.re = a, C.im = b
-     * \endcode
-     * __Copy constructor:__
+     */
+    Complex<T>() = default;
+    ~Complex<T>() = default;
+
+
+    /**
+     * @brief Copy constructor
      *
      * Initialize form already existing Complex number
      *
@@ -95,31 +91,8 @@ class Complex {
      * \endcode
      *
      * Equivalent initializing is `Complex<MyType> B(C)`
-     *
-     * __Real constructor:__
-     *
-     * Initialize only real element and sets imaginary to 0
-     *
-     * \code {.cpp}
-     * MyType a = hila::random();
-     * Complex<MyType> C(a); // C.re = a, C.im = 0
-     * \endcode
-     *
-     * Not equivalent to `Complex<MyType> C = a`
-     *
-     * __Zero constructor:__
-     *
-     * Initialize to zero with nullpointer trick
-     *
-     * \code {.cpp}
-     * Complex<MyType> C = 0; // C.re = 0, C.im = 0
-     * \endcode
-     *
-     * Equivalent to `Complex<MyType> C` and `Complex<MyType> C(0)`
-     *
+     * @param a
      */
-    Complex<T>() = default;
-    ~Complex<T>() = default;
     Complex<T>(const Complex<T> &a) = default;
 
     // constructor from single complex --IS THIS NEEDED?
@@ -133,16 +106,53 @@ class Complex {
     // in automatic conversions (there should be methods)
 
     //#pragma hila loop_function
+    /**
+     * @brief Real constructor
+     *
+     * Initialize only real element and sets imaginary to 0
+     *
+     * \code {.cpp}
+     * MyType a = hila::random();
+     * Complex<MyType> C(a); // C.re = a, C.im = 0
+     * \endcode
+     *
+     * Not equivalent to `Complex<MyType> C = a`
+     * @tparam S Type for value val
+     */
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     explicit constexpr Complex<T>(const S val) : re(val), im(0) {}
 
-    // allow construction from 0 (nullptr)
+    /**
+     * @brief Zero constructor
+     *
+     * Initialize to zero with nullpointer trick
+     *
+     * \code {.cpp}
+     * Complex<MyType> C = 0; // C.re = 0, C.im = 0
+     * \endcode
+     *
+     * Equivalent to `Complex<MyType> C` and `Complex<MyType> C(0)`
+     */
     constexpr Complex<T>(const std::nullptr_t n) : re(0), im(0) {}
 
     // constructor c(a,b)
+    /**
+     * @brief Complex constructor
+     *
+     * Initialize both real and imaginary element
+     *
+     * \code{.cpp}
+     * MyType a,b;
+     * a = hila::random();
+     * b = hila::random();
+     * Complex<MyType> C(a,b); // C.re = a, C.im = b
+     * \endcode
+     *
+     * @tparam A Type for value a
+     * @tparam B Type for value b
+     */
     template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
               std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
-    //#pragma hila novector loop_function
     explicit constexpr Complex<T>(const A &a, const B &b) : re(a), im(b) {}
 
     // make also std accessors real() and imag() - don't return reference, because
@@ -212,7 +222,19 @@ class Complex {
      */
     inline Complex<T> &operator=(const Complex<T> &s) = default;
 
-    // Assignment from Complex<A>
+    /**
+     * @brief Assignment from complex
+     *
+     * \code {.cpp}
+     * Complex<MyType> C(hila::random(),hila::random());
+     * Complex<MyType> B;
+     * B = C; // B.re = C.re, B.im = C.im
+     * \endcode
+     *
+     * @tparam A Type for Complex value s
+     * @param s Value to assign
+     * @return Complex<T>&
+     */
     template <typename A>
     inline Complex<T> &operator=(const Complex<A> &s) {
         re = s.re;
@@ -220,7 +242,21 @@ class Complex {
         return *this;
     }
 
-    // #pragma hila loop_function
+    /**
+     * @brief Assignment from real
+     *
+     * Assigns real part and imaginary part to zero
+     *
+     * \code {.cpp}
+     * Complex<MyType> B;
+     * MyType a = hila::random;
+     * B = a; // B.re = a, B.im = 0
+     * \endcode
+     *
+     * @tparam S Type for real value s
+     * @param s Value to assign
+     * @return Complex<T>&
+     */
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     inline Complex<T> &operator=(S s) {
         re = s;

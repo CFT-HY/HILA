@@ -240,7 +240,7 @@ Individual data elements of a reduction variable can be accumulated independentl
 
 
 
-## Reduction< T > -type  {#reduction_type_guide}
+## Reduction\<T\> -type  {#reduction_type_guide}
 
 
 Using type `Reduction<T>`,
@@ -329,7 +329,7 @@ be started with `start_reduce()`-method:
 ~~~
 If `r.start_reduce()` is omitted, it is implicitly done at `r.value()`, ensuring correct results.  However, the possible benefit of overlapping communication and computation is lost.
 
-## ReductionVector< T > {#reductionvector_guide}
+## ReductionVector\<T\> {#reductionvector_guide}
 
 ReductionVector enables (weighted) histogramming or general reduction to arrays. As an example, measuring "wall-to-wall" correlation function
 ~~~cpp
@@ -442,6 +442,8 @@ onsites(ALL) f[X].random();
 Field<MyType> f;
 onsites(ALL) f[X].gaussian_random();
 ~~~
+
+The used `gaussian_random` or `random` function is defined based on the element type MyType.
 
 # FFT
 
