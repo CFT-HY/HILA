@@ -3,7 +3,9 @@
 
 List of datatypes offered by HILA
 
-# Standard types \<S\> {#standard}
+# Standard types {#standard}
+
+The following types are the standard types supported by hila, also denoted by S. 
 
 - `int`
 - `int64_t`
