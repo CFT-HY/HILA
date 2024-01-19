@@ -254,9 +254,8 @@ class Matrix_t {
     }
 
     /**
-     * @brief Standard array indexing operation for matrices and vectors
-     *
-     * @details Accessing singular elements is insufficient, but matrix elements are often quite
+     * @brief Standard array indexing operation for matrices
+     * @details Accessing singular elements is insufficient, but Matrix elements are often quite
      * small.
      *
      * Exammple for matrix:
@@ -265,32 +264,42 @@ class Matrix_t {
      *  MyType a = M.e(i,j); \\ i <= n, j <= m
      * \endcode
      *
-     * Example for vector:
-     * \code {.cpp}
-     *  Vector<n,MyType> V;
-     * MyType a = V.e(i) \\ i <= n
-     * \endcode
      *
-     * @param i row index
-     * @param j column index
+     * @param i Row index
+     * @param j Column index
      * @return T matrix element type
      */
     inline T e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
     }
-    // Same as above but with const_function, see const_function for details
+
+    /// @internal const_function implementation. See const_function for details
     inline T &e(const int i, const int j) const_function {
         // return elem[i][j];
         return c[i * m + j];
     }
     // declare single e here too in case we have a vector
     // (n || m == 1)
+    /**
+     * @brief Standard array indexing operation for vectors
+     * @details  Accessing singular elements is insufficient, but Vector elements are often quite
+     * small.
+     * \code {.cpp}
+     *  Vector<n,MyType> V;
+     * MyType a = V.e(i) \\ i <= n
+     * \endcode
+     * @tparam q Number of rows
+     * @tparam p Number of columns
+     * @param i Index
+     * @return T
+     */
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
     }
-    // Same as above but with const_function, see const_function for details
+
+    /// @internal const_function implementation. See const_function for details
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &e(const int i) const_function {
         return c[i];
@@ -315,7 +324,7 @@ class Matrix_t {
     inline T operator[](const int i) const {
         return c[i];
     }
-    // Same as above but with const_function, see const_function for details
+    /// @internal const_function implementation. See const_function for details
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &operator[](const int i) const_function {
         return c[i];
@@ -471,11 +480,8 @@ class Matrix_t {
     // }
 
     /**
-     * @brief Subtraction operator
-     * @memberof Matrix_t
-     * @details Defined for the following operations
-     *
-     * __Unary:__
+     * @brief Unary operator
+     * @details
      *
      * Negation operation
      *
@@ -483,41 +489,6 @@ class Matrix_t {
      * M == -M;
      * \endcode
      *
-     * __Matrix - Matrix:__
-     *
-     * Subtraction operator between matrices is defined in the usual way (element wise).
-     *
-     * __NOTE__: Matrices must share same dimensionality.
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M, N, S;
-     * M.fill(1);
-     * N.fill(1);
-     * S = M - N; // Resulting matrix is uniformly 0
-     * \endcode
-     *
-     *
-     * __Scalar - Matrix / Matrix - Scalar:__
-     *
-     * Subtraction operator between matrix and scalar is defined in the usual way, where the scalar
-     * is subtracted from the diagonal elements.
-     *
-     * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
-     *
-     * \f$ M - 2 = M - 2\cdot\mathbb{1} \f$
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M,S;
-     * M = 2; // M = 2*I
-     * S = M - 1; // Resulting matrix is identity matrix
-     * \endcode
-     *
-     *
-     * @tparam Mtype1 Matrix type for a
-     * @tparam Mtype2 Matrix type for b
-     * @param a Left matrix or scalar
-     * @param b Right matrix or scalar
-     * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
      */
     inline Mtype operator-() const {
         Mtype res;
@@ -615,12 +586,8 @@ class Matrix_t {
     }
 
     /**
-     * @brief Assignment operator = to assign values to matrix
-     * @details The following ways to assign a matrix are:
-     *
-     *
-     * __Assignment from Matrix__:
-     *
+     * @brief Copy matrix assignment
+     * @details
      * \code {.cpp}
      * Matrix<n,m,MyType> M_0;
      * .
@@ -629,33 +596,8 @@ class Matrix_t {
      * Matrix<n,m,MyType> M; \\ undefined matrix
      * M = M_0; \\ Assignment from M_0
      * \endcode
-     *
-     * __Assignment from 0__:
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M;
-     * M = 0; Zero matrix;
-     * \endcode
-     *
-     * __Assignment from scalar__:
-     *
-     * Assignment from scalar assigns the scalar to the diagonal elements as \f$ M = I\cdot a\f$
-     *
-     * \code {.cpp}
-     * MyType a = hila::random;
-     * Matrix<n,m,MyType> M;
-     * M = a; M = I*a
-     * \endcode
-     *
-     *__Initializer list__:
-     *
-     * Assignment from c++ initializer list.
-     *
-     * \code{.cpp}
-     * Matrix<2,2,int> M ;
-     * M = {1, 0
-     *      0, 1};
-     * \endcode
+     * @param rhs Matrix to assign
+     * @return
      */
     // #pragma hila loop_function
     template <typename S, typename MT,
@@ -669,6 +611,17 @@ class Matrix_t {
 
     // assign from 0
     // #pragma hila loop_function
+    /**
+     * @brief Zero assignment
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M;
+     * M = 0; Zero matrix;
+     * \endcode
+     *
+     * @param z 0
+     * @return Mtype&
+     */
     inline Mtype &operator=(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
@@ -678,6 +631,20 @@ class Matrix_t {
 
     // Assign from "scalar" for square matrix
     // #pragma hila loop_function
+    /**
+     * @brief Assignment from scalar
+     * @details Assigns the scalar to the diagonal elements as \f$ M = I\cdot a\f$
+     *
+     * \code {.cpp}
+     * MyType a = hila::random;
+     * Matrix<n,m,MyType> M;
+     * M = a; M = I*a
+     * \endcode
+
+     * @tparam S Scalar type to assign
+     * @param rhs Scalar to assign
+     * @return Mtype&
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) out_only {
 
@@ -693,6 +660,14 @@ class Matrix_t {
 
     // Assign from diagonal matrix
     // #pragma hila loop_function
+
+    /**
+     * @brief Assignment from diagonam matrix
+     *
+     * @tparam S Element type of Diagonal matrix
+     * @param rhs Diagonal matrix to assign
+     * @return Mtype&
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const DiagonalMatrix<n, S> &rhs) out_only {
         static_assert(n == m,
@@ -708,9 +683,18 @@ class Matrix_t {
         return *this;
     }
 
-
-    // Assign from initializer list
-    // #pragma hila loop_function
+    /**
+     * @brief Initializer list assignment
+     * @details
+     * \code{.cpp}
+     * Matrix<2,2,int> M ;
+     * M = {1, 0
+     *      0, 1};
+     * \endcode
+     * @tparam S Element type of initializer list
+     * @param rhs Initializer list to assign
+     * @return Mtype&
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(std::initializer_list<S> rhs) out_only {
         assert(rhs.size() == n * m && "Initializer list has a wrong size in assignment");
@@ -1645,8 +1629,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
     /**
      * @brief Construct a new Matrix object
-     * @details The following ways of constructing a matrix are:
-     *
+     * @details
      * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
      *
      * __Default constructor__:
@@ -1656,45 +1639,31 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
      * \code{.cpp}
      * Matrix<n,m,MyType> M;
      * \endcode
+     */
+    Matrix() = default;
+    ~Matrix() = default;
+    /// Default copy constructor
+    Matrix(const Matrix &v) = default;
+
+
+    // constructor from scalar -- keep it explicit!  Not good for auto use
+    /**
+     * @brief Scalar constructor
+     * @details
      *
-     *
-     * __Scalar constructor__:
-     *
-     * Construct with given scalar at diagonal elements \f$ M = \mathbf{I}\cdot x\f$.
+     * Construct with given scalar at diagonal elements \f$ M = \mathbf{I}\cdot x\f$. Matrix must be
+     * square \f$n == m\f$
      *
      * \code{.cpp}
      * MyType x = hila::random();
      * Matrix<n,m,MyType> M = x;
      * \endcode
-     *
-     * __Copy constructor__:
-     *
-     * Construction from previously defined matrix if types are compatible. For example the code
-     * below only works if assignment from MyOtherType to MyType is defined.
-     *
-     * \code{.cpp}
-     * Matrix<n,m,MyOtherType> M_0;
-     * //
-     * // M_0 is filled with content
-     * //
-     * Matrix<n,m,MyType> M = M_0;
-     * \endcode
-     *
-     * __Initializer list__:
-     *
-     * Construction from c++ initializer list.
-     *
-     * \code{.cpp}
-     * Matrix<2,2,int> M = {1, 0
-     *                      0, 1};
-     * \endcode
+
+     * @tparam S Type for scalar
+     * @tparam nn Number of rows
+     * @tparam mm Numebr of columns
+     * @param rhs Scalar element to assign
      */
-    Matrix() = default;
-    ~Matrix() = default;
-    Matrix(const Matrix &v) = default;
-
-
-    // constructor from scalar -- keep it explicit!  Not good for auto use
     template <typename S, int nn = n, int mm = m,
               std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
     explicit Matrix(const S rhs) out_only {
@@ -1707,7 +1676,24 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
             }
     }
 
-    // Construct from a different type matrix
+    /**
+     * @brief Copy constructor
+     *
+     * Construction from previously defined matrix if types are compatible. For example the code
+     * below only works if assignment from MyOtherType to MyType is defined.
+     *
+     * \code{.cpp}
+     * Matrix<n,m,MyOtherType> M_0;
+     * //
+     * // M_0 is filled with content
+     * //
+     * Matrix<n,m,MyType> M = M_0;
+     * \endcode
+
+     * @tparam S Element type for copied matrix
+     * @tparam MT Matrix type for copied matrix
+     * @param rhs Matrix to copy
+     */
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix(const Matrix_t<n, m, S, MT> &rhs) out_only {
@@ -1716,7 +1702,11 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
         }
     }
 
-    // construct from 0
+    /**
+     * @brief std::nullptr_t constructo
+     * @details Constructing from 0 sets the whole Matrix to zero
+     * @param z 0
+     */
     Matrix(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             this->c[i] = 0;
@@ -1725,6 +1715,18 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
     // Construct matrix automatically from right-size initializer list
     // This does not seem to be dangerous, so keep non-explicit
+    /**
+     * @brief Initializer list constructor
+     *
+     * Construction from c++ initializer list.
+     *
+     * \code{.cpp}
+     * Matrix<2,2,int> M = {1, 0
+     *                      0, 1};
+     * \endcode
+     * @tparam S Element type for initializer list
+     * @param rhs
+     */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&
@@ -2005,6 +2007,26 @@ inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
     return a;
 }
 
+/**
+ * @brief Subtraction operator Matrix - Matrix
+ * @memberof Matrix_t
+ * @details
+ * Subtraction operator between matrices is defined in the usual way (element wise).
+ *
+ * __NOTE__: Matrices must share same dimensionality.
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M, N, S;
+ * M.fill(1);
+ * N.fill(1);
+ * S = M - N; // Resulting matrix is uniformly 0
+ * \endcode
+ * @tparam Mtype1 Element type of first matrix
+ * @tparam Mtype2 Element type of second matrix
+ * @param a Matrix to subtract from
+ * @param b Matrix to subtract
+ * @return Rtype
+ */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>>
@@ -2053,6 +2075,27 @@ inline Rtype operator+(const S &b, const Mtype &a) {
 }
 
 // matrix - scalar
+/**
+ * @brief Subtraction operator Matrix - scalar
+ * @memberof Matrix_t
+ * @details
+ *
+ * Subtraction operator between matrix and scalar is defined in the usual way, where the scalar
+ * is subtracted from the diagonal elements.
+ *
+ * \f$ M - 2 = M - 2\cdot\mathbb{1} \f$
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M,R;
+ * M = 2; // M = 2*I
+ * R = M - 1; // Resulting matrix is identity matrix
+ * \endcode
+ * @tparam Mtype Matrix type
+ * @tparam S Element type of Matrix
+ * @param a Matrix to subtract from
+ * @param b Scalar to subtract
+ * @return Rtype
+ */
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -2071,7 +2114,25 @@ inline Rtype operator-(const Mtype &a, const S &b) {
     return r;
 }
 
-// scalar - matrix
+/**
+ * @brief Subtraction operator Scalar - Matrix
+ * @memberof Matrix_t
+ * @details
+ * Subtraction operator between Scalar and Matrix is defined in the usual way, where the scalar is
+ * treated as diagonal matrix which is then subtracted from.
+ *
+ * \f$ 2 - M = 2\cdot\mathbb{1} - M \f$
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M,R;
+ * M = 1; // M = 1*I
+ * R = 2 - M; // Resulting matrix is identity matrix
+ * @tparam Mtype Matrix type
+ * @tparam S Element type of Matrix
+ * @param b Scalar to subtract from
+ * @param a Matrix to subtract
+ * @return Rtype
+ */
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
