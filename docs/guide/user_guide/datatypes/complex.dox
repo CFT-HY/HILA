@@ -107,7 +107,7 @@ hila::out0 << C.real() << " " << C.imag();
 
 ## Standard arithmetic methods
 
-The following standard arithmetic methods are defined in the usual way for Complex numebrs.
+The following standard arithmetic methods are defined in the usual way for Complex numbers.
 
 -  `Complex::operator+`
 -  `Complex::operator-`
