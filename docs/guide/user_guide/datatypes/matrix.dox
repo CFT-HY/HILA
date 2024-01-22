@@ -5,6 +5,14 @@ User guide for custom HILA Matrix class
 
 > __NOTE__: n,m are integers and T is a HILA [standard type](@ref standard) or Complex.
 
+Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #RowVector and #SquareMatrix are special alias cases of Matrix Class additionally SU and DiagonalMatrix are special cases of Matrix_t. Thus most methods for the aliases and special cases are inherited from Matrix.
+
+- #Vector\<n,T\>
+- #RowVector\<n,T\>
+- #SquareMatrix\<n,T\>
+
+The special alias cases have some functions specific to them which are documented on this page while SU and DiagonalMatrix have their own dedicated pages.
+
 # Construction
 
 > __NOTE__: Construction is possible only when the assignable values type or it's element type is compatible with the type T of the Matrix\<T\> variable.
@@ -16,7 +24,6 @@ Allocates undefined \f$ n\times m\f$ Array.
 \code{.cpp}
 Matrix<n,m,T> M;
 \endcode
-
 
 __Scalar constructor__:
 
@@ -91,7 +98,7 @@ M = {1, 0
 0, 1};
 \endcode
 
-# Access 
+# Access
 
 __Array indexing operation for matrices and vectors with Matrix::e__
 
@@ -121,9 +128,22 @@ Example:
 
 # Mathematical methods
 
-## Standard arithmetic methods:
+## Standard arithmetic methods
 
-## Arithmetic assignment methods:
+The following standard arithmetic methods are defined in the usual way for Matrices numbers.
 
-## Mathematical functions:
+- `Matrix::operator+`
+- `Matrix::operator-`
+- `Matrix::operator*`
+- `Matrix::operator/`
+
+## Arithmetic assignment methods
+
+- `Matrix::operator+=`
+- `Matrix::operator-=`
+- `Matrix::operator*=`
+- `Matrix::operator/=`
+
+## Mathematical functions
+
  */

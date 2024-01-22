@@ -501,9 +501,7 @@ class Matrix_t {
     /**
      * @brief Addition operator
      * @memberof Matrix_t
-     * @details Defined for the following operations
-     *
-     * __Unary:__
+     * @details
      *
      * Identity operation
      *
@@ -511,41 +509,11 @@ class Matrix_t {
      * M == +M;
      * \endcode
      *
-     * __Matrix + Matrix:__
-     *
-     * Addition operator between matrices is defined in the usual way (element wise).
-     *
-     * __NOTE__: Matrices must share same dimensionality.
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M, N, S;
-     * M.fill(1);
-     * N.fill(1);
-     * S = M + N; // Resulting matrix is uniformly 2
-     * \endcode
-     *
-     *
-     * __Scalar + Matrix / Matrix + Scalar:__
-     *
-     * Addition operator between matrix and scalar is defined in the usual way, where the scalar is
-     * added to the diagonal elements.
-     *
-     * __NOTE__: Exact definition exist in overloaded functions that can be viewed in source code.
-     *
-     * \f$ M + 2 = M + 2\cdot\mathbb{1} \f$
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M,S;
-     * M.fill(0);
-     * S = M + 1; // Resulting matrix is identity matrix
-     * \endcode
-     *
-     *
      * @tparam Mtype1 Matrix type for a
      * @tparam Mtype2 Matrix type for b
-     * @param a Left matrix or scalar
-     * @param b Right matrix or scalar
-     * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
+     * @param a Left matrix
+     * @param b Right matrix
+     * @return Rtype
      */
     inline const Mtype &operator+() const {
         return *this;
@@ -707,10 +675,8 @@ class Matrix_t {
 
 
     /**
-     * @brief Add assign operator with matrix or scalar
-     * @details Add assign operator can be used in the following ways
-     *
-     * __Add assign matrix__:
+     * @brief Add assign operator Matrix to Matrix
+     * @details
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M,N;
@@ -718,16 +684,6 @@ class Matrix_t {
      * N = 1;
      * M += N; \\M = 2*I
      * \endcode
-     *
-     * __Add assign scalar__:
-     *
-     * Adds scalar \f$ a \f$ to __square__ matrix as \f$ M + a\cdot\mathbb{1} \f$
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M = 1;
-     * M += 1 ; \\ M = 2*I
-     * \endcode
-     *
      * @tparam S Element type of rhs
      * @tparam MT Matrix type of rhs
      * @param rhs Matrix to add
@@ -744,10 +700,8 @@ class Matrix_t {
     }
 
     /**
-     * @brief Subtract assign operator with matrix or scalar
-     * @details Subtract assign operator can be used in the following ways
-     *
-     * __Subtract assign matrix__:
+     * @brief Subtract assign operator Matrix to MAtrix
+     * @details
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M,N;
@@ -756,18 +710,8 @@ class Matrix_t {
      * M -= N; \\M = 2*I
      * \endcode
      *
-     * __Subtract assign scalar__:
-     *
-     * Subtract scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M = 3;
-     * M -= 1 ; \\ M = 2*I
-     * \endcode
-     *
      * @param rhs Matrix to subtract with
-     * @return template <typename S, typename MT,
-     * std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>&
+     * @return Mtype&
      */
     // #pragma hila loop_function
     template <typename S, typename MT,
@@ -781,6 +725,20 @@ class Matrix_t {
 
     // add assign a scalar to square matrix
     // #pragma hila loop_function
+    /**
+     * @brief Add assign operator scalar to Matrix
+     * @details
+     * Adds scalar \f$ a \f$ to __square__ matrix as \f$ M + a\cdot\mathbb{1} \f$
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M = 1;
+     * M += 1 ; \\ M = 2*I
+     * \endcode
+     *
+     * @tparam S Element type of scalar rhs
+     * @param rhs Sclar to add
+     * @return Mtype&
+     */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) {
@@ -795,6 +753,18 @@ class Matrix_t {
 
     // subtract assign type T and convertible
     // #pragma hila loop_function
+    /**
+     * @brief Subtract assign operator scalar to Matrix
+     * @details Subtract scalar \f$ a \f$ to __square__ matrix as \f$ M - a\cdot\mathbb{1} \f$
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M = 3;
+     * M -= 1 ; \\ M = 2*I
+     * \endcode
+     * @tparam S Element type of scalar rhs
+     * @param rhs scalar to add
+     * @return Mtype&
+     */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) {
@@ -808,15 +778,10 @@ class Matrix_t {
 
     /**
      * @brief Multiply assign scalar or matrix
-     * @details Multiplication works as defined for matrix multiplication and scalar matrix
-     * multiplication.
+     * @details Multiplication works as defined for matrix multiplication
      *
      * Matrix multiply assign only defined for square matrices, since the matrix dimensions would
      * change otherwise.
-     *
-     * Multiply assign operator can be used in the following ways
-     *
-     * __Multiply assign matrix__:
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M,N;
@@ -824,16 +789,6 @@ class Matrix_t {
      * . Fill matrices M and N
      * .
      * M *= N; \\ M = M*N
-     * \endcode
-     *
-     * __Multiply assign scalar__:
-     *
-     * \code {.cpp}
-     * Matrix<n,m,MyType> M;
-     * .
-     * . Fill whole matrix with 1
-     * .
-     * M *= 2 ; \\ M is filled with 2
      * \endcode
      *
      * @param rhs Matrix to multiply with
@@ -852,6 +807,21 @@ class Matrix_t {
 
     // multiply assign with scalar
     // #pragma hila loop_function
+    /**
+     * @brief Multiply assign operator scalar to Matrix
+     * @details Multiply Matrix uniformly with scalar
+     *
+     * \code {.cpp}
+     * Matrix<n,m,MyType> M;
+     * .
+     * . Fill whole matrix with 1
+     * .
+     * M *= 2 ; \\ M is filled with 2
+     * \endcode
+     * @tparam S Scalar type of rhs
+     * @param rhs Scalar to multiply
+     * @return Mtype&
+     */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const S rhs) {
@@ -862,12 +832,9 @@ class Matrix_t {
     }
 
     /**
-     * @brief Divide assign scalar
+     * @brief Divide assign oprator scalar with matrix
      * @details Divide works as defined for scalar matrix division.
      *
-     * Division assign operator can be used in the following ways
-     *
-     * __Divide assign scalar__:
      *
      * \code {.cpp}
      * Matrix<n,m,MyType> M;
@@ -876,10 +843,9 @@ class Matrix_t {
      * .
      * M /= 2 ; \\ M is filled with 1
      * \endcode
-     *
-     * @param rhs Matrix to divide with
-     * @return template <int p, typename S, typename MT,
-     * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
+     * @tparam S Scalar type of rhs
+     * @param rhs Scalar to divide with
+     * @return
      */
     // #pragma hila loop_function
     template <typename S,
@@ -892,9 +858,11 @@ class Matrix_t {
     }
 
     /**
-     * @brief add and sub assign a DiagonalMatrix
-     *
-     * This is possible only for square matrices
+     * @brief Addition assign operator for DiagonalMatrix to Matrix
+     * @details Works as long as Matrix to assign to is square
+     * @tparam S Element type of rhs
+     * @param rhs DiagonalMatrix to add
+     * @return Mtype&
      */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
@@ -906,6 +874,13 @@ class Matrix_t {
         return *this;
     }
 
+    /**
+     * @brief Subtract assign operator for DiagonalMatrix to Matrix
+     * @details Works as long as Matrix to assign to is square
+     * @tparam S Element type of rhs
+     * @param rhs DiagonalMatrix to add
+     * @return Mtype&
+     */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator-=(const DiagonalMatrix<n, S> &rhs) {
@@ -953,7 +928,7 @@ class Matrix_t {
      * M.fill(2) \\ Matrix is filled with 2
      * \endcode
      *
-     * @tparam S Element type to be assigned
+     * @tparam S Scalar type to of rhs
      * @param rhs Element to fill matrix with
      * @return const Mtype&
      */
@@ -996,6 +971,13 @@ class Matrix_t {
         return *reinterpret_cast<const RowVector<n, T> *>(this);
     }
 
+    /**
+     * @brief Transpose of RowVector
+     * @details Returns reference
+     *
+     * @tparam mm
+     * @return const RowVector<n, T>&
+     */
     template <int nn = n, std::enable_if_t<nn == 1 && m != 1, int> = 0>
     inline const Vector<n, T> &transpose() const {
         return *reinterpret_cast<const Vector<n, T> *>(this);
@@ -1970,6 +1952,25 @@ inline auto imag(const Mtype &arg) {
 // Now matrix additions: matrix + matrix
 
 
+/**
+ * @brief Addition operator Matrix + Matrix
+ * @memberof Matrix_t
+ * @details Addition operator between matrices is defined in the usual way (element wise).
+ *
+ * __NOTE__: Matrices must share same dimensionality.
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M, N, S;
+ * M.fill(1);
+ * N.fill(1);
+ * S = M + N; // Resulting matrix is uniformly 2
+ * \endcode
+ * @tparam Mtype1 Matrix type of a
+ * @tparam Mtype2 Matrix type of b
+ * @param a Matrix to add
+ * @param b Matrix to add
+ * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
+ */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
@@ -1988,8 +1989,18 @@ inline Rtype operator+(const Mtype1 &a, const Mtype2 &b) {
     return r;
 }
 
-// Real micro-optimization wrt. above - no extra creation of variable and copy.
-
+/**
+ * @brief Real micro-optimization Matrix + Matrix - no extra creation of variable and copy.
+ * @internal
+ * @tparam Mtype1
+ * @tparam Mtype2
+ * @tparam Mtype2,
+ * std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int,
+ * typename Rtype, Mtype2>
+ * @param a
+ * @param b
+ * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
+ */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
@@ -2021,11 +2032,12 @@ inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
  * N.fill(1);
  * S = M - N; // Resulting matrix is uniformly 0
  * \endcode
- * @tparam Mtype1 Element type of first matrix
- * @tparam Mtype2 Element type of second matrix
+ *
+ * @tparam Mtype1 Matrix type of a
+ * @tparam Mtype2 Matrix type of b
  * @param a Matrix to subtract from
  * @param b Matrix to subtract
- * @return Rtype
+ * @return Rtype Return matrix of compatible type between Mtype1 and Mtype2
  */
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
@@ -2044,7 +2056,27 @@ inline Rtype operator-(const Mtype1 &a, const Mtype2 &b) {
     return r;
 }
 
-// Matrix + scalar
+/**
+ * @brief Addition operator Matrix + scalar
+ * @memberof Matrix_t
+ * @details
+ * Addition operator between matrix and scalar is defined in the usual way, where the scalar is
+ * added to the diagonal elements.
+ * *
+ * \f$ M + 2 = M + 2\cdot\mathbb{1} \f$
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M,S;
+ * M.fill(0);
+ * S = M + 1; // Resulting matrix is identity matrix
+ * \endcode
+ *
+ * @tparam Mtype Matrix type of b
+ * @tparam S Type of scalar
+ * @param a Matrix to add to
+ * @param b Scalar to add
+ * @return Rtype
+ */
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -2063,7 +2095,25 @@ inline Rtype operator+(const Mtype &a, const S &b) {
     return r;
 }
 
-// scalar + matrix
+/**
+ * @brief Addition operator scalar + Matrix
+ * @memberof Matrix_t
+ * @details
+ * Addition operator between Scalar and Matrix is defined in the usual way, where the scalar is
+ * treated as diagonal matrix which is then added to.
+ * \f$ 2 + M = 2\cdot\mathbb{1} + M \f$
+ *
+ * \code {.cpp}
+ * Matrix<n,m,MyType> M,R;
+ * M = 0; // M = 0*I
+ * R = 1 + M; // Resulting matrix is identity matrix
+ * \endcode
+ * @tparam Mtype Matrix type of a
+ * @tparam S scalar type of b
+ * @param b Matrix to add
+ * @param a Scalar to add to
+ * @return Rtype
+ */
 template <typename Mtype, typename S,
           std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
@@ -2090,8 +2140,8 @@ inline Rtype operator+(const S &b, const Mtype &a) {
  * M = 2; // M = 2*I
  * R = M - 1; // Resulting matrix is identity matrix
  * \endcode
- * @tparam Mtype Matrix type
- * @tparam S Element type of Matrix
+ * @tparam Mtype Matrix type of a
+ * @tparam S Scalar type of b
  * @param a Matrix to subtract from
  * @param b Scalar to subtract
  * @return Rtype
@@ -2127,8 +2177,9 @@ inline Rtype operator-(const Mtype &a, const S &b) {
  * Matrix<n,m,MyType> M,R;
  * M = 1; // M = 1*I
  * R = 2 - M; // Resulting matrix is identity matrix
- * @tparam Mtype Matrix type
- * @tparam S Element type of Matrix
+ * \endcode
+ * @tparam Mtype Matrix type a
+ * @tparam S Scalar type of b
  * @param b Scalar to subtract from
  * @param a Matrix to subtract
  * @return Rtype
@@ -2154,7 +2205,15 @@ inline Rtype operator-(const S &b, const Mtype &a) {
 ////////////////////////////////////////
 // matrix * matrix is the most important bit
 
-// same type square matrices:
+/**
+ * @brief Multiplication operator Square Matrix * Square Matrix
+ * @internal
+ * @memberof Matrix_t
+ * @tparam Mt Matrix type
+ * @param a First matrix to multiply
+ * @param b Second matrix to multiply
+ * @return Mt
+ */
 template <typename Mt, std::enable_if_t<Mt::is_matrix() && Mt::rows() == Mt::columns(), int> = 0>
 inline Mt operator*(const Mt &a, const Mt &b) {
 
@@ -2178,7 +2237,7 @@ inline Mt operator*(const Mt &a, const Mt &b) {
  * @details Multiplication type depends on the original types of the multiplied matrices. Defined
  * for the following operations.
  *
- * __Matrix * Matrix:__
+ * Matrix * Matrix
  *
  * [Standard matrix multiplication](https://en.wikipedia.org/wiki/Matrix_multiplication) where LHS
  * columns must match RHS rows
@@ -2191,20 +2250,6 @@ inline Mt operator*(const Mt &a, const Mt &b) {
  * auto S = N * M; // Results in a 3 x 3 Matrix since N.rows() = 3 and M.columns = 3
  * \endcode
  *
- * __RowVector * #Vector / #Vector * #RowVector:__
- *
- * Defined as standard [dot product](https://en.wikipedia.org/wiki/Dot_product) between vectors as
- * long as vectors are of same length
- *
- * \code {.cpp}
- * RowVector<n,MyType> V;
- * Vector<n,MyType> W;
- * //
- * // Fill V and W
- * //
- * auto S = V*W; // Results in MyType scalar
- * \endcode
- *
  * #Vector * RowVector is same as outer product which is equivalent to a matrix
  * multiplication
  *
@@ -2212,22 +2257,12 @@ inline Mt operator*(const Mt &a, const Mt &b) {
  * auto S = W*V // Result in n x n Matrix of type MyType
  * \endcode
  *
- * __Matrix * Scalar / Scalar * Matrix:__
- *
- * Multiplication operator between Matrix and Scalar are defined in the usual way (element wise)
- *
- * \code {.cpp}
- * Matrix<n,n,MyType> M;
- * M.fill(1);
- * auto S = M*2; // Resulting Matrix is uniformly 2
- * \endcode
- *
  * @tparam Mt1 Matrix type for a
  * @tparam Mt2 Matrix type for b
  * @tparam n Number of rows
  * @tparam m Number of columns
- * @param a Left Matrix, Vector or Scalar
- * @param b Right Matrix, Vector or Scalar
+ * @param a Left Matrix or Vector
+ * @param b Right Matrix or RowVector
  * @return Matrix<n, m, R>
  */
 template <typename Mt1, typename Mt2,
@@ -2271,7 +2306,31 @@ inline Matrix<n, m, R> operator*(const Mt1 &a, const Mt2 &b) {
     return res;
 }
 
-// and treat separately horiz. vector * vector
+/**
+ * @brief Multiplication operator RowVector * Vector
+ * @memberof Matrix_t
+ * @details
+ * Defined as standard [dot product](https://en.wikipedia.org/wiki/Dot_product) between
+ * vectors as long as vectors are of same length
+ *
+ * \code {.cpp}
+ * RowVector<n,MyType> V;
+ * Vector<n,MyType> W;
+ * //
+ * // Fill V and W
+ * //
+ * auto S = V*W; // Results in MyType scalar
+ * \endcode
+ *
+ * @tparam m Dimensions of RowVector
+ * @tparam n Dimension of Vector
+ * @tparam T1 Element type of RowVector
+ * @tparam T2 Element type of Vector
+ * @tparam Rt Return type of T1 \f$ \cdot \f$ T2 product
+ * @param A RowVector to multiply
+ * @param B Vector to multiply
+ * @return Rt
+ */
 template <int m, int n, typename T1, typename T2, typename Rt = hila::ntype_op<T1, T2>>
 Rt operator*(const Matrix<1, m, T1> &A, const Matrix<n, 1, T2> &B) {
 
@@ -2287,7 +2346,24 @@ Rt operator*(const Matrix<1, m, T1> &A, const Matrix<n, 1, T2> &B) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-// matrix * scalar
+/**
+ * @brief Multiplication operator Matrix * scalar
+ * @memberof Matrix_t
+ * @details Multiplication operator between Matrix and Scalar are defined in the usual way (element
+ * wise)
+ *
+ * \code {.cpp}
+ * Matrix<n,n,MyType> M;
+ * M.fill(1);
+ * auto S = M*2; // Resulting Matrix is uniformly 2
+ * \endcode
+ *
+ * @tparam Mt Matrix type of mat
+ * @tparam s Scalar type rhs
+ * @param mat Matrix to multiply
+ * @param rhs Scalar to multiply
+ * @return Rt
+ */
 template <typename Mt, typename S,
           std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
@@ -2299,7 +2375,24 @@ inline Rt operator*(const Mt &mat, const S &rhs) {
     return res;
 }
 
-// scalar * matrix
+/**
+ * @brief Multiplication operator Scalar * Matrix
+ * @memberof Matrix_t
+ * @details Multiplication operator between Matrix and Scalar are defined in the usual way (element
+ * wise)
+ *
+ * \code {.cpp}
+ * Matrix<n,n,MyType> M;
+ * M.fill(1);
+ * auto S = 2*M; // Resulting Matrix is uniformly 2
+ * \endcode
+ *
+ * @tparam Mt Matrix type of mat
+ * @tparam s Scalar type rhs
+ * @param mat Matrix to multiply
+ * @param rhs Scalar to multiply
+ * @return Rt
+ */
 template <typename Mt, typename S,
           std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
