@@ -63,7 +63,7 @@ Complex<S> C = 0; // C.re = 0, C.im = 0
 
 Equivalent to `Complex<S> C` and `Complex<S> C(0)`
 
-# Assignment 
+# Assignment
 
 > __NOTE__: Assignment is possible only when the assignable values type is compatible with the type S of the Complex\<S\> variable.
 
@@ -105,21 +105,23 @@ hila::out0 << C.real() << " " << C.imag();
 
 # Mathematical methods
 
+The arithmetic methods and arithmetic assignment methods hold allot of overloads depending on specific objects they are called for. All cases are documented and should be listed in order on the class page. These can be seen by following the links below.
+
 ## Standard arithmetic methods
 
 The following standard arithmetic methods are defined in the usual way for Complex numbers.
 
--  `Complex::operator+`
--  `Complex::operator-`
--  `Complex::operator*`
--  `Complex::operator/`
+- `Complex::operator+`
+- `Complex::operator-`
+- `Complex::operator*`
+- `Complex::operator/`
 
 ## Arithmetic assignment methods
 
--  `Field::operator+=`
--  `Field::operator-=`
--  `Field::operator*=`
--  `Field::operator/=`
+- `Field::operator+=`
+- `Field::operator-=`
+- `Field::operator*=`
+- `Field::operator/=`
 
 ## Arithmetic increment operators
 
@@ -160,7 +162,7 @@ The following standard arithmetic methods are defined in the usual way for Compl
 
 ## Random number generators
 
-There are two random number generators available for the Complex type. 
+There are two random number generators available for the Complex type.
 
 - `Complex::random`
 - `Complex::gaussian_random`
@@ -168,13 +170,13 @@ There are two random number generators available for the Complex type.
 __Uniform distribution:__
 
 ~~~cpp
-Complex<S> a.random();
+Complex<S> c.random();
 ~~~
 
 __Gaussian distribution:__
 
 ~~~cpp
-Complex<S> f.gaussian_random();
+Complex<S> c.gaussian_random();
 ~~~
 
 More detailed description on the functionality for both functions can be read on the Class page.
