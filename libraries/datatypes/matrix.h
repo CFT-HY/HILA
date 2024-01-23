@@ -341,6 +341,14 @@ class Matrix_t {
 
     /**
      * @brief Return reference to row in a matrix
+     * @details Since the Matrix data is ordered in a row major order accessing a row returns a
+     * reference to the row.
+     *
+     * \code{.cpp}
+     * Matrix<n,n,T> M;
+     * M.random();
+     * RowVector<n,T> V = M.row(i);
+     * \endcode
      *
      * @param r index of row to be referenced
      * @return const RowVector<m, T>&
@@ -351,7 +359,13 @@ class Matrix_t {
 
     /**
      * @brief Set row of Matrix with #RowVector if types are assignable
-     *
+     * @details
+     * \code{.cpp}
+     * RowVector<n,T> V;
+     * V.random();
+     * Matrix<n,n,T> M;
+     * M.set_row(i,V);
+     * \endcode
      * @tparam S RowVector type
      * @param r Index of row to be set
      * @param v RowVector to be set
@@ -364,7 +378,11 @@ class Matrix_t {
 
     /**
      * @brief Returns column vector as value at index c
-     *
+     * \code{.cpp}
+     * Matrix<n,n,T> M;
+     * M.random();
+     * Vector<n,T> V = M.column(i);
+     * \endcode
      * @param c index of column vector to be returned
      * @return const Vector<n, T>
      */
@@ -382,7 +400,13 @@ class Matrix_t {
 
     /**
      * @brief Set column of Matrix with #Vector if types are assignable
-     *
+     * @details
+     * \code{.cpp}
+     * Vector<n,T> V;
+     * V.random();
+     * Matrix<n,n,T> M;
+     * M.set_column(i,V);
+     * \endcode
      * @tparam S Vector type
      * @param c Index of column to be set
      * @param v #Vector to be set
@@ -397,6 +421,10 @@ class Matrix_t {
      * @brief Return diagonal of square matrix
      * @details If called for non square matrix the program will throw an error.
      *
+     * \code{.cpp}
+     * Matrix<n,n,T> M = 1;
+     * DiagonalMatrix<n,T> D = M.diagonal();
+     * \endcode
      * @return Vector<n, T> returned vector.
      */
     DiagonalMatrix<n, T> diagonal() {
@@ -604,7 +632,7 @@ class Matrix_t {
      * @details Assigns the scalar to the diagonal elements as \f$ M = I\cdot a\f$
      *
      * \code {.cpp}
-     * MyType a = hila::random;
+     * MyType a = hila::random();
      * Matrix<n,m,MyType> M;
      * M = a; M = I*a
      * \endcode
@@ -630,7 +658,7 @@ class Matrix_t {
     // #pragma hila loop_function
 
     /**
-     * @brief Assignment from diagonam matrix
+     * @brief Assignment from diagonal matrix
      *
      * @tparam S Element type of Diagonal matrix
      * @param rhs Diagonal matrix to assign
@@ -892,7 +920,13 @@ class Matrix_t {
     }
 
     /**
-     * @brief mult and divide assign a diagonal - cols must match diagonal matrix rows
+     * @brief Multiply assign operator for DiagonalMatrix to Matrix
+     * @details Simply defined as matrix multiplication, but since rhs is guaranteed to be diagonal
+     * the method is optimized to skip most of the elements.
+     *
+     * @tparam S Element type of rhs
+     * @param rhs DiagonalMatrix to multiply
+     * @return Mtype&
      */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
@@ -905,6 +939,16 @@ class Matrix_t {
         return *this;
     }
 
+    /**
+     * @brief Divide assign operator for DiagonalMatrix to Matrix
+     * @details Well defined since rhs is guaranteed to be Diagonal.
+     *
+     * Let M be the Matrix which we divide and D be the DiagonalMatrix which we divide with then the
+     * operation is defined as \f$ M \cdot D^{-1}  \f$.
+     * @tparam S Element type of rhs
+     * @param rhs DiagonalMatrix to divide
+     * @return Mtype&
+     */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     Mtype &operator/=(const DiagonalMatrix<m, S> &rhs) {
@@ -1147,9 +1191,8 @@ class Matrix_t {
     }
 
     /**
-     * @brief Find max or min value - only for arithmetic types
+     * @brief Find max of Matrix only for arithmetic types
      */
-
     template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     T max() const {
         T res = c[0];
@@ -1160,6 +1203,9 @@ class Matrix_t {
         return res;
     }
 
+    /**
+     * @brief Find min of Matrix only for arithmetic types
+     */
     template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     T min() const {
         T res = c[0];
@@ -1273,9 +1319,12 @@ class Matrix_t {
     /// Generate random elements
 
     /**
-     * @brief Fills Matrix with random elements
-     * @details Works only for real valued elements such as float or double
-     *
+     * @brief Fills Matrix with random elements from uniform distribution
+     * @details
+     * \code{.cpp}
+     * Matrix<n,m,T> M;
+     * M.random();
+     * \endcode
      * @return Mtype&
      */
     Mtype &random() out_only {
@@ -1290,8 +1339,12 @@ class Matrix_t {
     }
 
     /**
-     * @brief Fills Matrix with gaussian random elements
-     * @details Works only for real valued elements such as float or double
+     * @brief Fills Matrix with gaussian random elements from gaussian distribution
+     * @details
+     * \code {.cpp}
+     * Matrix<n,m,T> M;
+     * M.gaussian_random();
+     * \endcode
      *
      * @param width
      * @return Mtype&
@@ -1373,28 +1426,30 @@ class Matrix_t {
     }
 
     /**
-     * @brief Sort method for #Vector
-     * @details  Two interfaces: first returns permutation vector, which can be used to permute
-     * other vectors/matrices second does only sort
+     * @brief Sort method for #Vector which returns permutation order
+     * @details Order can be past as argument as either ascending (default) or descending
      *
-     * __Direct sort__:
-     *
-     * @code {.cpp}
-     * Vector<n,MyType> V;
-     * V.random();
-     * V.sort(); // V is sorted
-     * @endcode
-     *
-     * __Permutation vector__:
-     *
+     * __Ascending__
      * @code {.cpp}
      * Vector<n,MyType> V;
      * Vector<n,int> perm;
      * V.random();
      * V.sort(perm);
-     * V.permute(perm); // V is sorted
+     * V.permute(perm);
      * @endcode
      *
+     * __Descending__
+     * @code {.cpp}
+     * Vector<n,MyType> V;
+     * Vector<n,int> perm;
+     * V.random();
+     * V.sort(perm,hila::sort::descending);
+     * V.permute(perm);
+     * @endcode
+     * @tparam N
+     * @param permutation
+     * @param order
+     * @return Mtype
      */
 #pragma hila novector
     template <int N>
@@ -1426,6 +1481,25 @@ class Matrix_t {
         return this->permute(permutation);
     }
 
+    /**
+     * @brief  Sort method for #Vector
+     * @details Order can be past as argument as either ascending (default) or descending
+     *
+     * __Ascending__
+     * @code {.cpp}
+     * Vector<n,MyType> V;
+     * V.random();
+     * V.sort(); // V is sorted in ascending order
+     * @endcode
+     *
+     * __Descending__
+     * @code {.cpp}
+     * V.sort(hila::sort::descending);
+     * @endcode
+     *
+     * @param order Order to sort in
+     * @return Mtype
+     */
 #pragma hila novector
     Mtype sort(hila::sort order = hila::sort::ascending) const {
         static_assert(n == 1 || m == 1, "Sorting possible only for vectors");
@@ -2407,7 +2481,7 @@ inline Rt operator*(const S &rhs, const Mt &mat) {
  * @memberof Matrix_t
  * @details Defined for following operations
  *
- * __ Matrix / Scalar: __
+ * __Matrix / Scalar:__
  *
  * Division operator between Matrix and Scalar are defined in the usual way (element wise)
  *
