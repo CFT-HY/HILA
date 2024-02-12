@@ -121,11 +121,12 @@ else
 # option --ignore-libllvm gives all libs as .a -files and libLLVM.so is not included
 
 # llvim-config --system-libs return libz3.so on Debian GNU/linux, which causes link failure
-# for static building of hilapp. The first conditional directive remove this unwanted shared object file.
+# for static building of hilapp. The first conditional directive remove this unwanted shared object file
+# by extended regex. In fact, this pattern will match and remove all *so lib
 
   ifeq ($(DISTRO), debian)
   LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs \
-                   | sed 's/\/usr\/lib\/x86_64-linux-gnu\/libz3.so/ /'`
+                   | sed -E 's/[(\/)[:alpha:][:digit:]_-]+\.(so)//'`
   else
 
   LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
