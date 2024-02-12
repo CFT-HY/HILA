@@ -1684,7 +1684,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     using argument_type = T;
 
     /**
-     * @brief Construct a new Matrix object
+     * @brief Default constructo
      * @details
      * __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
      *
@@ -1759,8 +1759,9 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     }
 
     /**
-     * @brief std::nullptr_t constructo
+     * @brief Zero constructor
      * @details Constructing from 0 sets the whole Matrix to zero
+     * @internal
      * @param z 0
      */
     Matrix(const std::nullptr_t &z) out_only {

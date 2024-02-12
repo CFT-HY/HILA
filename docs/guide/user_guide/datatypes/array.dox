@@ -1,0 +1,126 @@
+/**
+@page array Array\<n,m,T\>
+
+User guide for custom HILA Complex class
+
+Acts as array class which stores data in a simple C style array. For detailed description and motivation see Array.
+
+# Construction
+
+> __NOTE__: n,m are integers and MyType is a HILA [standard type](@ref standard) or Complex.
+
+The multiple ways of constructing an Array object can be viewed on the Object documentation page
+
+- `Array::Array()`
+
+A simple example of construction is:
+
+\code{.cpp}
+    Array<n,m,MyType> A(1); // Constructs array uniformly with scalar 1
+    Array1d<n,MyType> B(1); // Constructs 1D Array set to uniformly 1
+    Array1d<n,MyType> C(B); // Constructs by copying contents from B to A
+\endcode
+
+> __NOTE__: Array1d is alias case of Array
+
+# Assignment
+
+The implicit definition of assignment exist as
+
+__Assignment from Array__:
+
+\code {.cpp}
+    Array<n,m,MyType> A_0;
+    // .
+    // . A_0 has values assigned to it
+    // .
+    Array<n,m,MyType> A; // undefined matrix
+    A = A_0; // Assignment from A_0
+\endcode
+
+__Initializer list__:
+
+Assignment from c++ initializer list.
+
+\code{.cpp}
+    Array<2,2,int> A ;
+    A = {1, 0
+         0, 1};
+\endcode
+
+Additionally there is a scalar assignment definition
+
+- `Array::operator=(const S rhs)`
+
+# Access
+
+- `Array::e`
+
+Example for Array2d:
+
+\code
+    Array<n,m,T> A;
+    T a = A.e(i,j); // i <= n, j <= m
+\endcode
+
+Example for Array1d:
+\code {.cpp}
+    Array1d<n,T> A;
+    T a = A.e(i) // i <= n
+\endcode
+
+# Mathematical methods
+
+The arithmetic methods and arithmetic assignment methods hold allot of overloads depending on specific objects they are called for. All cases are documented and should be listed in order on the class page. These can be seen by following the links below.
+
+## Standard arithmetic methods
+
+The following standard arithmetic methods are defined in the usual way for Complex numbers.
+
+- `Array::operator+`
+- `Array::operator-`
+- `Array::operator*`
+- `Array::operator/`
+
+## Arithmetic assignment methods
+
+- `Array::operator+=`
+- `Array::operator-=`
+- `Array::operator*=`
+- `Array::operator/=`
+
+## Comparison operators
+
+- `Array::operator==`
+- `Array::operator!=`
+
+## Mathematical functions
+
+- `Array::conj`
+- `Array::squarenorm`
+- `Array::acos`
+- `Array::acosh`
+- `Array::asin`
+- `Array::asinh`
+- `Array::atan`
+- `Array::atanh`
+- `Array::cbrt`
+- `Array::cos`
+- `Array::cosh`
+- `Array::exp`
+- `Array::log`
+- `Array::pow`
+- `Array::sin`
+- `Array::sinh`
+- `Array::sqrt`
+- `Array::tan`
+- `Array::tanh`
+
+## Random number generators
+
+There are two random number generators available for the Array type.
+
+- `Array::random`
+- `Array::gaussian_random`
+
+ */

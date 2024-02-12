@@ -61,10 +61,8 @@ class Complex {
     T re, im;
 
     /**
-     * @brief Construct a new Complex object
-     * @details The following ways of constructing a Complex object are
-     *
-     * __Default constructor:__
+     * @brief Default constructo
+     * @details
      *
      * \code{.cpp}
      * Complex<MyType> C;
@@ -132,6 +130,7 @@ class Complex {
      * \endcode
      *
      * Equivalent to `Complex<MyType> C` and `Complex<MyType> C(0)`
+     * @internal
      */
     constexpr Complex<T>(const std::nullptr_t n) : re(0), im(0) {}
 
@@ -161,8 +160,7 @@ class Complex {
 
     /**
      * @brief Real part of Complex number
-     * @details Overloads exist for pass by value and pass by reference for when Complex is defined
-     * as non-const or const
+     * @details Pass by value if Complex number is defined as const
      *
      * @return T Real part
      */
@@ -171,19 +169,28 @@ class Complex {
     }
     /**
      * @brief Imaginary part of Complex number
-     * @details Overloads exist for pass by value and pass by reference for when Complex is defined
-     * as non-const or const
-     *
+     * @details Pass by value if Complex number is defined as const
      * @return T Imaginary part
      */
     inline T imag() const {
         return im;
     }
 
+    /**
+     * @brief Real part of Complex number
+     * @details Pass by reference
+     *
+     * @return T & Real part
+     */
     inline T &real() const_function {
         return re;
     }
-
+    /**
+     * @brief Imaginary part of Complex number
+     * @details Pass by reference
+     *
+     * @return T & Imaginary part
+     */
     inline T &imag() const_function {
         return im;
     }
