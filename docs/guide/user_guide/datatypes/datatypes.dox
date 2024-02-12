@@ -22,7 +22,7 @@ The following types are the standard types supported by hila, also denoted by S.
     - #SquareMatrix\<n,T\>
 - \subpage su_matrix
 - \subpage diagonal_matrix
-- Array\<n,m,T\>
+- \subpage array 
 
 Here n,m\f$ \in \mathbb{N}\f$, S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not AVX vectorizable).
 

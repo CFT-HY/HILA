@@ -2,6 +2,7 @@
 blockquote::before {
     content: "";
 }
+
 blockquote::after {
     content: "";
 }
@@ -11,7 +12,18 @@ blockquote::after {
 div.fragment .line {
     white-space: pre-wrap;
 }
+
 div.line {
     text-indent: -53px;
     padding-left: 53px;
+}
+
+/* Prevents autolink generation for function, since doxygen states itself that the parser isn't smart enough. 
+   This leads to incorrect function linking with same member names" */
+a.code.hl_function {
+    pointer-events: none;
+    cursor: default;
+    text-decoration: none !important;
+    color: var(--fragment-foreground) !important;
+
 }

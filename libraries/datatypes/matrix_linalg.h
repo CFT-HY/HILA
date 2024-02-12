@@ -34,7 +34,7 @@ inline double find_largest_offdiag(const SquareMatrix<n, Mtype> &M, int &p, int 
  *  Matrix is  | c    s |
  *             | -s*  c |
  * s complex or real, c real, and c^2 + |s|^2 = 1.
- * 
+ *
  * mult_by_Givens_left/right multiply matrices with Givens matrix left/right.
  * where the "Givens" is taken to be unity except on row/col = p,q
  */
@@ -435,7 +435,8 @@ int Matrix_t<n, m, T, Mtype>::svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U,
  * @brief Singular value decomposition: divide matrix A = U S V*, where U,V unitary and S diagonal
  * matrix of real singular values. Unpivoted Jacobi rotations.
  *
- * Unpivoted rotation is generally faster than pivoted (esp. on gpu), but a bit less accurate
+ * @details Unpivoted rotation is generally faster than pivoted (esp. on gpu), but a bit less
+ * accurate
  *
  * Use:
  *   M.svd(U, S, V, [sorted]);
