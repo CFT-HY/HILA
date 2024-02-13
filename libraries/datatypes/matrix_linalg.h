@@ -801,9 +801,11 @@ T det(const Matrix_t<n, m, T, Mtype> &mat) {
  * Specialize this here for the case where A is diagonal and
  * u = v = sqrt(c) [1 1 1 ..]^T
  * i.e. invert M = (A + C), where C is constant matrix.  Let now B = A^-1, result is
- *    M^1_ij = B_i delta_ij - c B_i B_j / (1 + c Tr B)
+ *    M^{-1}_ij = B_i delta_ij - c B_i B_j / (1 + c Tr B)
  * or
- *    M^-1 = B - c Bv Bv^T / (1 + c Tr B)
+ *    M^{-1} = B - c Bv Bv^T / (1 + c Tr B)
+ * where
+ *    Bv = B [1 1 1 ..]^T,  i.e. Bv_i = B_ii.
  *
  * Inverse exists if (1 + c Tr B) != 0.
  */
