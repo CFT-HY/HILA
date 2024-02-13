@@ -58,12 +58,12 @@ sudo apt install build-essential \
 ~~~
 
 
-**CUDA:**
+* **CUDA:**
 
 See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
 
 
-**HIP:**
+* **HIP:**
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 
@@ -106,7 +106,7 @@ On windows the installation of the HILA preprocessor dependencies and HILA appli
 On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platforms the best solution is to opt to use the [singularity](#singularity) container. 
 
 
-**After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
+* **After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
 ## Containers {#containers}
 
@@ -500,7 +500,7 @@ make ARCH=cuda
 or
 make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 ~~~
-> __NOTE__: Default cuda version is 11.6 and compute architecture is sm_61*
+> __NOTE__: Default cuda version is 11.6 and compute architecture is sm_61
 
 Now if we execute the cuda version one should expect the following output
 
