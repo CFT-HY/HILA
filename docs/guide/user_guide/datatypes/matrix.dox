@@ -1,0 +1,134 @@
+/**
+@page matrix Matrix\<n,m,T\>
+
+User guide for custom HILA Matrix class
+
+The Matrix object is simply an \f$n \times m\f$ matrix, where n is the number of rows and m is the number of columns. The goal is to have an object which defines the mathematical definition of a Matrix. For a general array type see Array.
+
+> __NOTE__: n,m are integers and T is a HILA [standard type](@ref standard) or Complex.
+
+Matrix is defined with the base class Matrix_t (See documentation for details). #Vector, #RowVector
+and #SquareMatrix are special alias cases of Matrix Class additionally SU and DiagonalMatrix are
+special cases of Matrix_t. Thus most methods for the aliases and special cases are inherited from
+Matrix.
+
+- #Vector\<n,T\>
+- #RowVector\<n,T\>
+- #SquareMatrix\<n,T\>
+
+The special alias cases have some functions specific to them which are documented on this page while
+SU and DiagonalMatrix have their own dedicated pages.
+
+# Construction, Assignment
+
+> __NOTE__: Construction and assignment is possible only when the assignable values type or it's
+element type is compatible with the type T of the Matrix\<T\> variable.
+
+The multiple ways of constructing and assigning a Matrix object can be viewed on the Object
+documentation page
+
+- `Matrix::Matrix()`
+- `Matrix::operator=`
+
+A simple example of constructing a Matrix object is as follows:
+
+\code{.cpp}
+Matrix<n,m,T> M(1);     // Allocates Matrix.c which is simply an n*m c style array
+Matrix<n,m,T> N = M;    // Copy constructor: copies the contents of M into N
+N = M + 1;              // Assignment operator: Scalar is treated as identity 1*I, N = M + 1 = 2*I
+\endcode
+
+## Set elements
+
+- `Matrix::set_row`
+- `Matrix::set_column`
+- `Matrix::set_diagonal`
+
+# Access
+
+__Array indexing operation for matrices and vectors with Matrix::e__
+
+Accessing singular elements is insufficient, but matrix elements are often quite
+small.
+
+Example for matrix:
+\code
+    Matrix<n,m,T> M;
+    T a = M.e(i,j); \\ i <= n, j <= m
+\endcode
+
+Example for vector:
+\code {.cpp}
+    Vector<n,T> V;
+    T a = V.e(i) \\ i <= n
+\endcode
+
+__Standard array indexing operation for vectors only with Matrix::operator[]__
+
+\code {.cpp}
+    Vector<n,T> V;
+    T a = V[i] \\ i <= n
+\endcode
+
+__Access row, column or diagonal elemetns__
+
+- `Matrix::row`
+- `Matrix::column`
+- `Matrix::diagonal`
+
+# Mathematical methods
+
+The arithmetic methods and arithmetic assignment methods hold allot of overloads depending on
+specific objects they are called for. All cases are documented and should be listed in order on the
+class page. These can be seen by following the links below.
+
+## Standard arithmetic methods
+
+The following standard arithmetic methods are defined in the usual way for Matrices numbers.
+
+- `Matrix::operator+`
+- `Matrix::operator-`
+- `Matrix::operator*`
+- `Matrix::operator/`
+
+## Arithmetic assignment methods
+
+- `Matrix::operator+=`
+- `Matrix::operator-=`
+- `Matrix::operator*=`
+- `Matrix::operator/=`
+
+## Mathematical functions
+
+- `Matrix::abs`
+- `Matrix::adjoint`
+- `Matrix::conj`
+- `Matrix::dagger`
+- `Matrix::det`
+- `Matrix::det_laplace`
+- `Matrix::det_lu`
+- `Vector::dot`
+- `Matrix::eigen_hermitean`
+- `Matrix::exp`
+- `Matrix::imag`
+- `Matrix::mul_trace`
+- `Matrix::mult_by_2x2_left`
+- `Matrix::mult_by_2x2_right`
+- `Matrix::norm`
+- `Matrix::real`
+- `Matrix::squarenorm`
+- `Matrix::svd`
+- `Matrix::svd_pivot`
+- `Matrix::trace`
+- `Matrix::transpose`
+
+## Random number generators
+
+There are two random number generators available for the Matrix type.
+
+- `Matrix::random`
+- `Matrix::gaussian_random`
+
+More detailed description on the functionality for both functions can be read on the Class page.
+
+ */
