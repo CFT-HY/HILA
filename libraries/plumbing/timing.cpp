@@ -5,8 +5,8 @@
 #include "defs.h"
 
 //////////////////////////////////////////////////////////////////
-/// Time related routines (runtime - timing - timelimit)
-/// Check timing.h for details
+// Time related routines (runtime - timing - timelimit)
+// Check timing.h for details
 //////////////////////////////////////////////////////////////////
 
 #include "com_mpi.h"
