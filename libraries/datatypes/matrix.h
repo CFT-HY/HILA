@@ -2325,8 +2325,8 @@ std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
     return strm;
 }
 
-/// Convert to string for "pretty" printing
-///
+// Convert to string for "pretty" printing
+//
 
 namespace hila {
 

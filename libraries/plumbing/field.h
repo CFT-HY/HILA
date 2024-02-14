@@ -1735,10 +1735,11 @@ void swap(Field<T> &A, Field<T> &B) {
 }
 } // namespace std
 
+namespace hila {
+  
 /**
  * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
- */
-namespace hila {
+ */  
 template <typename T>
 void swap(Field<T> &A, Field<T> &B) {
     std::swap(A.fs, B.fs);
