@@ -126,9 +126,11 @@ inline dir_mask_t get_dir_mask(const Direction d) {
     return (dir_mask_t)(1 << d);
 }
 
-/// define hila::direction_name() and hila::prettyprint(Direction)
 namespace hila {
 
+
+// define hila::direction_name() and hila::prettyprint(Direction)
+   
 constexpr inline const char *direction_name(Direction d) {
     const char *dirnames[NDIRS] = {
         "e_x",
