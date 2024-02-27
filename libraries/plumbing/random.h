@@ -67,11 +67,11 @@ double random();
 // routine is not normally needed in user code, instead use standard hila::random().
 double host_random();
 
-#pragma hila contains_rng loop_function
 
 /**
  * @brief Gaussian random generation routine 
  */  
+#pragma hila contains_rng loop_function
 double gaussrand();
 
 
