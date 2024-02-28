@@ -12,6 +12,7 @@
 #include "hilapp.h"
 #include "toplevelvisitor.h"
 #include "stringops.h"
+#include "clang/AST/ASTLambda.h"
 
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
@@ -34,6 +35,23 @@ void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
     if (sb == nullptr) {
         // it's a system file -- should we do something?
         return;
+    }
+
+    if(CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(fd)){
+        if(isLambdaCallOperator(MD)){
+            CXXRecordDecl *RD = MD->getParent();
+            if(RD->isLambda()){
+                // reportDiag(DiagnosticsEngine::Level::Remark,fd->getInnerLocStart(),"fd begin\n");
+                // reportDiag(DiagnosticsEngine::Level::Remark,RD->getInnerLocStart(),"RD begin\n");
+                // fd->getInnerLocStart points to here:------------------------------------------------v
+                //                        auto lambda = [capture, this, and, that]   (int i, int j) -> return_type { ... }
+                // RD->getInnerLocStart points to here:-^                          ^
+                //                                                                 |
+                // __device__ __host__ should be inserted in here -----------------|
+                // for now ignore, anyway not standard, nvcc --expt-extended-lambda
+                return;
+            }
+        }
     }
 
     if (!sb->is_edited(sl))
