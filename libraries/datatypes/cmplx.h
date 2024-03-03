@@ -210,11 +210,11 @@ class Complex {
      * @param s
      * @return Complex<T>&
      */
-    inline Complex<T> &operator=(const Complex<T> &s) = default;
+    inline Complex<T> &operator=(const Complex<T> &s) & = default;
 
     // Assignment from Complex<A>
     template <typename A>
-    inline Complex<T> &operator=(const Complex<A> &s) {
+    inline Complex<T> &operator=(const Complex<A> &s) & {
         re = s.re;
         im = s.im;
         return *this;
@@ -222,11 +222,15 @@ class Complex {
 
     // #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    inline Complex<T> &operator=(S s) {
+    inline Complex<T> &operator=(S s) & {
         re = s;
         im = 0;
         return *this;
     }
+
+    // delete the assign to rvalue
+    template <typename S>
+    Complex<T> &operator=(const S &s) && = delete;
 
     /**
      * @brief Compute square norm of Complex number
@@ -379,14 +383,14 @@ class Complex {
      */
     //#pragma hila loop_function
     template <typename A>
-    inline Complex<T> &operator+=(const Complex<A> &lhs) {
+    inline Complex<T> &operator+=(const Complex<A> &lhs) & {
         re += lhs.re;
         im += lhs.im;
         return *this;
     }
 
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator+=(const A &a) {
+    inline Complex<T> &operator+=(const A &a) & {
         re += a;
         return *this;
     }
@@ -415,14 +419,14 @@ class Complex {
      *
      */
     template <typename A>
-    inline Complex<T> &operator-=(const Complex<A> &lhs) {
+    inline Complex<T> &operator-=(const Complex<A> &lhs) & {
         re -= lhs.re;
         im -= lhs.im;
         return *this;
     }
 
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator-=(const A &a) {
+    inline Complex<T> &operator-=(const A &a) & {
         re -= a;
         return *this;
     }
@@ -464,7 +468,7 @@ class Complex {
      */
     //#pragma hila loop_function
     template <typename A>
-    inline Complex<T> &operator*=(const Complex<A> &lhs) {
+    inline Complex<T> &operator*=(const Complex<A> &lhs) & {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
         im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
         re = r;
@@ -472,7 +476,7 @@ class Complex {
     }
 
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator*=(const A a) {
+    inline Complex<T> &operator*=(const A a) & {
         re *= a;
         im *= a;
         return *this;
@@ -516,7 +520,7 @@ class Complex {
      *
      */
     template <typename A>
-    inline Complex<T> &operator/=(const Complex<A> &lhs) {
+    inline Complex<T> &operator/=(const Complex<A> &lhs) & {
         T n = lhs.squarenorm();
         T r = mul_add(re, lhs.re, im * lhs.im) / n; // a*b+c
         im = mul_sub(im, lhs.re, re * lhs.im) / n;  // a*b-c
@@ -525,7 +529,7 @@ class Complex {
     }
 
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator/=(const A &a) {
+    inline Complex<T> &operator/=(const A &a) & {
         re /= a;
         im /= a;
         return *this;
