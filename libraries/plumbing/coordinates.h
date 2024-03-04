@@ -305,14 +305,14 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Assign from 0
 #pragma hila loop_function
-    inline CoordinateVector_t &operator=(std::nullptr_t z) {
+    inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
         foralldir(d) this->e(d) = 0;
         return *this;
     }
 
     /// Assign from initializer list
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) {
+    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == NDIM && "Initializer list has a wrong size in assignment");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
@@ -321,7 +321,18 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    // Assign
+    // Assign from direction
+    inline CoordinateVector_t &operator=(Direction d) out_only & {
+        foralldir(dir) {
+            this->e(dir) = dir_dot_product(d,dir);
+        }
+        return *this;
+    }
+
+    // and delete assign to rvalue
+    template <typename S>
+    CoordinateVector_t & operator=(const S & s) && = delete;
+
 
     bool operator==(const CoordinateVector_t<T> &rhs) const {
         foralldir(d) {
@@ -379,19 +390,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     // add coordinate vector -- def explicit as loop_function
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) {
+    CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) & {
         foralldir(d) this->e(d) += rhs.e(d);
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) {
+    CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) & {
         foralldir(d) this->e(d) -= rhs.e(d);
         return *this;
     }
 
     // and also additions for Direction -- dir acts like a unit vector
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const Direction dir) {
+    CoordinateVector_t &operator+=(const Direction dir) & {
         if (is_up_dir(dir))
             ++this->e(dir);
         else
@@ -399,7 +410,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const Direction dir) {
+    CoordinateVector_t &operator-=(const Direction dir) & {
         if (is_up_dir(dir))
             --this->e(dir);
         else
