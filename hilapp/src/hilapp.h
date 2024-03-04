@@ -301,10 +301,11 @@ struct var_info {
     bool is_site_dependent;         // is the value of variable site dependent
     bool is_special_reduction_type; // is variable defined with Reduction<T>
     bool is_raw;                    // is it raw access var?
+    bool is_lambda_var_ref;         // is it a var ref to a lambda function
 
     var_info() {
         is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type = is_raw =
-            false;
+            is_lambda_var_ref = false;
         decl = nullptr;
         reduction_type = reduction::NONE;
     }
@@ -454,8 +455,9 @@ struct call_info_struct {
     bool is_site_dependent;
     bool has_site_dependent_conditional;
     bool contains_random;
-    bool is_defaulted; // We assume that Clang "default" classification functions
-                       // do not need to be handled (incl. default methods)
+    bool is_defaulted;         // We assume that Clang "default" classification functions
+                               // do not need to be handled (incl. default methods)
+    bool is_loop_local_lambda; // if it calls to a lambda function declared inside the loop
 
     call_info_struct() {
         call = nullptr;
@@ -464,7 +466,7 @@ struct call_info_struct {
         ctordecl = nullptr;
         arguments.clear();
         is_method = is_operator = is_site_dependent = contains_random = false;
-        has_site_dependent_conditional = is_defaulted = false;
+        has_site_dependent_conditional = is_defaulted = is_loop_local_lambda = false;
         decl_only = false;
         is_vectorizable = true;
         vector_type_only = number_type::UNKNOWN;
