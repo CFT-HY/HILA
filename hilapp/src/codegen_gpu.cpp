@@ -37,18 +37,27 @@ void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
         return;
     }
 
-    if(CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(fd)){
-        if(isLambdaCallOperator(MD)){
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(fd)) {
+        if (isLambdaCallOperator(MD)) {
             CXXRecordDecl *RD = MD->getParent();
-            if(RD->isLambda()){
-                // reportDiag(DiagnosticsEngine::Level::Remark,fd->getInnerLocStart(),"fd begin\n");
-                // reportDiag(DiagnosticsEngine::Level::Remark,RD->getInnerLocStart(),"RD begin\n");
-                // fd->getInnerLocStart points to here:------------------------------------------------v
-                //                        auto lambda = [capture, this, and, that]   (int i, int j) -> return_type { ... }
-                // RD->getInnerLocStart points to here:-^                          ^
-                //                                                                 |
-                // __device__ __host__ should be inserted in here -----------------|
-                // for now ignore, anyway not standard, nvcc --expt-extended-lambda
+            if (RD->isLambda()) { // isLambda check probably redundant?
+                                  // clang-format off
+            // reportDiag(DiagnosticsEngine::Level::Remark,fd->getInnerLocStart(),"fd begin\n");
+            // reportDiag(DiagnosticsEngine::Level::Remark,RD->getInnerLocStart(),"RD begin\n");
+            // fd->getInnerLocStart points to here:------------------------------v
+            //                        auto lambda =   [captures]     (params) -> return_type { ... };
+            // RD->getInnerLocStart points to here:---^           ^
+            //                                                    |
+            // __device__ __host__ should be inserted in here ----|
+                                  // clang-format on
+                // not standard, on nvcc needs --expt-extended-lambda
+                if (true) { // use some gpu_use_extended_lambda flag?
+                    sl = RD->getInnerLocStart();
+                    sl = ::skipParens(TheRewriter.getSourceMgr(), sl,
+                                      '['); // skip over capture group [...]
+                    if (!sb->is_edited(sl))
+                        sb->insert(sl, "__device__ __host__", true, true);
+                }
                 return;
             }
         }
@@ -64,6 +73,8 @@ void GeneralVisitor::handle_loop_function_gpu(call_info_struct &ci) {
 
     if (ci.is_defaulted)
         return; // cuda can take care of these
+    if (ci.is_loop_local_lambda)
+        return; // loop local lambdas do not need __device__ __host__
 
     gpu_loop_function_marker(ci.funcdecl);
     FunctionDecl *proto;
@@ -292,6 +303,27 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
+    // check if contains outside of kernel lambdas, and generate templates for them.. (lambdas dont
+    // have expressible type...)
+    bool first_lambda_tmp = true;
+    size_t lambda_tmp_name_i = 0;
+    for (var_info &vi : var_info_list) {
+        if (vi.is_lambda_var_ref && !vi.is_loop_local) {
+            if (first_lambda_tmp) {
+                kernel << "template<";
+                first_lambda_tmp = false;
+            } else
+                kernel << ", ";
+            // for lambdas vi.type is just some expanded source location string...
+            // So we override it here with a template type name,
+            // Now vi.type is correct and we dont need to modify the code where the kernel func
+            // params are written.
+            vi.type = "HILA_lmbd_" + std::to_string(lambda_tmp_name_i++);
+            kernel << "typename " + vi.type + " ";
+        }
+    }
+    if (!first_lambda_tmp)
+        kernel << ">\n";
 
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error

@@ -69,14 +69,17 @@ SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct) {
 /// If partype == '(', just balance par expressions (may contain strings).
 /// If partype == '<', balance < > -parens (may contain () -parens, which are balanced
 /// in turn) This last one is useful for template scanning
+/// If partype == '[', does the same as for '<'.
 
 SourceLocation skipParens(const SourceManager &SM, SourceLocation sl, const char partype) {
 
-    assert((partype == '(' || partype == '<') && "Unknown paren type in skipParens");
+    assert((partype == '(' || partype == '<' || partype == '[') && "Unknown paren type in skipParens");
 
     char endpar;
     if (partype == '<')
         endpar = '>';
+    else if (partype == '[')
+        endpar = ']';
     else
         endpar = ')';
 
