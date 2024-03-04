@@ -43,11 +43,10 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
 
     // get all constructors from base
     using Matrix_t<N, N, Complex<T>, SU<N, T>>::Matrix_t;
+    // same with assignent, but delete rvalue assign
     using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator=;
-    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator+=;
-    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator-=;
-    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator*=;
-    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator/=;
+    SU & operator=(const SU & su) && = delete;
+
 
     /**
      * @brief Makes the matrix unitary by orthogonalizing the rows
@@ -250,10 +249,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
     /// std constructors and operators derived from vector
     using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::Matrix_t;
     using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator+=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator-=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator*=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator/=;
+    Algebra & operator=(const Algebra & a) && = delete;
 
     // suN generators, normalized as
     //  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
