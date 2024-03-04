@@ -2049,7 +2049,7 @@ inline Rtype operator-(const S &b, const Mtype &a) {
 // matrix * matrix is the most important bit
 
 // same type square matrices:
-template <typename Mt, std::enable_if_t<Mt::is_matrix() && Mt::rows() == Mt::columns(), int> = 0>
+template <typename Mt, std::enable_if_t<Mt::is_matrix() && Mt::is_square(), int> = 0>
 inline Mt operator*(const Mt &a, const Mt &b) {
 
     constexpr int n = Mt::rows();
@@ -2126,7 +2126,7 @@ inline Mt operator*(const Mt &a, const Mt &b) {
 template <typename Mt1, typename Mt2,
           std::enable_if_t<Mt1::is_matrix() && Mt2::is_matrix() && !std::is_same<Mt1, Mt2>::value,
                            int> = 0,
-          typename R = hila::ntype_op<hila::number_type<Mt1>, hila::number_type<Mt2>>,
+          typename R = hila::type_mul<hila::number_type<Mt1>, hila::number_type<Mt2>>,
           int n = Mt1::rows(), int m = Mt2::columns()>
 inline Matrix<n, m, R> operator*(const Mt1 &a, const Mt2 &b) {
 
