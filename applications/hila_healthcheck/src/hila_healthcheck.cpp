@@ -48,9 +48,8 @@ void test_functions() {
     Field<Complex<double>> cf = 0;
     report_pass("Field functions: complex exp", abs(exp(cf).sum() - lattice.volume()), 1e-8);
 
-    df[ALL] = sin(X.x() *2*M_PI/lattice.size(e_x) );
+    df[ALL] = sin(X.x() * 2 * M_PI / lattice.size(e_x));
     report_pass("Field functions: sin", df.sum(), 1e-8);
-
 }
 
 
@@ -549,6 +548,35 @@ void test_field_slices() {
     }
 }
 
+//--------------------------------------------------------------------------------
+
+void test_matrix_operations() {
+
+    Field<Matrix<3, 2, Complex<double>>> mf;
+
+    onsites(ALL) mf[X].fill(1 + I);
+
+    Matrix<3, 3, Complex<double>> cm;
+    cm.asArray() = 4;
+    double sum = 0;
+    onsites(ALL) {
+        sum += (mf[X] * mf[X].dagger() - cm).squarenorm();
+    }
+
+    report_pass("matrix multiply and addition", sum, 1e-8);
+
+    auto dm = cm * I - 2*I;
+    dm.asArray() *= I;
+    dm = ((dm - 2).asArray() + 4).asMatrix();
+    report_pass("Array and imaginary unit operations", dm.squarenorm(), 1e-8);
+
+    
+
+
+
+
+}
+
 
 //--------------------------------------------------------------------------------
 
@@ -644,6 +672,8 @@ int main(int argc, char **argv) {
     test_set_elements_and_select();
 
     test_subvolumes();
+
+    test_matrix_operations();
 
     fft_test();
 
