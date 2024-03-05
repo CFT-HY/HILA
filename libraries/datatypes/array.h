@@ -114,7 +114,6 @@ class Array {
     }
 
     // and make non-explicit constructor from 0
-#pragma hila loop_function
     inline Array(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++)
             c[i] = 0;
@@ -324,7 +323,7 @@ class Array {
      *      0, 1};
      * \endcode
      */
-#pragma hila loop_function
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array<n, m, T> &operator=(const S rhs) out_only & {
         for (int i = 0; i < n * m; i++) {
@@ -413,7 +412,7 @@ class Array {
      * @param rhs Array to add
      * @return Array<n, m, T>
      */
-#pragma hila loop_function
+
     template <typename S, std::enable_if_t<std::is_convertible<S, T>::value, int> = 0>
     Array<n, m, T> &operator+=(const Array<n, m, S> &rhs) & {
         for (int i = 0; i < n; i++)
