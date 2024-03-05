@@ -805,8 +805,64 @@ class MyASTConsumer : public ASTConsumer {
   public:
     MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R, C) {}
 
+
+    // Unwind macro definitions so that you get the real location in cod
+    SourceLocation getrealbeginloc(Decl *d) {
+        // Find the beginning location of the Declaration
+        SourceLocation beginloc = d->getBeginLoc();
+        // Macro source range doesn't point to it's actual location in the file
+        // Find where the macro is called
+        if (beginloc.isMacroID()) {
+            Preprocessor &pp = myCompilerInstance->getPreprocessor();
+            // Is there an easier way?
+            CharSourceRange CSR =
+                Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange(beginloc);
+            beginloc = CSR.getBegin();
+        }
+        return beginloc;
+    }
+
+
+    // handle one top level declaration, going in namespace declarations for
+    // locations for generating kernels and specializations
+    void HandleToplevelDecl(SourceManager &SM, Decl *dp, SourceLocation beginloc) {
+
+        if (NamespaceDecl *NSD = dyn_cast<NamespaceDecl>(dp)) {
+            // it is a namespace decl, go in independent decls
+            for (Decl *d : NSD->decls()) {
+                beginloc = getrealbeginloc(d);
+                HandleToplevelDecl(SM, d, beginloc);
+            }
+
+        } else {
+            // Now not namespace decl
+
+            // get our own file edit buffer (unless it exists)
+            Visitor.set_writeBuf(SM.getFileID(beginloc));
+
+            // save this for source location
+            global.location.top = dp->getSourceRange().getBegin();
+            global.location.bot = Visitor.getSourceLocationAtEndOfRange(dp->getSourceRange());
+
+            // set the default insertion point for possibly generated kernels
+            // go to the beginning of line
+            SourceLocation sl = global.location.top;
+            while (sl.isValid() && getChar(SM, sl) != '\n')
+                sl = sl.getLocWithOffset(-1);
+            global.location.kernels = sl;
+
+
+            // Traverse the declaration using our AST visitor.
+            // if theres "#pragma skip" don't do it
+            if (!skip_this_translation_unit)
+                Visitor.TraverseDecl(dp);
+        }
+    }
+
+
     // HandleTranslationUnit is called after the AST for the whole TU is completed
     // Need to use this interface to ensure that specializations are present
+
     virtual void HandleTranslationUnit(ASTContext &ctx) override {
 
         SourceManager &SM = ctx.getSourceManager();
@@ -823,16 +879,7 @@ class MyASTConsumer : public ASTConsumer {
             // in a system file or a virtual file.
 
             // Find the beginning location of the Declaration
-            SourceLocation beginloc = d->getBeginLoc();
-            // Macro source range doesn't point to it's actual location in the file
-            // Find where the macro is called
-            if (beginloc.isMacroID()) {
-                Preprocessor &pp = myCompilerInstance->getPreprocessor();
-                // Is there an easier way?
-                CharSourceRange CSR =
-                    Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange(beginloc);
-                beginloc = CSR.getBegin();
-            }
+            SourceLocation beginloc = getrealbeginloc(d);
 
             if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
 
@@ -840,25 +887,7 @@ class MyASTConsumer : public ASTConsumer {
                 // "\n";
                 // TODO: ensure that we go only through files which are needed!
 
-                // get our own file edit buffer (unless it exists)
-                Visitor.set_writeBuf(SM.getFileID(beginloc));
-
-                // save this for source location
-                global.location.top = d->getSourceRange().getBegin();
-                global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
-
-                // set the default insertion point for possibly generated kernels
-                // go to the beginning of line
-                SourceLocation sl = global.location.top;
-                while (sl.isValid() && getChar(SM, sl) != '\n')
-                    sl = sl.getLocWithOffset(-1);
-                global.location.kernels = sl;
-
-
-                // Traverse the declaration using our AST visitor.
-                // if theres "#pragma skip" don't do it
-                if (!skip_this_translation_unit)
-                    Visitor.TraverseDecl(d);
+                HandleToplevelDecl(SM, d, beginloc);
 
                 // llvm::errs() << "Dumping level " << i++ << "\n";
                 if (cmdline::dump_ast) {
@@ -1160,4 +1189,3 @@ int main(int argc, const char **argv) {
     // To further customize this, we could create our own factory class.
     return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
-
