@@ -717,6 +717,11 @@ bool TopLevelVisitor::loop_function_check(Decl *d) {
 
     if (CXXConstructorDecl *cd = dyn_cast<CXXConstructorDecl>(d)) {
 
+        // go to inherited constructor in parent 
+        if (cd->isInheritingConstructor()) {
+            cd = cd->getInheritedConstructor().getConstructor();
+        }
+
         ci.ctordecl = cd;
 
         // set the arguments -- should not be used though
