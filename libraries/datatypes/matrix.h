@@ -188,14 +188,14 @@ class Matrix_t {
     }
 
     // cast to curious type
-    // #pragma hila loop_function
+    
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator Mtype &() {
         return *reinterpret_cast<Mtype *>(this);
     }
 
-    // #pragma hila loop_function
+    
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator const Mtype &() const {
@@ -203,11 +203,11 @@ class Matrix_t {
     }
 
     // automatically cast to generic matrix
-    // #pragma hila loop_function
+    
     inline operator Matrix<n, m, T> &() {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
-    // #pragma hila loop_function
+    
     inline operator const Matrix<n, m, T> &() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -577,7 +577,7 @@ class Matrix_t {
      *      0, 1};
      * \endcode
      */
-    // #pragma hila loop_function
+    
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only & {
@@ -588,7 +588,7 @@ class Matrix_t {
     }
 
     // assign from 0
-    // #pragma hila loop_function
+    
     inline Mtype &operator=(const std::nullptr_t &z) out_only & {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
@@ -597,7 +597,7 @@ class Matrix_t {
     }
 
     // Assign from "scalar" for square matrix
-    // #pragma hila loop_function
+    
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) out_only & {
 
@@ -612,7 +612,7 @@ class Matrix_t {
     }
 
     // Assign from diagonal matrix
-    // #pragma hila loop_function
+    
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const DiagonalMatrix<n, S> &rhs) out_only & {
         static_assert(n == m,
@@ -630,7 +630,7 @@ class Matrix_t {
 
 
     // Assign from initializer list
-    // #pragma hila loop_function
+    
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == n * m && "Initializer list has a wrong size in assignment");
@@ -673,7 +673,7 @@ class Matrix_t {
      * @param rhs Matrix to add
      * @return Mtype&
      */
-    // #pragma hila loop_function
+    
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator+=(const Matrix_t<n, m, S, MT> &rhs) & {
@@ -709,7 +709,7 @@ class Matrix_t {
      * @return template <typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>&
      */
-    // #pragma hila loop_function
+    
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) & {
@@ -720,7 +720,7 @@ class Matrix_t {
     }
 
     // add assign a scalar to square matrix
-    // #pragma hila loop_function
+    
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) & {
@@ -734,7 +734,7 @@ class Matrix_t {
     }
 
     // subtract assign type T and convertible
-    // #pragma hila loop_function
+    
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) & {
@@ -780,7 +780,7 @@ class Matrix_t {
      * @return template <int p, typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
      */
-    // #pragma hila loop_function
+    
     template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const Matrix_t<m, p, S, MT> &rhs) & {
@@ -791,7 +791,7 @@ class Matrix_t {
     }
 
     // multiply assign with scalar
-    // #pragma hila loop_function
+    
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const S rhs) & {
@@ -821,7 +821,7 @@ class Matrix_t {
      * @return template <int p, typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
      */
-    // #pragma hila loop_function
+    
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     Mtype &operator/=(const S rhs) & {

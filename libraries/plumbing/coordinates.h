@@ -296,7 +296,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
     // /// cast to vector<NDIM,int> - useful for method inheritance
-    // #pragma hila loop_function
     // inline operator Vector<NDIM, int>() {
     //     Vector<NDIM, int> v;
     //     foralldir(d) v.e(d) = this->e(d);
@@ -304,7 +303,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // }
 
     /// Assign from 0
-#pragma hila loop_function
     inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
         foralldir(d) this->e(d) = 0;
         return *this;
@@ -459,7 +457,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Return site index of the coordinate vector -- assumes a valid lattice vector
 
-    // #pragma hila loop_function
     // inline SiteIndex index() const;
 };
 
