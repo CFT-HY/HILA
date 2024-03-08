@@ -138,7 +138,6 @@ class Complex {
     // Remember to mark this explicit, we do not want this to be invoked
     // in automatic conversions (there should be methods)
 
-    // #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     explicit constexpr Complex<T>(const S val) : re(val), im(0) {}
 
@@ -148,7 +147,6 @@ class Complex {
     // constructor c(a,b)
     template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
               std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
-    // #pragma hila novector loop_function
     explicit constexpr Complex<T>(const A &a, const B &b) : re(a), im(b) {}
 
     // make also std accessors real() and imag() - don't return reference, because
@@ -186,7 +184,6 @@ class Complex {
     // automatic casting from Complex<T> -> Complex<A>
     // TODO: ensure this works if A is vector type!
     template <typename A>
-#pragma hila loop_function // TODO
     operator Complex<A>() const {
         return Complex<A>(re, im);
     }
@@ -226,7 +223,6 @@ class Complex {
         return *this;
     }
 
-    // #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     inline Complex<T> &operator=(S s) & {
         re = s;
@@ -387,7 +383,6 @@ class Complex {
      *
      *
      */
-    // #pragma hila loop_function
     template <typename A>
     inline Complex<T> &operator+=(const Complex<A> &lhs) & {
         re += lhs.re;
@@ -472,7 +467,6 @@ class Complex {
      *
      *
      */
-    // #pragma hila loop_function
     template <typename A>
     inline Complex<T> &operator*=(const Complex<A> &lhs) & {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
@@ -746,13 +740,11 @@ using complex_x_scalar_type = typename complex_x_scalar_s<A, B>::type;
 // comment out as hilapp gets confused at the moment
 ////////////////////////////////////////////////////////////////////////
 
-// #pragma hila loop_function
 // template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 // inline const Complex<hila::arithmetic_type<T>> * as_complex_array(const T &var) {
 //     return (const Complex<hila::arithmetic_type<T>> *)(void *)&var;
 // }
 
-// #pragma hila loop_function
 // template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 // inline Complex<hila::arithmetic_type<T>> * as_complex_array(T &var) {
 //     return (Complex<hila::arithmetic_type<T>> *)(void *)&var;
@@ -839,7 +831,6 @@ Complex<T> polar(T r, T arg) {
  * @param b
  * @return Complex<Tr>
  */
-#pragma hila loop_function
 template <typename T1, typename T2, typename Tr = hila::type_plus<T1, T2>>
 inline Complex<Tr> operator+(const Complex<T1> &a, const Complex<T2> &b) {
     return Complex<Tr>(a.re + b.re, a.im + b.im);
@@ -1316,7 +1307,6 @@ class Imaginary_t : public Complex<T> {
     constexpr Imaginary_t(const Imaginary_t &i) = default;
 
     // construct from scalar
-#pragma hila loop_function
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     explicit constexpr Imaginary_t(const A v) : Complex<T>(0, v) {}
 
