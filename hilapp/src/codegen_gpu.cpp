@@ -95,6 +95,9 @@ void GeneralVisitor::handle_loop_constructor_gpu(call_info_struct &ci) {
         // it's a system file -- should we do something?
         return;
     }
+
+    // llvm::errs() << "marking CTOR " << sb->get(ci.ctordecl->getSourceRange()) << '\n';
+
     sb->insert(sl, "__device__ __host__ ", true, true);
 }
 
