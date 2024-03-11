@@ -5,6 +5,7 @@
 #include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
+#include "clang/AST/ASTLambda.h"
 
 // #define LOOP_FUNCTION_DEBUG
 
@@ -68,6 +69,25 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
 
     // llvm::errs() << "FUNC " << D->getNameAsString() << " vectorizable " << ci.is_vectorizable <<
     // '\n';
+
+    // check if lambda function call:
+    if(CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)){
+        if(isLambdaCallOperator(MD)){
+            // CXXRecordDecl *RD = MD->getParent();
+            // check if lambda is defined inside the loop:
+            for(var_decl &vd : var_decl_list){
+                if(vd.scope >= 0 && vd.decl->hasInit()){
+                    if(LambdaExpr *LE = dyn_cast<LambdaExpr>(vd.decl->getInit())){
+                        if(LE->getCallOperator() == MD){
+                            // found local decl for the lambda 
+                            ci.is_loop_local_lambda = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);

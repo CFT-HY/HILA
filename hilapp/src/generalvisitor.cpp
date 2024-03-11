@@ -608,6 +608,13 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
     //     vi.type = "element<" + vi.type + ">";
     // llvm::errs() << " + Got " << vi.type << '\n';
 
+    // check if it's a lambda var ref
+    if (Expr *E = vi.decl->getInit()) {
+        if (LambdaExpr *LE = dyn_cast<LambdaExpr>(E)) {
+            vi.is_lambda_var_ref = true;
+        }
+    }
+
     // is it loop-local?
     vi.is_loop_local = false;
     for (var_decl &d : var_decl_list) {
@@ -658,6 +665,12 @@ var_info *GeneralVisitor::add_var_to_decl_list(VarDecl *var, int scope_level) {
     if (var->hasInit()) {
         ip->is_site_dependent = is_site_dependent(var->getInit(), &ip->dependent_vars);
         ip->is_assigned = true;
+        // also check here if it's a lambda function var ref
+        if (Expr *E = var->getInit()) {
+            if (auto LE = dyn_cast<LambdaExpr>(E)) {
+                ip->is_lambda_var_ref = true;
+            }
+        }
     } else {
         ip->is_assigned = false;
     }
