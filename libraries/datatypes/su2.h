@@ -473,6 +473,7 @@ class Algebra<SU2<T>> {
         a = *(it++);
         b = *(it++);
         c = *(it);
+        return *this;
     }
 #pragma hila loop_function
     /// assign from zero
