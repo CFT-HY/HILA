@@ -734,7 +734,8 @@ bool is_macro_defined(const char *name, std::string *arg) {
 /////////////////////////////////////////////////////////////////////////////
 /// Global variable where the file buffers are hanging
 
-std::list<file_buffer> file_buffer_list = {};
+static std::list<file_buffer> file_buffer_list = {};
+
 
 /////////////////////////////////////////////////////////////////////////////
 /// get the file buffer for the file; create if it does not exist
@@ -749,23 +750,15 @@ srcBuf *get_file_buffer(Rewriter &R, const FileID fid) {
 
     SourceManager &SM = R.getSourceMgr();
 
-    // System files should not be buffered!  FIle is OK if its name contains /hila/
-    // if not found, return nullptr
-    // TODO: this sounds pretty fragile!!
-    // IT IS TOO FRAGILE; COMMENT OUT
-    // std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
-    // if (path.find("/hila/") == std::string::npos)
-    //    return nullptr;
-
     file_buffer fb;
     fb.fid = fid;
     file_buffer_list.push_back(fb);
-    SourceRange r(SM.getLocForStartOfFile(fid), SM.getLocForEndOfFile(fid));
+    SourceRange sr(SM.getLocForStartOfFile(fid), SM.getLocForEndOfFile(fid));
 
     // llvm::errs() << "Create buf for file "
     //              << SM.getFilename(SM.getLocForStartOfFile(fid)) << '\n';
 
-    file_buffer_list.back().sbuf.create(&R, r);
+    file_buffer_list.back().sbuf.create(&R, sr);
     return (&file_buffer_list.back().sbuf);
 }
 
@@ -798,15 +791,18 @@ void remove_ifdef_HILAPP_sections() {
 /////////////////////////////////////////////////////////////////////////////////
 /// Implementation of the ASTConsumer interface for reading an AST produced
 /// by the Clang parser.
-/// This starts the main AST Visitor too
+/// This starts our main AST Visitor (TopLevelVisitor)
 /////////////////////////////////////////////////////////////////////////////////
 
 class MyASTConsumer : public ASTConsumer {
+  private:
+    TopLevelVisitor Visitor;
+
   public:
     MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R, C) {}
 
 
-    // Unwind macro definitions so that you get the real location in cod
+    // Unwind macro definitions so that you get the real location in code.
     SourceLocation getrealbeginloc(Decl *d) {
         // Find the beginning location of the Declaration
         SourceLocation beginloc = d->getBeginLoc();
@@ -860,8 +856,9 @@ class MyASTConsumer : public ASTConsumer {
     }
 
 
-    // HandleTranslationUnit is called after the AST for the whole TU is completed
-    // Need to use this interface to ensure that specializations are present
+    // HandleTranslationUnit is called after the AST for the whole TU is completed.
+    // This is where we start processing the AST and generating new code.  We need to
+    // use this interface to ensure that all template specializations are present in the AST
 
     virtual void HandleTranslationUnit(ASTContext &ctx) override {
 
@@ -885,7 +882,6 @@ class MyASTConsumer : public ASTConsumer {
 
                 // llvm::errs() << "Processing file " << SM.getFilename(beginloc) <<
                 // "\n";
-                // TODO: ensure that we go only through files which are needed!
 
                 HandleToplevelDecl(SM, d, beginloc);
 
@@ -901,13 +897,13 @@ class MyASTConsumer : public ASTConsumer {
         auto &DE = ctx.getDiagnostics();
         state::compile_errors_occurred = DE.hasErrorOccurred();
     }
-
-  private:
-    TopLevelVisitor Visitor;
 };
 
-/// This struct will be used to keep track of #include-chains.
-std::vector<FileID> file_id_list = {};
+////////////////////////////////////////////////////////////////////////////////
+/// This struct will be used to keep track of #include-chains and insertions
+
+static std::vector<FileID> file_id_list = {};
+
 
 /// Tiny utility to search for the list
 bool search_fid(const FileID FID) {
@@ -924,7 +920,7 @@ void set_fid_modified(const FileID FID) {
         // new file to be added
         file_id_list.push_back(FID);
 
-        SourceManager &SM = myCompilerInstance->getSourceManager();
+        // SourceManager &SM = myCompilerInstance->getSourceManager();
         // llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName()
         // <<
         // '\n';
@@ -933,6 +929,10 @@ void set_fid_modified(const FileID FID) {
 
 /// For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
+  private:
+    Rewriter TheRewriter;
+    // ASTContext  TheContext;
+
   public:
     MyFrontendAction() {}
 
@@ -1149,10 +1149,6 @@ class MyFrontendAction : public ASTFrontendAction {
         return std::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
 #endif
     }
-
-  private:
-    Rewriter TheRewriter;
-    // ASTContext  TheContext;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
