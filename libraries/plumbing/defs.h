@@ -10,6 +10,7 @@
 
 // Useful global definitions here -- this file should be included by (almost) all others
 
+#include <cstdint>
 #include <iostream>
 #include <array>
 #include <vector>
