@@ -5,7 +5,7 @@
 
 #include "plumbing/lattice.h"
 
-/// let us house the partitions-struct here
+// let us house the partitions-struct here
 namespace hila {
 class partitions_struct {
   public:

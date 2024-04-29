@@ -27,10 +27,11 @@ def find_brief(source_files):
     
 def generate_application_file(files_and_briefs,write_file):
     f = open(write_file,'w')
-    f.write("# HILA Applications \n\n__List of documented applications/simulations offered by HILA.__\n\n")
+    f.write("/** \n\n \page hila_applications HILA Applications \n\n__List of documented applications/simulations offered by HILA.__\n\n")
     for file,brief in files_and_briefs.items():
         f.write("{}:\n\n".format(file.split('/')[-1]))
         f.write("> {}\n\n".format(brief))
+    f.write("*/")
     f.close()
 
             

@@ -1682,8 +1682,8 @@ void TopLevelVisitor::check_var_info_list() {
                 // Use Reduction<> -type vars only as reductions
                 for (auto &vr : vi.refs) {
                     reportDiag(DiagnosticsEngine::Level::Error, vr.ref->getSourceRange().getBegin(),
-                               "reduction variables are restricted only for reductions "
-                               "(on the lhs of \'+=\' or \'*=\')");
+                               "variables of type Reduction<T> are restricted only for reductions "
+                               "(on the lhs of \'+=\')");
                 }
 
             } else if (vi.is_assigned) {

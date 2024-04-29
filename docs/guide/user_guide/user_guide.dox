@@ -1,0 +1,15 @@
+/**
+
+\page user_guide User Guide
+
+
+This section is comprehensive description of the functionality HILA offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
+
+- \subpage makefile
+- \subpage field_documentation
+- \subpage datatypes
+- \subpage input_library
+- \subpage test_input_and_layout
+- \subpage hilapp_tool
+- \subpage utility
+*/
