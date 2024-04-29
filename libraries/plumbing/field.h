@@ -39,7 +39,7 @@ void ensure_field_operators_exist();
  * @brief The field class implements the standard methods for accessing Fields. Hilapp replaces the
  * parity access patterns, Field[par] with a loop over the appropriate sites. Since the Field class
  * is one of the more important functionalities of HILA, extensive general instructions on the Field
- * class can be read at [HILA Functionality](@ref Field_documentation) documentation.
+ * class can be read at [HILA Functionality](@ref field_documentation) documentation.
  *
  * @details The Field class contains member functions used by hilapp, which are marked internal, as
  * well as members that are useful for application developers.
@@ -1032,17 +1032,24 @@ class Field {
 
     /**
      * @brief Field comparison operator.
-     * @details Computes squarenorm of difference of two fields and checks if squarenorm is less
-     * than tolerance epsilon=0.
-     *
+     * @details Fields are equal if their content is element-by-element equal
+     * 
      * @param rhs Field to compare Field with
      * @return true
      * @return false
      */
-    bool operator==(const Field<T> &rhs) const {
-        hila::arithmetic_type<T> epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Field<S> &rhs) const {
+        double s = 0;
+        onsites(ALL) s += !((*this)[X] == rhs[X]);
+        return (s == 0);
     }
+
+    template <typename S>
+    bool operator!=(const Field<S> &rhs) const {
+        return !(*this == rhs);
+    }
+
 
     /**
      * @brief Squarenorm
@@ -1728,10 +1735,11 @@ void swap(Field<T> &A, Field<T> &B) {
 }
 } // namespace std
 
+namespace hila {
+  
 /**
  * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
- */
-namespace hila {
+ */  
 template <typename T>
 void swap(Field<T> &A, Field<T> &B) {
     std::swap(A.fs, B.fs);

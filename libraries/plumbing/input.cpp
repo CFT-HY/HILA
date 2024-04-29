@@ -11,8 +11,8 @@
 #define COMMENT_CHAR '#'
 
 //////////////////////////////////////////////////////////////////////////////
-/// Parameter file input system
-/// Check input.h for user instructions
+// Parameter file input system
+// Check input.h for user instructions
 //////////////////////////////////////////////////////////////////////////////
 
 namespace hila {
@@ -266,7 +266,7 @@ bool input::handle_key(const std::string &key) {
         if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
             if (speaking) {
                 hila::out0 << "Error: expecting key '" << key << "', found instead:\n";
-                print_linebuf(0);
+                hila::out0 << "\"" << linebuffer << "\"\n----\n";
             }
             return false;
         }

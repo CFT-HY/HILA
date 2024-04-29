@@ -5,6 +5,7 @@
 #include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
+#include "clang/AST/ASTLambda.h"
 
 // #define LOOP_FUNCTION_DEBUG
 
@@ -39,7 +40,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
     } else {
         vectorizable = !contains_novector(D->getBody());
     }
-    
+
     if (has_pragma(D, pragma_hila::CONTAINS_RNG)) {
         contains_rng = true;
     } else if (D->hasBody()) {
@@ -66,7 +67,27 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
 
     ci.is_vectorizable = ci.is_vectorizable && vectorizable;
 
-    // llvm::errs() << "FUNC " << D->getNameAsString() << " vectorizable " << ci.is_vectorizable << '\n';
+    // llvm::errs() << "FUNC " << D->getNameAsString() << " vectorizable " << ci.is_vectorizable <<
+    // '\n';
+
+    // check if lambda function call:
+    if(CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)){
+        if(isLambdaCallOperator(MD)){
+            // CXXRecordDecl *RD = MD->getParent();
+            // check if lambda is defined inside the loop:
+            for(var_decl &vd : var_decl_list){
+                if(vd.scope >= 0 && vd.decl->hasInit()){
+                    if(LambdaExpr *LE = dyn_cast<LambdaExpr>(vd.decl->getInit())){
+                        if(LE->getCallOperator() == MD){
+                            // found local decl for the lambda 
+                            ci.is_loop_local_lambda = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);
@@ -90,7 +111,6 @@ bool TopLevelVisitor::loop_constant_function_call(Stmt *s) {
         return true;
     }
     return false;
-
 }
 
 
@@ -107,6 +127,11 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 
     // Get the declaration of the constructor
     CXXConstructorDecl *decl = CtorE->getConstructor();
+
+    // If inherited, go to inherited parent
+    if (decl->isInheritingConstructor()) {
+        decl = decl->getInheritedConstructor().getConstructor();
+    }
 
     // if constructor for index types return, nothing to do
     std::string name = decl->getNameAsString();

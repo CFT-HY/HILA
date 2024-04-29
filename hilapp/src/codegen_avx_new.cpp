@@ -332,11 +332,12 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size_, std::s
         // and still, check the special functions
         if (is_vectorizable) {
             for (auto const &sfc : special_function_call_list) {
-                if (sfc.name == "coordinates" || sfc.name == "coordinate") {
+                if (sfc.name == "coordinates" || sfc.name == "coordinate" || 
+                    sfc.name == "x" || sfc.name == "y" || sfc.name == "z" || sfc.name == "t") {
                     is_vectorizable = false;
 
                     reason.push_back(
-                        "X.coordinates() and X.coordinate() make expression site dependent");
+                        "X.coordinates() and related calls are not AVX vectorizable");
 
                     // // returning int vector
                     // if (vector_size == 0) {

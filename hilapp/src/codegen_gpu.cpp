@@ -12,6 +12,7 @@
 #include "hilapp.h"
 #include "toplevelvisitor.h"
 #include "stringops.h"
+#include "clang/AST/ASTLambda.h"
 
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
@@ -36,9 +37,34 @@ void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
         return;
     }
 
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(fd)) {
+        if (isLambdaCallOperator(MD)) {
+            CXXRecordDecl *RD = MD->getParent();
+            if (RD->isLambda()) { // isLambda check probably redundant?
+                                  // clang-format off
+            // reportDiag(DiagnosticsEngine::Level::Remark,fd->getInnerLocStart(),"fd begin\n");
+            // reportDiag(DiagnosticsEngine::Level::Remark,RD->getInnerLocStart(),"RD begin\n");
+            // fd->getInnerLocStart points to here:------------------------------v
+            //                        auto lambda =   [captures]     (params) -> return_type { ... };
+            // RD->getInnerLocStart points to here:---^           ^
+            //                                                    |
+            // __device__ __host__ should be inserted in here ----|
+                                  // clang-format on
+                // not standard, on nvcc needs --expt-extended-lambda
+                if (true) { // use some gpu_use_extended_lambda flag?
+                    sl = RD->getInnerLocStart();
+                    sl = ::skipParens(TheRewriter.getSourceMgr(), sl,
+                                      '['); // skip over capture group [...]
+                    if (!sb->is_edited(sl))
+                        sb->insert(sl, "__device__ __host__", true, true);
+                }
+                return;
+            }
+        }
+    }
+
     if (!sb->is_edited(sl))
         sb->insert(sl, "__device__ __host__ ", true, true);
-
 }
 
 
@@ -47,10 +73,12 @@ void GeneralVisitor::handle_loop_function_gpu(call_info_struct &ci) {
 
     if (ci.is_defaulted)
         return; // cuda can take care of these
+    if (ci.is_loop_local_lambda)
+        return; // loop local lambdas do not need __device__ __host__
 
     gpu_loop_function_marker(ci.funcdecl);
     FunctionDecl *proto;
-    if (find_prototype(ci.funcdecl,proto)) {
+    if (find_prototype(ci.funcdecl, proto)) {
         gpu_loop_function_marker(proto);
     }
 }
@@ -67,6 +95,9 @@ void GeneralVisitor::handle_loop_constructor_gpu(call_info_struct &ci) {
         // it's a system file -- should we do something?
         return;
     }
+
+    // llvm::errs() << "marking CTOR " << sb->get(ci.ctordecl->getSourceRange()) << '\n';
+
     sb->insert(sl, "__device__ __host__ ", true, true);
 }
 
@@ -275,12 +306,34 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
+    // check if contains outside of kernel lambdas, and generate templates for them.. (lambdas dont
+    // have expressible type...)
+    bool first_lambda_tmp = true;
+    size_t lambda_tmp_name_i = 0;
+    for (var_info &vi : var_info_list) {
+        if (vi.is_lambda_var_ref && !vi.is_loop_local) {
+            if (first_lambda_tmp) {
+                kernel << "template<";
+                first_lambda_tmp = false;
+            } else
+                kernel << ", ";
+            // for lambdas vi.type is just some expanded source location string...
+            // So we override it here with a template type name,
+            // Now vi.type is correct and we dont need to modify the code where the kernel func
+            // params are written.
+            vi.type = "HILA_lmbd_" + std::to_string(lambda_tmp_name_i++);
+            kernel << "typename " + vi.type + " ";
+        }
+    }
+    if (!first_lambda_tmp)
+        kernel << ">\n";
 
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
     // use "static" instead??
+    // Switch to static here for now
     // Add __launch_bounds__ directive here
-    kernel << "inline __global__ void __launch_bounds__(N_threads) " << kernel_name
+    kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
     code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
@@ -496,6 +549,16 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             code << ", " << ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
+            // kernel variable name for size of array
+            std::string array_size_varname;
+            if (loop_has_reductionvector_blocks) {
+                // in this case need to pass the size of the vector (original!) to the kernel
+                array_size_varname = ar.new_name + "_size";
+
+                code << ", " << ar.size_expr;
+                kernel << ", const int " << array_size_varname;
+            }
+
 
             for (bracket_ref_t &br : ar.refs) {
                 // change the name
@@ -549,12 +612,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     //    new_name[static_cast<int>(ind)*N_threads_total + thread_idx] += val
                     // static cast is added if the type of the index is not of int type
 
-                    // in this case pass the size of the vector (original!) to the kernel
-                    std::string ar_size_varname(ar.new_name + "_size");
-
-                    code << ", " << ar.size_expr;
-                    kernel << ", const int " << ar_size_varname;
-
                     // Now have to be careful not to insert on the index variable "area",
                     // go in front of it
 
@@ -578,7 +635,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 #ifndef ALT_VECTOR_REDUCTION
                     // Normal simpler way to accumulate vectorreductions
-                    loopBuf.insert(l, " ) + _HILA_thread_id * " + ar_size_varname);
+                    loopBuf.insert(l, " ) + _HILA_thread_id * " + array_size_varname);
 
 #else
                     // ALT of above is below
@@ -626,8 +683,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         kernel << r.type << " " << r.loop_name << "sum;\n";
         // Initialize only the local element
         if (r.reduction_type == reduction::SUM) {
-            kernel << r.loop_name << "sum = 0; \n";
-            kernel << r.loop_name << "sh[threadIdx.x] = 0;\n";
+            // OLD method - using operator=, which is not necessarily loop func!
+            // kernel << r.loop_name << "sum = 0; \n";
+            // kernel << r.loop_name << "sh[threadIdx.x] = 0;\n";
+            kernel << "_hila_kernel_set_zero(" << r.loop_name << "sum);\n";
+            kernel << "_hila_kernel_set_zero(" << r.loop_name << "sh[threadIdx.x]);\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             kernel << r.loop_name << "sum = 1; \n";
             kernel << r.loop_name << "sh[threadIdx.x] = 1;\n";
@@ -693,31 +753,39 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     }
                 }
             } else {
+
                 // now local var dependent neighbour
+                // Two methods, either fetch all neighbours to vars and use them in loop,
+                // or fetch element every time it is used. Clearly case-by-case either one
+                // can be better.  Use the latter for now.
+                // TODO: make selection automatic? At least tunable by pragma?
 
-                // std::string loop_array_name = l.new_name + "_dirs";
-                // kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
-                // kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
-                //           "++_HILAdir_) {\n"
-                //        << loop_array_name << "[_HILAdir_] = " << l.new_name <<
-                //        ".get("
-                //        << l.new_name << ".neighbours[_HILAdir_][" << looping_var
-                //        << "], d_lattice.field_alloc_size);\n}\n";
+#ifdef BUILD_VARIABLE_NB_DIR_ELEMENTS
 
-                // // and replace references in loop body
-                // for (dir_ptr &d : l.dir_list) {
-                //     std::string dirname;
-                //     if (d.is_constant_direction)
-                //         dirname = d.direxpr_s; // orig. string
-                //     else
-                //         dirname = remove_X(loopBuf.get(
-                //             d.parityExpr->getSourceRange())); // mapped name was
 
-                //     for (field_ref *ref : d.ref_list) {
-                //         loopBuf.replace(ref->fullExpr,
-                //                         loop_array_name + "[" + dirname + "]");
-                //     }
-                // }
+                std::string loop_array_name = l.new_name + "_dirs";
+                kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
+                kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
+                          "++_HILAdir_) {\n"
+                       << loop_array_name << "[_HILAdir_] = " << l.new_name << ".get(" << l.new_name
+                       << ".neighbours[_HILAdir_][" << looping_var
+                       << "], d_lattice.field_alloc_size);\n}\n";
+
+                // and replace references in loop body
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr, loop_array_name + "[" + dirname + "]");
+                    }
+                }
+
+#else
 
                 // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
@@ -735,6 +803,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                                                            "], d_lattice.field_alloc_size)");
                     }
                 }
+#endif
             }
         }
 
@@ -828,7 +897,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     // Assign reductions to shared memory
     for (reduction_expr &r : reduction_list) {
-        kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
+        // OLD
+        // kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
+        kernel << "_hila_kernel_copy_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
+               << "sum);\n";
     }
 
     // Handle reductions: Need to sync threads once, then do reduction
@@ -855,8 +927,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (r.reduction_type == reduction::SUM) {
             kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
                    << " < d_lattice.loop_end) {\n";
-            kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
-                   << "sh[threadIdx.x+_H_i];\n";
+            // STD
+            // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
+            //        << "sh[threadIdx.x+_H_i];\n";
+            kernel << "_hila_kernel_add_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
+                   << "sh[threadIdx.x + _H_i]);\n";
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
@@ -871,7 +946,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // kernel << "}\n";
 
         kernel << "if(threadIdx.x == 0) {\n"
-               << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+               // << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+               << "_hila_kernel_copy_var(" << r.loop_name << "[blockIdx.x], " << r.loop_name
+               << "sh[0]);\n";
         kernel << "}\n";
     }
     // Reduction end handling stops here

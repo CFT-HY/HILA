@@ -126,9 +126,11 @@ inline dir_mask_t get_dir_mask(const Direction d) {
     return (dir_mask_t)(1 << d);
 }
 
-/// define hila::direction_name() and hila::prettyprint(Direction)
 namespace hila {
 
+
+// define hila::direction_name() and hila::prettyprint(Direction)
+   
 constexpr inline const char *direction_name(Direction d) {
     const char *dirnames[NDIRS] = {
         "e_x",
@@ -294,7 +296,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
     // /// cast to vector<NDIM,int> - useful for method inheritance
-    // #pragma hila loop_function
     // inline operator Vector<NDIM, int>() {
     //     Vector<NDIM, int> v;
     //     foralldir(d) v.e(d) = this->e(d);
@@ -302,15 +303,14 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // }
 
     /// Assign from 0
-#pragma hila loop_function
-    inline CoordinateVector_t &operator=(std::nullptr_t z) {
+    inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
         foralldir(d) this->e(d) = 0;
         return *this;
     }
 
     /// Assign from initializer list
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) {
+    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == NDIM && "Initializer list has a wrong size in assignment");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
@@ -319,7 +319,18 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    // Assign
+    // Assign from direction
+    inline CoordinateVector_t &operator=(Direction d) out_only & {
+        foralldir(dir) {
+            this->e(dir) = dir_dot_product(d,dir);
+        }
+        return *this;
+    }
+
+    // and delete assign to rvalue
+    template <typename S>
+    CoordinateVector_t & operator=(const S & s) && = delete;
+
 
     bool operator==(const CoordinateVector_t<T> &rhs) const {
         foralldir(d) {
@@ -377,19 +388,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     // add coordinate vector -- def explicit as loop_function
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) {
+    CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) & {
         foralldir(d) this->e(d) += rhs.e(d);
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) {
+    CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) & {
         foralldir(d) this->e(d) -= rhs.e(d);
         return *this;
     }
 
     // and also additions for Direction -- dir acts like a unit vector
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const Direction dir) {
+    CoordinateVector_t &operator+=(const Direction dir) & {
         if (is_up_dir(dir))
             ++this->e(dir);
         else
@@ -397,7 +408,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const Direction dir) {
+    CoordinateVector_t &operator-=(const Direction dir) & {
         if (is_up_dir(dir))
             --this->e(dir);
         else
@@ -435,9 +446,17 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return r;
     }
 
+    /// @brief Convert momentum space CoordinateVector to wave number k, where -pi/2 < k_i <= pi_2
+    /// Utility function for FFT
+    /// wave vector k_i = 2 pi n_i / N_i, where N_i = lattice.size(i) and
+    /// where n_i is the coordinate modded to interval -N_i/2 < n_i <= N_i/2, or
+    /// if n_i > N_i/2 then n_i = n_i - N_i.
+    /// 
+    /// @return wave number vector k
+    inline Vector<NDIM,double> convert_to_k() const;
+
     /// Return site index of the coordinate vector -- assumes a valid lattice vector
 
-    // #pragma hila loop_function
     // inline SiteIndex index() const;
 };
 
