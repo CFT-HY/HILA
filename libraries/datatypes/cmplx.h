@@ -1223,8 +1223,8 @@ inline Complex<T> dagger(const Complex<T> &val) {
 /**
  * @brief Return Squarenorm of Complex number
  * @details Wrapper around Complex::squarenorm
- * @tparam T Arithmetic type of a
- * @param a Complex number to compute squarenorm of
+ * @tparam T Arithmetic type of val
+ * @param val Complex number to compute squarenorm of
  * @return T
  */
 template <typename T>
