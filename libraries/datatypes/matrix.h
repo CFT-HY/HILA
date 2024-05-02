@@ -2501,14 +2501,13 @@ template <int n,int m,typename T,typename MT>
 inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat, Matrix_t<n,m,T,MT> pl[n+1]) {
     static_assert(n==m,"chexp() only for square matrices");
 
-    // compute the first n matrix powers of mat and the corresponding traces
+    // compute the first n matrix powers of mat and the corresponding traces :
     // the i-th matrix power of mat[][] is stored in pl[i][][]
-    T trpl[n+1];                 // the trace of pl[i][][] is stored in trpl[i]
+    T trpl[n+1]; // the trace of pl[i][][] is stored in trpl[i]
     trpl[0]=n;
     pl[1]=mat;
     trpl[1]=trace(mat);
     int i,j,k;
-    // compute the higher powers with minimal number of 
     for(i=2; i<=n; ++i) {
         j=i/2;
         k=i%2;
@@ -2516,7 +2515,7 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat, Matrix_t<n,m,T,MT
         trpl[i]=trace(pl[i]);
     }
 
-    // compute the characteristic polynomial crpl[] from the traced powers trpl[] :
+    // compute the characteristic polynomial coefficients crpl[] from the traced powers trpl[] :
     T crpl[n+1];
     crpl[n]=1;
     for(j=1; j<=n; ++j) {
@@ -2530,7 +2529,7 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat, Matrix_t<n,m,T,MT
 
     int mmax=15*n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
     T al[n],pal[n]; // temp. Cayley-Hamilton coefficents
-    hila::arithmetic_type<T> wpf=1.0,twpf=1.0,ttwpf; // leading coefficient of power series and value from prev. iteration
+    hila::arithmetic_type<T> wpf=1.0,twpf=1.0,ttwpf; // initial values for power series coefficnet and its running sum
 
     // set initial values for the n entries in al[] and pal[] :
     for(i=0; i<n; ++i) {
@@ -2542,9 +2541,11 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat, Matrix_t<n,m,T,MT
     pal[n-1]=1.0;
 
     // next we iteratively add higher order power series terms to al[] till al[] stops changing
-    // more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-    T ch,cho; // temporary variables for iterating
-    hila::arithmetic_type<T> s,rs=1.0; // used for normalizing the pal[]
+    // more precisely: the iteration will terminate as soon as twpf stops changing. Here twpf
+    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[] 
+    // would have at iteration i, if no renormalization were used.
+    T ch,cho; // temporary variables for iteration
+    hila::arithmetic_type<T> s,rs=1.0; // temp variables used for renormalization of pal[]
     for(j=n; j<mmax; ++j) {
         pal[n-1]*=rs;
         ch=-pal[n-1]*crpl[0];
@@ -2561,7 +2562,8 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat, Matrix_t<n,m,T,MT
         }
 
         if(s>1.0) {
-            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, 
+            // and multiply wpf by s to compensate
             s=std::sqrt(s);
             wpf*=s/(j+1);
             rs=1.0/s;
@@ -2638,7 +2640,7 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
         tc=trace(tB[ip])/k;
         crpl[n-k]=tc;
         ip=iip;
-        iip=(iip+1)%2;
+        iip=1-iip;
     }
 
 
@@ -2655,9 +2657,11 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
     pal[n-1]=1.0;
 
     // next we iteratively add higher order power series terms to al[] till al[] stops changing
-    // more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-    T ch,cho; // temporary variables for iterating
-    hila::arithmetic_type<T> s,rs=1.0; // used for normalizing the pal[]
+    // more precisely: the iteration will terminate as soon as twpf stops changing. Here twpf
+    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[] 
+    // would have at iteration i, if no renormalization were used.    
+    T ch,cho; // temporary variables for iteration
+    hila::arithmetic_type<T> s,rs=1.0; // temp variables used for renormalization of pal[]
     ttwpf=twpf;
     for(j=n; j<mmax; ++j) {
         pal[n-1]*=rs;
@@ -2674,7 +2678,8 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
             al[i]+=wpf*ch;
         }
         if(s>1.0) {
-            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, 
+            // and multiply wpf by s to compensate
             s=std::sqrt(s);
             wpf*=s/(j+1);
             rs=1.0/s;
@@ -2700,7 +2705,7 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
         tB[iip]=tB[ip]*mat;
         tB[iip]+=al[n-i-1];
         ip=iip;
-        iip=(iip+1)%2;
+        iip=1-iip;
     }
 
     return tB[ip];
