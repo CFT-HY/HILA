@@ -2699,12 +2699,13 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
     //}
 
     // form output matrix:
-    ip=0; iip=1;
-    tB[ip]=al[n-1];
-    for(i=1; i<n; ++i) {
+    ip=1; iip=0;
+    tB[iip]=al[n-1]*mat;
+    tB[ip]+=al[n-2];
+    for(i=2; i<n; ++i) {
         tB[iip]=tB[ip]*mat;
         tB[iip]+=al[n-i-1];
-        ip=iip;
+        ip=iip; 
         iip=1-iip;
     }
 
