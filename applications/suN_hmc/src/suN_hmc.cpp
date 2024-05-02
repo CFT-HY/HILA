@@ -68,6 +68,7 @@ void regroup_gauge(GaugeField<group>& U) {
 
 template <typename group>
 void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,double delta) {
+    // compute the force for the plaquette action and use it to evolve E
     Field<group> staple;
     hila::number_type<group> eps=delta*p.beta/group::size();
     foralldir(d) {
@@ -80,6 +81,7 @@ void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const pa
 
 template <typename group>
 double measure_action(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
+    // measure the total action, consisting of plaquette and momentum term
     auto plaq=measure_plaq(U);
     auto e2=measure_e2(E);
     return p.beta*plaq+e2/2;
@@ -88,13 +90,14 @@ double measure_action(const GaugeField<group>& U,const VectorField<Algebra<group
 template <typename group>
 void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
     // leap frog integration for normal action
-    // advance U by halfa time step
+    // start trajectory: advance U by half a time step
     update_U(U,E,p.dt/2);
+    // main trajectory integration:
     for(int n=0; n<p.trajlen-1; n++) {
         update_E(U,E,p,p.dt);
         update_U(U,E,p.dt);
     }
-    // and bring U and E to the same time value
+    // end trajectory: bring U and E to the same time value
     update_E(U,E,p,p.dt);
     update_U(U,E,p.dt/2);
     regroup_gauge(U);
@@ -106,7 +109,7 @@ void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const par
 
 template <typename T>
 T get_ch_inv(const T& U) {
-    // returns the inverse of the square matrix U, computd with the 
+    // compute inverse of the square matrix U, using the 
     // Cayley-Hamilton theorem (Faddeev–LeVerrier algorithm)
     T tB[2];
     int ip=0,iip=1;
@@ -125,7 +128,7 @@ T get_ch_inv(const T& U) {
 
 template <typename T>
 T get_bp_Amat(const T& U) {
-    // computes A-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
+    // compute A-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
     T tA1=0.5*(1.+U);
     T tA2=get_ch_inv(tA1); 
     tA1=tA2*tA2.dagger();
@@ -134,7 +137,7 @@ T get_bp_Amat(const T& U) {
 
 template <typename T>
 T get_bp_iOsqmat(const T& U) {
-    // computes matrix inside the trace on r.h.s. of Eq. (B1) of arXiv:2306.14319 for n=2
+    // compute matrix inside the trace on r.h.s. of Eq. (B1) of arXiv:2306.14319 for n=2
     T tA1=0.5*(1.+U);
     T tA2=tA1.dagger()*tA1;
     tA1=get_ch_inv(tA2);
@@ -143,7 +146,7 @@ T get_bp_iOsqmat(const T& U) {
 
 template <typename T>
 void plaqpm(const GaugeField<T>& U,Field<T>& plaqp,Field<T>& plaqm,Direction d1,Direction d2,Parity par=ALL) {
-    // computes the positive and negative plaquettes for BP froce computation in Eq. (B5) of arXiv:2306.14319
+    // compute the positive and negative plaquettes for BP froce computation in Eq. (B5) of arXiv:2306.14319
     if(d2!=d1) {
         Field<T> lower;
         // anticipate that these are needed
@@ -166,7 +169,7 @@ void plaqpm(const GaugeField<T>& U,Field<T>& plaqp,Field<T>& plaqm,Direction d1,
 
 template <typename group>
 void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,double delta) {
-    // computes the force for the BP action for n=2 according to Eq. (B5) of arXiv:2306.14319
+    // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and use it to evolve E
     Field<group> plaqp;
     Field<group> plaqm;
     auto eps=delta*2.0*p.beta/group::size();
@@ -196,7 +199,7 @@ double measure_plaq_bp(const GaugeField<group>& U) {
 
 template <typename group>
 double measure_action_bp(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
-    // measure the total BP action, consisting of BP-plaquette action and momentum term
+    // measure the total BP action, consisting of BP-plaquette and momentum term
     auto plaq=measure_plaq_bp(U);
     auto e2=measure_e2(E);
     return p.beta*plaq+e2/2;
