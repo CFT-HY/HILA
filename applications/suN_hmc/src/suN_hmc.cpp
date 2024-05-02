@@ -1,7 +1,6 @@
 #include "hila.h"
 #include "gauge/staples.h"
 #include "gauge/polyakov.h"
-#include "gauge/stout_smear.h"
 
 using mygroup=SU<NCOLOR,double>;
 
@@ -70,7 +69,7 @@ template <typename group>
 void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,double delta) {
     // compute the force for the plaquette action and use it to evolve E
     Field<group> staple;
-    hila::number_type<group> eps=delta*p.beta/group::size();
+    auto eps=delta*p.beta/group::size();
     foralldir(d) {
         staplesum(U,staple,d);
         onsites(ALL) {
@@ -127,12 +126,12 @@ T get_ch_inv(const T& U) {
 }
 
 template <typename T>
-T get_bp_Amat(const T& U) {
-    // compute A-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
+T get_bp_UAmat(const T& U) {
+    // compute U*A(U)-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
     T tA1=0.5*(1.+U);
     T tA2=get_ch_inv(tA1); 
     tA1=tA2*tA2.dagger();
-    return tA1*tA1*tA2;
+    return U*tA1*tA1*tA2;
 }
 
 template <typename T>
@@ -144,40 +143,21 @@ T get_bp_iOsqmat(const T& U) {
     return tA1*tA1-1.;
 }
 
-template <typename T>
-void plaqpm(const GaugeField<T>& U,Field<T>& plaqp,Field<T>& plaqm,Direction d1,Direction d2,Parity par=ALL) {
-    // compute the positive and negative plaquettes for BP froce computation in Eq. (B5) of arXiv:2306.14319
-    if(d2!=d1) {
-        Field<T> lower;
-        // anticipate that these are needed
-        // not really necessary, but may be faster
-        U[d2].start_gather(d1,ALL);
-        U[d1].start_gather(d2,par);
-        // calculate first lower 'u' of the staple sum
-        // do it on opp parity
-        onsites(~par) {
-            lower[X]=U[d2][X].dagger()*U[d1][X]*U[d2][X+d1];
-        }
-        // calculate then the upper 'n' of staple sum
-        // lower could also be added on a separate loop 
-        onsites(par) {
-            plaqp[X]=U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger();
-            plaqm[X]=U[d1][X]*lower[X-d2].dagger();
-        }
-    }
-}
-
 template <typename group>
 void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,double delta) {
     // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and use it to evolve E
-    Field<group> plaqp;
-    Field<group> plaqm;
+    Field<group> fmatp;
+    Field<group> fmatm;
     auto eps=delta*2.0*p.beta/group::size();
     foralldir(d1) {
         foralldir(d2) if(d2!=d1) {
-            plaqpm(U,plaqp,plaqm,d1,d2);
             onsites(ALL) {
-                E[d1][X]-=eps*(plaqp[X]*get_bp_Amat(plaqp[X])+plaqm[X]*get_bp_Amat(plaqm[X])).project_to_algebra();
+                fmatm[X]=U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger();
+                fmatp[X]=get_bp_UAmat(fmatm[X]);
+                fmatm[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X];
+            }
+            onsites(ALL) {
+                E[d1][X]-=eps*(fmatp[X]+fmatm[X-d2]).project_to_algebra();
             }
         }
     }
