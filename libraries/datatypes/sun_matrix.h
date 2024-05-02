@@ -407,6 +407,7 @@ SU<N, T> exp(const Algebra<SU<N, T>> &a) {
     // return m;
 }
 
+
 // matrix exponential of algebra matrix with iterative Cayley-Hamilton (ch)
 template <int N,typename T>
 SU<N,T> chexp(const Algebra<SU<N,T>>& a) {
