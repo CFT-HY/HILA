@@ -2498,7 +2498,7 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
  * @return Matrix_t<n, m, T, MT>
  */
 template <int n,int m,typename T,typename MT>
-inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat,Matrix_t<n,m,T,MT> pl[n+1]) {
+inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat,Matrix_t<n,m,T,MT> (&pl)[n+1]) {
     static_assert(n==m,"chexp() only for square matrices");
 
     // compute the first n matrix powers of mat and the corresponding traces :

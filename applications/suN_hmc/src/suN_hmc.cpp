@@ -1,14 +1,81 @@
 #include "hila.h"
 #include "gauge/staples.h"
 #include "gauge/polyakov.h"
+#include <numbers>
+#include <utility>
 
 using mygroup=SU<NCOLOR,double>;
+
+template <int N>
+struct Factorial {
+    enum { value=N*Factorial<N-1>::value };
+};
+
+template <>
+struct Factorial<0> {
+    enum { value=1 };
+};
+
+
+template<int N, int Nfac=Factorial<N>::value>
+class levi_civita {
+    // template class to provide the non-zero elements of the N-dimensional 
+    // Levi-Civita symbol.
+    // (would be nice to make a[Nfac][N+1] static constexpr, but haven't
+    //  figured out yet how to do it with C++17) 
+public:
+    static constexpr int n=N;
+    static constexpr int nfac=Nfac;
+
+    int a[Nfac][N+1];
+
+    constexpr levi_civita() {
+        int tarr0[N+1]; // inital sequence and permutation sign :
+        // sequence {0,1,...} :
+        for(int i=0; i<N; ++i) {
+            tarr0[i]=i;
+        }
+        // sign 1 :
+        tarr0[N]=1;
+
+        int ind[N]{0}; //initial permutation vector is zero
+        for(int j=0; j<Nfac; ++j) {
+            // initialize a[j][]=tarr0[] :
+            for(int i=0; i<n+1; ++i) {
+                a[j][i]=tarr0[i];
+            }
+            // apply permutation given by ind[] to a[j][] :
+            for(int i=0; i<n-1; ++i) {
+                if(ind[i]!=0) {
+                    // swap a[j][i] with a[j][i+ind[i]]:
+                    int te=a[j][i];
+                    int ti=i+ind[i];
+                    a[j][i]=a[j][ti];
+                    a[j][ti]=te;
+                    // flip sign on a[j][]: 
+                    a[j][N]=-a[j][N];
+                }
+            }
+
+            // next permuation vector: 
+            ++ind[N-1];
+            for(int i=n-1; i>=1; --i) {
+                if(ind[i]>n-1-i) {
+                    ind[i]=0;
+                    ++ind[i-1];
+                }
+            }
+        }
+
+    }
+
+};
+
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
     double beta;
-    double deltab;
     double dt;
     int trajlen;
     int n_traj;
@@ -17,13 +84,14 @@ struct parameters {
     double time_offset;
 };
 
+
 ///////////////////////////////////////////////////////////////////////////////////
 // general functions
 
 template <typename group>
 double measure_plaq(const GaugeField<group>& U) {
     // measure the Wilson plaquette action
-    Reduction<double> plaq;
+    Reduction<double> plaq=0;
     plaq.allreduce(false).delayed(true);
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         onsites(ALL) {
@@ -32,6 +100,32 @@ double measure_plaq(const GaugeField<group>& U) {
         }
     }
     return plaq.value();
+}
+
+template <typename group>
+double measure_topo_charge(const GaugeField<group>& U) {
+    // measure (naive) topological charge of the gauge field, using the matrix logarithms
+    // of the plaquettes as components of the field strength tensor
+
+    Reduction<double> qtopo=0;
+    qtopo.allreduce(false).delayed(true);
+
+#if NDIM == 4
+    Field<Algebra<group>> F[6]; // F[0]: F[0][1], F[1]: F[0][2], F[2]: F[0][3], F[3]: F[1][2], F[4]: F[1][3], F[5]: F[2][3]
+    int k=0;
+    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
+        onsites(ALL) {
+            F[k][X]=log((U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger()));
+        }
+        ++k;
+    }
+    onsites(ALL) {
+        qtopo+=real(trace(F[0][X].dagger()*F[5][X]));
+        qtopo+=-real(trace(F[1][X].dagger()*F[4][X]));
+        qtopo+=real(trace(F[2][X].dagger()*F[3][X]));
+    }
+#endif
+    return qtopo.value()/(8.0*M_PI*M_PI);
 }
 
 template <typename group>
@@ -127,7 +221,7 @@ T get_ch_inv(const T& U) {
 
 template <typename T>
 T get_bp_UAmat(const T& U) {
-    // compute U*A(U)-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
+    // compute U*A(U) with the A-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
     T tA1=0.5*(1.+U);
     T tA2=get_ch_inv(tA1); 
     tA1=tA2*tA2.dagger();
@@ -209,14 +303,15 @@ template <typename group>
 void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>& E) {
     static bool first=true;
     if(first) {
-        hila::out0<<"Legend MEAS: BP-plaq  plaq  E^2  P.real  P.imag\n";
+        hila::out0<<"Legend MEAS: BP-plaq  plaq  E^2  P.real  P.imag  Qtopo\n";
         first=false;
     }
     auto plaqbp=measure_plaq_bp(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
     auto plaq=measure_plaq(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
     auto e2=measure_e2(E)/(lattice.volume()*NDIM);
     auto poly=measure_polyakov(U,e_t);
-    hila::out0<<"MEAS "<<std::setprecision(8)<<plaqbp<<' '<<plaq<<' '<<e2<<' '<<poly<<'\n';
+    auto qtopo=measure_topo_charge(U);
+    hila::out0<<"MEAS "<<std::setprecision(8)<<plaqbp<<' '<<plaq<<' '<<e2<<' '<<poly<<' '<<qtopo<<'\n';
 }
 
 // end measurement functions
@@ -317,18 +412,24 @@ int main(int argc,char** argv) {
     // measure surface properties and print "profile"
     p.config_file=par.get("config name");
 
+    par.close(); // file is closed also when par goes out of scope
+
     /*
     if(hila::myrank()==0) {
-        // test matrix logarithm
+        // test matrix logarithm:
         mygroup tU;
         tU.random();
         std::cout<<"tU:"<<std::endl;
         std::cout<<tU<<std::endl;
         Algebra<mygroup> ltU=log(tU);
+        mygroup ltUg=ltU.expand();
         std::cout<<"ltU:"<<std::endl;
-        std::cout<<ltU<<std::endl;
-        ltU*=0.5;
-        tU=chexp(ltU);
+        std::cout<<ltUg<<std::endl;
+
+        Algebra<mygroup> tltU=ltU;
+        std::cout<<tltU.dagger()*ltU/2<<" -- "<<real(trace(ltUg.dagger()*ltUg))<<std::endl;
+        ltUg*=0.5;
+        tU=chexp(ltUg);
         std::cout<<"sqrt(tU)=exp(ltU/2):"<<std::endl;
         std::cout<<tU<<std::endl;
         tU=tU*tU;
@@ -337,8 +438,20 @@ int main(int argc,char** argv) {
     }
     */
 
-    par.close(); // file is closed also when par goes out of scope
-
+    /*
+    levi_civita<NDIM> LCS;
+    if(hila::myrank()==0) {
+        // check levi_citiva output:
+        for(int i=0; i<LCS.nfac; ++i) {
+            std::cout<<i<<"  :  ";
+            for(int j=0; j<LCS.n; ++j) {
+                std::cout<<LCS.a[i][j]<<" ";
+            }
+            std::cout<<"  :  "<<LCS.a[i][LCS.n]<<std::endl;
+        }
+    }
+    */
+    
     // setting up the lattice is convenient to do after reading
     // the parameter
     lattice.setup(lsize);

@@ -348,7 +348,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
             m.e(i,i)=Complex<T>(0,scf*d.e(i));
 
         int k=n_diag;
-        T inv2=scf/2;
+        T inv2=0.5*scf;
         for(int i=0; i<N-1; i++)
             for(int j=i+1; j<N; j++) {
                 Complex<T> v(this->c[k]*inv2,this->c[k+1]*inv2);
@@ -408,7 +408,7 @@ SU<N, T> exp(const Algebra<SU<N, T>> &a) {
 }
 
 
-// matrix exponential of algebra matrix with iterative Cayley-Hamilton (ch)
+// overload of matrix exponential with iterative Cayley-Hamilton (ch) defined in matrix.h.
 template <int N,typename T>
 SU<N,T> chexp(const Algebra<SU<N,T>>& a) {
     SU<N,T> m=a.expand();
@@ -416,8 +416,9 @@ SU<N,T> chexp(const Algebra<SU<N,T>>& a) {
 }
 
 
-// matrix exponential of algebra matrix with iterative Cayley-Hamilton
-// using less temporary memory use, but slightly slower (chs)
+// overload of matrix exponential with iterative Cayley-Hamilton using
+// "chs" implementation (defined in matrix.h) which needs less temporary 
+// memory, but is a bit slower.
 template <int N,typename T>
 SU<N,T> chsexp(const Algebra<SU<N,T>>& a) {
     SU<N,T> m=a.expand();
@@ -430,11 +431,11 @@ template <int N,typename T>
 Algebra<SU<N,T>> log(const SU<N,T>& a) {
     int maxit=5*N;
     T fprec=(2.2e-15)*Algebra<SU<N,T>>::N_a;
-    SU<N,T> pl[N+1];
-    SU<N,T> tmat,tmat2;
-    Algebra<SU<N,T>> res,tres;
+    Matrix_t<N,N,Complex<T>,SU<N,T>> pl[N+1];
+
+    SU<N,T> tmat=a,tmat2;
+    Algebra<SU<N,T>> res=0,tres;
     T trn,rn;
-    tmat=a;
     int it,i;
     for(it=0; it<maxit; ++it) {
         tres=tmat.project_to_algebra(trn);
@@ -443,11 +444,11 @@ Algebra<SU<N,T>> log(const SU<N,T>& a) {
             res.e(i)+=tres.e(i);
             rn+=abs(res.e(i));
         }
-        if(trn<fprec*rn) {
+        if(trn<fprec*(rn+1.0)) {
             break;
         }
         tmat=res.expand_scaled(-1.0);
-        tmat2=chexp(tmat);
+        tmat2=chexp(tmat,pl);
         tmat=a*tmat2;
     }
 
