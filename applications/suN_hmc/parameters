@@ -1,7 +1,7 @@
 # This is a parameter file for SUN_hmc
 
 lattice size           8,8,8,8
-beta                   32.
+beta                   60.0
 dt                     0.005
 trajectory length      100
 number of trajectories 5000
