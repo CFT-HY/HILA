@@ -1254,7 +1254,7 @@ class Matrix_t {
      * @param width
      * @return Mtype&
      */
-    Mtype &gaussian_random(double width = 1.0) out_only {
+    Mtype &gaussian_random(base_type width = 1.0) out_only {
 
         static_assert(hila::is_floating_point<hila::arithmetic_type<T>>::value,
                       "Matrix/Vector gaussian_random() requires non-integral type elements");
