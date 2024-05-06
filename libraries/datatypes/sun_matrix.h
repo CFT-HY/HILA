@@ -385,6 +385,12 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
     //
     //     return *this;
     // }
+    // Wrapper for base class' gaussian_random with appropriate
+    // default gaussian width for chosen algebra normalization
+    Algebra& gaussian_random(T width=sqrt(2.0)) out_only {
+        Matrix_t<N* N-1,1,T,Algebra<SU<N,T>>>::gaussian_random(width);
+        return *this;
+    }
 };
 
 template <int N, typename T>
