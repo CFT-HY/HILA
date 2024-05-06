@@ -2629,18 +2629,17 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
     Matrix_t<n,m,T,MT> tB[2];
     T crpl[n+1];
     crpl[n]=1.0;
-    int ip=0,iip=1;
+    int ip=0;
     tB[ip]=1.;
     T tc=trace(mat);
     crpl[n-1]=tc;
-    tB[iip]=mat;
+    tB[1-ip]=mat;
     for(k=2; k<=n; ++k) {
-        tB[iip]-=tc;
-        tB[ip]=mat*tB[iip];
+        tB[1-ip]-=tc;
+        tB[ip]=mat*tB[1-ip];
         tc=trace(tB[ip])/k;
         crpl[n-k]=tc;
-        ip=iip;
-        iip=1-iip;
+        ip=1-ip;
     }
 
 
@@ -2699,14 +2698,13 @@ inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
     //}
 
     // form output matrix:
-    ip=0; iip=1;
+    ip=0;
     tB[ip]=al[n-1]*mat;
     tB[ip]+=al[n-2];
     for(i=2; i<n; ++i) {
-        tB[iip]=tB[ip]*mat;
-        tB[iip]+=al[n-i-1];
-        ip=iip;
-        iip=1-iip;
+        tB[1-ip]=tB[ip]*mat;
+        tB[1-ip]+=al[n-i-1];
+        ip=1-ip;
     }
 
     return tB[ip];
