@@ -307,16 +307,15 @@ T get_ch_inv(const T& U) {
     // compute inverse of the square matrix U, using the 
     // Cayley-Hamilton theorem (Faddeev–LeVerrier algorithm)
     T tB[2];
-    int ip=0,iip=1;
+    int ip=0;
     tB[ip]=1.;
     auto tc=trace(U);
-    tB[iip]=U;
+    tB[1-ip]=U;
     for(int k=2; k<=T::size(); ++k) {
-        tB[iip]-=tc;
-        tB[ip]=U*tB[iip];
+        tB[1-ip]-=tc;
+        tB[ip]=U*tB[1-ip];
         tc=trace(tB[ip])/k;
-        ip=iip;
-        iip=(iip+1)%2;
+        ip=1-ip;
     }
     return tB[ip]/tc;
 }
@@ -757,7 +756,7 @@ int main(int argc,char** argv) {
             <<std::setprecision(6)<<act_new-act_old;
 
         hila::out0<<" time "<<std::setprecision(3)<<hila::gettime()-ttime<<'\n';
-
+        
         if(reject) {
             U=U_old;
         }
