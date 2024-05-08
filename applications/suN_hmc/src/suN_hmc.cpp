@@ -501,86 +501,37 @@ atype do_wilson_flow(GaugeField<group>& V,atype l_start,atype l_end) {
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_wilson_flow_adapt_b(GaugeField<group>& V,atype l_start,atype l_end,atype tstep=0.08, atype atol=1.0e-7, atype rtol=1.0e-7) {
+atype do_wilson_flow_o2(GaugeField<group>& V,atype l_start,atype l_end) {
     // wilson flow integration from flow scale l_start to l_end
-    // using 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
-    // arXiv:2101.05320 for derivation of this Runge-Kutta method)
-    atype t=l_start*l_start/8.0;
+    // using 2rd order Runge-Kutta (cf. arXiv:2101.05320 for description
+    // of method to derivation coefficients)
+    atype tmin=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
     int nsteps=10;
-    atype step=(tmax-t)/(atype)nsteps;
+    atype step=(tmax-tmin)/(atype)nsteps;
     while(step>0.08) {
         //make sure the step size is not too large
         ++nsteps;
-        step=(tmax-t)/(atype)nsteps;
+        step=(tmax-tmin)/(atype)nsteps;
     }
 
     VectorField<Algebra<group>> k1,k2;
-    GaugeField<group> V2,V0;
-    Field<atype> reldiff;
-    atype maxreldiff,maxstep;
 
-    // 3rd order Runge-Kutta coefficients from arXiv:1006.4518 :
-    atype a11=0.25;
-    atype a21=-17.0/36.0,a22=8.0/9.0;
-    atype a33=0.75;
-
-    // 2nd order step coefficients :
+    // 2nd order Runge-Kutta coefficients :
+    atype b11=0.25;
     atype b21=-1.25,b22=2.0;
-    int i=0;
-    V0=V;
-    while(i<nsteps&&t<tmax) {
 
+    for(int i=0; i<nsteps; ++i) {
         get_wf_force(V,k1);
         foralldir(d) onsites(ALL) {
-            V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
+            V[d][X]=chexp(k1[d][X]*(step*b11))*V[d][X];
         }
 
         get_wf_force(V,k2);
         foralldir(d) onsites(ALL) {
-            V2[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
-
-            k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
-            V[d][X]=chexp(k2[d][X])*V[d][X];
+            V[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
         }
 
-        onsites(ALL) {
-            reldiff[X]=0;
-        }
-
-        get_wf_force(V,k1);
-        foralldir(d) onsites(ALL) {
-            k1[d][X]=k1[d][X]*(step*a33)-k2[d][X];
-            V[d][X]=chexp(k1[d][X])*V[d][X];
-
-            reldiff[X]+=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
-        }
-
-        maxreldiff=reldiff.max()/(NDIM*group::size()*group::size());
-
-        maxstep=min(step/pow(maxreldiff,1.0/3.0),0.8);
-        if(step>maxstep) {
-            while(step>maxstep) {
-                //make sure the step size is not too large
-                ++nsteps;
-                step=(tmax-t)/(atype)(nsteps-i);
-            }
-            V=V0;
-        } else {
-            t+=step;
-            ++i;
-            while(step<0.5*maxstep&&nsteps>i+1) {
-                //make sure the step size is not too small
-                --nsteps;
-                step=(tmax-t)/(atype)(nsteps-i);
-            }
-            V0=V;
-        }
-        /*
-        if(hila::myrank()==0) {
-            std::cout<<"wflow  i: "<<i<<"  nsteps: "<<nsteps<<"  step: "<<step<<"  maxstep: "<<maxstep<<"  maxreldiff: "<<maxreldiff<<std::endl;
-        }
-        */
     }
 
     V.reunitarize_gauge();
@@ -669,46 +620,7 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype 
             V0=V;
         }
         // adjust step size for next iteration to better match accuracy goal :
-        step=min(0.9*maxstep,0.08); 
-    }
-
-    V.reunitarize_gauge();
-    return step;
-}
-
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_wilson_flow_o2(GaugeField<group>& V,atype l_start,atype l_end) {
-    // wilson flow integration from flow scale l_start to l_end
-    // using 2rd order Runge-Kutta (cf. arXiv:2101.05320 for description
-    // of method to derivation coefficients)
-    atype tmin=l_start*l_start/8.0;
-    atype tmax=l_end*l_end/8.0;
-    int nsteps=10;
-    atype step=(tmax-tmin)/(atype)nsteps;
-    while(step>0.08) {
-        //make sure the step size is not too large
-        ++nsteps;
-        step=(tmax-tmin)/(atype)nsteps;
-    }
-
-    VectorField<Algebra<group>> k1,k2;
-
-    // 2nd order Runge-Kutta coefficients :
-    atype b11=0.25;
-    atype b21=-1.25,b22=2.0;
-
-    for(int i=0; i<nsteps; ++i) {
-        get_wf_force(V,k1);
-        foralldir(d) onsites(ALL) {
-            V[d][X]=chexp(k1[d][X]*(step*b11))*V[d][X];
-        }
-
-        get_wf_force(V,k2);
-        foralldir(d) onsites(ALL) {
-            V[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
-        }
-
+        step=min(0.9*maxstep,0.08);
     }
 
     V.reunitarize_gauge();
