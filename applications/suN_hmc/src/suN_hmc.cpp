@@ -146,13 +146,25 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
     qtopo.allreduce(false).delayed(true);
 
 #if NDIM == 4
-    Field<Algebra<group>> F[6];
+    Field<group> F[6];
     // F[0]: F[0][1], F[1]: F[0][2], F[2]: F[0][3],
     // F[3]: F[1][2], F[4]: F[1][3], F[5]: F[2][3]
+    Field<group> tF0,tF1;
+
     int k=0;
+    // (Note: by replacing log() by project_to_algebra() in the following, one would get the Clover F[dir1][dir2])
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         onsites(ALL) {
-            F[k][X]=log((U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger()));
+            // log of dir1-dir2-plaquette that starts and ends at X; corresponds to F[dir1][dir2]
+            // at center location of plaquette X+dir1/2+dir2/2 :
+            tF0[X]=log((U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger())).expand();
+            // parallel transport to X+dir1
+            tF1[X]=U[dir1][X].dagger()*tF0[X]*U[dir1][X];
+        }
+        onsites(ALL) {
+            // get F[dir1][dir2] at X from average of parallel transported F[dir1][dir2] from the 
+            // centers of the dir1-dir2-plaquettes that surround X :
+            F[k][X]=( tF0[X]+tF1[X-dir1] + U[dir2][X-dir2].dagger()*(tF0[X-dir2]+tF1[X-dir1-dir2])*U[dir2][X-dir2] )*0.25;
         }
         ++k;
     }
@@ -169,8 +181,8 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
         energy+=F[5][X].squarenorm();
     }
 #endif
-    qtopo_out=qtopo.value()/(8.0*M_PI*M_PI);
-    energy_out=energy.value()*0.5;
+    qtopo_out=qtopo.value()/(4.0*M_PI*M_PI);
+    energy_out=energy.value();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
@@ -217,6 +229,8 @@ template <typename group,typename atype=hila::arithmetic_type<group>>
 void measure_topo_charge_and_energy_log_clover(const GaugeField<group>& U,atype& qtopo_out,atype& energy_out) {
     // measure topological charge and field strength energy of the gauge field, using the
     // logs of the "clover leave matrices" as components of the field strength tensor
+    // (this is here just for cross check of log-definition above; should be the same, 
+    // but more costly since log is taken four times more)
 
     Reduction<atype> qtopo=0;
     Reduction<atype> energy=0;
