@@ -6,80 +6,23 @@
 using ftype=double;
 using mygroup=SU<NCOLOR,ftype>;
 
-template <int N>
-struct Factorial {
-    enum { value=N*Factorial<N-1>::value };
-};
-
-template <>
-struct Factorial<0> {
-    enum { value=1 };
-};
-
-
-template<int N, int Nfac=Factorial<N>::value>
-class levi_civita {
-    // template class to provide the non-zero elements of the N-dimensional 
-    // Levi-Civita symbol.
-    // (would be nice to make a[Nfac][N+1] static constexpr, but haven't
-    //  figured out yet how to do it with C++17) 
-public:
-    static constexpr int n=N;
-    static constexpr int nfac=Nfac;
-
-    int a[Nfac][N+1];
-
-    constexpr levi_civita() {
-        int tarr0[N+1]; // inital sequence and permutation sign :
-        // sequence {0,1,...} :
-        for(int i=0; i<N; ++i) {
-            tarr0[i]=i;
-        }
-        // sign 1 :
-        tarr0[N]=1;
-
-        int ind[N]{0}; //initial permutation vector is zero
-        for(int j=0; j<Nfac; ++j) {
-            // initialize a[j][]=tarr0[] :
-            for(int i=0; i<n+1; ++i) {
-                a[j][i]=tarr0[i];
-            }
-            // apply permutation given by ind[] to a[j][] :
-            for(int i=0; i<n-1; ++i) {
-                if(ind[i]!=0) {
-                    // swap a[j][i] with a[j][i+ind[i]]:
-                    int te=a[j][i];
-                    int ti=i+ind[i];
-                    a[j][i]=a[j][ti];
-                    a[j][ti]=te;
-                    // flip sign on a[j][]: 
-                    a[j][N]=-a[j][N];
-                }
-            }
-
-            // next permuation vector: 
-            ++ind[N-1];
-            for(int i=n-1; i>=1; --i) {
-                if(ind[i]>n-1-i) {
-                    ind[i]=0;
-                    ++ind[i-1];
-                }
-            }
-        }
-
-    }
-
-};
-
 template<typename ... Args>
 std::string string_format(const std::string& format,Args ... args) {
-    int size_s=std::snprintf(nullptr,0,format.c_str(),args ...)+1; 
+    // wrapper for std::snprintf which sets up buffer of required size
+
+    // determine required buffer size :
+    int size_s=std::snprintf(nullptr,0,format.c_str(),args ...)+1;
     if(size_s<=0) { 
         throw std::runtime_error("Error during formatting."); 
     }
+
+    // allocate buffer :
     auto size=static_cast<size_t>(size_s);
     std::unique_ptr<char[]> buf(new char[size]);
+
+    // write formatted string to buffer :
     std::snprintf(buf.get(),size,format.c_str(),args ...);
+
     return std::string(buf.get(),buf.get()+size-1); 
 }
 
@@ -152,7 +95,7 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
     Field<group> tF0,tF1;
 
     int k=0;
-    // (Note: by replacing log() by project_to_algebra() in the following, one would get the Clover F[dir1][dir2])
+    // (Note: by replacing log() by project_to_algebra() in the following, one would get the clover F[dir1][dir2])
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         onsites(ALL) {
             // log of dir1-dir2-plaquette that starts and ends at X; corresponds to F[dir1][dir2]
@@ -273,6 +216,18 @@ void measure_topo_charge_and_energy_log_clover(const GaugeField<group>& U,atype&
 ///////////////////////////////////////////////////////////////////////////////////
 // non-bulk-prevention functions
 
+template <typename group>
+void get_force(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
+    // compute the force for the plaquette action and write it to K
+    Field<group> staple;
+    foralldir(d) {
+        staplesum(U,staple,d);
+        onsites(ALL) {
+            K[d][X]=-(U[d][X]*staple[X].dagger()).project_to_algebra();
+        }
+    }
+}
+
 template <typename group,typename atype=hila::arithmetic_type<group>>
 void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
     // compute the force for the plaquette action and use it to evolve E
@@ -305,7 +260,7 @@ void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const par
         update_E(U,E,p,p.dt);
         update_U(U,E,p.dt);
     }
-    // end trajectory: bring U and E to the same time value
+    // end trajectory: bring U and E to the same time
     update_E(U,E,p,p.dt);
     update_U(U,E,p.dt/2);
     
@@ -352,6 +307,32 @@ T get_bp_iOsqmat(const T& U) {
     return tA1*tA1-1.;
 }
 
+template <typename group>
+void get_force_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
+    // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and write it to K
+    Field<group> fmatp;
+    Field<group> fmatmd1;
+    Field<group> fmatmd2;
+    auto eps=2.0;
+    bool first=true;
+    foralldir(d1) {
+        onsites(ALL) K[d1][X]=0;
+    }
+    foralldir(d1) {
+        foralldir(d2) if(d2>d1) {
+            onsites(ALL) {
+                fmatp[X]=get_bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
+                fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X]; // parallel transport fmatp[X].dagger() to X+d2
+                fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X]; // parallel transport fmatp[X] to X+d1
+            }
+            onsites(ALL) {
+                K[d1][X]-=eps*(fmatmd1[X-d2]+fmatp[X]).project_to_algebra();
+                K[d2][X]-=eps*(fmatmd2[X-d1]-fmatp[X]).project_to_algebra();
+            }
+        }
+    }
+}
+
 template <typename group,typename atype=hila::arithmetic_type<group>>
 void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
     // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and use it to evolve E
@@ -363,8 +344,8 @@ void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const
         foralldir(d2) if(d2>d1) {
             onsites(ALL) {
                 fmatp[X]=get_bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
-                fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X];
-                fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X];
+                fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X]; // parallel transport fmatp[X].dagger() to X+d2
+                fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X]; // parallel transport fmatp[X] to X+d1
             }
             onsites(ALL) {
                 E[d1][X]-=eps*(fmatmd1[X-d2]+fmatp[X]).project_to_algebra();
@@ -407,7 +388,7 @@ void do_trajectory_bp(GaugeField<group>& U,VectorField<Algebra<group>>& E,const 
         update_E_bp(U,E,p,p.dt);
         update_U(U,E,p.dt);
     }
-    // end trajectory: bring U and E to the same time value
+    // end trajectory: bring U and E to the same time
     update_E_bp(U,E,p,p.dt);
     update_U(U,E,p.dt/2);
 
@@ -420,8 +401,11 @@ void do_trajectory_bp(GaugeField<group>& U,VectorField<Algebra<group>>& E,const 
 
 template <typename group>
 void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>& E) {
+    // perform measurements on current gauge and momentum pair (U, E) and
+    // print results in formatted form to standard output
     static bool first=true;
     if(first) {
+        // print legend for measurement output
         hila::out0<<"Legend MEAS: BP-plaq  plaq  E^2  P.real  P.imag\n";
         first=false;
     }
@@ -432,64 +416,35 @@ void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>&
     hila::out0<<string_format("MEAS % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e",plaqbp,plaq,e2,poly.real(),poly.imag())<<'\n';
 }
 
-template <typename group>
-void get_force(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
-    // compute the force for the plaquette action and write it to K
-    Field<group> staple;
-    foralldir(d) {
-        staplesum(U,staple,d);
-        onsites(ALL) {
-            K[d][X]=-(U[d][X]*staple[X].dagger()).project_to_algebra();
-        }
-    }
-}
-
-template <typename group>
-void get_force_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
-    // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and write it to E
-    Field<group> fmatp;
-    Field<group> fmatmd1;
-    Field<group> fmatmd2;
-    auto eps=2.0;
-    bool first=true;
-    foralldir(d1) {
-        onsites(ALL) E[d1][X]=0;
-    }
-    foralldir(d1) {
-        foralldir(d2) if(d2>d1) {
-            onsites(ALL) {
-                fmatp[X]=get_bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
-                fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X];
-                fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X];
-            }
-            onsites(ALL) {
-                E[d1][X]-=eps*(fmatmd1[X-d2]+fmatp[X]).project_to_algebra();
-                E[d2][X]-=eps*(fmatmd2[X-d1]-fmatp[X]).project_to_algebra();
-            }
-        }
-    }
-}
-
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void measure_wflow_stuff(const GaugeField<group>& U, atype flow_l, atype t_step) {
+void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step) {
+    // perform measurements on flowed gauge configuration V at flow scale flow_l
+    // [t_step is the flow time integration step size used in last gradient flow step]
+    // and print results in formatted form to standard output
     static bool first=true;
     if(first) {
+        // print legend for flow measurement output
         hila::out0<<"Legend  WFLOW MEAS  f.-scale  BP-S-plaq  S-plaq  t^2*E_plaq  t^2*E_log  Qtopo_log  t^2*E_clov  Qtopo_clov  [t step size]\n";
         first=false;
     }
-    auto plaqbp=measure_plaq_bp(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
-    auto eplaq=measure_plaq(U)*2.0/lattice.volume();
-    auto plaq=eplaq/(NDIM*(NDIM-1));
-    eplaq*=group::size();
+    auto plaqbp=measure_plaq_bp(V)/(lattice.volume()*NDIM*(NDIM-1)/2); // average bulk-prevention plaquette action
+    auto eplaq=measure_plaq(V)*2.0/lattice.volume();
+    auto plaq=eplaq/(NDIM*(NDIM-1)); // average wilson plaquette action
+    eplaq*=group::size(); // average naive energy density (based on wilson plaquette action)
 
+    // average energy density and toplogical charge from 
+    // symmetric log definition of field strength tensor :
     atype qtopolog,elog;
-    measure_topo_charge_and_energy_log(U,qtopolog,elog);
+    measure_topo_charge_and_energy_log(V,qtopolog,elog);
     elog/=lattice.volume();
 
+    // average energy density and toplogical charge from 
+    // clover definition of field strength tensor :
     atype qtopocl,ecl;
-    measure_topo_charge_and_energy_clover(U,qtopocl,ecl);
+    measure_topo_charge_and_energy_clover(V,qtopocl,ecl);
     ecl/=lattice.volume();
 
+    // print formatted results to standard output :
     hila::out0<<string_format("WFLOW MEAS % 6.2f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e   [%0.5f]",flow_l,plaqbp,plaq,pow(flow_l,4)/64.0*eplaq,pow(flow_l,4)/64.0*elog,qtopolog,pow(flow_l,4)/64.0*ecl,qtopocl,t_step)<<'\n';
 }
 
@@ -497,12 +452,13 @@ template <typename group>
 void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
     // force computation routine to be used to integrate wilson flow
     get_force(U,E);
+    //get_force_bp(U,E);
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype do_wilson_flow(GaugeField<group>& V,atype l_start,atype l_end) {
     // wilson flow integration from flow scale l_start to l_end
-    // 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
+    // using 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
     atype tmin=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
@@ -516,6 +472,7 @@ atype do_wilson_flow(GaugeField<group>& V,atype l_start,atype l_end) {
 
     VectorField<Algebra<group>> k1,k2;
 
+    // 3rd order Runge-Kutta coefficients from arXiv:1006.4518 :
     atype a11=0.25;
     atype a21=-17.0/36.0,a22=8.0/9.0;
     atype a33=0.75;
@@ -542,6 +499,222 @@ atype do_wilson_flow(GaugeField<group>& V,atype l_start,atype l_end) {
     V.reunitarize_gauge();   
     return step;
 }
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype do_wilson_flow_adapt_b(GaugeField<group>& V,atype l_start,atype l_end,atype tstep=0.08, atype atol=1.0e-7, atype rtol=1.0e-7) {
+    // wilson flow integration from flow scale l_start to l_end
+    // using 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
+    // arXiv:2101.05320 for derivation of this Runge-Kutta method)
+    atype t=l_start*l_start/8.0;
+    atype tmax=l_end*l_end/8.0;
+    int nsteps=10;
+    atype step=(tmax-t)/(atype)nsteps;
+    while(step>0.08) {
+        //make sure the step size is not too large
+        ++nsteps;
+        step=(tmax-t)/(atype)nsteps;
+    }
+
+    VectorField<Algebra<group>> k1,k2;
+    GaugeField<group> V2,V0;
+    Field<atype> reldiff;
+    atype maxreldiff,maxstep;
+
+    // 3rd order Runge-Kutta coefficients from arXiv:1006.4518 :
+    atype a11=0.25;
+    atype a21=-17.0/36.0,a22=8.0/9.0;
+    atype a33=0.75;
+
+    // 2nd order step coefficients :
+    atype b21=-1.25,b22=2.0;
+    int i=0;
+    V0=V;
+    while(i<nsteps&&t<tmax) {
+
+        get_wf_force(V,k1);
+        foralldir(d) onsites(ALL) {
+            V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
+        }
+
+        get_wf_force(V,k2);
+        foralldir(d) onsites(ALL) {
+            V2[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
+
+            k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
+            V[d][X]=chexp(k2[d][X])*V[d][X];
+        }
+
+        onsites(ALL) {
+            reldiff[X]=0;
+        }
+
+        get_wf_force(V,k1);
+        foralldir(d) onsites(ALL) {
+            k1[d][X]=k1[d][X]*(step*a33)-k2[d][X];
+            V[d][X]=chexp(k1[d][X])*V[d][X];
+
+            reldiff[X]+=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
+        }
+
+        maxreldiff=reldiff.max()/(NDIM*group::size()*group::size());
+
+        maxstep=min(step/pow(maxreldiff,1.0/3.0),0.8);
+        if(step>maxstep) {
+            while(step>maxstep) {
+                //make sure the step size is not too large
+                ++nsteps;
+                step=(tmax-t)/(atype)(nsteps-i);
+            }
+            V=V0;
+        } else {
+            t+=step;
+            ++i;
+            while(step<0.5*maxstep&&nsteps>i+1) {
+                //make sure the step size is not too small
+                --nsteps;
+                step=(tmax-t)/(atype)(nsteps-i);
+            }
+            V0=V;
+        }
+        /*
+        if(hila::myrank()==0) {
+            std::cout<<"wflow  i: "<<i<<"  nsteps: "<<nsteps<<"  step: "<<step<<"  maxstep: "<<maxstep<<"  maxreldiff: "<<maxreldiff<<std::endl;
+        }
+        */
+    }
+
+    V.reunitarize_gauge();
+    return step;
+}
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype tstep=0.001,atype atol=1.0e-7,atype rtol=1.0e-7) {
+    // wilson flow integration from flow scale l_start to l_end
+    // using 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
+    // arXiv:2101.05320 for derivation of this Runge-Kutta method)
+
+    // translate flow scale interval [l_start,l_end] to corresponding
+    // flow time interval [t,tmax] :
+    atype t=l_start*l_start/8.0;
+    atype tmax=l_end*l_end/8.0;
+    atype step=min(min(tstep,0.51*(tmax-t)),0.08);  //initial step size
+
+    VectorField<Algebra<group>> k1,k2;
+    GaugeField<group> V2,V0;
+    Field<atype> reldiff;
+    atype maxreldiff,maxstep;
+
+    // 3rd order Runge-Kutta coefficients from arXiv:1006.4518 :
+    atype a11=0.25;
+    atype a21=-17.0/36.0,a22=8.0/9.0;
+    atype a33=0.75;
+
+    // 2nd order step coefficients :
+    atype b21=-1.25,b22=2.0;
+    V0=V;
+    bool stop=false;
+
+    while(t<tmax&&!stop) {
+
+        if(t+step>=tmax) {
+            step=tmax-t;
+            stop=true;
+        } else {
+            if(t+2.0*step>=tmax) {
+                step=0.51*(tmax-t);
+            }
+        }
+
+        get_wf_force(V,k1);
+        foralldir(d) onsites(ALL) {
+            // first steps of 3rd and 2nd order RK are the same :
+            V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
+        }
+
+        get_wf_force(V,k2);
+        foralldir(d) onsites(ALL) {
+            // second step for 2nd order RK :
+            V2[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
+
+            // second step for 3rd order RK :
+            k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
+            V[d][X]=chexp(k2[d][X])*V[d][X];
+        }
+
+        get_wf_force(V,k1);
+        foralldir(d) onsites(ALL) {
+            // third step of 3rd order RK :
+            k1[d][X]=k1[d][X]*(step*a33)-k2[d][X];
+            V[d][X]=chexp(k1[d][X])*V[d][X];
+        }
+
+        // determine maximum difference between 2nd and 3rd order RK, 
+        // relative to desired accuracy :
+        onsites(ALL) {
+            reldiff[X]=0;
+        }
+        foralldir(d) onsites(ALL) {
+            reldiff[X]+=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
+        }
+        maxreldiff=reldiff.max()/(NDIM*group::size()*group::size());
+
+        // max. allowed step size to achieve desired accuracy :
+        maxstep=min(step/pow(maxreldiff,1.0/3.0),1.0);
+        if(step>maxstep) {
+            // repeat current iteration if step size was larger than maxstep
+            V=V0;
+        } else {
+            // proceed to next iteration
+            t+=step;
+            V0=V;
+        }
+        // adjust step size for next iteration to better match accuracy goal :
+        step=min(0.9*maxstep,0.08); 
+    }
+
+    V.reunitarize_gauge();
+    return step;
+}
+
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype do_wilson_flow_o2(GaugeField<group>& V,atype l_start,atype l_end) {
+    // wilson flow integration from flow scale l_start to l_end
+    // using 2rd order Runge-Kutta (cf. arXiv:2101.05320 for description
+    // of method to derivation coefficients)
+    atype tmin=l_start*l_start/8.0;
+    atype tmax=l_end*l_end/8.0;
+    int nsteps=10;
+    atype step=(tmax-tmin)/(atype)nsteps;
+    while(step>0.08) {
+        //make sure the step size is not too large
+        ++nsteps;
+        step=(tmax-tmin)/(atype)nsteps;
+    }
+
+    VectorField<Algebra<group>> k1,k2;
+
+    // 2nd order Runge-Kutta coefficients :
+    atype b11=0.25;
+    atype b21=-1.25,b22=2.0;
+
+    for(int i=0; i<nsteps; ++i) {
+        get_wf_force(V,k1);
+        foralldir(d) onsites(ALL) {
+            V[d][X]=chexp(k1[d][X]*(step*b11))*V[d][X];
+        }
+
+        get_wf_force(V,k2);
+        foralldir(d) onsites(ALL) {
+            V[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
+        }
+
+    }
+
+    V.reunitarize_gauge();
+    return step;
+}
+
 
 // end measurement functions
 ///////////////////////////////////////////////////////////////////////////////////
@@ -785,19 +958,24 @@ int main(int argc,char** argv) {
 
             if(p.wflow_freq>0&&trajectory%p.wflow_freq==0) {
                 int wtrajectory=trajectory/p.wflow_freq;
-                hila::out0<<"Wflow_start "<<wtrajectory<<'\n';
                 if(p.wflow_l_step>0) {
                     int nflow_steps=(int)(p.wflow_max_l/p.wflow_l_step);
+
+                    double wtime=hila::gettime();
+                    hila::out0<<"Wflow_start "<<wtrajectory<<'\n';
+
                     GaugeField<mygroup> V=U;
+                    ftype t_step=0.001;
                     for(int i=0; i<nflow_steps; ++i) {
 
-                        auto t_step=do_wilson_flow(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step);
+                        t_step=do_wilson_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,t_step);
 
                         measure_wflow_stuff(V,(i+1)*p.wflow_l_step,t_step);
 
                     }
+
+                    hila::out0<<"Wflow_end "<<wtrajectory<<"    time "<<std::setprecision(3)<<hila::gettime()-wtime<<'\n';
                 }
-                hila::out0<<"Wflow_end "<<wtrajectory<<'\n';
             }
 
         }
