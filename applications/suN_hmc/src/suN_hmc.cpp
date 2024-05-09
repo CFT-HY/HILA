@@ -278,7 +278,7 @@ void get_force_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
     auto eps=2.0;
     bool first=true;
     foralldir(d1) {
-        onsites(ALL) K[d1][X]=0;
+        K[d1][ALL]=0;
     }
     foralldir(d1) {
         foralldir(d2) if(d2>d1) {
@@ -423,8 +423,8 @@ void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype tstep=0.001,atype atol=1.0e-7,atype rtol=1.0e-7) {
-    // wilson flow integration from flow scale l_start to l_end
-    // using 3rd order Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
+    // wilson flow integration from flow scale l_start to l_end using 3rd order
+    // 3-step Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
     // and embedded RK2 for adaptive step size
 
@@ -432,7 +432,7 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype 
     // flow time interval [t,tmax] :
     atype t=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
-    atype lstab=0.09; // stability limit
+    atype lstab=0.095; // stability limit
     atype step=min(min(tstep,0.51*(tmax-t)),lstab);  //initial step size
 
     VectorField<Algebra<group>> k1,k2;
@@ -501,13 +501,12 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype 
 
         // determine maximum difference between RK3 and RK2, 
         // relative to desired accuracy :
-        onsites(ALL) {
-            reldiff[X]=0;
+        maxreldiff=0;
+        foralldir(d) {
+            reldiff[ALL]=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
+            maxreldiff=max(maxreldiff,reldiff.max());
         }
-        foralldir(d) onsites(ALL) {
-            reldiff[X]+=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
-        }
-        maxreldiff=reldiff.max()/(NDIM*group::size()*group::size());
+        maxreldiff/=(atype)(group::size()*group::size());
 
         // max. allowed step size to achieve desired accuracy :
         maxstep=min(step/pow(maxreldiff,1.0/3.0),1.0);
