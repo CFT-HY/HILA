@@ -97,18 +97,19 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
     Field<group> tF0,tF1;
 
     int k=0;
-    // (Note: by removing log(...).expand() in the following, one would recover the clover F[dir1][dir2])
+    // (Note: by replacing log(...).expand() in the following by anti-hermitian projection,
+    // one would recover the clover F[dir1][dir2])
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         onsites(ALL) {
             // log of dir1-dir2-plaquette that starts and ends at X; corresponds to F[dir1][dir2]
-            // at center location of plaquette X+dir1/2+dir2/2 :
+            // at center location X+dir1/2+dir2/2 of plaquette:
             tF0[X]=log((U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger())).expand();
             // parallel transport to X+dir1
             tF1[X]=U[dir1][X].dagger()*tF0[X]*U[dir1][X];
         }
         onsites(ALL) {
-            // get F[dir1][dir2] at X from average of parallel transported F[dir1][dir2] from the 
-            // centers of the dir1-dir2-plaquettes that surround X :
+            // get F[dir1][dir2] at X from average of the (parallel transported) F[dir1][dir2] from 
+            // the centers of all dir1-dir2-plaquettes that touch X :
             F[k][X]=(tF0[X]+tF1[X-dir1]+U[dir2][X-dir2].dagger()*(tF0[X-dir2]+tF1[X-dir1-dir2])*U[dir2][X-dir2])*0.25;
         }
         ++k;
@@ -146,6 +147,7 @@ void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qto
     int k=0;
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         onsites(ALL) {
+            // clover operator as in eq. (2.9) of Nuclear Physics B259 (1985) 572-596
             F[k][X]=0.25*(U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger()
                 -(U[dir1][X-dir1-dir2]*U[dir2][X-dir2]).dagger()*U[dir2][X-dir1-dir2]*U[dir1][X-dir1]
                 +U[dir2][X]*(U[dir2][X-dir1]*U[dir1][X-dir1+dir2]).dagger()*U[dir1][X-dir1]
@@ -477,28 +479,27 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype 
 
         get_wf_force(V,k1);
         foralldir(d) onsites(ALL) {
-            // first steps of 3rd and 2nd order RK are the same :
+            // first steps of RK3 and RK2 are the same :
             V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
         }
 
         get_wf_force(V,k2);
         foralldir(d) onsites(ALL) {
-            // second step for 2nd order RK :
+            // second step of RK2 :
             V2[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
 
-            // second step for 3rd order RK :
+            // second step of RK3 :
             k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
             V[d][X]=chexp(k2[d][X])*V[d][X];
         }
 
         get_wf_force(V,k1);
         foralldir(d) onsites(ALL) {
-            // third step of 3rd order RK :
-            k1[d][X]=k1[d][X]*(step*a33)-k2[d][X];
-            V[d][X]=chexp(k1[d][X])*V[d][X];
+            // third step of RK3 :
+            V[d][X]=chexp(k1[d][X]*(step*a33)-k2[d][X])*V[d][X];
         }
 
-        // determine maximum difference between 2nd and 3rd order RK, 
+        // determine maximum difference between RK3 and RK2, 
         // relative to desired accuracy :
         onsites(ALL) {
             reldiff[X]=0;
