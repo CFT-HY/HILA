@@ -29,15 +29,17 @@ std::string string_format(const std::string& format,Args ... args) {
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
-    ftype beta;
-    ftype dt;
-    int trajlen;
-    int n_traj;
-    int n_therm;
-    int wflow_freq;
-    ftype wflow_max_l;
-    ftype wflow_l_step;
-    int n_save;
+    ftype beta;          // inverse gauge coupling
+    ftype dt;            // HMC time step
+    int trajlen;         // number of HMC time steps per trajectory
+    int n_traj;          // number of trajectories to generate
+    int n_therm;         // number of thermalization trajectories (counts only accepted traj.)
+    int wflow_freq;      // number of trajectories between wflow measurements
+    ftype wflow_max_l;   // flow scale at which wilson flow stops
+    ftype wflow_l_step;  // flow scale interval between flow measurements
+    ftype wflow_a_accu;  // desired absolute accuracy of wilson flow integration steps
+    ftype wflow_r_accu;  // desired relative accuracy of wilson flow integration steps
+    int n_save;          // number of trajectories between config. check point 
     std::string config_file;
     ftype time_offset;
 };
@@ -95,7 +97,7 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
     Field<group> tF0,tF1;
 
     int k=0;
-    // (Note: by replacing log() by project_to_algebra() in the following, one would get the clover F[dir1][dir2])
+    // (Note: by removing log(...).expand() in the following, one would recover the clover F[dir1][dir2])
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         onsites(ALL) {
             // log of dir1-dir2-plaquette that starts and ends at X; corresponds to F[dir1][dir2]
@@ -107,14 +109,14 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
         onsites(ALL) {
             // get F[dir1][dir2] at X from average of parallel transported F[dir1][dir2] from the 
             // centers of the dir1-dir2-plaquettes that surround X :
-            F[k][X]=( tF0[X]+tF1[X-dir1] + U[dir2][X-dir2].dagger()*(tF0[X-dir2]+tF1[X-dir1-dir2])*U[dir2][X-dir2] )*0.25;
+            F[k][X]=(tF0[X]+tF1[X-dir1]+U[dir2][X-dir2].dagger()*(tF0[X-dir2]+tF1[X-dir1-dir2])*U[dir2][X-dir2])*0.25;
         }
         ++k;
     }
     onsites(ALL) {
-        qtopo+=real(trace(F[0][X].dagger()*F[5][X]));
-        qtopo+=-real(trace(F[1][X].dagger()*F[4][X]));
-        qtopo+=real(trace(F[2][X].dagger()*F[3][X]));
+        qtopo+=real(trace(F[0][X]*F[5][X]));
+        qtopo+=-real(trace(F[1][X]*F[4][X]));
+        qtopo+=real(trace(F[2][X]*F[3][X]));
 
         energy+=F[0][X].squarenorm();
         energy+=F[1][X].squarenorm();
@@ -138,7 +140,7 @@ void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qto
     qtopo.allreduce(false).delayed(true);
 
 #if NDIM == 4
-    Field<Algebra<group>> F[6];
+    Field<group> F[6];
     // F[0]: F[0][1], F[1]: F[0][2], F[2]: F[0][3],
     // F[3]: F[1][2], F[4]: F[1][3], F[5]: F[2][3]
     int k=0;
@@ -147,14 +149,15 @@ void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qto
             F[k][X]=0.25*(U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger()
                 -(U[dir1][X-dir1-dir2]*U[dir2][X-dir2]).dagger()*U[dir2][X-dir1-dir2]*U[dir1][X-dir1]
                 +U[dir2][X]*(U[dir2][X-dir1]*U[dir1][X-dir1+dir2]).dagger()*U[dir1][X-dir1]
-                -U[dir1][X]*(U[dir1][X-dir2]*U[dir2][X+dir1-dir2]).dagger()*U[dir2][X-dir2]).project_to_algebra();
+                -U[dir1][X]*(U[dir1][X-dir2]*U[dir2][X+dir1-dir2]).dagger()*U[dir2][X-dir2]);
+            F[k][X]=0.5*(F[k][X]-F[k][X].dagger()); // anti-hermitian projection
         }
         ++k;
     }
     onsites(ALL) {
-        qtopo+=real(trace(F[0][X].dagger()*F[5][X]));
-        qtopo+=-real(trace(F[1][X].dagger()*F[4][X]));
-        qtopo+=real(trace(F[2][X].dagger()*F[3][X]));
+        qtopo+=real(trace(F[0][X]*F[5][X]));
+        qtopo+=-real(trace(F[1][X]*F[4][X]));
+        qtopo+=real(trace(F[2][X]*F[3][X]));
 
         energy+=F[0][X].squarenorm();
         energy+=F[1][X].squarenorm();
@@ -164,51 +167,8 @@ void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qto
         energy+=F[5][X].squarenorm();
     }
 #endif
-    qtopo_out=qtopo.value()/(8.0*M_PI*M_PI);
-    energy_out=energy.value()*0.5;
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void measure_topo_charge_and_energy_log_clover(const GaugeField<group>& U,atype& qtopo_out,atype& energy_out) {
-    // measure topological charge and field strength energy of the gauge field, using the
-    // logs of the "clover leave matrices" as components of the field strength tensor
-    // (this is here just for cross check of log-definition above; should be the same, 
-    // but more costly since log is taken four times more)
-
-    Reduction<atype> qtopo=0;
-    Reduction<atype> energy=0;
-    qtopo.allreduce(false).delayed(true);
-
-#if NDIM == 4
-    Field<Algebra<group>> F[6];
-    // F[0]: F[0][1], F[1]: F[0][2], F[2]: F[0][3],
-    // F[3]: F[1][2], F[4]: F[1][3], F[5]: F[2][3]
-    int k=0;
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        onsites(ALL) {
-            F[k][X]=log(U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger());
-            F[k][X]-=log((U[dir1][X-dir1-dir2]*U[dir2][X-dir2]).dagger()*U[dir2][X-dir1-dir2]*U[dir1][X-dir1]);
-            F[k][X]+=log(U[dir2][X]*(U[dir2][X-dir1]*U[dir1][X-dir1+dir2]).dagger()*U[dir1][X-dir1]);
-            F[k][X]-=log(U[dir1][X]*(U[dir1][X-dir2]*U[dir2][X+dir1-dir2]).dagger()*U[dir2][X-dir2]);
-            F[k][X]*=0.25;
-        }
-        ++k;
-    }
-    onsites(ALL) {
-        qtopo+=real(trace(F[0][X].dagger()*F[5][X]));
-        qtopo+=-real(trace(F[1][X].dagger()*F[4][X]));
-        qtopo+=real(trace(F[2][X].dagger()*F[3][X]));
-
-        energy+=F[0][X].squarenorm();
-        energy+=F[1][X].squarenorm();
-        energy+=F[2][X].squarenorm();
-        energy+=F[3][X].squarenorm();
-        energy+=F[4][X].squarenorm();
-        energy+=F[5][X].squarenorm();
-    }
-#endif
-    qtopo_out=qtopo.value()/(8.0*M_PI*M_PI);
-    energy_out=energy.value()*0.5;
+    qtopo_out=qtopo.value()/(4.0*M_PI*M_PI);
+    energy_out=energy.value();
 }
 
 
@@ -416,6 +376,10 @@ void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>&
     hila::out0<<string_format("MEAS % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e",plaqbp,plaq,e2,poly.real(),poly.imag())<<'\n';
 }
 
+// end measurement functions
+///////////////////////////////////////////////////////////////////////////////////
+// Wilson flow functions
+
 template <typename group,typename atype=hila::arithmetic_type<group>>
 void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step) {
     // perform measurements on flowed gauge configuration V at flow scale flow_l
@@ -424,7 +388,7 @@ void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step)
     static bool first=true;
     if(first) {
         // print legend for flow measurement output
-        hila::out0<<"Legend  WFLOW MEAS  f.-scale  BP-S-plaq  S-plaq  t^2*E_plaq  t^2*E_log  Qtopo_log  t^2*E_clov  Qtopo_clov  [t step size]\n";
+        hila::out0<<"Legend WFLMEAS  f.-scale  BP-S-plaq  S-plaq  t^2*E_plaq  t^2*E_log  Qtopo_log  t^2*E_clov  Qtopo_clov  [t step size]\n";
         first=false;
     }
     auto plaqbp=measure_plaq_bp(V)/(lattice.volume()*NDIM*(NDIM-1)/2); // average bulk-prevention plaquette action
@@ -445,7 +409,7 @@ void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step)
     ecl/=lattice.volume();
 
     // print formatted results to standard output :
-    hila::out0<<string_format("WFLOW MEAS % 6.2f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e   [%0.5f]",flow_l,plaqbp,plaq,pow(flow_l,4)/64.0*eplaq,pow(flow_l,4)/64.0*elog,qtopolog,pow(flow_l,4)/64.0*ecl,qtopocl,t_step)<<'\n';
+    hila::out0<<string_format("WFLMEAS % 7.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e   [%0.5f]",flow_l,plaqbp,plaq,pow(flow_l,4)/64.0*eplaq,pow(flow_l,4)/64.0*elog,qtopolog,pow(flow_l,4)/64.0*ecl,qtopocl,t_step)<<'\n';
 }
 
 template <typename group>
@@ -456,112 +420,47 @@ void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_wilson_flow(GaugeField<group>& V,atype l_start,atype l_end) {
-    // wilson flow integration from flow scale l_start to l_end
-    // using 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
-    // arXiv:2101.05320 for derivation of this Runge-Kutta method)
-    atype tmin=l_start*l_start/8.0;
-    atype tmax=l_end*l_end/8.0;
-    int nsteps=10;
-    atype step=(tmax-tmin)/(atype)nsteps;
-    while(step>0.08) {
-        //make sure the step size is not too large
-        ++nsteps;
-        step=(tmax-tmin)/(atype)nsteps;
-    }
-
-    VectorField<Algebra<group>> k1,k2;
-
-    // 3rd order Runge-Kutta coefficients from arXiv:1006.4518 :
-    atype a11=0.25;
-    atype a21=-17.0/36.0,a22=8.0/9.0;
-    atype a33=0.75;
-
-    for(int i=0; i<nsteps; ++i) {
-        get_wf_force(V,k1);
-        foralldir(d) onsites(ALL) {
-            V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
-        }
-
-        get_wf_force(V,k2);
-        foralldir(d) onsites(ALL) {
-            k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
-            V[d][X]=chexp(k2[d][X])*V[d][X];
-        }
-
-        get_wf_force(V,k1);
-        foralldir(d) onsites(ALL) {
-            k1[d][X]=k1[d][X]*(step*a33)-k2[d][X];
-            V[d][X]=chexp(k1[d][X])*V[d][X];
-        }
-    }
-
-    V.reunitarize_gauge();   
-    return step;
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_wilson_flow_o2(GaugeField<group>& V,atype l_start,atype l_end) {
-    // wilson flow integration from flow scale l_start to l_end
-    // using 2rd order Runge-Kutta (cf. arXiv:2101.05320 for description
-    // of method to derivation coefficients)
-    atype tmin=l_start*l_start/8.0;
-    atype tmax=l_end*l_end/8.0;
-    int nsteps=10;
-    atype step=(tmax-tmin)/(atype)nsteps;
-    while(step>0.08) {
-        //make sure the step size is not too large
-        ++nsteps;
-        step=(tmax-tmin)/(atype)nsteps;
-    }
-
-    VectorField<Algebra<group>> k1,k2;
-
-    // 2nd order Runge-Kutta coefficients :
-    atype b11=0.25;
-    atype b21=-1.25,b22=2.0;
-
-    for(int i=0; i<nsteps; ++i) {
-        get_wf_force(V,k1);
-        foralldir(d) onsites(ALL) {
-            V[d][X]=chexp(k1[d][X]*(step*b11))*V[d][X];
-        }
-
-        get_wf_force(V,k2);
-        foralldir(d) onsites(ALL) {
-            V[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
-        }
-
-    }
-
-    V.reunitarize_gauge();
-    return step;
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
 atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype tstep=0.001,atype atol=1.0e-7,atype rtol=1.0e-7) {
     // wilson flow integration from flow scale l_start to l_end
-    // using 3rd order Runge-Kutta from arXiv:1006.4518 (cf. appendix C of
+    // using 3rd order Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
+    // and embedded RK2 for adaptive step size
 
     // translate flow scale interval [l_start,l_end] to corresponding
     // flow time interval [t,tmax] :
     atype t=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
-    atype step=min(min(tstep,0.51*(tmax-t)),0.08);  //initial step size
+    atype lstab=0.09; // stability limit
+    atype step=min(min(tstep,0.51*(tmax-t)),lstab);  //initial step size
 
     VectorField<Algebra<group>> k1,k2;
     GaugeField<group> V2,V0;
     Field<atype> reldiff;
     atype maxreldiff,maxstep;
 
-    // 3rd order Runge-Kutta coefficients from arXiv:1006.4518 :
+    // RK3 coefficients from arXiv:1006.4518 :
+    // correspond to standard RK3 with Butcher-tableau 
+    // (cf. arXiv:2101.05320, Appendix C)
+    //  0  |   0     0     0
+    //  #  |  1/4    0     0
+    //  #  | -2/9   8/9    0
+    // -------------------------
+    //     |  1/4    0    3/4
+    //
     atype a11=0.25;
     atype a21=-17.0/36.0,a22=8.0/9.0;
     atype a33=0.75;
 
-    // 2nd order step coefficients :
+    // RK2 coefficients :
+    // cf. Alg. 6 and Eqn. (13)-(14) in arXiv:2101.05320 to see
+    // how these are obtained from standard RK2 with Butcher-tableau
+    //  0  |   0     0
+    //  #  |  1/4    0
+    // -----------------
+    //     |  -1     2
+    //
     atype b21=-1.25,b22=2.0;
+
     V0=V;
     bool stop=false;
 
@@ -620,7 +519,7 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype 
             V0=V;
         }
         // adjust step size for next iteration to better match accuracy goal :
-        step=min(0.9*maxstep,0.08);
+        step=min(0.9*maxstep,lstab);
     }
 
     V.reunitarize_gauge();
@@ -628,7 +527,7 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype 
 }
 
 
-// end measurement functions
+// end Wilson flow functions
 ///////////////////////////////////////////////////////////////////////////////////
 // load/save config functions
 
@@ -723,10 +622,14 @@ int main(int argc,char** argv) {
     p.n_therm=par.get("thermalization trajs");
     // wilson flow frequency (number of traj. between w. flow measurement)
     p.wflow_freq=par.get("wflow freq");
-    // wilson flow max. flow distance
+    // wilson flow max. flow-distance
     p.wflow_max_l=par.get("wflow max lambda");
-    // wilson flow flow distance step size
+    // wilson flow flow-distance step size
     p.wflow_l_step=par.get("wflow lambda step");
+    // wilson flow absolute accuracy (per integration step)
+    p.wflow_a_accu=par.get("wflow abs. accuracy");
+    // wilson flow relative accuracy (per integration step)
+    p.wflow_r_accu=par.get("wflow rel. accuracy");
     // random seed = 0 -> get seed from time
     long seed=par.get("random seed");
     // save config and checkpoint
@@ -736,45 +639,8 @@ int main(int argc,char** argv) {
 
     par.close(); // file is closed also when par goes out of scope
 
-    /*
-    if(hila::myrank()==0) {
-        // test matrix logarithm:
-        mygroup tU;
-        tU.random();
-        std::cout<<"tU:"<<std::endl;
-        std::cout<<tU<<std::endl;
-        Algebra<mygroup> ltU=log(tU);
-        mygroup ltUg=ltU.expand();
-        std::cout<<"ltU:"<<std::endl;
-        std::cout<<ltUg<<std::endl;
 
-        Algebra<mygroup> tltU=ltU;
-        std::cout<<tltU.dagger()*ltU/2<<" -- "<<real(trace(ltUg.dagger()*ltUg))<<std::endl;
-        ltUg*=0.5;
-        tU=chexp(ltUg);
-        std::cout<<"sqrt(tU)=exp(ltU/2):"<<std::endl;
-        std::cout<<tU<<std::endl;
-        tU=tU*tU;
-        std::cout<<"sqrt(tU)^2:"<<std::endl;
-        std::cout<<tU<<std::endl;
-    }
-    */
-
-    /*
-    levi_civita<NDIM> LCS;
-    if(hila::myrank()==0) {
-        // check levi_citiva output:
-        for(int i=0; i<LCS.nfac; ++i) {
-            std::cout<<i<<"  :  ";
-            for(int j=0; j<LCS.n; ++j) {
-                std::cout<<LCS.a[i][j]<<" ";
-            }
-            std::cout<<"  :  "<<LCS.a[i][LCS.n]<<std::endl;
-        }
-    }
-    */
-    
-    // setting up the lattice is convenient to do after reading
+                 // setting up the lattice is convenient to do after reading
     // the parameter
     lattice.setup(lsize);
 
@@ -794,7 +660,7 @@ int main(int argc,char** argv) {
     auto orig_trajlen=p.trajlen;
     GaugeField<mygroup> U_old;
     int nreject=0;
-    for(int trajectory=start_traj; trajectory<p.n_traj; trajectory++) {
+    for(int trajectory=start_traj; trajectory<p.n_traj; ++trajectory) {
         if(trajectory<p.n_therm) {
             // during thermalization: start with 10% of normal step size (and trajectory length)
             // and increse linearly with number of accepted thermalization trajectories. normal
@@ -880,7 +746,7 @@ int main(int argc,char** argv) {
                     ftype t_step=0.001;
                     for(int i=0; i<nflow_steps; ++i) {
 
-                        t_step=do_wilson_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,t_step);
+                        t_step=do_wilson_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,t_step,p.wflow_a_accu,p.wflow_r_accu);
 
                         measure_wflow_stuff(V,(i+1)*p.wflow_l_step,t_step);
 

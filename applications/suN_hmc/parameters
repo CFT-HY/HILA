@@ -9,6 +9,8 @@ thermalization trajs   20
 wflow freq             10
 wflow max lambda       6.
 wflow lambda step      0.25
+wflow abs. accuracy    1.0e-7
+wflow rel. accuracy    1.0e-7
 random seed            0
 trajs/saved            20
 config name            config
