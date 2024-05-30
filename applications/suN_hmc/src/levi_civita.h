@@ -1,8 +1,3 @@
-/**  levi_civita.h 
- *   class providing non-zero entries of N-dimensional 
- *   Levi-Civita symbol in sparse form.
- */
-
 #ifndef LEVI_CIVITA_H_
 #define LEVI_CIVITA_H_
 
