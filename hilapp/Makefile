@@ -34,7 +34,7 @@
 DISTRO := $(shell cat /etc/*-release | grep -iE "^(ID=)" | cut -f2 -d"=")
 
 $(info --------------------------------------------------------------)
-$(info We are on $(DISTRO) ditribution)
+$(info We are on $(DISTRO) distribution)
 $(info --------------------------------------------------------------)
 
 # keep 14 as default for now

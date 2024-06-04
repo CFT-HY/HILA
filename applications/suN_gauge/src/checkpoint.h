@@ -23,7 +23,7 @@ void checkpoint(const GaugeField<group> &U, int iteration, const parameters &p) 
 
     std::stringstream msg;
     msg << "Checkpointing, time " << hila::gettime() - t;
-    hila::timestamp(msg.str().c_str());
+    hila::timestamp(msg.str());
 }
 
 template <typename group>
