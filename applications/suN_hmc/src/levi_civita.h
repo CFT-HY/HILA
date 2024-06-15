@@ -1,14 +1,8 @@
-/** @file levi_civita.h */
-
 #ifndef LEVI_CIVITA_H_
 #define LEVI_CIVITA_H_
 
 #include "hila.h"
 
-/**
- * @brief class providing non-zero entries of N-dimensional 
- * Levi-Civita symbol in sparse form.
- */
 
 template <int N>
 struct Factorial {
