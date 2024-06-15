@@ -2546,6 +2546,7 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat,Matrix_t<n,m,T,MT>
     // would have at iteration i, if no renormalization were used.
     T ch,cho; // temporary variables for iteration
     hila::arithmetic_type<T> s,rs=1.0; // temp variables used for renormalization of pal[]
+    ttwpf=twpf;
     for(j=n; j<mmax; ++j) {
         pal[n-1]*=rs;
         ch=-pal[n-1]*crpl[0];
