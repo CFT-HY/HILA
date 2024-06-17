@@ -13,6 +13,7 @@
 #include "parameters.h"
 #include "twist_specific_methods.h"
 #include "polyakov_surface.h"
+#include "utility.h"
 
 // /**
 //  * @brief Helper function to get valid z-coordinate index
@@ -60,20 +61,26 @@ template <typename group>
 void measure_poly(const GaugeField<group> &U, const parameters &p) {
   static bool first = true;
   auto poly = measure_polyakov_twist(U);
+  // if (first) {
+  //   hila::out0 << "polyakov: ";
+  //   for (int i = 0; i < poly.size() - 1; i++)
+  //     hila::out0 << i << ", ";
+  //   hila::out0 << "sum \n";
+  //   first = false;
+  // }
+  // hila::out0 << "polyakov: ";
+  // for (int i = 0; i < poly.size(); i++) {
+  //   hila::out0 << poly[i] << ", ";
+  // }
   if (first) {
-    hila::out0 << "polyakov: ";
-    for (int i = 0; i < poly.size() - 1; i++)
-      hila::out0 << i << ", ";
-    hila::out0 << "sum \n";
+    print_formatted_numbers(poly,"polyakov",true,true);
+    print_formatted_numbers(poly,"polyakov",false,true);
     first = false;
-  }
-  hila::out0 << "polyakov: ";
-  for (int i = 0; i < poly.size(); i++) {
-    hila::out0 << poly[i] << ", ";
+  } else {
+    print_formatted_numbers(poly,"polyakov",false,true);
   }
   //hila::out0 << poly[poly.size()-1] << ", ";
   //hila::out0 << poly << ", ";
-  hila::out0 << "\n";
 }
 
 /**
@@ -275,7 +282,7 @@ int main(int argc, char **argv) {
     if (trajectory >= 0) {
       measure_timer.start();
 
-      measure_plaq(U, p);
+      //measure_plaq(U, p);
 
       measure_poly(U, p);
 
