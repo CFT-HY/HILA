@@ -228,6 +228,30 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
         return a;
     }
 
+    Algebra<SU<N,T>> project_to_algebra_scaled(T scf) const {
+        Algebra<SU<N,T>> a;
+
+        // diagonal generators
+        T sum=this->e(0,0).im;
+        for(int i=1; i<N; i++) {
+            a.e(i-1)=scf*(sum-i*this->e(i,i).im)/sqrt(0.5*i*(i+1));
+            sum+=this->e(i,i).im;
+        }
+
+        // Then off-diag bits
+        int k=a.n_diag;
+        for(int i=0; i<N-1; i++) {
+            for(int j=i+1; j<N; j++) {
+                auto od=this->e(i,j)-this->e(j,i).conj();
+                a.e(k)=scf*od.re;
+                a.e(k+1)=scf*od.im;
+                k+=2;
+            }
+        }
+
+        return a;
+    }
+
     Algebra<SU<N,T>> project_to_algebra(T& onenorm) const {
         Algebra<SU<N,T>> a;
 
@@ -328,7 +352,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
         return m;
     }
 
-    /// expand algebra to scaled matrix rep - antihermitean
+    /// expand algebra to scaled matrix rep - antihermitian
     SU<N,T> expand_scaled(T scf) const {
         SU<N,T> m;
 
@@ -454,8 +478,9 @@ Algebra<SU<N,T>> log(const SU<N,T>& a) {
             break;
         }
         tmat=res.expand_scaled(-1.0);
-        tmat2=chexp(tmat,pl);
-        tmat=a*tmat2;
+        chexp(tmat,tmat2,pl);
+        //tmat=a*tmat2;
+        mult(a,tmat2,tmat);
     }
 
     return res;
