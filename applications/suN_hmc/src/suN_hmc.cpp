@@ -1,5 +1,4 @@
 #include "hila.h"
-#include "gauge/staples.h"
 #include "gauge/polyakov.h"
 #include <string>
 
@@ -50,6 +49,40 @@ struct parameters {
 ///////////////////////////////////////////////////////////////////////////////////
 // general functions
 
+template <typename T>
+void staplesum(const GaugeField<T>& U,Field<T>& staples,Direction d1,Parity par=ALL) {
+
+    Field<T> lower;
+
+    bool first=true;
+    foralldir(d2) if(d2!=d1) {
+
+        // anticipate that these are needed
+        // not really necessary, but may be faster
+        U[d2].start_gather(d1,ALL);
+        U[d1].start_gather(d2,par);
+
+        // calculate first lower 'U' of the staple sum
+        // do it on opp parity
+        onsites(opp_parity(par)) {
+            lower[X]=(U[d1][X]*U[d2][X+d1]).dagger()*U[d2][X];
+        }
+
+        // calculate then the upper 'n', and add the lower
+        // lower could also be added on a separate loop
+        if(first) {
+            onsites(par) {
+                staples[X]=U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger()+lower[X-d2];
+            }
+            first=false;
+        } else {
+            onsites(par) {
+                staples[X]+=U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger()+lower[X-d2];
+            }
+        }
+    }
+}
+
 template <typename group>
 ftype measure_plaq(const GaugeField<group>& U) {
     // measure the Wilson plaquette action
@@ -76,16 +109,16 @@ atype measure_e2(const VectorField<Algebra<group>>& E) {
 }
 
 template <typename group,int L>
-void get_wilson_line(const GaugeField<group>& U,const Direction(&path)[L],Field<group>& R) {
+void get_wilson_line_b(const GaugeField<group>& U,const Direction(&path)[L],Field<group>& R) {
     // compute the Wilson line defined by the list of directions "path"
     CoordinateVector v=0;
     // initialize R with first link of the Wilson line:
     if(path[0]<NDIM) {
-        // positive direction
+        // link points in positive direction
         onsites(ALL) R[X]=U[path[0]][X];
         v+=path[0];
     } else {
-        // negative direction
+        // link points in negative direction
         v+=path[0];
         onsites(ALL) R[X]=U[opp_dir(path[0])][X+v].dagger();
     }
@@ -93,11 +126,11 @@ void get_wilson_line(const GaugeField<group>& U,const Direction(&path)[L],Field<
     // multiply R successively with the remaining links of the Wilson line
     for(int i=1; i<L; ++i) {
         if(path[i]<NDIM) {
-            // positive direction
+            // link points in positive direction
             onsites(ALL) R[X]*=U[path[i]][X+v];
             v+=path[i];
         } else {
-            // negative direction
+            // link points in negative direction
             v+=path[i];
             onsites(ALL) R[X]*=U[opp_dir(path[i])][X+v].dagger();
         }
@@ -108,48 +141,154 @@ template <typename group,int L>
 void get_wloop_force_add_b(const GaugeField<group>& U,const Direction(&path)[L],ftype eps,VectorField<Algebra<group>>& K) {
     // compute gauge force of Wilson loop defined by "path" and add result to vector field "K"
     Field<group> R;
-    get_wilson_line(U,path,R);
+    get_wilson_line_b(U,path,R);
 
     CoordinateVector v=0;
     for(int i=0; i<L; ++i) {
         if(path[i]<NDIM) {
-            // positive direction
-            onsites(ALL) K[path[i]][X]-=eps*(R[X-v]).project_to_algebra();
+            // link points in positive direction
+            onsites(ALL) K[path[i]][X]-=R[X-v].project_to_algebra_scaled(eps);
 
             onsites(ALL) R[X]=U[path[i]][X+v].dagger()*R[X]*U[path[i]][X+v];
 
             v+=path[i];
         } else {
-            // negative direction
+            // link points in negative direction
             v+=path[i];
 
             onsites(ALL) R[X]=U[opp_dir(path[i])][X+v]*R[X]*U[opp_dir(path[i])][X+v].dagger();
 
-            onsites(ALL) K[opp_dir(path[i])][X]+=eps*(R[X-v]).project_to_algebra();
+            onsites(ALL) K[opp_dir(path[i])][X]+=R[X-v].project_to_algebra_scaled(eps);
+        }
+    }
+}
+
+template <typename group,int L>
+void get_wilson_line(const GaugeField<group>& U,const Direction(&path)[L],Field<group>& R) {
+    // compute the Wilson line defined by the list of directions "path"
+    int i,ip;
+
+    int udirs[NDIRS]={0};
+    for(i=0; i<L; ++i) {
+        if((udirs[(int)path[i]]++)==0) {
+            if(path[i]<NDIM) {
+                U[path[i]].start_gather(opp_dir(path[i]),ALL);
+            }
+        }
+    }
+
+    Field<group> R0[2];
+
+    i=0;
+    ip=0;
+    // initialize R0[0] with first link variable of the Wilson line:
+    if(path[i]<NDIM) {
+        // link points in positive direction
+        onsites(ALL) R0[ip][X]=U[path[i]][X-path[i]];
+    } else {
+        // link points in negative direction
+        onsites(ALL) R0[ip][X]=U[opp_dir(path[i])][X].dagger();
+    }
+
+    // multiply R0[ip] successively with the L-2 intermediate link variables of the Wilson line
+    // and store the result in R0[1-ip]
+    for(i=1; i<L-1; ++i) {
+        //R0[ip].start_gather(opp_dir(path[i]),ALL);
+        if(path[i]<NDIM) {
+            // link points in positive direction
+            onsites(ALL) mult(R0[ip][X-path[i]],U[path[i]][X-path[i]],R0[1-ip][X]);
+        } else {
+            // link points in negative direction
+            onsites(ALL) mult(R0[ip][X-path[i]],U[opp_dir(path[i])][X].dagger(),R0[1-ip][X]);
+        }
+        ip=1-ip;
+    }
+
+    // multiply R0[ip] by the last link variable of the Wilson line and store the result in R
+    //R0[ip].start_gather(opp_dir(path[i]),ALL);
+    if(path[i]<NDIM) {
+        // link points in positive direction
+        onsites(ALL) mult(R0[ip][X-path[i]],U[path[i]][X-path[i]],R[X]);
+    } else {
+        // link points in negative direction
+        onsites(ALL) mult(R0[ip][X-path[i]],U[opp_dir(path[i])][X].dagger(),R[X]);
+    }
+}
+
+template <typename group,int L>
+void get_wloop_force_add(const GaugeField<group>& U,const Direction(&path)[L],const Field<group>& W,ftype eps,VectorField<Algebra<group>>& K) {
+    // compute gauge force of Wilson loop "W", corresponding to "path" and add result to vector field "K"
+    Field<group> R=W;
+    Field<group> R0;
+    int udirs[NDIRS]={0};
+    for(int i=0; i<L; ++i) {
+        if((udirs[(int)path[i]]++)==0) {
+            if(path[i]<NDIM) {
+                U[path[i]].start_gather(opp_dir(path[i]),ALL);
+            }
+        }
+    }
+
+    for(int i=0; i<L; ++i) {
+        //R.start_gather(opp_dir(path[i]),ALL);
+        if(path[i]<NDIM) {
+            // link points in positive direction
+            onsites(ALL) K[path[i]][X]-=R[X].project_to_algebra_scaled(eps);
+
+            onsites(ALL) mult(U[path[i]][X-path[i]].dagger(),R[X-path[i]],R0[X]);
+            onsites(ALL) mult(R0[X],U[path[i]][X-path[i]],R[X]);
+
+            //onsites(ALL) R0[X]=U[path[i]][X-path[i]].dagger()*R[X-path[i]];
+            //onsites(ALL) R[X]=R0[X]*U[path[i]][X-path[i]];
+        } else {
+            // link points in negative direction
+            onsites(ALL) mult(U[opp_dir(path[i])][X],R[X-path[i]],R0[X]);
+            onsites(ALL) mult(R0[X],U[opp_dir(path[i])][X].dagger(),R[X]);
+
+            //onsites(ALL) R0[X]=U[opp_dir(path[i])][X]*R[X-path[i]];
+            //onsites(ALL) R[X]=R0[X]*U[opp_dir(path[i])][X].dagger();
+
+            onsites(ALL) K[opp_dir(path[i])][X]+=R[X].project_to_algebra_scaled(eps);
         }
     }
 }
 
 template <typename group,int L>
 void get_wloop_force_add(const GaugeField<group>& U,const Direction(&path)[L],ftype eps,VectorField<Algebra<group>>& K) {
-    // compute gauge force of Wilson loop defined by "path" and add result to vector field "K"
+    // compute gauge force of Wilson loop along "path" and add result to vector field "K"
     Field<group> R;
     Field<group> R0;
     get_wilson_line(U,path,R);
 
+    int udirs[NDIRS]={0};
     for(int i=0; i<L; ++i) {
+        if((udirs[(int)path[i]]++)==0) {
+            if(path[i]<NDIM) {
+                U[path[i]].start_gather(opp_dir(path[i]),ALL);
+            } 
+        }
+    }
+
+    for(int i=0; i<L; ++i) {
+        //R.start_gather(opp_dir(path[i]),ALL);
         if(path[i]<NDIM) {
-            // positive direction
-            onsites(ALL) K[path[i]][X]-=eps*(R[X]).project_to_algebra();
+            // link points in positive direction
+            onsites(ALL) K[path[i]][X]-=R[X].project_to_algebra_scaled(eps);
 
-            onsites(ALL) R0[X]=U[path[i]][X-path[i]].dagger()*R[X-path[i]];
-            onsites(ALL) R[X]=R0[X]*U[path[i]][X-path[i]];
+            onsites(ALL) mult(U[path[i]][X-path[i]].dagger(),R[X-path[i]],R0[X]);
+            onsites(ALL) mult(R0[X],U[path[i]][X-path[i]],R[X]);
+
+            //onsites(ALL) R0[X]=U[path[i]][X-path[i]].dagger()*R[X-path[i]];
+            //onsites(ALL) R[X]=R0[X]*U[path[i]][X-path[i]];
         } else {
-            // negative direction
-            onsites(ALL) R0[X]=U[opp_dir(path[i])][X]*R[X-path[i]];
-            onsites(ALL) R[X]=R0[X]*U[opp_dir(path[i])][X].dagger();
+            // link points in negative direction
+            onsites(ALL) mult(U[opp_dir(path[i])][X],R[X-path[i]],R0[X]);
+            onsites(ALL) mult(R0[X],U[opp_dir(path[i])][X].dagger(),R[X]);
 
-            onsites(ALL) K[opp_dir(path[i])][X]+=eps*(R[X]).project_to_algebra();
+            //onsites(ALL) R0[X]=U[opp_dir(path[i])][X]*R[X-path[i]];
+            //onsites(ALL) R[X]=R0[X]*U[opp_dir(path[i])][X].dagger();
+
+            onsites(ALL) K[opp_dir(path[i])][X]+=R[X].project_to_algebra_scaled(eps);
         }
     }
 }
@@ -168,7 +307,7 @@ ftype measure_rect12(const GaugeField<group>& U) {
     // measure the 1x2-rectangle action
     Reduction<ftype> plaq=0;
     plaq.allreduce(false).delayed(true);
-    Field<group> R;
+    Field<group> R=0;
     foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
         Direction path[6]={dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2),opp_dir(dir2)};
         get_wilson_line(U,path,R);
@@ -238,6 +377,106 @@ void get_force_impr(const GaugeField<group>& U,VectorField<Algebra<group>>& K,co
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
+void get_force_impr_f(const GaugeField<group>& U,VectorField<Algebra<group>>& K,const parameters& p) {
+    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
+    // in a faster way and write the results to K
+
+    foralldir(d1) {
+        K[d1][ALL]=0;
+    }
+
+    Field<group> ustap;
+    Field<group> lstap;
+
+    foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
+        U[dir2].start_gather(dir1,ALL);
+        U[dir1].start_gather(dir2,ALL);
+        // get upper (dir1,dir2) and lower (dir1,-dir2) staples
+        onsites(ALL) {
+            lstap[X]=(U[dir1][X]*U[dir2][X+dir1]).dagger()*U[dir2][X];
+            ustap[X]=U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger();
+        }
+
+        lstap.start_gather(opp_dir(dir2),ALL);
+
+        // compute plaquette contribution to force and add it to K
+        onsites(ALL) {
+            K[dir1][X]-=(U[dir1][X]*(ustap[X]+lstap[X-dir2])).project_to_algebra_scaled(p.c11);
+        }
+        
+        if(p.c12!=0) {
+            // rectangle contribution to force
+            Direction path[6]={opp_dir(dir2),dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2)};
+
+            // compose rectangle and store it in ustap
+            onsites(ALL) ustap[X]=lstap[X-dir2].dagger()*ustap[X];
+
+            // compute rectangle force and add it to K
+            get_wloop_force_add(U,path,ustap,p.c12,K);
+        }
+    }
+}
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+void get_force_impr_f2(const GaugeField<group>& U,VectorField<Algebra<group>>& K,const parameters& p) {
+    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
+    // in a faster way and write the results to K
+
+    foralldir(d1) {
+        K[d1][ALL]=0;
+    }
+
+    Field<group> ustap;
+    Field<group> lstap;
+    Field<group> tstap;
+
+    bool first=true;
+    foralldir(dir1) {
+        first=true;
+        foralldir(dir2) if(dir1!=dir2) {
+            U[dir2].start_gather(dir1,ALL);
+            U[dir1].start_gather(dir2,ALL);
+
+            // get upper (dir1,dir2) and lower (dir1,-dir2) staples
+            onsites(ALL) {
+                lstap[X]=(U[dir1][X]*U[dir2][X+dir1]).dagger()*U[dir2][X];
+                ustap[X]=U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger();
+            }
+
+            lstap.start_gather(opp_dir(dir2),ALL);
+
+            if(first) {
+                onsites(ALL) {
+                    tstap[X]=ustap[X];
+                    tstap[X]+=lstap[X-dir2];
+                }
+            } else {
+                onsites(ALL) {
+                    tstap[X]+=ustap[X];
+                    tstap[X]+=lstap[X-dir2];
+                }
+            }
+
+            if(p.c12!=0) {
+                // rectangle contribution to force
+                Direction path[6]={opp_dir(dir2),dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2)};
+
+                // compose rectangle and store it in ustap
+                onsites(ALL) ustap[X]=lstap[X-dir2].dagger()*ustap[X];
+
+                // compute rectangle force and add it to K
+                get_wloop_force_add(U,path,ustap,p.c12,K);
+            }
+            first=false;
+        }
+        // compute plaquette contribution to force and add it to K
+        onsites(ALL) {
+            K[dir1][X]-=(U[dir1][X]*tstap[X]).project_to_algebra_scaled(p.c11);
+        }
+    }
+}
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_action_impr(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
     // measure the total action, consisting of plaquette, rectangle (if present), and momentum term
     atype plaq=p.c11*measure_plaq(U);
@@ -276,6 +515,9 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
     // (Note: by replacing log(...).expand() in the following by anti-hermitian projection,
     // one would recover the clover F[dir1][dir2])
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
+        U[dir2].start_gather(dir1,ALL);
+        U[dir1].start_gather(dir2,ALL);
+
         onsites(ALL) {
             // log of dir1-dir2-plaquette that starts and ends at X; corresponds to F[dir1][dir2]
             // at center location X+dir1/2+dir2/2 of plaquette:
@@ -283,10 +525,17 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo
             // parallel transport to X+dir1
             tF1[X]=U[dir1][X].dagger()*tF0[X]*U[dir1][X];
         }
+
+        tF1.start_gather(opp_dir(dir1),ALL);
+        onsites(ALL) {
+            tF0[X]+=tF1[X-dir1];
+        }
+        U[dir2].start_gather(opp_dir(dir2),ALL);
+        tF0.start_gather(opp_dir(dir2),ALL);
         onsites(ALL) {
             // get F[dir1][dir2] at X from average of the (parallel transported) F[dir1][dir2] from 
             // the centers of all dir1-dir2-plaquettes that touch X :
-            F[k][X]=(tF0[X]+tF1[X-dir1]+U[dir2][X-dir2].dagger()*(tF0[X-dir2]+tF1[X-dir1-dir2])*U[dir2][X-dir2])*0.25;
+            F[k][X]=(tF0[X]+U[dir2][X-dir2].dagger()*tF0[X-dir2]*U[dir2][X-dir2])*0.25;
         }
         ++k;
     }
@@ -362,7 +611,7 @@ void get_force(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
     foralldir(d) {
         staplesum(U,staple,d);
         onsites(ALL) {
-            K[d][X]=-(U[d][X]*staple[X].dagger()).project_to_algebra();
+            K[d][X]=(U[d][X]*staple[X]).project_to_algebra_scaled(-1.0);
         }
     }
 }
@@ -375,7 +624,7 @@ void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const pa
     foralldir(d) {
         staplesum(U,staple,d);
         onsites(ALL) {
-            E[d][X]-=eps*(U[d][X]*staple[X].dagger()).project_to_algebra();
+            E[d][X]-=(U[d][X]*staple[X]).project_to_algebra_scaled(eps);
         }
     }
 }
@@ -411,7 +660,7 @@ void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const par
 // bulk-prevention functions, cf. arXiv:2306.14319 (with n=2)
 
 template <typename T>
-T get_ch_inv(const T& U) {
+T ch_inv(const T& U) {
     // compute inverse of the square matrix U, using the 
     // Cayley-Hamilton theorem (Faddeev-LeVerrier algorithm)
     T tB[2];
@@ -421,7 +670,7 @@ T get_ch_inv(const T& U) {
     tB[1-ip]=U;
     for(int k=2; k<=T::size(); ++k) {
         tB[1-ip]-=tc;
-        tB[ip]=U*tB[1-ip];
+        mult(U,tB[1-ip],tB[ip]);
         tc=trace(tB[ip])/k;
         ip=1-ip;
     }
@@ -429,20 +678,24 @@ T get_ch_inv(const T& U) {
 }
 
 template <typename T>
-T get_bp_UAmat(const T& U) {
+T bp_UAmat(const T& U) {
     // compute U*A(U) with the A-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
-    T tA1=0.5*(1.+U);
-    T tA2=get_ch_inv(tA1); 
+    T tA1=U;
+    tA1+=1.;
+    tA1*=0.5;
+    T tA2=ch_inv(tA1); 
     tA1=tA2*tA2.dagger();
     return U*tA1*tA1*tA2;
 }
 
 template <typename T>
-T get_bp_iOsqmat(const T& U) {
+T bp_iOsqmat(const T& U) {
     // compute matrix inside the trace on r.h.s. of Eq. (B1) of arXiv:2306.14319 for n=2
-    T tA1=0.5*(1.+U);
+    T tA1=U;
+    tA1+=1.;
+    tA1*=0.5;
     T tA2=tA1.dagger()*tA1;
-    tA1=get_ch_inv(tA2);
+    tA1=ch_inv(tA2);
     return tA1*tA1-1.;
 }
 
@@ -459,14 +712,18 @@ void get_force_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
     }
     foralldir(d1) {
         foralldir(d2) if(d2>d1) {
+            U[d2].start_gather(d1,ALL);
+            U[d1].start_gather(d2,ALL);
             onsites(ALL) {
-                fmatp[X]=get_bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
+                fmatp[X]=bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
                 fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X]; // parallel transport fmatp[X].dagger() to X+d2
                 fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X]; // parallel transport fmatp[X] to X+d1
             }
+            fmatmd1.start_gather(opp_dir(d2),ALL);
+            fmatmd2.start_gather(opp_dir(d1),ALL);
             onsites(ALL) {
-                K[d1][X]-=eps*(fmatmd1[X-d2]+fmatp[X]).project_to_algebra();
-                K[d2][X]-=eps*(fmatmd2[X-d1]-fmatp[X]).project_to_algebra();
+                K[d1][X]-=(fmatmd1[X-d2]+fmatp[X]).project_to_algebra_scaled(eps);
+                K[d2][X]-=(fmatmd2[X-d1]-fmatp[X]).project_to_algebra_scaled(eps);
             }
         }
     }
@@ -481,14 +738,19 @@ void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const
     auto eps=delta*2.0*p.beta/group::size();
     foralldir(d1) {
         foralldir(d2) if(d2>d1) {
+            U[d2].start_gather(d1,ALL);
+            U[d1].start_gather(d2,ALL);
             onsites(ALL) {
-                fmatp[X]=get_bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
+                fmatp[X]=bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
                 fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X]; // parallel transport fmatp[X].dagger() to X+d2
                 fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X]; // parallel transport fmatp[X] to X+d1
             }
+            fmatmd1.start_gather(opp_dir(d2),ALL);
+            fmatmd2.start_gather(opp_dir(d1),ALL);
+
             onsites(ALL) {
-                E[d1][X]-=eps*(fmatmd1[X-d2]+fmatp[X]).project_to_algebra();
-                E[d2][X]-=eps*(fmatmd2[X-d1]-fmatp[X]).project_to_algebra();
+                E[d1][X]-=(fmatmd1[X-d2]+fmatp[X]).project_to_algebra_scaled(eps);
+                E[d2][X]-=(fmatmd2[X-d1]-fmatp[X]).project_to_algebra_scaled(eps);
             }
         }
     }
@@ -500,8 +762,10 @@ atype measure_plaq_bp(const GaugeField<group>& U) {
     Reduction<hila::arithmetic_type<group>> plaq=0;
     plaq.allreduce(false).delayed(true);
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
+        U[dir2].start_gather(dir1,ALL);
+        U[dir1].start_gather(dir2,ALL);
         onsites(ALL) {
-            plaq+=real(trace(get_bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*
+            plaq+=real(trace(bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*
                 (U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size();
         }
     }
@@ -545,7 +809,7 @@ void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>&
     static bool first=true;
     if(first) {
         // print legend for measurement output
-        hila::out0<<"Legend MEAS: BP-plaq  plaq  rect  E^2  P.real  P.imag\n";
+        hila::out0<<"LMEAS:     BP-plaq          plaq          rect           E^2        P.real        P.imag\n";
         first=false;
     }
     auto plaqbp=measure_plaq_bp(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
@@ -568,7 +832,7 @@ void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step)
     static bool first=true;
     if(first) {
         // print legend for flow measurement output
-        hila::out0<<"Legend WFLMEAS  f.-scale  BP-S-plaq  S-plaq  S-rect  t^2*E_plaq  t^2*E_log  Qtopo_log  t^2*E_clov  Qtopo_clov  [t step size]\n";
+        hila::out0<<"LWFLMEAS   flscale     BP-S-plaq        S-plaq        S-rect    t^2*E_plaq     t^2*E_log     Qtopo_log    t^2*E_clov    Qtopo_clov   [t step size]\n";
         first=false;
     }
     auto plaqbp=measure_plaq_bp(V)/(lattice.volume()*NDIM*(NDIM-1)/2); // average bulk-prevention plaquette action
@@ -591,15 +855,15 @@ void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step)
     ecl/=lattice.volume();
 
     // print formatted results to standard output :
-    hila::out0<<string_format("WFLMEAS % 7.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e   [%0.5f]",flow_l,plaqbp,plaq,rect,pow(flow_l,4)/64.0*eplaq,pow(flow_l,4)/64.0*elog,qtopolog,pow(flow_l,4)/64.0*ecl,qtopocl,t_step)<<'\n';
+    hila::out0<<string_format("WFLMEAS  % 9.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e       [%0.5f]",flow_l,plaqbp,plaq,rect,pow(flow_l,4)/64.0*eplaq,pow(flow_l,4)/64.0*elog,qtopolog,pow(flow_l,4)/64.0*ecl,qtopocl,t_step)<<'\n';
 }
 
 template <typename group>
 void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
     // force computation routine to be used to integrate wilson flow
-    get_force(U,E); // force for Wilson plaquette action
+    //get_force(U,E); // force for Wilson plaquette action
     //get_force_bp(U,E); // froce for bulk-preventing action
-    //get_force_impr(U,E,p); // force for improved action -S_{impr} = \p.beta/N*( p.c11*\sum_{plaquettes P} ReTr(P) + p.c12*\sum_{1x2-rectangles R}  ReTr(R) )
+    get_force_impr_f2(U,E,p); // force for improved action -S_{impr} = \p.beta/N*( p.c11*\sum_{plaquettes P} ReTr(P) + p.c12*\sum_{1x2-rectangles R}  ReTr(R) )
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
@@ -827,12 +1091,17 @@ int main(int argc,char** argv) {
     //p.c12=-1.4088;     // rectangle weight
     //p.c11=1.0-8.0*p.c12; // plaquette weight
 
+    // Iwasaki action parameters:
+    p.c12=-0.331;     // rectangle weight
+    p.c11=1.0-8.0*p.c12; // plaquette weight
+
     // LW action parameters:
     //p.c12=-1.0/12.0;     // rectangle weight
     //p.c11=1.0-8.0*p.c12; // plaquette weight
 
-    p.c12=0;
-    p.c11=1.0;
+    // Wilson plaquette action parameters:
+    //p.c12=0;
+    //p.c11=1.0;
 
     // setting up the lattice is convenient to do after reading
     // the parameter
