@@ -1,5 +1,12 @@
 #include "hila.h"
 #include "gauge/polyakov.h"
+#include "wilson_plaquette_action.h"
+#include "bulk_prevention_action.h"
+#include "wilson_line_and_force.h"
+#include "improved_action.h"
+#include "wilson_flow.h"
+#include "topo_charge_clover.h"
+#include "topo_charge_log.h"
 #include <string>
 
 using ftype=double;
@@ -29,8 +36,6 @@ std::string string_format(const std::string& format,Args ... args) {
 // makes it simpler to pass the values around
 struct parameters {
     ftype beta;          // inverse gauge coupling
-    ftype c11;           // improved gauge action plaquette weight
-    ftype c12;           // improved gauge action 1x2-rectangle weight
     ftype dt;            // HMC time step
     int trajlen;         // number of HMC time steps per trajectory
     int n_traj;          // number of trajectories to generate
@@ -49,49 +54,25 @@ struct parameters {
 ///////////////////////////////////////////////////////////////////////////////////
 // general functions
 
-template <typename T>
-void staplesum(const GaugeField<T>& U,Field<T>& staples,Direction d1,Parity par=ALL) {
-
-    Field<T> lower;
-
-    bool first=true;
-    foralldir(d2) if(d2!=d1) {
-
-        // anticipate that these are needed
-        // not really necessary, but may be faster
-        U[d2].start_gather(d1,ALL);
-        U[d1].start_gather(d2,par);
-
-        // calculate first lower 'U' of the staple sum
-        // do it on opp parity
-        onsites(opp_parity(par)) {
-            lower[X]=(U[d1][X]*U[d2][X+d1]).dagger()*U[d2][X];
-        }
-
-        // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop
-        if(first) {
-            onsites(par) {
-                staples[X]=U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger()+lower[X-d2];
-            }
-            first=false;
-        } else {
-            onsites(par) {
-                staples[X]+=U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger()+lower[X-d2];
-            }
-        }
+template <typename group,typename atype=hila::arithmetic_type<group>>
+void update_U(GaugeField<group>& U,const VectorField<Algebra<group>>& E,atype delta) {
+    // evolve U with momentum E over time step delta 
+    foralldir(d) {
+        onsites(ALL) U[d][X]=chexp(E[d][X]*delta)*U[d][X];
     }
 }
 
-template <typename group>
-ftype measure_plaq(const GaugeField<group>& U) {
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype measure_plaq(const GaugeField<group>& U) {
     // measure the Wilson plaquette action
-    Reduction<ftype> plaq=0;
+    Reduction<atype> plaq=0;
     plaq.allreduce(false).delayed(true);
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
+        U[dir2].start_gather(dir1,ALL);
+        U[dir1].start_gather(dir2,ALL);
         onsites(ALL) {
             plaq+=1.0-real(trace(U[dir1][X]*U[dir2][X+dir1]*
-                U[dir1][X+dir2].dagger()*U[dir2][X].dagger()))/group::size();
+                (U[dir2][X]*U[dir1][X+dir2]).dagger()))/group::size();
         }
     }
     return plaq.value();
@@ -108,208 +89,14 @@ atype measure_e2(const VectorField<Algebra<group>>& E) {
     return e2.value()/2;
 }
 
-template <typename group,int L>
-void get_wilson_line_b(const GaugeField<group>& U,const Direction(&path)[L],Field<group>& R) {
-    // compute the Wilson line defined by the list of directions "path"
-    CoordinateVector v=0;
-    // initialize R with first link of the Wilson line:
-    if(path[0]<NDIM) {
-        // link points in positive direction
-        onsites(ALL) R[X]=U[path[0]][X];
-        v+=path[0];
-    } else {
-        // link points in negative direction
-        v+=path[0];
-        onsites(ALL) R[X]=U[opp_dir(path[0])][X+v].dagger();
-    }
-
-    // multiply R successively with the remaining links of the Wilson line
-    for(int i=1; i<L; ++i) {
-        if(path[i]<NDIM) {
-            // link points in positive direction
-            onsites(ALL) R[X]*=U[path[i]][X+v];
-            v+=path[i];
-        } else {
-            // link points in negative direction
-            v+=path[i];
-            onsites(ALL) R[X]*=U[opp_dir(path[i])][X+v].dagger();
-        }
-    }
-}
-
-template <typename group,int L>
-void get_wloop_force_add_b(const GaugeField<group>& U,const Direction(&path)[L],ftype eps,VectorField<Algebra<group>>& K) {
-    // compute gauge force of Wilson loop defined by "path" and add result to vector field "K"
-    Field<group> R;
-    get_wilson_line_b(U,path,R);
-
-    CoordinateVector v=0;
-    for(int i=0; i<L; ++i) {
-        if(path[i]<NDIM) {
-            // link points in positive direction
-            onsites(ALL) K[path[i]][X]-=R[X-v].project_to_algebra_scaled(eps);
-
-            onsites(ALL) R[X]=U[path[i]][X+v].dagger()*R[X]*U[path[i]][X+v];
-
-            v+=path[i];
-        } else {
-            // link points in negative direction
-            v+=path[i];
-
-            onsites(ALL) R[X]=U[opp_dir(path[i])][X+v]*R[X]*U[opp_dir(path[i])][X+v].dagger();
-
-            onsites(ALL) K[opp_dir(path[i])][X]+=R[X-v].project_to_algebra_scaled(eps);
-        }
-    }
-}
-
-template <typename group,int L>
-void get_wilson_line(const GaugeField<group>& U,const Direction(&path)[L],Field<group>& R) {
-    // compute the Wilson line defined by the list of directions "path"
-    int i,ip;
-
-    int udirs[NDIRS]={0};
-    for(i=0; i<L; ++i) {
-        if((udirs[(int)path[i]]++)==0) {
-            if(path[i]<NDIM) {
-                U[path[i]].start_gather(opp_dir(path[i]),ALL);
-            }
-        }
-    }
-
-    Field<group> R0[2];
-
-    i=0;
-    ip=0;
-    // initialize R0[0] with first link variable of the Wilson line:
-    if(path[i]<NDIM) {
-        // link points in positive direction
-        onsites(ALL) R0[ip][X]=U[path[i]][X-path[i]];
-    } else {
-        // link points in negative direction
-        onsites(ALL) R0[ip][X]=U[opp_dir(path[i])][X].dagger();
-    }
-
-    // multiply R0[ip] successively with the L-2 intermediate link variables of the Wilson line
-    // and store the result in R0[1-ip]
-    for(i=1; i<L-1; ++i) {
-        //R0[ip].start_gather(opp_dir(path[i]),ALL);
-        if(path[i]<NDIM) {
-            // link points in positive direction
-            onsites(ALL) mult(R0[ip][X-path[i]],U[path[i]][X-path[i]],R0[1-ip][X]);
-        } else {
-            // link points in negative direction
-            onsites(ALL) mult(R0[ip][X-path[i]],U[opp_dir(path[i])][X].dagger(),R0[1-ip][X]);
-        }
-        ip=1-ip;
-    }
-
-    // multiply R0[ip] by the last link variable of the Wilson line and store the result in R
-    //R0[ip].start_gather(opp_dir(path[i]),ALL);
-    if(path[i]<NDIM) {
-        // link points in positive direction
-        onsites(ALL) mult(R0[ip][X-path[i]],U[path[i]][X-path[i]],R[X]);
-    } else {
-        // link points in negative direction
-        onsites(ALL) mult(R0[ip][X-path[i]],U[opp_dir(path[i])][X].dagger(),R[X]);
-    }
-}
-
-template <typename group,int L>
-void get_wloop_force_add(const GaugeField<group>& U,const Direction(&path)[L],const Field<group>& W,ftype eps,VectorField<Algebra<group>>& K) {
-    // compute gauge force of Wilson loop "W", corresponding to "path" and add result to vector field "K"
-    Field<group> R=W;
-    Field<group> R0;
-    int udirs[NDIRS]={0};
-    for(int i=0; i<L; ++i) {
-        if((udirs[(int)path[i]]++)==0) {
-            if(path[i]<NDIM) {
-                U[path[i]].start_gather(opp_dir(path[i]),ALL);
-            }
-        }
-    }
-
-    for(int i=0; i<L; ++i) {
-        //R.start_gather(opp_dir(path[i]),ALL);
-        if(path[i]<NDIM) {
-            // link points in positive direction
-            onsites(ALL) K[path[i]][X]-=R[X].project_to_algebra_scaled(eps);
-
-            onsites(ALL) mult(U[path[i]][X-path[i]].dagger(),R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[path[i]][X-path[i]],R[X]);
-
-            //onsites(ALL) R0[X]=U[path[i]][X-path[i]].dagger()*R[X-path[i]];
-            //onsites(ALL) R[X]=R0[X]*U[path[i]][X-path[i]];
-        } else {
-            // link points in negative direction
-            onsites(ALL) mult(U[opp_dir(path[i])][X],R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[opp_dir(path[i])][X].dagger(),R[X]);
-
-            //onsites(ALL) R0[X]=U[opp_dir(path[i])][X]*R[X-path[i]];
-            //onsites(ALL) R[X]=R0[X]*U[opp_dir(path[i])][X].dagger();
-
-            onsites(ALL) K[opp_dir(path[i])][X]+=R[X].project_to_algebra_scaled(eps);
-        }
-    }
-}
-
-template <typename group,int L>
-void get_wloop_force_add(const GaugeField<group>& U,const Direction(&path)[L],ftype eps,VectorField<Algebra<group>>& K) {
-    // compute gauge force of Wilson loop along "path" and add result to vector field "K"
-    Field<group> R;
-    Field<group> R0;
-    get_wilson_line(U,path,R);
-
-    int udirs[NDIRS]={0};
-    for(int i=0; i<L; ++i) {
-        if((udirs[(int)path[i]]++)==0) {
-            if(path[i]<NDIM) {
-                U[path[i]].start_gather(opp_dir(path[i]),ALL);
-            } 
-        }
-    }
-
-    for(int i=0; i<L; ++i) {
-        //R.start_gather(opp_dir(path[i]),ALL);
-        if(path[i]<NDIM) {
-            // link points in positive direction
-            onsites(ALL) K[path[i]][X]-=R[X].project_to_algebra_scaled(eps);
-
-            onsites(ALL) mult(U[path[i]][X-path[i]].dagger(),R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[path[i]][X-path[i]],R[X]);
-
-            //onsites(ALL) R0[X]=U[path[i]][X-path[i]].dagger()*R[X-path[i]];
-            //onsites(ALL) R[X]=R0[X]*U[path[i]][X-path[i]];
-        } else {
-            // link points in negative direction
-            onsites(ALL) mult(U[opp_dir(path[i])][X],R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[opp_dir(path[i])][X].dagger(),R[X]);
-
-            //onsites(ALL) R0[X]=U[opp_dir(path[i])][X]*R[X-path[i]];
-            //onsites(ALL) R[X]=R0[X]*U[opp_dir(path[i])][X].dagger();
-
-            onsites(ALL) K[opp_dir(path[i])][X]+=R[X].project_to_algebra_scaled(eps);
-        }
-    }
-}
-
-template <typename group,int L>
-void get_wloop_force(const GaugeField<group>& U,const Direction(&path)[L],ftype eps,VectorField<Algebra<group>>& K) {
-    // compute gauge force of Wilson loop defined by "path" and store result in vector field "K"
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-    get_wloop_froce_add(U,path,eps,K);
-}
-
-template <typename group>
-ftype measure_rect12(const GaugeField<group>& U) {
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype measure_rect12(const GaugeField<group>& U) {
     // measure the 1x2-rectangle action
-    Reduction<ftype> plaq=0;
+    Reduction<atype> plaq=0;
     plaq.allreduce(false).delayed(true);
     Field<group> R=0;
     foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
-        Direction path[6]={dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2),opp_dir(dir2)};
+        Direction path[6]={dir1,dir2,dir2,-dir1,-dir2,-dir2};
         get_wilson_line(U,path,R);
         onsites(ALL) {
             plaq+=1.0-real(trace(R[X]))/group::size();
@@ -318,315 +105,15 @@ ftype measure_rect12(const GaugeField<group>& U) {
     return plaq.value();
 }
 
-template <typename group>
-void get_force_rect12(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
-    // compute the force for the 1-2-rectangle term
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-    foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
-        Direction path[6]={dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2),opp_dir(dir2)};
-        get_wloop_force_add(U,path,1.0,K);
-    }
-}
-
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_impr(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // and use it to evolve the momentum field E
-    
-    auto eps=delta*p.beta/group::size();
-    
-    // plaquette part:
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        Direction path[4]={dir1,dir2,opp_dir(dir1),opp_dir(dir2)};
-        get_wloop_force_add(U,path,eps*p.c11,E);
-    }
-
-    if(p.c12!=0) {
-        // rectangle part:
-        foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
-            Direction path[6]={dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2),opp_dir(dir2)};
-            get_wloop_force_add(U,path,eps*p.c12,E);
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr(const GaugeField<group>& U,VectorField<Algebra<group>>& K,const parameters& p) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // and write it to K
-
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-
-    // plaquette part:
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        Direction path[4]={dir1,dir2,opp_dir(dir1),opp_dir(dir2)};
-        get_wloop_force_add(U,path,p.c11,K);
-    }
-
-    if(p.c12!=0) {
-        // rectangle part:
-        foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
-            Direction path[6]={dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2),opp_dir(dir2)};
-            get_wloop_force_add(U,path,p.c12,K);
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr_f(const GaugeField<group>& U,VectorField<Algebra<group>>& K,const parameters& p) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // in a faster way and write the results to K
-
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-
-    Field<group> ustap;
-    Field<group> lstap;
-
-    foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
-        U[dir2].start_gather(dir1,ALL);
-        U[dir1].start_gather(dir2,ALL);
-        // get upper (dir1,dir2) and lower (dir1,-dir2) staples
-        onsites(ALL) {
-            lstap[X]=(U[dir1][X]*U[dir2][X+dir1]).dagger()*U[dir2][X];
-            ustap[X]=U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger();
-        }
-
-        lstap.start_gather(opp_dir(dir2),ALL);
-
-        // compute plaquette contribution to force and add it to K
-        onsites(ALL) {
-            K[dir1][X]-=(U[dir1][X]*(ustap[X]+lstap[X-dir2])).project_to_algebra_scaled(p.c11);
-        }
-        
-        if(p.c12!=0) {
-            // rectangle contribution to force
-            Direction path[6]={opp_dir(dir2),dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2)};
-
-            // compose rectangle and store it in ustap
-            onsites(ALL) ustap[X]=lstap[X-dir2].dagger()*ustap[X];
-
-            // compute rectangle force and add it to K
-            get_wloop_force_add(U,path,ustap,p.c12,K);
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr_f2(const GaugeField<group>& U,VectorField<Algebra<group>>& K,const parameters& p) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // in a faster way and write the results to K
-
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-
-    Field<group> ustap;
-    Field<group> lstap;
-    Field<group> tstap;
-
-    bool first=true;
-    foralldir(dir1) {
-        first=true;
-        foralldir(dir2) if(dir1!=dir2) {
-            U[dir2].start_gather(dir1,ALL);
-            U[dir1].start_gather(dir2,ALL);
-
-            // get upper (dir1,dir2) and lower (dir1,-dir2) staples
-            onsites(ALL) {
-                lstap[X]=(U[dir1][X]*U[dir2][X+dir1]).dagger()*U[dir2][X];
-                ustap[X]=U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger();
-            }
-
-            lstap.start_gather(opp_dir(dir2),ALL);
-
-            if(first) {
-                onsites(ALL) {
-                    tstap[X]=ustap[X];
-                    tstap[X]+=lstap[X-dir2];
-                }
-            } else {
-                onsites(ALL) {
-                    tstap[X]+=ustap[X];
-                    tstap[X]+=lstap[X-dir2];
-                }
-            }
-
-            if(p.c12!=0) {
-                // rectangle contribution to force
-                Direction path[6]={opp_dir(dir2),dir1,dir2,dir2,opp_dir(dir1),opp_dir(dir2)};
-
-                // compose rectangle and store it in ustap
-                onsites(ALL) ustap[X]=lstap[X-dir2].dagger()*ustap[X];
-
-                // compute rectangle force and add it to K
-                get_wloop_force_add(U,path,ustap,p.c12,K);
-            }
-            first=false;
-        }
-        // compute plaquette contribution to force and add it to K
-        onsites(ALL) {
-            K[dir1][X]-=(U[dir1][X]*tstap[X]).project_to_algebra_scaled(p.c11);
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_action_impr(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
+atype measure_action_impr(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,atype beta,atype c11,atype c12) {
     // measure the total action, consisting of plaquette, rectangle (if present), and momentum term
-    atype plaq=p.c11*measure_plaq(U);
-    if(p.c12!=0) {
-        plaq+=p.c12*measure_rect12(U);
+    atype plaq=c11*measure_plaq(U);
+    if(c12!=0) {
+        plaq+=c12*measure_rect12(U);
     }
     atype e2=measure_e2(E);
-    return p.beta*plaq+e2/2;
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_U(GaugeField<group>& U,const VectorField<Algebra<group>>& E,atype delta) {
-    // evolve U with momentum E over time step delta 
-    foralldir(d) {
-        onsites(ALL) U[d][X]=chexp(E[d][X]*delta)*U[d][X];
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void measure_topo_charge_and_energy_log(const GaugeField<group>& U, atype& qtopo_out, atype& energy_out) {
-    // measure topological charge and field strength energy of the gauge field, using the
-    // matrix logarithms of the plaquettes as components of the field strength tensor
-
-    Reduction<atype> qtopo=0;
-    Reduction<atype> energy=0;
-    qtopo.allreduce(false).delayed(true);
-    energy.allreduce(false).delayed(true);
-
-#if NDIM == 4
-    Field<group> F[6];
-    // F[0]: F[0][1], F[1]: F[0][2], F[2]: F[0][3],
-    // F[3]: F[1][2], F[4]: F[1][3], F[5]: F[2][3]
-    Field<group> tF0,tF1;
-
-    int k=0;
-    // (Note: by replacing log(...).expand() in the following by anti-hermitian projection,
-    // one would recover the clover F[dir1][dir2])
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        U[dir2].start_gather(dir1,ALL);
-        U[dir1].start_gather(dir2,ALL);
-
-        onsites(ALL) {
-            // log of dir1-dir2-plaquette that starts and ends at X; corresponds to F[dir1][dir2]
-            // at center location X+dir1/2+dir2/2 of plaquette:
-            tF0[X]=log((U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger())).expand();
-            // parallel transport to X+dir1
-            tF1[X]=U[dir1][X].dagger()*tF0[X]*U[dir1][X];
-        }
-
-        tF1.start_gather(opp_dir(dir1),ALL);
-        onsites(ALL) {
-            tF0[X]+=tF1[X-dir1];
-        }
-        U[dir2].start_gather(opp_dir(dir2),ALL);
-        tF0.start_gather(opp_dir(dir2),ALL);
-        onsites(ALL) {
-            // get F[dir1][dir2] at X from average of the (parallel transported) F[dir1][dir2] from 
-            // the centers of all dir1-dir2-plaquettes that touch X :
-            F[k][X]=(tF0[X]+U[dir2][X-dir2].dagger()*tF0[X-dir2]*U[dir2][X-dir2])*0.25;
-        }
-        ++k;
-    }
-    onsites(ALL) {
-        qtopo+=real(trace(F[0][X]*F[5][X]));
-        qtopo+=-real(trace(F[1][X]*F[4][X]));
-        qtopo+=real(trace(F[2][X]*F[3][X]));
-
-        energy+=F[0][X].squarenorm();
-        energy+=F[1][X].squarenorm();
-        energy+=F[2][X].squarenorm();
-        energy+=F[3][X].squarenorm();
-        energy+=F[4][X].squarenorm();
-        energy+=F[5][X].squarenorm();
-    }
-#endif
-    qtopo_out=qtopo.value()/(4.0*M_PI*M_PI);
-    energy_out=energy.value();
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qtopo_out,atype& energy_out) {
-    // measure topological charge and field strength energy of the gauge field, using the
-    // clover matrices as components of the field strength tensor
-
-    Reduction<atype> qtopo=0;
-    Reduction<atype> energy=0;
-    qtopo.allreduce(false).delayed(true);
-    energy.allreduce(false).delayed(true);
-
-#if NDIM == 4
-    Field<group> F[6];
-    // F[0]: F[0][1], F[1]: F[0][2], F[2]: F[0][3],
-    // F[3]: F[1][2], F[4]: F[1][3], F[5]: F[2][3]
-    int k=0;
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        onsites(ALL) {
-            // clover operator as in eq. (2.9) of Nuclear Physics B259 (1985) 572-596
-            F[k][X]=0.25*(U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger()
-                -(U[dir1][X-dir1-dir2]*U[dir2][X-dir2]).dagger()*U[dir2][X-dir1-dir2]*U[dir1][X-dir1]
-                +U[dir2][X]*(U[dir2][X-dir1]*U[dir1][X-dir1+dir2]).dagger()*U[dir1][X-dir1]
-                -U[dir1][X]*(U[dir1][X-dir2]*U[dir2][X+dir1-dir2]).dagger()*U[dir2][X-dir2]);
-            F[k][X]=0.5*(F[k][X]-F[k][X].dagger()); // anti-hermitian projection
-        }
-        ++k;
-    }
-    onsites(ALL) {
-        qtopo+=real(trace(F[0][X]*F[5][X]));
-        qtopo+=-real(trace(F[1][X]*F[4][X]));
-        qtopo+=real(trace(F[2][X]*F[3][X]));
-
-        energy+=F[0][X].squarenorm();
-        energy+=F[1][X].squarenorm();
-        energy+=F[2][X].squarenorm();
-        energy+=F[3][X].squarenorm();
-        energy+=F[4][X].squarenorm();
-        energy+=F[5][X].squarenorm();
-    }
-#endif
-    qtopo_out=qtopo.value()/(4.0*M_PI*M_PI);
-    energy_out=energy.value();
-}
-
-
-// end general functions
-///////////////////////////////////////////////////////////////////////////////////
-// non-bulk-prevention functions
-
-template <typename group>
-void get_force(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
-    // compute the force for the plaquette action and write it to K
-    Field<group> staple;
-    foralldir(d) {
-        staplesum(U,staple,d);
-        onsites(ALL) {
-            K[d][X]=(U[d][X]*staple[X]).project_to_algebra_scaled(-1.0);
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
-    // compute the force for the plaquette action and use it to evolve E
-    Field<group> staple;
-    auto eps=delta*p.beta/group::size();
-    foralldir(d) {
-        staplesum(U,staple,d);
-        onsites(ALL) {
-            E[d][X]-=(U[d][X]*staple[X]).project_to_algebra_scaled(eps);
-        }
-    }
+    return beta*plaq+e2/2;
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
@@ -645,132 +132,19 @@ void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const par
     update_U(U,E,p.dt/2);
     // main trajectory integration:
     for(int n=0; n<p.trajlen-1; n++) {
-        update_E(U,E,p,p.dt);
+        update_E(U,E,p.beta*p.dt);
         update_U(U,E,p.dt);
     }
     // end trajectory: bring U and E to the same time
-    update_E(U,E,p,p.dt);
+    update_E(U,E,p.beta*p.dt);
     update_U(U,E,p.dt/2);
     
     U.reunitarize_gauge();
 }
 
-// end non-bulk-prevention functions
+// end general functions
 ///////////////////////////////////////////////////////////////////////////////////
-// bulk-prevention functions, cf. arXiv:2306.14319 (with n=2)
-
-template <typename T>
-T ch_inv(const T& U) {
-    // compute inverse of the square matrix U, using the 
-    // Cayley-Hamilton theorem (Faddeev-LeVerrier algorithm)
-    T tB[2];
-    int ip=0;
-    tB[ip]=1.;
-    auto tc=trace(U);
-    tB[1-ip]=U;
-    for(int k=2; k<=T::size(); ++k) {
-        tB[1-ip]-=tc;
-        mult(U,tB[1-ip],tB[ip]);
-        tc=trace(tB[ip])/k;
-        ip=1-ip;
-    }
-    return tB[ip]/tc;
-}
-
-template <typename T>
-T bp_UAmat(const T& U) {
-    // compute U*A(U) with the A-matrix from Eq. (B3) of arXiv:2306.14319 for n=2
-    T tA1=U;
-    tA1+=1.;
-    tA1*=0.5;
-    T tA2=ch_inv(tA1); 
-    tA1=tA2*tA2.dagger();
-    return U*tA1*tA1*tA2;
-}
-
-template <typename T>
-T bp_iOsqmat(const T& U) {
-    // compute matrix inside the trace on r.h.s. of Eq. (B1) of arXiv:2306.14319 for n=2
-    T tA1=U;
-    tA1+=1.;
-    tA1*=0.5;
-    T tA2=tA1.dagger()*tA1;
-    tA1=ch_inv(tA2);
-    return tA1*tA1-1.;
-}
-
-template <typename group>
-void get_force_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& K) {
-    // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and write it to K
-    Field<group> fmatp;
-    Field<group> fmatmd1;
-    Field<group> fmatmd2;
-    auto eps=2.0;
-    bool first=true;
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-    foralldir(d1) {
-        foralldir(d2) if(d2>d1) {
-            U[d2].start_gather(d1,ALL);
-            U[d1].start_gather(d2,ALL);
-            onsites(ALL) {
-                fmatp[X]=bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
-                fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X]; // parallel transport fmatp[X].dagger() to X+d2
-                fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X]; // parallel transport fmatp[X] to X+d1
-            }
-            fmatmd1.start_gather(opp_dir(d2),ALL);
-            fmatmd2.start_gather(opp_dir(d1),ALL);
-            onsites(ALL) {
-                K[d1][X]-=(fmatmd1[X-d2]+fmatp[X]).project_to_algebra_scaled(eps);
-                K[d2][X]-=(fmatmd2[X-d1]-fmatp[X]).project_to_algebra_scaled(eps);
-            }
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
-    // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and use it to evolve E
-    Field<group> fmatp;
-    Field<group> fmatmd1;
-    Field<group> fmatmd2;
-    auto eps=delta*2.0*p.beta/group::size();
-    foralldir(d1) {
-        foralldir(d2) if(d2>d1) {
-            U[d2].start_gather(d1,ALL);
-            U[d1].start_gather(d2,ALL);
-            onsites(ALL) {
-                fmatp[X]=bp_UAmat(U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger());
-                fmatmd1[X]=(fmatp[X]*U[d2][X]).dagger()*U[d2][X]; // parallel transport fmatp[X].dagger() to X+d2
-                fmatmd2[X]=U[d1][X].dagger()*fmatp[X]*U[d1][X]; // parallel transport fmatp[X] to X+d1
-            }
-            fmatmd1.start_gather(opp_dir(d2),ALL);
-            fmatmd2.start_gather(opp_dir(d1),ALL);
-
-            onsites(ALL) {
-                E[d1][X]-=(fmatmd1[X-d2]+fmatp[X]).project_to_algebra_scaled(eps);
-                E[d2][X]-=(fmatmd2[X-d1]-fmatp[X]).project_to_algebra_scaled(eps);
-            }
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_plaq_bp(const GaugeField<group>& U) {
-    // measure the BP plaquette action
-    Reduction<hila::arithmetic_type<group>> plaq=0;
-    plaq.allreduce(false).delayed(true);
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        U[dir2].start_gather(dir1,ALL);
-        U[dir1].start_gather(dir2,ALL);
-        onsites(ALL) {
-            plaq+=real(trace(bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*
-                (U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size();
-        }
-    }
-    return plaq.value();
-}
+// bulk-prevention functions
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_action_bp(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
@@ -788,11 +162,11 @@ void do_trajectory_bp(GaugeField<group>& U,VectorField<Algebra<group>>& E,const 
     update_U(U,E,p.dt/2);
     // main trajectory integration:
     for(int n=0; n<p.trajlen-1; n++) {
-        update_E_bp(U,E,p,p.dt);
+        update_E_bp(U,E,p.beta*p.dt);
         update_U(U,E,p.dt);
     }
     // end trajectory: bring U and E to the same time
-    update_E_bp(U,E,p,p.dt);
+    update_E_bp(U,E,p.beta*p.dt);
     update_U(U,E,p.dt/2);
 
     U.reunitarize_gauge();
@@ -859,120 +233,29 @@ void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step)
 }
 
 template <typename group>
-void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
-    // force computation routine to be used to integrate wilson flow
+void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
+    // force computation routine to be used for wilson flow
     //get_force(U,E); // force for Wilson plaquette action
-    //get_force_bp(U,E); // froce for bulk-preventing action
-    get_force_impr_f2(U,E,p); // force for improved action -S_{impr} = \p.beta/N*( p.c11*\sum_{plaquettes P} ReTr(P) + p.c12*\sum_{1x2-rectangles R}  ReTr(R) )
-}
+    //get_force_bp(U,E); // force for bulk-preventing action
 
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,const parameters& p,atype tstep=0.001) {
-    // wilson flow integration from flow scale l_start to l_end using 3rd order
-    // 3-step Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
-    // arXiv:2101.05320 for derivation of this Runge-Kutta method)
-    // and embedded RK2 for adaptive step size
+    // DBW2 action parameters:
+    //ftype c12=-1.4088;     // rectangle weight
+    //ftype c11=1.0-8.0*c12; // plaquette weight
 
-    atype atol=p.wflow_a_accu;
-    atype rtol=p.wflow_r_accu;
+    // Iwasaki action parameters:
+    ftype c12=-0.331;     // rectangle weight
+    ftype c11=1.0-8.0*c12; // plaquette weight
 
-    // translate flow scale interval [l_start,l_end] to corresponding
-    // flow time interval [t,tmax] :
-    atype t=l_start*l_start/8.0;
-    atype tmax=l_end*l_end/8.0;
-    atype lstab=0.095; // stability limit
-    atype step=min(min(tstep,0.51*(tmax-t)),lstab);  //initial step size
+    // LW action parameters:
+    //ftype c12=-1.0/12.0;     // rectangle weight
+    //ftype c11=1.0-8.0*c12; // plaquette weight
 
-    VectorField<Algebra<group>> k1,k2;
-    GaugeField<group> V2,V0;
-    Field<atype> reldiff;
-    atype maxreldiff,maxstep;
+    // Wilson plaquette action parameters:
+    //ftype c12=0;
+    //ftype c11=1.0;
 
-    // RK3 coefficients from arXiv:1006.4518 :
-    // correspond to standard RK3 with Butcher-tableau 
-    // (cf. arXiv:2101.05320, Appendix C)
-    //  0  |   0     0     0
-    //  #  |  1/4    0     0
-    //  #  | -2/9   8/9    0
-    // -------------------------
-    //     |  1/4    0    3/4
-    //
-    atype a11=0.25;
-    atype a21=-17.0/36.0,a22=8.0/9.0;
-    atype a33=0.75;
-
-    // RK2 coefficients :
-    // cf. Alg. 6 and Eqn. (13)-(14) in arXiv:2101.05320 to see
-    // how these are obtained from standard RK2 with Butcher-tableau
-    //  0  |   0     0
-    //  #  |  1/4    0
-    // -----------------
-    //     |  -1     2
-    //
-    atype b21=-1.25,b22=2.0;
-
-    V0=V;
-    bool stop=false;
-
-    while(t<tmax&&!stop) {
-
-        if(t+step>=tmax) {
-            step=tmax-t;
-            stop=true;
-        } else {
-            if(t+2.0*step>=tmax) {
-                step=0.51*(tmax-t);
-            }
-        }
-
-        get_wf_force(V,k1,p);
-        foralldir(d) onsites(ALL) {
-            // first steps of RK3 and RK2 are the same :
-            V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
-        }
-
-        get_wf_force(V,k2,p);
-        foralldir(d) onsites(ALL) {
-            // second step of RK2 :
-            V2[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
-
-            // second step of RK3 :
-            k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
-            V[d][X]=chexp(k2[d][X])*V[d][X];
-        }
-
-        get_wf_force(V,k1,p);
-        foralldir(d) onsites(ALL) {
-            // third step of RK3 :
-            V[d][X]=chexp(k1[d][X]*(step*a33)-k2[d][X])*V[d][X];
-        }
-
-        // determine maximum difference between RK3 and RK2, 
-        // relative to desired accuracy :
-        maxreldiff=0;
-        foralldir(d) {
-            reldiff[ALL]=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
-            maxreldiff=max(maxreldiff,reldiff.max());
-        }
-        maxreldiff/=(atype)(group::size()*group::size());
-
-        // max. allowed step size to achieve desired accuracy :
-        maxstep=min(step/pow(maxreldiff,1.0/3.0),1.0);
-        if(step>maxstep) {
-            // repeat current iteration if step size was larger than maxstep
-            V=V0;
-        } else {
-            // proceed to next iteration
-            t+=step;
-            V0=V;
-        }
-        // adjust step size for next iteration to better match accuracy goal :
-        step=min(0.9*maxstep,lstab);
-    }
-
-    V.reunitarize_gauge();
-    return step;
-}
+    get_force_impr_f2(U,E,c11,c12); // force for improved action -S_{impr} = \p.beta/N*( c11*\sum_{plaquettes P} ReTr(P) + c12*\sum_{1x2-rectangles R}  ReTr(R) )
+};
 
 
 // end Wilson flow functions
@@ -982,8 +265,10 @@ atype do_wilson_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,const 
 template <typename group>
 void checkpoint(const GaugeField<group>& U,int trajectory,const parameters& p) {
     double t=hila::gettime();
+    // name of config with extra suffix
+    std::string config_file=p.config_file+"_"+std::to_string(((trajectory+1)/p.n_save)%2);
     // save config
-    U.config_write(p.config_file);
+    U.config_write(config_file);
     // write run_status file
     if(hila::myrank()==0) {
         std::ofstream outf;
@@ -991,6 +276,8 @@ void checkpoint(const GaugeField<group>& U,int trajectory,const parameters& p) {
         outf<<"trajectory  "<<trajectory+1<<'\n';
         outf<<"seed        "<<static_cast<uint64_t>(hila::random()*(1UL<<61))<<'\n';
         outf<<"time        "<<hila::gettime()<<'\n';
+        // write config name to status file:
+        outf<<"config name  "<<config_file<<'\n';
         outf.close();
     }
     std::stringstream msg;
@@ -1009,9 +296,11 @@ bool restore_checkpoint(GaugeField<group>& U,int& trajectory,parameters& p) {
         trajectory=status.get("trajectory");
         seed=status.get("seed");
         p.time_offset=status.get("time");
+        // get config name with suffix from status file:
+        std::string config_file=status.get("config name");
         status.close();
         hila::seed_random(seed);
-        U.config_read(p.config_file);
+        U.config_read(config_file);
         ok=true;
     } else {
         std::ifstream in;
@@ -1086,22 +375,6 @@ int main(int argc,char** argv) {
     p.config_file=par.get("config name");
 
     par.close(); // file is closed also when par goes out of scope
-
-    // DBW2 action parameters:
-    //p.c12=-1.4088;     // rectangle weight
-    //p.c11=1.0-8.0*p.c12; // plaquette weight
-
-    // Iwasaki action parameters:
-    p.c12=-0.331;     // rectangle weight
-    p.c11=1.0-8.0*p.c12; // plaquette weight
-
-    // LW action parameters:
-    //p.c12=-1.0/12.0;     // rectangle weight
-    //p.c11=1.0-8.0*p.c12; // plaquette weight
-
-    // Wilson plaquette action parameters:
-    //p.c12=0;
-    //p.c11=1.0;
 
     // setting up the lattice is convenient to do after reading
     // the parameter
@@ -1209,7 +482,7 @@ int main(int argc,char** argv) {
                     ftype t_step=0.001;
                     for(int i=0; i<nflow_steps; ++i) {
 
-                        t_step=do_wilson_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,p,t_step);
+                        t_step=do_wilson_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,get_wf_force,p.wflow_a_accu,p.wflow_r_accu,t_step);
 
                         measure_wflow_stuff(V,(i+1)*p.wflow_l_step,t_step);
 
