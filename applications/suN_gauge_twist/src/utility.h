@@ -31,4 +31,15 @@ void print_formatted_numbers(const std::vector<Complex<T>> &numbers, std::string
     }
 }
 
+template <typename T>
+void write_surface(std::vector<T> surf) {
+    std::ofstream MFile;
+    MFile.open("surface", std::ios_base::app);
+    hila::out0 << "OPENED surface file" << std::endl;
+    for (int y = 0; y < lattice.size(e_y); y++) {
+        for (int x = 0; x < lattice.size(e_x); x++) {
+            if (hila::myrank() == 0)
+                MFile << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)] << '\n';
+        }
+    }
 #endif
