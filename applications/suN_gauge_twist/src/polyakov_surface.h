@@ -1,6 +1,7 @@
 #ifndef POLYAKOV_SURFACE_H_
 #define POLYAKOV_SURFACE_H_
-
+#include <stdio.h>
+#include <stdlib.h>
 #include "hila.h"
 #include "utility.h"
 /// Helper function to get valid z-index coordinate
@@ -261,7 +262,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
         hila::out0 << "Start location: " << startloc << std::endl;
 
-        std::vector<float> surf_interpolated, surf2;
+        std::vector<float> surf_interpolated, surf_discrete;
         // Only allocate on first rank
         if (hila::myrank() == 0) {
             surf_interpolated.resize(area);
@@ -275,6 +276,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
         //get full xyz-volume t=0 slice to main node
         polyakov_3D_volume = polyakov_field_z.get_slice({-1, -1, -1, 0});
+        //hila::out0 << traj << " " << p.n_trajectories << std::endl;
 
         for (int y = 0; y < lattice.size(e_y); y++) {
             //get now full xz-plane polyakov line to main node
@@ -289,7 +291,6 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                         line[z] = polyakov_3D_volume[x + lattice.size(e_x) * (z)];
                     }
 
-                    if (hila::myrank() == 0) {
                     //start search of the surface from the center between min and max
                     int z = startloc;
 
@@ -301,17 +302,14 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                             z - startloc < lattice.size(e_z) * 0.4)
                         z++;
 
-
+                    hila::out0 << "z-index " << z << std::endl;
                     //do linear interpolation
-                    //surf[x + y * lattice.size(e_x)] = z;
+                    surf_discrete[x + y * lattice.size(e_x)] = z;
                     // surf_interpolated[x + y * lattice.size(e_x)] =
                     //     z +
                     //     (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
 
-                    // if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
-                    //     hila::out0 << "SURF" << sl << ' ' << x << ' ' << y << ' '
-                    //                << surf_interpolated[x + y * lattice.size(e_x)] << '\n';
-                    // }
+
 
                     //and locate the other surface - start from Lz/2 offset
 
@@ -330,9 +328,11 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                     // surf2[x + y * lattice.size(e_x)] =
                     //     z +
                     //     (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
-                    }
+                    
                 }
             }
+
+            
 
             // if (hila::myrank() == 0) {
             //     constexpr int pow_size = 200;
@@ -349,6 +349,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
             //     }
             // }
         }
+        if (traj == p.n_trajectories - 1 && sl == 1) write_surface(surf_discrete);
     }
 }
 

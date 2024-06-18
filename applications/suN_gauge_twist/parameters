@@ -1,9 +1,9 @@
-lattice size        10,10,28,6 
-beta                           30
+lattice size        10,10,20,6 
+beta                           16
 delta beta fraction            0
 overrelax steps                4
 updates in trajectory          1
-trajectories                   2000
+trajectories                   1000
 thermalization                 0
 random seed                    0
 traj/saved                     200000
