@@ -266,7 +266,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         // Only allocate on first rank
         if (hila::myrank() == 0) {
             surf_interpolated.resize(area);
-            //surf2.resize(area);
+            surf_discrete.resize(area);
         }
 
         hila::out0 << std::setprecision(6);
@@ -302,13 +302,13 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                             z - startloc < lattice.size(e_z) * 0.4)
                         z++;
 
-                    hila::out0 << "z-index " << z << std::endl;
+                    //hila::out0 << x << " " << y << " " << z +
+                    //    (surface_level - line[z_ind(z)].abs()) / (line[z_ind(z + 1)].abs() - line[z_ind(z)].abs()) << std::endl;
                     //do linear interpolation
                     surf_discrete[x + y * lattice.size(e_x)] = z;
-                    // surf_interpolated[x + y * lattice.size(e_x)] =
-                    //     z +
-                    //     (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
-
+                    surf_interpolated[x + y * lattice.size(e_x)] =
+                        z +
+                        (surface_level - line[z_ind(z)].abs()) / (line[z_ind(z + 1)].abs() - line[z_ind(z)].abs());
 
 
                     //and locate the other surface - start from Lz/2 offset
@@ -348,8 +348,17 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
             //                     << hits[i] << '\n';
             //     }
             // }
+
         }
-        if (traj == p.n_trajectories - 1 && sl == 1) write_surface(surf_discrete);
+        if (traj == p.n_trajectories - 1 && sl == 1) {
+            write_surface(surf_interpolated,"surface_smooth",APPEND_FILE::TRUE, CLOSE_FILE::TRUE);
+        } else if (sl == p.n_smear.size() -1 ) {
+            write_surface(surf_interpolated,"surface_smooth",APPEND_FILE::TRUE, CLOSE_FILE::FALSE);
+        }
+        // if (traj == p.n_trajectories - 1 && sl == 1) {
+        //     write_surface(surf_discrete,"surface_discrete");
+        //     write_surface(surf_interpolated,"surface_smooth");
+        // }
     }
 }
 

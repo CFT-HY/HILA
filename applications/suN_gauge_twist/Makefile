@@ -36,6 +36,7 @@ build/suN_gauge_twist: Makefile build/suN_gauge_twist.o $(HILA_OBJECTS) $(HEADER
 	$(LD) -o $@ build/suN_gauge_twist.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
 
 #build/suN_gauge_bare.o: src/suN_gauge_bare.h
+build/suN_gauge_twist.o: src/suN_gauge_twist.cpp src/polyakov_surface.h src/utility.h src/checkpoint.h src/parameters.h src/twist_specific_methods.h
 
 
 
