@@ -175,28 +175,30 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     /// Project matrix to antihermitean and traceless algebra
     /// of the group.
     /// suN generators, normalized as
-    ///  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
+    ///  Tr(\lambda_n \lambda_m) = -1/2 \delta_nm ,
+    ///  or equivalently: Tr(\lambda^{\dagger}_n \lambda_m) = 1/2 \delta_nm
+    /// 
     /// off-diagonal are just that:
-    ///    \lambda^od_ij,r = 1/2 for elements ij and ji
-    ///    \lambda^od_ij,i = i/2 for ij; -i for ji
+    ///    \lambda^od_nm = i/2 for elements nm and mn
+    ///    \lambda^od_nm = 1/2 for nm; -1/2 for mn
     ///
     /// diagonals: su(N) has N-1 diag generators
     /// parametrize these recursively:
-    ///  \lambda_1 = diag(1,-1,0,0,..)/sqrt(1)/2
-    ///  \lambda_2 = diag(1,1,-2,0,..)/sqrt(3)/2
-    ///  \lambda_3 = diag(1,1,1,-3,..)/sqrt(6)/2
-    ///  \lambda_i = diag(1,.. ,-i,..)/sqrt(i(i+1)/2)/2
+    ///  \lambda_1 = diag(i,-i,0,0,..)/sqrt(1)/2
+    ///  \lambda_2 = diag(i,i,-2i,0,..)/sqrt(3)/2
+    ///  \lambda_3 = diag(i,i,i,-3i,0,..)/sqrt(6)/2
+    ///  \lambda_k = diag(i,.. i,-ki,0,..)/sqrt(k(k+1)/2)/2
     ///  ..
-    ///  \lambda_N-1 = diag(1,.. ,1,-(N-1))/sqrt(N(N-1)/2)/2
+    ///  \lambda_N-1 = diag(i,.. i,-(N-1)i)/sqrt(N(N-1)/2)/2
     ///
     /// Define \lambda's so that diagonals come first
     ///
-    /// Dividing U = U_ah + U_h, U_ah = 1/2 (U - U^+) = i a_i \lambda_i + tr.im I/N
-    /// =>  Tr \lambda_i (U_ah) = 1/2 i a_i = 1/2 (\lambda_i)_jk (u_kj - u_jk^*)
-    /// =>  a_i = -i (\lambda_i)_jk (u_kj - u_jk^*)
+    /// Dividing U = U_ah + U_h, U_ah = 1/2 (U - U^+) = a_k \lambda_k + tr.im I/N
+    /// =>  Tr(\lambda_k U_ah) = -1/2 a_k = 1/2 (\lambda_k)_lm (u_ml - u_lm^*)
+    /// =>  a_k = - (\lambda_k)_lm (u_ml - u_lm^*)
     ///
     /// Thus, for diags,
-    ///     a_i = (u_00 + ..u_(i-1)(i-1) - i*u_ii).im 2/(sqrt(2i(i+1)))
+    ///     a_k = (u_00 + ..u_(k-1)(k-1) - k*u_kk).im 2/(sqrt(2k(k+1)))
     ///
     /// and off-diags:
     /// symm: a_i = -i (u_kj - u_kj^* + u_jk - u_jk^*)/2 = -i i(u_kj.im + u_jk.im)
@@ -205,6 +207,9 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     ///                = (u_kj.re - u_jk.re)
 
     Algebra<SU<N, T>> project_to_algebra() const {
+        // computes real vector a[] of Lie-algebra decomposition coefficients
+        // of A[][]=(*this) , s.t.  a[i] = 2 ReTr( \lambda^{\dagger}_i A )
+        
         Algebra<SU<N, T>> a;
 
         // diagonal generators
@@ -229,6 +234,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     }
 
     Algebra<SU<N,T>> project_to_algebra_scaled(T scf) const {
+        // as above, but rescales the output vector by the factor scf
         Algebra<SU<N,T>> a;
 
         // diagonal generators
@@ -252,7 +258,10 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
         return a;
     }
 
-    Algebra<SU<N,T>> project_to_algebra(T& onenorm) const {
+    Algebra<SU<N,T>> project_to_algebra(out_only T& onenorm) const {
+        // computes and returns vector a[] of real-valued Lie-algebra
+        // projection coefficients and sets in addition onenorm
+        // to be the 1-norm of a[] 
         Algebra<SU<N,T>> a;
 
         onenorm=0;
@@ -304,7 +313,8 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
     Algebra & operator=(const Algebra & a) && = delete;
 
     // suN generators, normalized as
-    //  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
+    //  Tr(\lambda_i \lambda_j) = -1/2 \delta_ij ,
+    // or equivalently: Tr(\lambda_i \lambda_j) = 1/2 \delta_ij
     // off-diagonal are just that:
     //    \lambda^od_ij,r = 1/2 for elements ij and ji
     //    \lambda^od_ij,i = i/2 for ij; -i for ji
@@ -328,7 +338,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
 
         d.e(0) = (T)0;
         for (int i = 1; i < N; i++) {
-            T r = this->e(i - 1) * sqrt(0.5 / (i * (i + 1)));
+            T r = this->c[i - 1] * sqrt(0.5 / (i * (i + 1)));
             // the contributions from 1's above
             for (int j = 0; j < i; j++)
                 d.e(j) += r;
@@ -360,7 +370,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
 
         d.e(0)=(T)0;
         for(int i=1; i<N; i++) {
-            T r=this->e(i-1)*sqrt(0.5/(i*(i+1)));
+            T r=this->c[i-1]*sqrt(0.5/(i*(i+1)));
             // the contributions from 1's above
             for(int j=0; j<i; j++)
                 d.e(j)+=r;
@@ -414,6 +424,15 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
     Algebra& gaussian_random(T width=sqrt(2.0)) out_only {
         Matrix_t<N* N-1,1,T,Algebra<SU<N,T>>>::gaussian_random(width);
         return *this;
+    }
+
+    // dot product of two Algebra vectors
+    T dot(const Algebra& rhs) const {
+        T r=0.0;
+        for(int i=0; i<N_a; ++i) {
+            r+=this->e(i)*rhs.e(i);
+        }
+        return -r*0.5;
     }
 };
 
@@ -479,7 +498,6 @@ Algebra<SU<N,T>> log(const SU<N,T>& a) {
         }
         tmat=res.expand_scaled(-1.0);
         chexp(tmat,tmat2,pl);
-        //tmat=a*tmat2;
         mult(a,tmat2,tmat);
     }
 
