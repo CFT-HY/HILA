@@ -3,6 +3,8 @@
 #ifndef STRING_FORMAT_H_
 #define STRING_FORMAT_H_
 
+#include <string>
+
 template<typename ... Args>
 std::string string_format(const std::string& format,Args ... args) {
     // wrapper for std::snprintf which sets up buffer of required size
