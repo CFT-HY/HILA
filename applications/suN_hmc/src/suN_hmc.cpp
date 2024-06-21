@@ -4,39 +4,21 @@
 #include "bulk_prevention_action.h"
 #include "wilson_line_and_force.h"
 #include "improved_action.h"
-#include "wilson_flow.h"
-#include "energy_and_topo_charge_clover.h"
-#include "energy_and_topo_charge_log.h"
 #include "clover_action.h"
+#include "gradient_flow.h"
+#include "string_format.h"
+
 #include <string>
 
 using ftype=double;
 using mygroup=SU<NCOLOR,ftype>;
 
-template<typename ... Args>
-std::string string_format(const std::string& format,Args ... args) {
-    // wrapper for std::snprintf which sets up buffer of required size
-
-    // determine required buffer size :
-    int size_s=std::snprintf(nullptr,0,format.c_str(),args ...)+1;
-    if(size_s<=0) { 
-        throw std::runtime_error("Error during formatting."); 
-    }
-
-    // allocate buffer :
-    auto size=static_cast<size_t>(size_s);
-    std::unique_ptr<char[]> buf(new char[size]);
-
-    // write formatted string to buffer :
-    std::snprintf(buf.get(),size,format.c_str(),args ...);
-
-    return std::string(buf.get(),buf.get()+size-1); 
-}
-
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
     ftype beta;          // inverse gauge coupling
+    ftype c11;
+    ftype c12;
     ftype dt;            // HMC time step
     int trajlen;         // number of HMC time steps per trajectory
     int n_traj;          // number of trajectories to generate
@@ -51,25 +33,28 @@ struct parameters {
     ftype time_offset;
 };
 
-// DBW2 action parameters:
-//ftype c12=-1.4088;     // rectangle weight
-//ftype c11=1.0-8.0*c12; // plaquette weight
-
-// Iwasaki action parameters:
-ftype c12=-0.331;     // rectangle weight
-ftype c11=1.0-8.0*c12; // plaquette weight
-
-// LW action parameters:
-//ftype c12=-1.0/12.0;     // rectangle weight
-//ftype c11=1.0-8.0*c12; // plaquette weight
-
-// Wilson plaquette action parameters:
-//ftype c12=0;
-//ftype c11=1.0;
-
 
 ///////////////////////////////////////////////////////////////////////////////////
-// general functions
+// HMC functions
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype measure_s(const GaugeField<group>& U,const parameters& p) {
+    //atype res=measure_s_wplaq(U);
+    atype res=measure_s_bp(U);
+    //atype res=measure_s_impr(U,p.c11,p.c12);
+    //atype res=measure_s_clover(U);
+    return res;
+}
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
+    // compute the force for the chosen action and use it to evolve E
+    atype eps=delta*p.beta/group::size();
+    //get_force_wplaq_add(U,E,eps);
+    get_force_bp_add(U,E,eps);
+    //get_force_impr_add(U,E,eps*p.c11,eps*p.c12);
+    //get_force_clover_add(U,E,eps);
+}
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 void update_U(GaugeField<group>& U,const VectorField<Algebra<group>>& E,atype delta) {
@@ -90,157 +75,46 @@ atype measure_e2(const VectorField<Algebra<group>>& E) {
     return e2.value()/2;
 }
 
-// end general functions
-///////////////////////////////////////////////////////////////////////////////////
-// Wilson plaquette action functions
-
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_local_wplaq(const GaugeField<group>& U) {
-    return measure_s_wplaq(U);
-}
-
-template <typename group>
-void do_trajectory_wplaq(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
-    // leap frog integration for normal action
-
-    // start trajectory: advance U by half a time step
-    update_U(U,E,p.dt/2);
-    // main trajectory integration:
-    for(int n=0; n<p.trajlen-1; n++) {
-        update_E_wplaq(U,E,p.beta*p.dt);
-        update_U(U,E,p.dt);
-    }
-    // end trajectory: bring U and E to the same time
-    update_E_wplaq(U,E,p.beta*p.dt);
-    update_U(U,E,p.dt/2);
-
-    U.reunitarize_gauge();
-}
-
-// end Wilson plaquette action functions
-///////////////////////////////////////////////////////////////////////////////////
-// improved action functions
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_local_impr(const GaugeField<group>& U) {
-    return measure_s_impr_f2(U,c11,c12);
-}
-
-template <typename group>
-void do_trajectory_impr(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
-    // leap frog integration for normal action
-
-    // start trajectory: advance U by half a time step
-    update_U(U,E,p.dt/2);
-    // main trajectory integration:
-    for(int n=0; n<p.trajlen-1; n++) {
-        update_E_impr_f2(U,E,c11,c12,p.beta*p.dt);
-        update_U(U,E,p.dt);
-    }
-    // end trajectory: bring U and E to the same time
-    update_E_impr_f2(U,E,c11,c12,p.beta*p.dt);
-    update_U(U,E,p.dt/2);
-    
-    U.reunitarize_gauge();
-}
-
-// end improved action functions
-///////////////////////////////////////////////////////////////////////////////////
-// bulk-prevention functions
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_local_bp(const GaugeField<group>& U) {
-    return measure_s_bp(U);
-}
-
-template <typename group>
-void do_trajectory_bp(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
-    // leap frog integration for BP action
-
-    // start trajectory: advance U by half a time step
-    update_U(U,E,p.dt/2);
-    // main trajectory integration:
-    for(int n=0; n<p.trajlen-1; n++) {
-        update_E_bp(U,E,p.beta*p.dt);
-        update_U(U,E,p.dt);
-    }
-    // end trajectory: bring U and E to the same time
-    update_E_bp(U,E,p.beta*p.dt);
-    update_U(U,E,p.dt/2);
-
-    U.reunitarize_gauge();
-}
-
-// end bulk-prevention functions
-///////////////////////////////////////////////////////////////////////////////////
-// clover action functions
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_local_clover(const GaugeField<group>& U) {
-    return measure_s_clover_action(U);
-}
-
-template <typename group>
-void do_trajectory_clover(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
-    // leap frog integration for BP action
-
-    // start trajectory: advance U by half a time step
-    update_U(U,E,p.dt/2);
-    // main trajectory integration:
-    for(int n=0; n<p.trajlen-1; n++) {
-        update_E_clover_action(U,E,p.beta*p.dt);
-        update_U(U,E,p.dt);
-    }
-    // end trajectory: bring U and E to the same time
-    update_E_clover_action(U,E,p.beta*p.dt);
-    update_U(U,E,p.dt/2);
-
-    U.reunitarize_gauge();
-}
-
-// end clover action functions
-///////////////////////////////////////////////////////////////////////////////////
-// HMC action and force wrappers
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s(const GaugeField<group>& U) {
-    //atype res=measure_s_local_wplaq(U);
-    atype res=measure_s_local_bp(U);
-    //atype res=measure_s_local_impr(U);
-    //atype res=measure_s_local_clover(U);
-    return res;
-}
-
-template <typename group>
-void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
-    //do_trajectory_wplaq(U,E,p);
-    do_trajectory_bp(U,E,p);
-    //do_trajectory_impr(U,E,p);
-    //do_trajectory_clover(U,E,p);
+atype measure_action(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p,atype& plaq) {
+    // measure the total action, consisting of plaquette and momentum term
+    plaq=p.beta*measure_s(U,p);
+    atype e2=measure_e2(E);
+    return plaq+e2/2;
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_action(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
     // measure the total action, consisting of plaquette and momentum term
-    atype plaq=measure_s(U);
-    atype e2=measure_e2(E);
-    return p.beta*plaq+e2/2;
+    atype plaq=0;
+    return measure_action(U,E,p,plaq);
 }
+
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_action(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p, atype& plaq) {
-    // measure the total action, consisting of plaquette and momentum term
-    plaq=p.beta*measure_s(U);
-    atype e2=measure_e2(E);
-    return plaq+e2/2;
+void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p) {
+    // leap frog integration for normal action
+
+    // start trajectory: advance U by half a time step
+    update_U(U,E,p.dt/2);
+    // main trajectory integration:
+    for(int n=0; n<p.trajlen-1; ++n) {
+        update_E(U,E,p,p.dt);
+        update_U(U,E,p.dt);
+    }
+    // end trajectory: bring U and E to the same time
+    update_E(U,E,p,p.dt);
+    update_U(U,E,p.dt/2);
+
+    U.reunitarize_gauge();
 }
 
-// end HMC action and force wrappers
+// end HMC functions
 ///////////////////////////////////////////////////////////////////////////////////
 // measurement functions
 
 template <typename group>
-void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>& E) {
+void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
     // perform measurements on current gauge and momentum pair (U, E) and
     // print results in formatted form to standard output
     static bool first=true;
@@ -249,7 +123,7 @@ void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>&
         hila::out0<<"LMEAS:     s-local          plaq           E^2        P.real        P.imag\n";
         first=false;
     }
-    auto slocal=measure_s(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
+    auto slocal=measure_s(U,p)/(lattice.volume()*NDIM*(NDIM-1)/2);
     auto plaq=measure_s_wplaq(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
     auto e2=measure_e2(E)/(lattice.volume()*NDIM);
     auto poly=measure_polyakov(U,e_t);
@@ -257,100 +131,6 @@ void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>&
 }
 
 // end measurement functions
-///////////////////////////////////////////////////////////////////////////////////
-// Wilson flow functions
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_wf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
-    atype eps=2.0; // factor 2.0 to switch from unoriented to oriented plaquettes
-                   // (factor is usually absorbed in \beta, but gradient flow force is
-                   // computed from action term with \beta-factor stripped off) 
-
-    // force computation routine to be used for wilson flow:
-
-    //get_force_wplaq(U,E,eps); // force for Wilson plaquette action
-
-    //get_force_bp(U,E,eps);    // force for bulk-preventing (BP) action (should only be used
-                                // for gradient flow if BP is also used for HMC evolution)
-
-    get_force_impr_f2(U,E,eps*c11,eps*c12); // force for improved action:  
-                                            // 2.0 * ( c11*\sum_{unoriented plaquettes P} ReTr(P) 
-                                            //        + c12*\sum_{unoriented 1x2-rectangles R}  ReTr(R) )
-    //get_force_clover_action(U,E,eps); // force for clover action (not useful by itself)
-
-    // 2/9*BP+7/9*Wilson (cancels O(a^4) terms)
-    //get_force_bp(U,E,eps*2.0/9.0);
-    //get_force_wplaq_add(U,E,eps*7.0/9.0);
-};
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_dE_wplaq_dt(const GaugeField<group>& U) {
-    Reduction<atype> declov=0;
-    declov.allreduce(false).delayed(true);
-    VectorField<Algebra<group>> K,Kc;
-    get_wf_force(U,K);
-    get_force_wplaq(U,Kc,2.0);
-    foralldir(d) {
-        onsites(ALL) {
-            declov+=Kc[d][X].dot(K[d][X]);
-        }
-    }
-    return declov.value();
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_dE_clov_dt(const GaugeField<group>& U) {
-    Reduction<atype> declov=0;
-    declov.allreduce(false).delayed(true);
-    VectorField<Algebra<group>> K,Kc;
-    get_wf_force(U,K);
-    get_force_clover_action(U,Kc,2.0);
-    foralldir(d) {
-        onsites(ALL) {
-            declov+=Kc[d][X].dot(K[d][X]);
-        }
-    }
-    return declov.value();
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void measure_wflow_stuff(const GaugeField<group>& V, atype flow_l, atype t_step) {
-    // perform measurements on flowed gauge configuration V at flow scale flow_l
-    // [t_step is the flow time integration step size used in last gradient flow step]
-    // and print results in formatted form to standard output
-    static bool first=true;
-    if(first) {
-        // print legend for flow measurement output
-        hila::out0<<"LWFLMEAS  l(ambda)        S-flow        S-plaq        E_plaq    dE_plaq/dl         E_clv     dE_clv/dl     Qtopo_clv         E_log     Qtopo_log   [t step size]\n";
-        first=false;
-    }
-    atype slocal=measure_s(V)/(lattice.volume()*NDIM*(NDIM-1)/2); // average action per plaquette 
-    atype plaq=measure_s_wplaq(V)/(lattice.volume()*NDIM*(NDIM-1)/2); // average wilson plaquette action
-    atype eplaq=plaq*NDIM*(NDIM-1)*group::size(); // naive energy density (based on wilson plaquette action)
-
-    // average energy density and toplogical charge from 
-    // symmetric log definition of field strength tensor :
-    atype qtopolog,elog;
-    measure_topo_charge_and_energy_log(V,qtopolog,elog);
-    elog/=lattice.volume();
-
-    // average energy density and toplogical charge from 
-    // clover definition of field strength tensor :
-    atype qtopocl,ecl;
-    measure_topo_charge_and_energy_clover(V,qtopocl,ecl);
-    ecl/=lattice.volume();
-
-    // derivative of plaquette energy density w.r.t. to flow time :
-    atype deplaqdt=measure_dE_wplaq_dt(V)/lattice.volume();
-
-    // derivative of clover energy density w.r.t. to flow time :
-    atype declovdt=measure_dE_clov_dt(V)/lattice.volume();
-    
-    // print formatted results to standard output :
-    hila::out0<<string_format("WFLMEAS  % 9.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e       [%0.5f]",flow_l,slocal,plaq,eplaq,0.25*flow_l*deplaqdt,ecl,0.25*flow_l*declovdt,qtopocl,elog,qtopolog,t_step)<<'\n';
-}
-
-// end Wilson flow functions
 ///////////////////////////////////////////////////////////////////////////////////
 // load/save config functions
 
@@ -413,7 +193,6 @@ bool restore_checkpoint(GaugeField<group>& U,int& trajectory,parameters& p) {
 ///////////////////////////////////////////////////////////////////////////////////
 
 
-
 int main(int argc,char** argv) {
 
     // hila::initialize should be called as early as possible
@@ -468,8 +247,23 @@ int main(int argc,char** argv) {
 
     par.close(); // file is closed also when par goes out of scope
 
-    // setting up the lattice is convenient to do after reading
-    // the parameter
+    // DBW2 action parameters:
+    //p.c12=-1.4088;     // rectangle weight
+    //p.c11=1.0-8.0*p.c12; // plaquette weight
+
+    // Iwasaki action parameters:
+    p.c12=-0.331;     // rectangle weight
+    p.c11=1.0-8.0*p.c12; // plaquette weight
+
+    // LW action parameters:
+    //p.c12=-1.0/12.0;     // rectangle weight
+    //p.c11=1.0-8.0*p.c12; // plaquette weight
+
+    // Wilson plaquette action parameters:
+    //p.c12=0;
+    //p.c11=1.0;
+
+    // set up the lattice
     lattice.setup(lsize);
 
     // We need random number here
@@ -550,19 +344,16 @@ int main(int argc,char** argv) {
             <<std::setprecision(6)<<act_new-act_old<<std::setprecision(12);
         if(reject) {
             hila::out0<<" REJECT"<<" --> S_GAUGE "<<g_act_old;
+            U=U_old;
         } else {
             hila::out0<<" ACCEPT"<<" --> S_GAUGE "<<g_act_new;
         }
-
         hila::out0<<"  time "<<std::setprecision(3)<<hila::gettime()-ttime<<'\n';
-        
-        if(reject) {
-            U=U_old;
-        }
+ 
 
         hila::out0<<"Measure_start "<<trajectory<<'\n';
 
-        measure_stuff(U,E);
+        measure_stuff(U,E,p);
 
         hila::out0<<"Measure_end "<<trajectory<<'\n';
 
@@ -580,9 +371,9 @@ int main(int argc,char** argv) {
                     ftype t_step=0.001;
                     for(int i=0; i<nflow_steps; ++i) {
 
-                        t_step=do_wilson_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,get_wf_force,p.wflow_a_accu,p.wflow_r_accu,t_step);
+                        t_step=do_gradient_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,p.wflow_a_accu,p.wflow_r_accu,t_step);
 
-                        measure_wflow_stuff(V,(i+1)*p.wflow_l_step,t_step);
+                        measure_gradient_flow_stuff(V,(i+1)*p.wflow_l_step,t_step);
 
                     }
 

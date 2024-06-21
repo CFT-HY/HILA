@@ -6,8 +6,28 @@
 #include "hila.h"
 #include "wilson_line_and_force.h"
 
-// functions for improved action -S_{impr} = \p.beta/N*( c11*\sum_{plaquettes P} ReTr(P) + c12*\sum_{1x2-rectangles R}  ReTr(R) )
+/* 
+* parameters for for different improved actions:
+// DBW2 action parameters:
+//ftype c12=-1.4088;     // rectangle weight
+//ftype c11=1.0-8.0*c12; // plaquette weight
 
+// Iwasaki action parameters:
+//ftype c12=-0.331;     // rectangle weight
+//ftype c11=1.0-8.0*c12; // plaquette weight
+
+// LW action parameters:
+//ftype c12=-1.0/12.0;     // rectangle weight
+//ftype c11=1.0-8.0*c12; // plaquette weight
+
+// Wilson plaquette action parameters:
+//ftype c12=0;
+//ftype c11=1.0;
+*/
+
+
+// functions for improved action -S_{impr} = \p.beta/N*( c11*\sum_{plaquettes P} ReTr(P) + c12*\sum_{1x2-rectangles R}  ReTr(R) )
+/*
 template <typename group,typename atype=hila::arithmetic_type<group>>
 void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
     // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
@@ -27,84 +47,11 @@ void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& 
         }
     }
 }
+*/
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // and write it to K
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-    get_force_impr_add(U,K,c11,c12);
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_impr(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype c11,atype c12,atype delta) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // and use it to evolve the momentum field E
-    auto eps=delta/group::size();
-    get_force_impr_add(U,E,eps*c11,eps*c12);
-}
-
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr_f_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // in a faster way and add the results to K
-    Field<group> ustap;
-    Field<group> lstap;
-    foralldir(dir1) foralldir(dir2) if(dir1!=dir2) {
-        U[dir2].start_gather(dir1,ALL);
-        U[dir1].start_gather(dir2,ALL);
-        // get upper (dir1,dir2) and lower (dir1,-dir2) staples
-        onsites(ALL) {
-            lstap[X]=(U[dir1][X]*U[dir2][X+dir1]).dagger()*U[dir2][X];
-            ustap[X]=U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger();
-        }
-
-        lstap.start_gather(-dir2,ALL);
-
-        // compute plaquette contribution to force and add it to K
-        onsites(ALL) {
-            K[dir1][X]-=(U[dir1][X]*(ustap[X]+lstap[X-dir2])).project_to_algebra_scaled(c11);
-        }
-
-        if(c12!=0) {
-            // rectangle contribution to force
-            Direction path[6]={-dir2,dir1,dir2,dir2,-dir1,-dir2};
-
-            // compose rectangle and store it in ustap
-            onsites(ALL) ustap[X]=lstap[X-dir2].dagger()*ustap[X];
-
-            // compute rectangle force and add it to K
-            get_wloop_force_add(U,path,ustap,c12,K);
-        }
-    }
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr_f(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // in a faster way and write the results to K
-    foralldir(d1) {
-        K[d1][ALL]=0;
-    }
-    get_force_impr_f_add(U,K,c11,c12);
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_impr_f(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype c11,atype c12,atype delta) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // in a faster way and write the results to E
-
-    auto eps=delta/group::size();
-    get_force_impr_f_add(U,E,eps*c11,eps*c12);
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_impr_f2(const GaugeField<group>& U, atype c11, atype c12) {
+atype measure_s_impr(const GaugeField<group>& U, atype c11, atype c12) {
     // measure the improved action for dir1<dir2
-    // (just to have same normalization as with plaquette action)
     Reduction<hila::arithmetic_type<group>> stot=0;
     stot.allreduce(false).delayed(true);
     Field<group> tP;
@@ -134,7 +81,7 @@ atype measure_s_impr_f2(const GaugeField<group>& U, atype c11, atype c12) {
 
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr_f2_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
+void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
     // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
     // in an even faster way and add the results to K
     Field<group> ustap;
@@ -189,23 +136,13 @@ void get_force_impr_f2_add(const GaugeField<group>& U,VectorField<Algebra<group>
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_impr_f2(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
+void get_force_impr(const GaugeField<group>& U,VectorField<Algebra<group>>& K,atype c11,atype c12) {
     // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
     // in an even faster way and write the results to K
     foralldir(d1) {
         K[d1][ALL]=0;
     }
-    get_force_impr_f2_add(U,K,c11,c12);
-}
-
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_impr_f2(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype c11,atype c12,atype delta) {
-    // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
-    // in an even faster way and write the results to K
-
-    auto eps=delta/group::size();
-    get_force_impr_f2_add(U,E,eps*c11,eps*c12);
+    get_force_impr_add(U,K,c11,c12);
 }
 
 

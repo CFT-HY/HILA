@@ -65,7 +65,7 @@ void get_clover_leaves(const GaugeField<group>& U,Direction d1,Direction d2,Fiel
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_clover_action(const GaugeField<group>& U) {
+atype measure_s_clover(const GaugeField<group>& U) {
     // measure the clover action for dir1<dir2
     // (just to have same normalization as with plaquette action)
     Reduction<hila::arithmetic_type<group>> stot=0;
@@ -82,7 +82,7 @@ atype measure_s_clover_action(const GaugeField<group>& U) {
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_clover_action_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K, atype eps=1.0) {
+void get_force_clover_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K, atype eps=1.0) {
     // compute gauge force for clover action and add result to K
     Field<group> C[4];
     Field<group> Csum;
@@ -118,19 +118,13 @@ void get_force_clover_action_add(const GaugeField<group>& U,VectorField<Algebra<
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_force_clover_action(const GaugeField<group>& U,VectorField<Algebra<group>>& K, atype eps=1.0) {
+void get_force_clover(const GaugeField<group>& U,VectorField<Algebra<group>>& K, atype eps=1.0) {
     // determine gauge force for clover action and store result in K
     foralldir(d1) {
         K[d1][ALL]=0;
     }
-    get_force_clover_action_add(U,K,eps);
+    get_force_clover_add(U,K,eps);
 }
 
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_clover_action(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype delta) {
-    // compute force for clover action and use it to evolve E
-    auto eps=delta/group::size();
-    get_force_clover_action_add(U,E,eps);
-}
 
 #endif
