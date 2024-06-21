@@ -112,7 +112,7 @@ void get_force_clover_add(const GaugeField<group>& U,VectorField<Algebra<group>>
             // compute the gauge force from the first 4 links of all the Wilson loops that are summed in tC[k]
             // (is valid to do so since first 4 links are the same for all Wilson loops and projection on 
             // Lie-algebra is linear)
-            get_wloop_force_add(U,paths[k],tC,teps,K);
+            get_wloop_force_from_wl_add(U,paths[k],tC,teps,K);
         }
     }
 }
