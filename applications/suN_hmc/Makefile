@@ -11,6 +11,14 @@ HILA_DIR := ../..
 # Number of colors
 NCOL := 3
 
+# Gauge action for HMC update: 
+# "WILSON": 0, "BP": 1, "LW": 2, "IWASAKI": 3, "DBW2": 4
+HMCS := 1
+
+# Gauge action for gradient flow update: 
+# "WILSON": 0, "BP": 1, "LW": 2, "IWASAKI": 3, "DBW2": 4
+GFLOWS := 3
+
 # Set default goal and arch
 .DEFAULT_GOAL := suN_hmc
 
@@ -25,7 +33,7 @@ include $(HILA_DIR)/libraries/main.mk
 #HILAPP_OPTS += -comment-pragmas
 HILAPP_OPTS += -check-init
 
-APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL}
+APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL} -DHMCACTION=${HMCS} -DGFLOWACTION=${GFLOWS}
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir

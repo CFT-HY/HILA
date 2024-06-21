@@ -1,14 +1,22 @@
 #include "hila.h"
 #include "gauge/polyakov.h"
 #include "wilson_plaquette_action.h"
+
+#ifdef HMCACTION
+#define HMCS HMCACTION
+#else
+#define HMCS 1
+#endif
+
+#if HMCS==1
 #include "bulk_prevention_action.h"
+#elif HMCS>1
 #include "wilson_line_and_force.h"
 #include "improved_action.h"
-#include "clover_action.h"
+#endif
+
 #include "gradient_flow.h"
 #include "string_format.h"
-
-#include <string>
 
 using ftype=double;
 using mygroup=SU<NCOLOR,ftype>;
@@ -17,8 +25,6 @@ using mygroup=SU<NCOLOR,ftype>;
 // makes it simpler to pass the values around
 struct parameters {
     ftype beta;          // inverse gauge coupling
-    ftype c11;
-    ftype c12;
     ftype dt;            // HMC time step
     int trajlen;         // number of HMC time steps per trajectory
     int n_traj;          // number of trajectories to generate
@@ -38,22 +44,49 @@ struct parameters {
 // HMC functions
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s(const GaugeField<group>& U,const parameters& p) {
-    //atype res=measure_s_wplaq(U);
+atype measure_s(const GaugeField<group>& U) {
+    // compute the value of the chosen gauge action (without beta/N factor)
+#if HMCS==1 // BP
     atype res=measure_s_bp(U);
-    //atype res=measure_s_impr(U,p.c11,p.c12);
-    //atype res=measure_s_clover(U);
+#elif HMCS==2 //LW
+    atype c12=-1.0/12.0;     // rectangle weight
+    atype c11=1.0-8.0*c12;   // plaquette weight
+    atype res=measure_s_impr(U,c11,c12);
+#elif HMCS==3 //IWASAKI
+    atype c12=-0.331;        // rectangle weight
+    atype c11=1.0-8.0*c12;   // plaquette weight
+    atype res=measure_s_impr(U,c11,c12);
+#elif HMCS==4 //DBW2
+    atype c12=-1.4088;       // rectangle weight
+    atype c11=1.0-8.0*c12;   // plaquette weight
+    atype res=measure_s_impr(U,c11,c12);
+#else //WILSON
+    atype res=measure_s_wplaq(U);
+#endif
     return res;
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,atype delta) {
+void update_E(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype delta) {
     // compute the force for the chosen action and use it to evolve E
-    atype eps=delta*p.beta/group::size();
-    //get_force_wplaq_add(U,E,eps);
+    atype eps=delta/group::size();
+#if HMCS==1 // BP
     get_force_bp_add(U,E,eps);
-    //get_force_impr_add(U,E,eps*p.c11,eps*p.c12);
-    //get_force_clover_add(U,E,eps);
+#elif HMCS==2 //LW
+    atype c12=-1.0/12.0;     // rectangle weight
+    atype c11=1.0-8.0*c12;   // plaquette weight
+    get_force_impr_add(U,E,eps*c11,eps*c12);
+#elif HMCS==3 //IWASAKI
+    atype c12=-0.331;        // rectangle weight
+    atype c11=1.0-8.0*c12;   // plaquette weight
+    get_force_impr_add(U,E,eps*c11,eps*c12);
+#elif HMCS==4 //DBW2
+    atype c12=-1.4088;       // rectangle weight
+    atype c11=1.0-8.0*c12;   // plaquette weight
+    get_force_impr_add(U,E,eps*c11,eps*c12);
+#else //WILSON
+    get_force_wplaq_add(U,E,eps);
+#endif
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
@@ -78,7 +111,7 @@ atype measure_e2(const VectorField<Algebra<group>>& E) {
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_action(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p,atype& plaq) {
     // measure the total action, consisting of plaquette and momentum term
-    plaq=p.beta*measure_s(U,p);
+    plaq=p.beta*measure_s(U);
     atype e2=measure_e2(E);
     return plaq+e2/2;
 }
@@ -99,11 +132,11 @@ void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const par
     update_U(U,E,p.dt/2);
     // main trajectory integration:
     for(int n=0; n<p.trajlen-1; ++n) {
-        update_E(U,E,p,p.dt);
+        update_E(U,E,p.beta*p.dt);
         update_U(U,E,p.dt);
     }
     // end trajectory: bring U and E to the same time
-    update_E(U,E,p,p.dt);
+    update_E(U,E,p.beta*p.dt);
     update_U(U,E,p.dt/2);
 
     U.reunitarize_gauge();
@@ -114,7 +147,7 @@ void do_trajectory(GaugeField<group>& U,VectorField<Algebra<group>>& E,const par
 // measurement functions
 
 template <typename group>
-void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>& E,const parameters& p) {
+void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>& E) {
     // perform measurements on current gauge and momentum pair (U, E) and
     // print results in formatted form to standard output
     static bool first=true;
@@ -123,7 +156,7 @@ void measure_stuff(const GaugeField<group>& U,const VectorField<Algebra<group>>&
         hila::out0<<"LMEAS:     s-local          plaq           E^2        P.real        P.imag\n";
         first=false;
     }
-    auto slocal=measure_s(U,p)/(lattice.volume()*NDIM*(NDIM-1)/2);
+    auto slocal=measure_s(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
     auto plaq=measure_s_wplaq(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
     auto e2=measure_e2(E)/(lattice.volume()*NDIM);
     auto poly=measure_polyakov(U,e_t);
@@ -209,9 +242,19 @@ int main(int argc,char** argv) {
     // .get() -method can read many different input types,
     // see file "input.h" for documentation
 
-    parameters p;
+#if HMCS==1
+    hila::out0<<"SU("<<mygroup::size()<<") HMC with bulk-prevention gauge action\n";
+#elif HMCS==2
+    hila::out0<<"SU("<<mygroup::size()<<") HMC with Luscher-Weisz gauge action\n";
+#elif HMCS==3
+    hila::out0<<"SU("<<mygroup::size()<<") HMC with Iwasaki gauge action\n";
+#elif HMCS==4
+    hila::out0<<"SU("<<mygroup::size()<<") HMC with DBW2 gauge action\n";
+#else
+    hila::out0<<"SU("<<mygroup::size()<<") HMC with Wilson's plaquette gauge action\n";
+#endif
 
-    hila::out0<<"SU("<<mygroup::size()<<") HMC with bulk-prevention\n";
+    parameters p;
 
     hila::input par("parameters");
 
@@ -246,22 +289,6 @@ int main(int argc,char** argv) {
     p.config_file=par.get("config name");
 
     par.close(); // file is closed also when par goes out of scope
-
-    // DBW2 action parameters:
-    //p.c12=-1.4088;     // rectangle weight
-    //p.c11=1.0-8.0*p.c12; // plaquette weight
-
-    // Iwasaki action parameters:
-    p.c12=-0.331;     // rectangle weight
-    p.c11=1.0-8.0*p.c12; // plaquette weight
-
-    // LW action parameters:
-    //p.c12=-1.0/12.0;     // rectangle weight
-    //p.c11=1.0-8.0*p.c12; // plaquette weight
-
-    // Wilson plaquette action parameters:
-    //p.c12=0;
-    //p.c11=1.0;
 
     // set up the lattice
     lattice.setup(lsize);
@@ -353,7 +380,7 @@ int main(int argc,char** argv) {
 
         hila::out0<<"Measure_start "<<trajectory<<'\n';
 
-        measure_stuff(U,E,p);
+        measure_stuff(U,E);
 
         hila::out0<<"Measure_end "<<trajectory<<'\n';
 
