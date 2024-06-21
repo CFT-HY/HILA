@@ -16,12 +16,13 @@ NCOL := 3
 # "WILSON": 0, "BP": 1, "LW": 2, "IWASAKI": 3, "DBW2": 4
 GFLOWS := 3
 
-# Set default goal and arch
-.DEFAULT_GOAL := suN_gauge_gf
 
 ifndef ARCH
 ARCH := vanilla
 endif
+
+# Set default goal and arch
+.DEFAULT_GOAL := suN_gauge_gf
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk
@@ -39,10 +40,10 @@ endif
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-suN_gauge_gf: build/suN_gauge_gf ; @:
+suN_gauge_gf: build/suN_gauge_gf_su${NCOL}_fs${GFLOWS}_${ARCH} ; @:
 
 # Now the linking step for each target executable
-build/suN_gauge_gf: Makefile build/suN_gauge_gf.o $(HILA_OBJECTS) $(HEADERS)
+build/suN_gauge_gf_su${NCOL}_fs${GFLOWS}_${ARCH}: Makefile build/suN_gauge_gf.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/suN_gauge_gf.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
 
 

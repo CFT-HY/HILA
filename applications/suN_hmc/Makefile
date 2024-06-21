@@ -38,10 +38,10 @@ APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL} -DHMCACTION=${HMCS} -DGFLOWACTION=${GFLOWS
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-suN_hmc: build/suN_hmc ; @:
+suN_hmc: build/suN_hmc_su${NCOL}_hmcs${HMCS}_fs${GFLOWS}_${ARCH} ; @:
 
 # Now the linking step for each target executable
-build/suN_hmc: Makefile build/suN_hmc.o $(HILA_OBJECTS) $(HEADERS)
+build/suN_hmc_su${NCOL}_hmcs${HMCS}_fs${GFLOWS}_${ARCH}: Makefile build/suN_hmc.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/suN_hmc.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
 
 
