@@ -1,0 +1,16 @@
+# This is a parameter file for SUN_hmc
+
+lattice size           12,12,12,12
+beta                   6.
+number of trajectories 50000
+updates in trajectory  1
+overrelax steps        4
+thermalization trajs   50
+wflow freq             100
+wflow max lambda       6.
+wflow lambda step      0.1
+wflow abs. accuracy    1.0e-7
+wflow rel. accuracy    1.0e-7
+random seed            0
+trajs/saved            100
+config name            config
