@@ -124,7 +124,7 @@ void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& 
                 Direction path[6]={-dir2,dir1,dir2,dir2,-dir1,-dir2};
 
                 // compute rectangle force and add it to K
-                get_wloop_force_add(U,path,ustap,c12,K);
+                get_wloop_force_from_wl_add(U,path,ustap,c12,K);
             }
             first=false;
         }
