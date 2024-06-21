@@ -48,6 +48,22 @@ T bp_iOsqmat(const T& U) {
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
+atype measure_s_bp(const GaugeField<group>& U) {
+    // measure the BP plaquette action
+    Reduction<hila::arithmetic_type<group>> plaq=0;
+    plaq.allreduce(false).delayed(true);
+    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
+        U[dir2].start_gather(dir1,ALL);
+        U[dir1].start_gather(dir2,ALL);
+        onsites(ALL) {
+            plaq+=real(trace(bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*
+                (U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size();
+        }
+    }
+    return plaq.value();
+}
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
 void get_force_bp_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K, atype eps=1.0) {
     // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and add it to K
     Field<group> fmatp;
@@ -80,29 +96,6 @@ void get_force_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& K, aty
         K[d1][ALL]=0;
     }
     get_force_bp_add(U,K,eps);
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype delta) {
-    // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and use it to evolve E
-    auto eps=delta/group::size();
-    get_force_bp_add(U,E,eps);
-}
-
-template <typename group,typename atype=hila::arithmetic_type<group>>
-atype measure_s_bp(const GaugeField<group>& U) {
-    // measure the BP plaquette action
-    Reduction<hila::arithmetic_type<group>> plaq=0;
-    plaq.allreduce(false).delayed(true);
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        U[dir2].start_gather(dir1,ALL);
-        U[dir1].start_gather(dir2,ALL);
-        onsites(ALL) {
-            plaq+=real(trace(bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*
-                (U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size();
-        }
-    }
-    return plaq.value();
 }
 
 

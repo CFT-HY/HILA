@@ -80,17 +80,5 @@ void get_force_wplaq(const GaugeField<group>& U,VectorField<Algebra<group>>& K,a
     }
 }
 
-template <typename group,typename atype=hila::arithmetic_type<group>>
-void update_E_wplaq(const GaugeField<group>& U,VectorField<Algebra<group>>& E,atype delta) {
-    // compute the force for the plaquette action and use it to evolve E
-    Field<group> staple;
-    auto eps=delta/group::size();
-    foralldir(d) {
-        staplesum(U,staple,d);
-        onsites(ALL) {
-            E[d][X]-=(U[d][X]*staple[X]).project_to_algebra_scaled(eps);
-        }
-    }
-}
 
 #endif
