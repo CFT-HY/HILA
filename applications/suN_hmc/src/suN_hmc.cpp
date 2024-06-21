@@ -392,7 +392,7 @@ int main(int argc,char** argv) {
                     int nflow_steps=(int)(p.wflow_max_l/p.wflow_l_step);
 
                     double wtime=hila::gettime();
-                    hila::out0<<"Wflow_start "<<wtrajectory<<'\n';
+                    hila::out0<<"Gflow_start "<<wtrajectory<<'\n';
 
                     GaugeField<mygroup> V=U;
                     ftype t_step=0.001;
@@ -404,7 +404,7 @@ int main(int argc,char** argv) {
 
                     }
 
-                    hila::out0<<"Wflow_end "<<wtrajectory<<"    time "<<std::setprecision(3)<<hila::gettime()-wtime<<'\n';
+                    hila::out0<<"Gflow_end "<<wtrajectory<<"    time "<<std::setprecision(3)<<hila::gettime()-wtime<<'\n';
                 }
             }
 
