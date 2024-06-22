@@ -1585,7 +1585,7 @@ class Matrix_t {
  * @tparam T Data type Matrix
  */
 template <int n, int m, typename T>
-class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
+class Matrix : public Matrix_t<n, m, T, Matrix<n,m,T>> {
 
   public:
     /// std incantation for field types

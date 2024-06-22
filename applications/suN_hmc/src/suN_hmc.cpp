@@ -1,6 +1,6 @@
 #include "hila.h"
 #include "gauge/polyakov.h"
-#include "wilson_plaquette_action.h"
+#include "gauge/wilson_plaquette_action.h"
 
 #ifdef HMCACTION
 #define HMCS HMCACTION
@@ -9,14 +9,14 @@
 #endif
 
 #if HMCS==1
-#include "bulk_prevention_action.h"
+#include "gauge/bulk_prevention_action.h"
 #elif HMCS>1
-#include "wilson_line_and_force.h"
-#include "improved_action.h"
+#include "gauge/wilson_line_and_force.h"
+#include "gauge/improved_action.h"
 #endif
 
-#include "gradient_flow.h"
-#include "string_format.h"
+#include "gauge/gradient_flow.h"
+#include "tools/string_format.h"
 
 using ftype=double;
 using mygroup=SU<NCOLOR,ftype>;
