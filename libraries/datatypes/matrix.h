@@ -2624,7 +2624,7 @@ template <int n,int m,typename T,typename MT>
 inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
     static_assert(n==m,"chsexp() only for square matrices");
 
-    // compute the characteristic polynomial coefficients crpl[] with the Faddeev–LeVerrier algorithm :
+    // compute the characteristic polynomial coefficients crpl[] with the Faddeev-LeVerrier algorithm :
     int i,j,k;
     Matrix_t<n,m,T,MT> tB[2];
     T crpl[n+1];
