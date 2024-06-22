@@ -1,11 +1,11 @@
 #include "hila.h"
 #include "gauge/polyakov.h"
-#include "wilson_plaquette_action.h"
+#include "gauge/wilson_plaquette_action.h"
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
 #include "gauge/staples.h"
-#include "gradient_flow.h"
-#include "string_format.h"
+#include "gauge/gradient_flow.h"
+#include "tools/string_format.h"
 
 using ftype=double;
 using mygroup=SU<NCOLOR,ftype>;

@@ -350,7 +350,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
             m.e(i, i) = Complex<T>(0, d.e(i));
 
         int k = n_diag;
-        T inv2 = 1.0 / 2;
+        T inv2 = 0.5;
         for (int i = 0; i < N - 1; i++)
             for (int j = i + 1; j < N; j++) {
                 Complex<T> v(this->c[k] * inv2, this->c[k + 1] * inv2);

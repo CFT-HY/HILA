@@ -2,8 +2,14 @@
 # Following line(s) are printed with "make help".  Use columns 8 and 30
 #%     make [suN_gauge_gf]        - build suN_gauge_gf program
 #% suN_gauge_gf make options 
-#%     NCOL=<N>             - SU(N) gauge simulation program (default: 3)
-#%     SUN_OVERRELAX_dFJ=1  - use deForcrand-Jahn full overrelax (default: su2 subgroups)
+#%     NCOL=<N>              - SU(N) gauge simulation program (default: 3)
+#%     SUN_OVERRELAX_dFJ=1   - use deForcrand-Jahn full overrelax (default: su2 subgroups)
+#%     GFLOWS=<K>            - Gauge action for gradient flow:
+#%                                                   K=0: "WILSON"
+#%                                                   K=1: "Bulk-Prevention"
+#%                                                   K=2: "Luscher-Weisz"   (default)
+#%                                                   K=3: "IWASAKI"
+#%                                                   K=4: "DBW2"
 
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
@@ -40,10 +46,10 @@ endif
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-suN_gauge_gf: build/suN_gauge_gf_su${NCOL}_fs${GFLOWS}_${ARCH} ; @:
+suN_gauge_gf: build/su${NCOL}_gauge_gf_fs${GFLOWS}_${ARCH} ; @:
 
 # Now the linking step for each target executable
-build/suN_gauge_gf_su${NCOL}_fs${GFLOWS}_${ARCH}: Makefile build/suN_gauge_gf.o $(HILA_OBJECTS) $(HEADERS)
+build/su${NCOL}_gauge_gf_fs${GFLOWS}_${ARCH}: Makefile build/suN_gauge_gf.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/suN_gauge_gf.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
 
 
