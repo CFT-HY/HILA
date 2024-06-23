@@ -94,7 +94,7 @@ void get_force_clover_add(const GaugeField<group>& U,VectorField<Algebra<group>>
         get_clover_leaves(U,dir1,dir2,C,Csum);
 
         // define for each clover leave matrix the correspondin path of gauge links
-        Direction paths[4][4]={{dir1,dir2,-dir1,-dir2},{dir2,-dir1,-dir2,dir1},{-dir1,-dir2,dir1,dir2},{-dir2,dir1,dir2,-dir1}};
+        std::vector<Direction> paths[4]={{dir1,dir2,-dir1,-dir2},{dir2,-dir1,-dir2,dir1},{-dir1,-dir2,dir1,dir2},{-dir2,dir1,dir2,-dir1}};
 
         // the force on the link (Y,dir) from the clover term with foot point X is:
         // F[dir][Y] = d_{Y,dir}(0.5*Tr(Csum*Csum)) 
@@ -111,7 +111,7 @@ void get_force_clover_add(const GaugeField<group>& U,VectorField<Algebra<group>>
             // compute the gauge force from the first 4 links of all the Wilson loops that are summed in tC[k]
             // (is valid to do so since first 4 links are the same for all Wilson loops and projection on 
             // Lie-algebra is linear)
-            get_wloop_force_from_wl_add(U,paths[k],4,tC,eps,K);
+            get_wloop_force_from_wl_add(U,paths[k],tC,eps,K);
         }
     }
 }

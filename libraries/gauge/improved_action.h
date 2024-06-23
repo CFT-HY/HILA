@@ -121,10 +121,10 @@ void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& 
                 onsites(ALL) ustap[X]=lstap[X-dir2].dagger()*ustap[X];
 
                 // corresponding path
-                Direction path[6]={-dir2,dir1,dir2,dir2,-dir1,-dir2};
+                std::vector<Direction> path={-dir2,dir1,dir2,dir2,-dir1,-dir2};
 
                 // compute rectangle force and add it to K
-                get_wloop_force_from_wl_add(U,path,6,ustap,c12,K);
+                get_wloop_force_from_wl_add(U,path,ustap,c12,K);
             }
         }
         // compute plaquette contribution to force and add it to K
