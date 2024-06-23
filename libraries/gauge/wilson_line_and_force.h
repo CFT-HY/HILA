@@ -4,6 +4,7 @@
 #define WILSON_LINE_AND_FORCE_H_
 
 #include "hila.h"
+#include <vector>
 
 // functions to compute general Wilson lines and gauge force for closed Wilson lines
 
@@ -13,10 +14,12 @@ void get_wilson_line(const GaugeField<group>& U,const std::vector<Direction>& pa
     int i,ip;
     int L=path.size();
     int udirs[NDIRS]={0};
+    Direction dir;
     for(i=0; i<L; ++i) {
-        if(is_up_dir(path[i])) {
-            if((udirs[(int)path[i]]++)==0) {
-                U[path[i]].start_gather(-path[i],ALL);
+        dir=path[i];
+        if(is_up_dir(dir)) {
+            if((udirs[(int)dir]++)==0) {
+                U[dir].start_gather(-dir,ALL);
             }
         }
     }
@@ -25,37 +28,40 @@ void get_wilson_line(const GaugeField<group>& U,const std::vector<Direction>& pa
 
     i=0;
     ip=0;
+    dir=path[i];
     // initialize R0[0] with first link variable of the Wilson line:
-    if(is_up_dir(path[i])) {
+    if(is_up_dir(dir)) {
         // link points in positive direction
-        onsites(ALL) R0[ip][X]=U[path[i]][X-path[i]];
+        onsites(ALL) R0[ip][X]=U[dir][X-dir];
     } else {
         // link points in negative direction
-        onsites(ALL) R0[ip][X]=U[-path[i]][X].dagger();
+        onsites(ALL) R0[ip][X]=U[-dir][X].dagger();
     }
 
     // multiply R0[ip] successively with the L-2 intermediate link variables of the Wilson line
     // and store the result in R0[1-ip]
     for(i=1; i<L-1; ++i) {
-        R0[ip].start_gather(-path[i],ALL);
-        if(is_up_dir(path[i])) {
+        dir=path[i];
+        R0[ip].start_gather(-dir,ALL);
+        if(is_up_dir(dir)) {
             // link points in positive direction
-            onsites(ALL) mult(R0[ip][X-path[i]],U[path[i]][X-path[i]],R0[1-ip][X]);
+            onsites(ALL) mult(R0[ip][X-dir],U[dir][X-dir],R0[1-ip][X]);
         } else {
             // link points in negative direction
-            onsites(ALL) mult(R0[ip][X-path[i]],U[-path[i]][X].dagger(),R0[1-ip][X]);
+            onsites(ALL) mult(R0[ip][X-dir],U[-dir][X].dagger(),R0[1-ip][X]);
         }
         ip=1-ip;
     }
 
     // multiply R0[ip] by the last link variable of the Wilson line and store the result in R
-    R0[ip].start_gather(-path[i],ALL);
-    if(is_up_dir(path[i])) {
+    dir=path[i];
+    R0[ip].start_gather(-dir,ALL);
+    if(is_up_dir(dir)) {
         // link points in positive direction
-        onsites(ALL) mult(R0[ip][X-path[i]],U[path[i]][X-path[i]],R[X]);
+        onsites(ALL) mult(R0[ip][X-dir],U[dir][X-dir],R[X]);
     } else {
         // link points in negative direction
-        onsites(ALL) mult(R0[ip][X-path[i]],U[-path[i]][X].dagger(),R[X]);
+        onsites(ALL) mult(R0[ip][X-dir],U[-dir][X].dagger(),R[X]);
     }
 }
 
@@ -66,28 +72,31 @@ void get_wloop_force_from_wl_add(const GaugeField<group>& U,const std::vector<Di
     Field<group> R0;
     int L=path.size();
     int udirs[NDIRS]={0};
+    Direction dir;
     for(int i=0; i<L; ++i) {
-        if(is_up_dir(path[i])) {
-            if((udirs[(int)path[i]]++)==0) {
-                U[path[i]].start_gather(-path[i],ALL);
+        dir=path[i];
+        if(is_up_dir(dir)) {
+            if((udirs[(int)dir]++)==0) {
+                U[dir].start_gather(-dir,ALL);
             }
         }
     }
 
     for(int i=0; i<L; ++i) {
-        R.start_gather(-path[i],ALL);
-        if(is_up_dir(path[i])) {
+        dir=path[i];
+        R.start_gather(-dir,ALL);
+        if(is_up_dir(dir)) {
             // link points in positive direction
-            onsites(ALL) K[path[i]][X]-=R[X].project_to_algebra_scaled(eps);
+            onsites(ALL) K[dir][X]-=R[X].project_to_algebra_scaled(eps);
 
-            onsites(ALL) mult(U[path[i]][X-path[i]].dagger(),R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[path[i]][X-path[i]],R[X]);
+            onsites(ALL) mult(U[dir][X-dir].dagger(),R[X-dir],R0[X]);
+            onsites(ALL) mult(R0[X],U[dir][X-dir],R[X]);
         } else {
             // link points in negative direction
-            onsites(ALL) mult(U[-path[i]][X],R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[-path[i]][X].dagger(),R[X]);
+            onsites(ALL) mult(U[-dir][X],R[X-dir],R0[X]);
+            onsites(ALL) mult(R0[X],U[-dir][X].dagger(),R[X]);
 
-            onsites(ALL) K[-path[i]][X]+=R[X].project_to_algebra_scaled(eps);
+            onsites(ALL) K[-dir][X]+=R[X].project_to_algebra_scaled(eps);
         }
     }
 }
@@ -108,29 +117,32 @@ void get_wloop_force_add(const GaugeField<group>& U,const std::vector<Direction>
     int L=path.size();
     get_wilson_line(U,path,R);
 
+    Direction dir;
     int udirs[NDIRS]={0};
     for(int i=0; i<L; ++i) {
-        if(is_up_dir(path[i])) {
-            if((udirs[(int)path[i]]++)==0) {
-                U[path[i]].start_gather(-path[i],ALL);
+        dir=path[i];
+        if(is_up_dir(dir)) {
+            if((udirs[(int)dir]++)==0) {
+                U[dir].start_gather(-dir,ALL);
             }
         }
     }
 
     for(int i=0; i<L; ++i) {
-        R.start_gather(-path[i],ALL);
-        if(path[i]<NDIM) {
+        dir=path[i];
+        R.start_gather(-dir,ALL);
+        if(is_up_dir(dir)) {
             // link points in positive direction
-            onsites(ALL) K[path[i]][X]-=R[X].project_to_algebra_scaled(eps);
+            onsites(ALL) K[dir][X]-=R[X].project_to_algebra_scaled(eps);
 
-            onsites(ALL) mult(U[path[i]][X-path[i]].dagger(),R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[path[i]][X-path[i]],R[X]);
+            onsites(ALL) mult(U[dir][X-dir].dagger(),R[X-dir],R0[X]);
+            onsites(ALL) mult(R0[X],U[dir][X-dir],R[X]);
         } else {
             // link points in negative direction
-            onsites(ALL) mult(U[-path[i]][X],R[X-path[i]],R0[X]);
-            onsites(ALL) mult(R0[X],U[-path[i]][X].dagger(),R[X]);
+            onsites(ALL) mult(U[-dir][X],R[X-dir],R0[X]);
+            onsites(ALL) mult(R0[X],U[-dir][X].dagger(),R[X]);
 
-            onsites(ALL) K[-path[i]][X]+=R[X].project_to_algebra_scaled(eps);
+            onsites(ALL) K[-dir][X]+=R[X].project_to_algebra_scaled(eps);
         }
     }
 }
