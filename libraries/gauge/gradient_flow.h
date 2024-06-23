@@ -30,9 +30,12 @@ template <typename group,typename atype=hila::arithmetic_type<group>>
 void get_gf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
     // wrapper for force computation routine to be used for gradient flow
 
-    atype eps=2.0; // factor 2.0 to switch from unoriented to oriented plaquettes
-                   // (factor is usually absorbed in \beta, but gradient flow force is
-                   // computed from action term with \beta-factor stripped off) 
+    atype eps=1.0; // in principle need factor 2.0 here to switch from unoriented to oriented
+                   // plaquettes (factor is usually absorbed in \beta, but gradient flow force
+                   // is computed from action term with \beta-factor stripped off) 
+                   // however; it seems that in practice factor 1.0 is used.
+                   // note: when switching to factor 2.0, remember to change also the stability
+                   // limit in the do_gradient_flow_adapt() below
 
 #if GFLOWS==1 // BP
     get_force_bp(U,E,eps);
@@ -175,7 +178,7 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
     // flow time interval [t,tmax] :
     atype t=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
-    atype lstab=0.095; // stability limit
+    atype lstab=0.095; // stability limit 0.1 for esp=1.0 and 0.05 for esp=2.0
     atype step=min(min(tstep,0.51*(tmax-t)),lstab);  //initial step size
 
     VectorField<Algebra<group>> k1,k2;
