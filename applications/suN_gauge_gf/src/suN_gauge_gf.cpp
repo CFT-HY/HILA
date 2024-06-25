@@ -18,11 +18,11 @@ struct parameters {
     int n_therm;         // number of thermalization trajectories (counts only accepted traj.)
     int n_update;        // number of heat-bath sweeps per "trajectory"
     int n_overrelax;     // number of overrelaxation sweeps between heat-batch sweeps
-    int wflow_freq;      // number of trajectories between wflow measurements
-    ftype wflow_max_l;   // flow scale at which wilson flow stops
-    ftype wflow_l_step;  // flow scale interval between flow measurements
-    ftype wflow_a_accu;  // desired absolute accuracy of wilson flow integration steps
-    ftype wflow_r_accu;  // desired relative accuracy of wilson flow integration steps
+    int gflow_freq;      // number of trajectories between gflow measurements
+    ftype gflow_max_l;   // flow scale at which gradient flow stops
+    ftype gflow_l_step;  // flow scale interval between flow measurements
+    ftype gflow_a_accu;  // desired absolute accuracy of gradient flow integration steps
+    ftype gflow_r_accu;  // desired relative accuracy of gradient flow integration steps
     int n_save;          // number of trajectories between config. check point 
     std::string config_file;
     ftype time_offset;
@@ -242,15 +242,15 @@ int main(int argc,char** argv) {
     // number of thermalization trajectories
     p.n_therm=par.get("thermalization trajs");
     // wilson flow frequency (number of traj. between w. flow measurement)
-    p.wflow_freq=par.get("wflow freq");
+    p.gflow_freq=par.get("gflow freq");
     // wilson flow max. flow-distance
-    p.wflow_max_l=par.get("wflow max lambda");
+    p.gflow_max_l=par.get("gflow max lambda");
     // wilson flow flow-distance step size
-    p.wflow_l_step=par.get("wflow lambda step");
+    p.gflow_l_step=par.get("gflow lambda step");
     // wilson flow absolute accuracy (per integration step)
-    p.wflow_a_accu=par.get("wflow abs. accuracy");
+    p.gflow_a_accu=par.get("gflow abs. accuracy");
     // wilson flow relative accuracy (per integration step)
-    p.wflow_r_accu=par.get("wflow rel. accuracy");
+    p.gflow_r_accu=par.get("gflow rel. accuracy");
     // random seed = 0 -> get seed from time
     long seed=par.get("random seed");
     // save config and checkpoint
@@ -277,10 +277,12 @@ int main(int argc,char** argv) {
         U=1;
     }
 
+
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
     hila::timer gf_timer("Gradient Flow");
 
+    ftype t_step0=0.001;
     for(int trajectory=start_traj; trajectory<p.n_traj; ++trajectory) {
 
         double ttime=hila::gettime();
@@ -307,28 +309,35 @@ int main(int argc,char** argv) {
 
         if(trajectory>=0) {
 
-            if(p.wflow_freq>0&&trajectory%p.wflow_freq==0) {
+            if(p.gflow_freq>0&&trajectory%p.gflow_freq==0) {
 
 
-                int wtrajectory=trajectory/p.wflow_freq;
-                if(p.wflow_l_step>0) {
+                int gtrajectory=trajectory/p.gflow_freq;
+                if(p.gflow_l_step>0) {
 
                     gf_timer.start();
                     
-                    int nflow_steps=(int)(p.wflow_max_l/p.wflow_l_step);
-                    double wtime=hila::gettime();
-                    hila::out0<<"Gflow_start "<<wtrajectory<<'\n';
+                    int nflow_steps=(int)(p.gflow_max_l/p.gflow_l_step);
+                    double gftime=hila::gettime();
+                    hila::out0<<"Gflow_start "<<gtrajectory<<'\n';
 
                     GaugeField<mygroup> V=U;
-                    ftype t_step=0.001;
-                    for(int i=0; i<nflow_steps; ++i) {
 
-                        t_step=do_gradient_flow_adapt(V,i*p.wflow_l_step,(i+1)*p.wflow_l_step,p.wflow_a_accu,p.wflow_r_accu,t_step);
+                    ftype t_step=t_step0;
+                    measure_gradient_flow_stuff(V,0.0,t_step);
+                    t_step=do_gradient_flow_adapt(V,0.0,p.gflow_l_step,p.gflow_a_accu,p.gflow_r_accu,t_step);
+                    measure_gradient_flow_stuff(V,p.gflow_l_step,t_step);
+                    t_step0=t_step;
 
-                        measure_gradient_flow_stuff(V,(i+1)*p.wflow_l_step,t_step);
+                    for(int i=1; i<nflow_steps; ++i) {
+
+                        t_step=do_gradient_flow_adapt(V,i*p.gflow_l_step,(i+1)*p.gflow_l_step,p.gflow_a_accu,p.gflow_r_accu,t_step);
+
+                        measure_gradient_flow_stuff(V,(i+1)*p.gflow_l_step,t_step);
+
                     }
 
-                    hila::out0<<"Gflow_end "<<wtrajectory<<"    time "<<std::setprecision(3)<<hila::gettime()-wtime<<'\n';
+                    hila::out0<<"Gflow_end "<<gtrajectory<<"    time "<<std::setprecision(3)<<hila::gettime()-gftime<<'\n';
 
                     gf_timer.stop();
                 }

@@ -7,8 +7,8 @@
 #%     GFLOWS=<K>            - Gauge action for gradient flow:
 #%                                                   K=0: "WILSON"
 #%                                                   K=1: "Bulk-Prevention"
-#%                                                   K=2: "Luscher-Weisz"   (default)
-#%                                                   K=3: "IWASAKI"
+#%                                                   K=2: "Luscher-Weisz"
+#%                                                   K=3: "IWASAKI"         (default)
 #%                                                   K=4: "DBW2"
 
 # Give the location of the top level distribution directory wrt. this location.

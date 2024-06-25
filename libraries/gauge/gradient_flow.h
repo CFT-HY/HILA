@@ -8,6 +8,7 @@
 #include "gauge/energy_and_topo_charge_log.h"
 #include "gauge/wilson_plaquette_action.h"
 #include "gauge/clover_action.h"
+#include "gauge/log_action.h"
 
 #ifdef GFLOWACTION
 #define GFLOWS GFLOWACTION
@@ -90,32 +91,47 @@ atype measure_gf_s(const GaugeField<group>& U) {
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_dE_wplaq_dt(const GaugeField<group>& U) {
-    Reduction<atype> declov=0;
-    declov.allreduce(false).delayed(true);
+    Reduction<atype> de=0;
+    de.allreduce(false).delayed(true);
     VectorField<Algebra<group>> K,Kc;
     get_gf_force(U,K);
     get_force_wplaq(U,Kc,2.0);
     foralldir(d) {
         onsites(ALL) {
-            declov+=Kc[d][X].dot(K[d][X]);
+            de+=Kc[d][X].dot(K[d][X]);
         }
     }
-    return declov.value();
+    return de.value();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_dE_clov_dt(const GaugeField<group>& U) {
-    Reduction<atype> declov=0;
-    declov.allreduce(false).delayed(true);
+    Reduction<atype> de=0;
+    de.allreduce(false).delayed(true);
     VectorField<Algebra<group>> K,Kc;
     get_gf_force(U,K);
     get_force_clover(U,Kc,2.0);
     foralldir(d) {
         onsites(ALL) {
-            declov+=Kc[d][X].dot(K[d][X]);
+            de+=Kc[d][X].dot(K[d][X]);
         }
     }
-    return declov.value();
+    return de.value();
+}
+
+template <typename group,typename atype=hila::arithmetic_type<group>>
+atype measure_dE_log_dt(const GaugeField<group>& U) {
+    Reduction<atype> de=0;
+    de.allreduce(false).delayed(true);
+    VectorField<Algebra<group>> K,Kc;
+    get_gf_force(U,K);
+    get_force_log(U,Kc,2.0);
+    foralldir(d) {
+        onsites(ALL) {
+            de+=Kc[d][X].dot(K[d][X]);
+        }
+    }
+    return de.value();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
@@ -138,7 +154,7 @@ void measure_gradient_flow_stuff(const GaugeField<group>& V,atype flow_l,atype t
         hila::out0<<"GFINFO using Wilson's plaquette action\n";
 #endif
         // print legend for flow measurement output
-        hila::out0<<"LGFLMEAS  l(ambda)        S-flow        S-plaq        E_plaq    dE_plaq/dl         E_clv     dE_clv/dl     Qtopo_clv         E_log     Qtopo_log   [t step size]\n";
+        hila::out0<<"LGFLMEAS  l(ambda)        S-flow        S-plaq        E_plaq    dE_plaq/dl         E_clv     dE_clv/dl     Qtopo_clv         E_log     dE_log/dl     Qtopo_log   [t step size]\n";
         first=false;
     }
     atype slocal=measure_gf_s(V)/(lattice.volume()*NDIM*(NDIM-1)/2); // average action per plaquette 
@@ -163,25 +179,39 @@ void measure_gradient_flow_stuff(const GaugeField<group>& V,atype flow_l,atype t
     // derivative of clover energy density w.r.t. to flow time :
     atype declovdt=measure_dE_clov_dt(V)/lattice.volume();
 
+    // derivative of log energy density w.r.t. to flow time :
+    atype delogdt=measure_dE_log_dt(V)/lattice.volume();
+
     // print formatted results to standard output :
-    hila::out0<<string_format("GFLMEAS  % 9.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e       [%0.5f]",flow_l,slocal,plaq,eplaq,0.25*flow_l*deplaqdt,ecl,0.25*flow_l*declovdt,qtopocl,elog,qtopolog,t_step)<<'\n';
+    hila::out0<<string_format("GFLMEAS  % 9.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e       [%0.5f]",flow_l,slocal,plaq,eplaq,0.25*flow_l*deplaqdt,ecl,0.25*flow_l*declovdt,qtopocl,elog,0.25*flow_l*delogdt,qtopolog,t_step)<<'\n';
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype atol=1.0e-7,atype rtol=1.0e-7,atype tstep=0.001) {
+atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype atol=1.0e-7,atype rtol=1.0e-7,atype tstep=0.00001) {
     // wilson flow integration from flow scale l_start to l_end using 3rd order
     // 3-step Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
     // and embedded RK2 for adaptive step size
 
+    atype esp=3.0; // expected error scaling power: err ~ step^(esp) 
+                   //   - for global error: esp\approx 2.0
+                   //   - for single step error: esp\approx 3.0
+    atype iesp=1.0/esp;
+
+    atype maxstepmf=4.0; // max. growth factor of adaptive step size
+    atype minmaxreldiff=pow(maxstepmf,-esp);
+    atype ubstep=0.5; // upper bound max. allowed step size
+
     // translate flow scale interval [l_start,l_end] to corresponding
     // flow time interval [t,tmax] :
     atype t=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
-    atype lstab=0.095; // stability limit 0.1 for esp=1.0 and 0.05 for esp=2.0
-    atype step=min(min(tstep,0.51*(tmax-t)),lstab);  //initial step size
 
-    VectorField<Algebra<group>> k1,k2;
+    atype step=min(min(tstep,0.51*(tmax-t)),ubstep);  //initial step size
+    atype tatol=sqrt(2.0)*atol;
+
+    // temporary variables :
+    VectorField<Algebra<group>> k1,k2,tk;
     GaugeField<group> V2,V0;
     Field<atype> reldiff;
     atype maxreldiff,maxstep;
@@ -232,43 +262,55 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
         get_gf_force(V,k2);
         foralldir(d) onsites(ALL) {
             // second step of RK2 :
-            V2[d][X]=chexp(k2[d][X]*(step*b22)+k1[d][X]*(step*b21))*V[d][X];
+            tk[d][X]=k2[d][X];
+            tk[d][X]*=(step*b22);
+            tk[d][X]+=k1[d][X]*(step*b21);
+            V2[d][X]=chexp(tk[d][X])*V[d][X];
 
             // second step of RK3 :
-            k2[d][X]=k2[d][X]*(step*a22)+k1[d][X]*(step*a21);
+            k2[d][X]*=(step*a22);
+            k2[d][X]+=k1[d][X]*(step*a21);
             V[d][X]=chexp(k2[d][X])*V[d][X];
         }
 
         get_gf_force(V,k1);
         foralldir(d) onsites(ALL) {
             // third step of RK3 :
-            V[d][X]=chexp(k1[d][X]*(step*a33)-k2[d][X])*V[d][X];
+            k1[d][X]*=(step*a33);
+            k1[d][X]-=k2[d][X];
+            V[d][X]=chexp(k1[d][X])*V[d][X];
         }
 
         // determine maximum difference between RK3 and RK2, 
         // relative to desired accuracy :
         maxreldiff=0;
         foralldir(d) {
-            reldiff[ALL]=(V[d][X]-V2[d][X]).norm()/(atol+rtol*V[d][X].norm());
+            reldiff[ALL]=(V2[d][X]*V[d][X].dagger()).project_to_algebra().max_abs()/(tatol+rtol*tk[d][X].max_abs());
             maxreldiff=max(maxreldiff,reldiff.max());
         }
-        maxreldiff/=(atype)(group::size()*group::size());
-
-        // max. allowed step size to achieve desired accuracy :
-        maxstep=min(step/pow(maxreldiff,1.0/3.0),1.0);
-        if(step>maxstep) {
-            // repeat current iteration if step size was larger than maxstep
-            V=V0;
-        } else {
+ 
+        if(maxreldiff<1.0) {
             // proceed to next iteration
             t+=step;
+            V.reunitarize_gauge();
             V0=V;
+        } else {
+            // repeat current iteration if step size was larger than maxstep
+            V=V0;
         }
-        // adjust step size for next iteration to better match accuracy goal :
-        step=min(0.9*maxstep,lstab);
+
+        // determine step size to achieve desired accuracy goal :
+        // (limit growth of step to at most factor maxstepmf=minmaxreldiff^(1/3)):
+        if(maxreldiff>minmaxreldiff) {
+            maxstep=step*pow(maxreldiff,-iesp);
+        } else {
+            maxstep=step*maxstepmf;
+        }
+        // adjust step size :
+        step=min(0.9*maxstep,ubstep);
     }
 
-    V.reunitarize_gauge();
+    //V.reunitarize_gauge();
     return step;
 }
 

@@ -1153,6 +1153,27 @@ class Matrix_t {
         return res;
     }
 
+    auto max_abs() const {
+        hila::arithmetic_type<T> tres,res=0;
+        for(int i=0; i<n*m; i++) {
+            tres=::abs(c[i]);
+            if(tres>res) {
+                res=tres;
+            }
+        }
+        return res;
+    }
+
+    auto min_abs() const {
+        hila::arithmetic_type<T> tres,res=::abs(c[0]);
+        for(int i=1; i<n*m; i++) {
+            tres=::abs(c[i]);
+            if(tres<res) {
+                res=tres;
+            }
+        }
+        return res;
+    }
 
     // dot product - (*this).dagger() * rhs
     // could be done as well by writing the operation as above!
