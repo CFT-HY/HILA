@@ -183,11 +183,11 @@ void measure_gradient_flow_stuff(const GaugeField<group>& V,atype flow_l,atype t
     atype delogdt=measure_dE_log_dt(V)/lattice.volume();
 
     // print formatted results to standard output :
-    hila::out0<<string_format("GFLMEAS  % 9.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e       [%0.5f]",flow_l,slocal,plaq,eplaq,0.25*flow_l*deplaqdt,ecl,0.25*flow_l*declovdt,qtopocl,elog,0.25*flow_l*delogdt,qtopolog,t_step)<<'\n';
+    hila::out0<<string_format("GFLMEAS  % 9.3f % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e     [%0.3e]",flow_l,slocal,plaq,eplaq,0.25*flow_l*deplaqdt,ecl,0.25*flow_l*declovdt,qtopocl,elog,0.25*flow_l*delogdt,qtopolog,t_step)<<'\n';
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype atol=1.0e-7,atype rtol=1.0e-7,atype tstep=0.00001) {
+atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype atol=1.0e-7,atype rtol=1.0e-7,atype tstep=0.0) {
     // wilson flow integration from flow scale l_start to l_end using 3rd order
     // 3-step Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
@@ -198,17 +198,18 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
                    //   - for single step error: esp\approx 3.0
     atype iesp=1.0/esp;
 
-    atype maxstepmf=4.0; // max. growth factor of adaptive step size
+    atype maxstepmf=1.0e3; // max. growth factor of adaptive step size
     atype minmaxreldiff=pow(maxstepmf,-esp);
-    atype ubstep=0.5; // upper bound max. allowed step size
+    atype ubstep=0.45; // upper bound max. allowed step size
 
     // translate flow scale interval [l_start,l_end] to corresponding
     // flow time interval [t,tmax] :
     atype t=l_start*l_start/8.0;
     atype tmax=l_end*l_end/8.0;
 
-    atype step=min(min(tstep,0.51*(tmax-t)),ubstep);  //initial step size
     atype tatol=sqrt(2.0)*atol;
+
+    //hila::out0<<"t: "<<t<<" , tmax: "<<tmax<<" , step: "<<step<<" , minmaxreldiff: "<<minmaxreldiff<<"\n";
 
     // temporary variables :
     VectorField<Algebra<group>> k1,k2,tk;
@@ -238,6 +239,41 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
     //     |  -1     2
     //
     atype b21=-1.25,b22=2.0;
+    
+    atype step=min(min(tstep,0.501*(tmax-t)),ubstep); //initial step size
+
+    if(t==0||step==0) {
+        // when using a gauge action for gradient flow that is different from
+        // the one used to sample the gauge cofingurations, the initial force
+        // can be huge. Therefore, if no t_step is provided as input, the inital
+        // value for step is here adjustet so that 
+        // step * <largest force component> = maxstk
+        atype maxstk=1.0e-1;
+
+        // get max. local gauge force:
+        get_gf_force(V,tk);
+        atype maxtk=0.0;
+        foralldir(d) {
+            onsites(ALL) {
+                reldiff[X]=(tk[d][X].squarenorm());
+            }
+            maxtk=max(maxtk,reldiff.max());
+        }
+        maxtk=sqrt(0.5*maxtk);
+
+        if(step==0) {
+            if(maxtk>maxstk) {
+                step=maxstk/maxtk;  // adjust initial step size based on force
+                hila::out0<<"GFINFO using max. gauge force (max_X |F(X)|="<<maxtk<<") to set initial flow time step size: "<<step<<"\n";
+            } else {
+                step=maxstk; 
+            }
+        } else if(step*maxtk>maxstk) {
+            step=maxstk/maxtk;  //adjust initial step size
+            hila::out0<<"GFINFO using max. gauge force (max_X |F(X)|="<<maxtk<<") to set initial flow time step size: "<<step<<"\n";
+        }
+    } 
+    
 
     V0=V;
     bool stop=false;
@@ -249,7 +285,7 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
             stop=true;
         } else {
             if(t+2.0*step>=tmax) {
-                step=0.51*(tmax-t);
+                step=0.501*(tmax-t);
             }
         }
 
@@ -283,9 +319,11 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
 
         // determine maximum difference between RK3 and RK2, 
         // relative to desired accuracy :
-        maxreldiff=0;
+        maxreldiff=0.0;
         foralldir(d) {
-            reldiff[ALL]=(V2[d][X]*V[d][X].dagger()).project_to_algebra().max_abs()/(tatol+rtol*tk[d][X].max_abs());
+            onsites(ALL) {
+                reldiff[X]=(V2[d][X]*V[d][X].dagger()).project_to_algebra().max_abs()/(tatol+rtol*tk[d][X].max_abs());
+            }
             maxreldiff=max(maxreldiff,reldiff.max());
         }
  
@@ -306,9 +344,12 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
         } else {
             maxstep=step*maxstepmf;
         }
+
         // adjust step size :
         step=min(0.9*maxstep,ubstep);
+        //hila::out0<<" maxreldiff: "<<maxreldiff<<" , maxstep: "<<maxstep<<" gf , step:"<<step<<"\n";
     }
+
 
     //V.reunitarize_gauge();
     return step;

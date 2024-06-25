@@ -9,7 +9,7 @@
 // functions for clover gauge action
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-void get_log_leaves(const GaugeField<group>& U,Direction dir1,Direction dir2,Field<group>& Csum) {
+void get_log_clover_mat(const GaugeField<group>& U,Direction dir1,Direction dir2,Field<group>& Csum) {
     // sets Csum=(C[0]+C[1]+C[2]+C[3])/4 where C[0],C[1],C[2],C[3] are the logs of the clover-leave
     // matrices in counter-clockwise order 
 
@@ -49,7 +49,7 @@ atype measure_s_log(const GaugeField<group>& U) {
     stot.allreduce(false).delayed(true);
     Field<group> Csum;
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        get_log_leaves(U,dir1,dir2,Csum);
+        get_log_clover_mat(U,dir1,dir2,Csum);
         onsites(ALL) {
             stot+=-0.5*real(mul_trace(Csum[X],Csum[X]));
         }
@@ -65,7 +65,7 @@ void get_force_log_add(const GaugeField<group>& U,VectorField<Algebra<group>>& K
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         // get the 4 clover leave matrices C[][X] (ordered counter-clockwise in (dir1,dir2)-plane)
         // and their anti-hermitian traceless sum Csum[X]
-        get_log_leaves(U,dir1,dir2,Csum);
+        get_log_clover_mat(U,dir1,dir2,Csum);
 
         // define for each clover leave matrix the correspondin path of gauge links
         std::vector<Direction> paths[4]={{dir1,dir2,-dir1,-dir2},{dir2,-dir1,-dir2,dir1},{-dir1,-dir2,dir1,dir2},{-dir2,dir1,dir2,-dir1}};

@@ -282,7 +282,7 @@ int main(int argc,char** argv) {
     hila::timer measure_timer("Measurements");
     hila::timer gf_timer("Gradient Flow");
 
-    ftype t_step0=0.001;
+    ftype t_step0=0;
     for(int trajectory=start_traj; trajectory<p.n_traj; ++trajectory) {
 
         double ttime=hila::gettime();

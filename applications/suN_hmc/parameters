@@ -4,13 +4,13 @@ lattice size           12,12,12,12
 beta                   2.0
 dt                     0.005
 trajectory length      200
-number of trajectories 72
+number of trajectories 82
 thermalization trajs   20
 gflow freq             10
 gflow max lambda       12.
 gflow lambda step      0.1
-gflow abs. accuracy    1.0e-6
-gflow rel. accuracy    1.0e-6
+gflow abs. accuracy    1.0e-5
+gflow rel. accuracy    1.0e-5
 random seed            0
-trajs/saved            10
+trajs/saved            20
 config name            config

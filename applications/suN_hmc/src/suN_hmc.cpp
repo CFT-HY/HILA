@@ -313,7 +313,7 @@ int main(int argc,char** argv) {
     auto orig_trajlen=p.trajlen;
     GaugeField<mygroup> U_old;
     int nreject=0;
-    ftype t_step0=0.0001;
+    ftype t_step0=0.0;
     for(int trajectory=start_traj; trajectory<p.n_traj; ++trajectory) {
         if(trajectory<p.n_therm) {
             // during thermalization: start with 10% of normal step size (and trajectory length)
