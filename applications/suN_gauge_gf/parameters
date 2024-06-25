@@ -1,16 +1,16 @@
-# This is a parameter file for SUN_hmc
+# This is a parameter file for SUN_gauge_gf
 
 lattice size           12,12,12,12
 beta                   6.
-number of trajectories 50000
+number of trajectories 202
 updates in trajectory  1
 overrelax steps        4
 thermalization trajs   50
-wflow freq             100
-wflow max lambda       6.
-wflow lambda step      0.1
-wflow abs. accuracy    1.0e-7
-wflow rel. accuracy    1.0e-7
+gflow freq             100
+gflow max lambda       12.
+gflow lambda step      0.1
+gflow abs. accuracy    1.0e-6
+gflow rel. accuracy    1.0e-6
 random seed            0
 trajs/saved            100
 config name            config
