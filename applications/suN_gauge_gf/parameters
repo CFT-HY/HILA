@@ -2,7 +2,7 @@
 
 lattice size           12,12,12,12
 beta                   6.
-number of trajectories 202
+number of trajectories 302
 updates in trajectory  1
 overrelax steps        4
 thermalization trajs   50
@@ -12,5 +12,5 @@ gflow lambda step      0.1
 gflow abs. accuracy    1.0e-6
 gflow rel. accuracy    1.0e-6
 random seed            0
-trajs/saved            100
+trajs/saved            200
 config name            config

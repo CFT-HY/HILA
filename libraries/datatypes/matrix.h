@@ -2569,15 +2569,15 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
  * @return void (if omat is provided) or Matrix_t<n,m,T,MT>
  */
 template <int n,int m,typename T,typename MT>
-inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& omat,Matrix_t<n,m,T,MT>(out_only &pl)[n+1]) {
+inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& omat,Matrix_t<n,m,T,MT>(out_only &pl)[n+1],hila::arithmetic_type<T> scl=1.0) {
     static_assert(n==m,"chexp() only for square matrices");
-
+    hila::arithmetic_type<T> iscl=1.0/scl;
     // compute the first n matrix powers of mat and the corresponding traces :
     // the i-th matrix power of mat[][] is stored in pl[i][][]
     T trpl[n+1]; // the trace of pl[i][][] is stored in trpl[i]
     trpl[0]=n;
-    pl[1]=mat;
-    trpl[1]=trace(mat);
+    pl[1]=scl*mat;
+    trpl[1]=trace(pl[1]);
     int i,j,k;
     for(i=2; i<=n; ++i) {
         j=i/2;
@@ -2606,7 +2606,7 @@ inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& oma
     for(i=0; i<n; ++i) {
         pal[i]=0;
         al[i]=wpf;
-        wpf/=(i+1); //compute (i+1)-th power series coefficent from the i-th coefficient
+        wpf*=iscl/(i+1); //compute (i+1)-th power series coefficent from the i-th coefficient
         twpf+=wpf;
     }
     pal[n-1]=1.0;
@@ -2637,10 +2637,10 @@ inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& oma
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, 
             // and multiply wpf by s to compensate
             s=std::sqrt(s);
-            wpf*=s/(j+1);
+            wpf*=s*iscl/(j+1);
             rs=1.0/s;
         } else {
-            wpf/=(j+1);
+            wpf*=iscl/(j+1);
             rs=1.0;
         }
         twpf+=wpf;

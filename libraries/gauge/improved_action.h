@@ -86,7 +86,7 @@ void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& 
     Field<group> ustap;
     Field<group> lstap;
     Field<group> tstap;
-    bool first=true;
+    bool first;
     foralldir(dir1) {
         first=true;
         foralldir(dir2) if(dir1!=dir2) {
