@@ -38,9 +38,9 @@ void get_gf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
                    // note: when switching to factor 2.0, remember to change also the stability
                    // limit in the do_gradient_flow_adapt() below
 
-#if GFLOWS==1 // BP
+#if GFLOWS==1 //Bulk-Prevention (BP)
     get_force_bp(U,E,eps);
-#elif GFLOWS==2 //LW
+#elif GFLOWS==2 //Luscher-Weisz (LW)
     atype c12=-1.0/12.0;     // rectangle weight
     atype c11=1.0-8.0*c12;   // plaquette weight
     get_force_impr(U,E,eps*c11,eps*c12);
@@ -209,7 +209,7 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
 
     atype tatol=sqrt(2.0)*atol;
 
-    //hila::out0<<"t: "<<t<<" , tmax: "<<tmax<<" , step: "<<step<<" , minmaxreldiff: "<<minmaxreldiff<<"\n";
+    //hila::out0<<"t: "<<t<<" , tmax: "<<tmax<<" , step: "<<tstep<<" , minmaxreldiff: "<<minmaxreldiff<<"\n";
 
     // temporary variables :
     VectorField<Algebra<group>> k1,k2,tk;
@@ -263,13 +263,13 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
 
         if(step==0) {
             if(maxtk>maxstk) {
-                step=maxstk/maxtk;  // adjust initial step size based on force
+                step=maxstk/maxtk;  // adjust initial step size based on max. force magnitude
                 hila::out0<<"GFINFO using max. gauge force (max_X |F(X)|="<<maxtk<<") to set initial flow time step size: "<<step<<"\n";
             } else {
                 step=maxstk; 
             }
         } else if(step*maxtk>maxstk) {
-            step=maxstk/maxtk;  //adjust initial step size
+            step=maxstk/maxtk;   //adjust initial step size based on max. force magnitude
             hila::out0<<"GFINFO using max. gauge force (max_X |F(X)|="<<maxtk<<") to set initial flow time step size: "<<step<<"\n";
         }
     } 
@@ -292,21 +292,22 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
         get_gf_force(V,k1);
         foralldir(d) onsites(ALL) {
             // first steps of RK3 and RK2 are the same :
-            V[d][X]=chexp(k1[d][X]*(step*a11))*V[d][X];
+            V[d][X]=chsexp(k1[d][X]*(step*a11))*V[d][X];
         }
 
         get_gf_force(V,k2);
         foralldir(d) onsites(ALL) {
             // second step of RK2 :
+            // (tk[d][X] will be used for rel. error computation)
             tk[d][X]=k2[d][X];
             tk[d][X]*=(step*b22);
             tk[d][X]+=k1[d][X]*(step*b21);
-            V2[d][X]=chexp(tk[d][X])*V[d][X];
+            V2[d][X]=chsexp(tk[d][X])*V[d][X];
 
             // second step of RK3 :
             k2[d][X]*=(step*a22);
             k2[d][X]+=k1[d][X]*(step*a21);
-            V[d][X]=chexp(k2[d][X])*V[d][X];
+            V[d][X]=chsexp(k2[d][X])*V[d][X];
         }
 
         get_gf_force(V,k1);
@@ -314,7 +315,7 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
             // third step of RK3 :
             k1[d][X]*=(step*a33);
             k1[d][X]-=k2[d][X];
-            V[d][X]=chexp(k1[d][X])*V[d][X];
+            V[d][X]=chsexp(k1[d][X])*V[d][X];
         }
 
         // determine maximum difference between RK3 and RK2, 
