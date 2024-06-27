@@ -52,7 +52,7 @@ void get_force_impr_add(const GaugeField<group>& U,VectorField<Algebra<group>>& 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_s_impr(const GaugeField<group>& U, atype c11, atype c12) {
     // measure the improved action for dir1<dir2
-    Reduction<hila::arithmetic_type<group>> stot=0;
+    Reduction<double> stot=0;
     stot.allreduce(false).delayed(true);
     Field<group> tP;
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
@@ -76,7 +76,7 @@ atype measure_s_impr(const GaugeField<group>& U, atype c11, atype c12) {
             stot+=c12*(1.0-real(trace(tP[X]*U[dir2][X]*tP[X+dir2]*U[dir2][X].dagger()))/group::size());
         }
     }
-    return stot.value();
+    return (atype)stot.value();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>

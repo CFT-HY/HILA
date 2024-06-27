@@ -43,7 +43,7 @@ void rstaplesum(const GaugeField<T>& U,Field<T>& staples,Direction d1,Parity par
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_s_wplaq(const GaugeField<group>& U) {
     // measure the Wilson plaquette action
-    Reduction<atype> plaq=0;
+    Reduction<double> plaq=0;
     plaq.allreduce(false).delayed(true);
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         U[dir2].start_gather(dir1,ALL);
@@ -53,7 +53,7 @@ atype measure_s_wplaq(const GaugeField<group>& U) {
                 (U[dir2][X]*U[dir1][X+dir2]).dagger()))/group::size();
         }
     }
-    return plaq.value();
+    return (atype)plaq.value();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>

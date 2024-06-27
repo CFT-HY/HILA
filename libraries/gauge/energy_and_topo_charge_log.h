@@ -10,8 +10,8 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U,atype& qtopo_
     // measure topological charge and field strength energy of the gauge field, using the
     // matrix logarithms of the plaquettes as components of the field strength tensor
 
-    Reduction<atype> qtopo=0;
-    Reduction<atype> energy=0;
+    Reduction<double> qtopo=0;
+    Reduction<double> energy=0;
     qtopo.allreduce(false).delayed(true);
     energy.allreduce(false).delayed(true);
 
@@ -63,8 +63,8 @@ void measure_topo_charge_and_energy_log(const GaugeField<group>& U,atype& qtopo_
         energy+=F[5][X].squarenorm();
     }
 #endif
-    qtopo_out=qtopo.value()/(4.0*M_PI*M_PI);
-    energy_out=energy.value();
+    qtopo_out=(atype)qtopo.value()/(4.0*M_PI*M_PI);
+    energy_out=(atype)energy.value();
 }
 
 
