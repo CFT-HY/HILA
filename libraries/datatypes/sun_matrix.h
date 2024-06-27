@@ -10,6 +10,7 @@
 
 #include "matrix.h"
 #include "su2.h"
+#include "tools/floating_point_epsilon.h"
 
 /// Define type SU<n,type>
 /// Derives from square Matrix<Complex> type
@@ -68,11 +69,11 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
             // normalize row r
             T n2 = 0;
             // use here function instead of method, works for double/float too
-            for (int c = 0; c < N; c++)
-                n2 += ::squarenorm(this->e(r, c));
+            for (int i = 0; i < N; i++)
+                n2 += ::squarenorm(this->e(r, i));
             n2 = 1.0 / sqrt(n2);
-            for (int c = 0; c < N; c++)
-                this->e(r, c) *= n2;
+            for (int i = 0; i < N; i++)
+                this->e(r, i) *= n2;
 
             // Now make rows r+1 .. n-1 orthogonal to row r,
             // by doing j = j - (r^* j) r
@@ -98,15 +99,14 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
      * @details Set the determinant of the SU(N) matrix to 1
      * @return const SU&
      */
-    const SU &fix_det() {
+    const SU& fix_det() {
 
-        Complex<T> d, factor;
-        T t;
-
-        d = det(*(this));
-        t = d.arg() / N;
-        factor = Complex<T>(cos(-t), sin(-t));
-        this->asArray() *= factor;
+        Complex<T> d=det(*(this));
+        T t=d.arg()/N;
+        d=Complex<T>(cos(-t),sin(-t));
+        for(int i=0; i<N*N; i++) {
+            this->c[i]*=d;
+        }
         return *this;
     }
 
@@ -479,7 +479,7 @@ SU<N,T> chsexp(const Algebra<SU<N,T>>& a) {
 template <int N,typename T>
 Algebra<SU<N,T>> log(const SU<N,T>& a) {
     int maxit=5*N;
-    T fprec=(2.2e-15)*Algebra<SU<N,T>>::N_a;
+    T fprec=fp<T>::epsilon*10.0*Algebra<SU<N,T>>::N_a;
     Matrix_t<N,N,Complex<T>,SU<N,T>> pl[N+1];
 
     SU<N,T> tmat=a,tmat2;

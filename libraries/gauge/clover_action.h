@@ -68,7 +68,7 @@ template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_s_clover(const GaugeField<group>& U) {
     // measure the clover action for dir1<dir2
     // (just to have same normalization as with plaquette action)
-    Reduction<hila::arithmetic_type<group>> stot=0;
+    Reduction<double> stot=0;
     stot.allreduce(false).delayed(true);
     Field<group> C[4];
     Field<group> Csum;
@@ -78,7 +78,7 @@ atype measure_s_clover(const GaugeField<group>& U) {
             stot+=-0.5*real(mul_trace(Csum[X],Csum[X]));
         }
     }
-    return stot.value()/group::size();
+    return (atype)stot.value()/group::size();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>

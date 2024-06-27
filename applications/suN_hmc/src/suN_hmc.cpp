@@ -17,9 +17,12 @@
 
 #include "gauge/gradient_flow.h"
 #include "tools/string_format.h"
+#include "tools/floating_point_epsilon.h"
 
-using ftype=double;
+
+using ftype=float;
 using mygroup=SU<NCOLOR,ftype>;
+
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -100,12 +103,12 @@ void update_U(GaugeField<group>& U,const VectorField<Algebra<group>>& E,atype de
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_e2(const VectorField<Algebra<group>>& E) {
     // compute gauge kinetic energy from momentum field E
-    Reduction<atype> e2=0;
+    Reduction<double> e2=0;
     e2.allreduce(false).delayed(true);
     foralldir(d) {
         onsites(ALL) e2+=E[d][X].squarenorm();
     }
-    return e2.value()/2;
+    return (atype)e2.value()/2;
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
@@ -254,6 +257,8 @@ int main(int argc,char** argv) {
     hila::out0<<"SU("<<mygroup::size()<<") HMC with Wilson's plaquette gauge action\n";
 #endif
 
+    hila::out0<<"Using floating point epsilon: "<<fp<ftype>::epsilon<<"\n";
+
     parameters p;
 
     hila::input par("parameters");
@@ -347,7 +352,7 @@ int main(int argc,char** argv) {
         update_timer.start();
 
         U_old=U;
-        double ttime=hila::gettime();
+        ftype ttime=hila::gettime();
 
         foralldir(d) onsites(ALL) E[d][X].gaussian_random();
 
@@ -407,14 +412,14 @@ int main(int argc,char** argv) {
 
                     int nflow_steps=(int)(p.gflow_max_l/p.gflow_l_step);
 
-                    double gftime=hila::gettime();
+                    ftype gftime=hila::gettime();
                     hila::out0<<"Gflow_start "<<gtrajectory<<'\n';
 
                     GaugeField<mygroup> V=U;
 
                     ftype t_step=t_step0;
-                    measure_gradient_flow_stuff(V,0.0,t_step);
-                    t_step=do_gradient_flow_adapt(V,0.0,p.gflow_l_step,p.gflow_a_accu,p.gflow_r_accu,t_step);
+                    measure_gradient_flow_stuff(V,(ftype)0.0,t_step);
+                    t_step=do_gradient_flow_adapt(V,(ftype)0.0,p.gflow_l_step,p.gflow_a_accu,p.gflow_r_accu,t_step);
                     measure_gradient_flow_stuff(V,p.gflow_l_step,t_step);
                     t_step0=t_step;
 

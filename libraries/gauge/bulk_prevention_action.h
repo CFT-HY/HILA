@@ -39,28 +39,29 @@ T bp_UAmat(const T& U) {
 template <typename T>
 T bp_iOsqmat(const T& U) {
     // compute matrix inside the trace on r.h.s. of Eq. (B1) of arXiv:2306.14319 for n=2
+    // (without identiy matrix subtraction)
     T tA1=U;
     tA1+=1.;
     tA1*=0.5;
     T tA2=ch_inv(tA1);
     mult(tA2,tA2.dagger(),tA1);
-    return tA1*tA1-1.;
+    return tA1*tA1;
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
 atype measure_s_bp(const GaugeField<group>& U) {
     // measure the BP plaquette action
-    Reduction<hila::arithmetic_type<group>> plaq=0;
+    Reduction<double> plaq=0;
     plaq.allreduce(false).delayed(true);
     foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
         U[dir2].start_gather(dir1,ALL);
         U[dir1].start_gather(dir2,ALL);
         onsites(ALL) {
             plaq+=real(trace(bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*
-                (U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size();
+                (U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size()-1.0;
         }
     }
-    return plaq.value();
+    return (atype)plaq.value();
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>

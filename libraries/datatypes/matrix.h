@@ -98,6 +98,10 @@ struct eigen_result {
  * @tparam T Matrix element type
  * @tparam Mtype Specific "Matrix" type for CRTP
  */
+
+// Helper struct for getting the floating point number epsilons without
+// having to use std::numeric_limits .
+
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t {
 
@@ -2537,18 +2541,15 @@ template <int n, int m, typename T, typename MT>
 inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int order = 20) {
     static_assert(n == m, "exp() only for square matrices");
 
-    Matrix_t<n, m, T, MT> r;
     hila::arithmetic_type<T> one = 1.0;
-
-    r = mat * (one / order) + one;
+    Matrix_t<n, m, T, MT> r = mat;
 
     // doing the loop step-by-step should reduce temporaries
-    for (int k = order - 1; k > 1; k--) {
-        r *= mat;
+    for (int k = order; k > 1; k--) {
         r *= (one / k);
         r += one;
+        r *= mat;
     }
-    r *= mat;
     r += one;
 
     return r;

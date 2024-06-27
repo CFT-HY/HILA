@@ -11,8 +11,8 @@ void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qto
     // measure topological charge and field strength energy of the gauge field, using the
     // clover matrices as components of the field strength tensor
 
-    Reduction<atype> qtopo=0;
-    Reduction<atype> energy=0;
+    Reduction<double> qtopo=0;
+    Reduction<double> energy=0;
     qtopo.allreduce(false).delayed(true);
     energy.allreduce(false).delayed(true);
 
@@ -86,8 +86,8 @@ void measure_topo_charge_and_energy_clover(const GaugeField<group>& U,atype& qto
         energy+=F[5][X].squarenorm();
     }
 #endif
-    qtopo_out=qtopo.value()/(4.0*M_PI*M_PI);
-    energy_out=energy.value();
+    qtopo_out=(atype)qtopo.value()/(4.0*M_PI*M_PI);
+    energy_out=(atype)energy.value();
 }
 
 #endif

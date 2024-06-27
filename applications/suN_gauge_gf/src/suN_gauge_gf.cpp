@@ -6,8 +6,9 @@
 #include "gauge/staples.h"
 #include "gauge/gradient_flow.h"
 #include "tools/string_format.h"
+#include "tools/floating_point_epsilon.h"
 
-using ftype=double;
+using ftype=float;
 using mygroup=SU<NCOLOR,ftype>;
 
 // define a struct to hold the input parameters: this
@@ -223,6 +224,7 @@ int main(int argc,char** argv) {
 
     hila::out0<<"SU("<<mygroup::size()<<") heat-bath with overrelaxation\n";
 
+    hila::out0<<"Using floating point epsilon: "<<fp<ftype>::epsilon<<"\n";
 
     parameters p;
 
@@ -285,11 +287,9 @@ int main(int argc,char** argv) {
     ftype t_step0=0;
     for(int trajectory=start_traj; trajectory<p.n_traj; ++trajectory) {
 
-        double ttime=hila::gettime();
+        ftype ttime=hila::gettime();
 
         update_timer.start();
-
-        double acc=0;
 
         do_trajectory(U,p);
 
@@ -318,14 +318,14 @@ int main(int argc,char** argv) {
                     gf_timer.start();
                     
                     int nflow_steps=(int)(p.gflow_max_l/p.gflow_l_step);
-                    double gftime=hila::gettime();
+                    ftype gftime=hila::gettime();
                     hila::out0<<"Gflow_start "<<gtrajectory<<'\n';
 
                     GaugeField<mygroup> V=U;
 
                     ftype t_step=t_step0;
-                    measure_gradient_flow_stuff(V,0.0,t_step);
-                    t_step=do_gradient_flow_adapt(V,0.0,p.gflow_l_step,p.gflow_a_accu,p.gflow_r_accu,t_step);
+                    measure_gradient_flow_stuff(V,(ftype)0.0,t_step);
+                    t_step=do_gradient_flow_adapt(V,(ftype)0.0,p.gflow_l_step,p.gflow_a_accu,p.gflow_r_accu,t_step);
                     measure_gradient_flow_stuff(V,p.gflow_l_step,t_step);
                     t_step0=t_step;
 
