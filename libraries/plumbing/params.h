@@ -162,12 +162,15 @@
 #endif
 
 
-/** @brief GPU_GLOBAL_ARG_MAX_SIZE : in __global__functions gives the max size of variable passed
- * directly as an argument. Larger value sizes are passed with gpuMemcopy()
+/** @brief GPU_GLOBAL_ARG_MAX_SIZE : in some __global__functions gives the max size of variable
+ * passed directly as an argument of the function call. Larger value sizes are passed with
+ * gpuMemcopy() and a pointer. CUDA < 12.1 limits the total parameter size to 4K, >= 12.1 it is 32K.
+ * We set the default to 2K. in HIP/rocm I have not found the size. Passing as an arg is faster, but
+ * size limit is relevant only for big "matrices"
  */
 
 #ifndef GPU_GLOBAL_ARG_MAX_SIZE
-#define GPU_GLOBAL_ARG_MAX_SIZE 1024
+#define GPU_GLOBAL_ARG_MAX_SIZE 2048
 #endif
 
 #endif // CUDA || HIP
