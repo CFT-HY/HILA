@@ -52,6 +52,10 @@ void get_gf_force(const GaugeField<group>& U,VectorField<Algebra<group>>& E) {
     atype c12=-1.4088;       // rectangle weight
     atype c11=1.0-8.0*c12;   // plaquette weight
     get_force_impr(U,E,eps*c11,eps*c12);
+#elif GFLOWS==5 //CLOVER
+    get_force_clover(U,E,eps);
+#elif GFLOWS==6 //LOG-CLOVER
+    get_force_log(U,E,eps);
 #else //WILSON
     get_force_wplaq(U,E,eps);
 #endif
@@ -79,6 +83,10 @@ atype measure_gf_s(const GaugeField<group>& U) {
     atype c12=-1.4088;       // rectangle weight
     atype c11=1.0-8.0*c12;   // plaquette weight
     atype res=measure_s_impr(U,c11,c12);
+#elif GFLOWS==5 //CLOVER
+    atype res=measure_s_clover(U);
+#elif GFLOWS==6 //LOG-CLOVER
+    atype res=measure_s_log(U);
 #else //WILSON
     atype res=measure_s_wplaq(U);
 #endif
@@ -150,6 +158,10 @@ void measure_gradient_flow_stuff(const GaugeField<group>& V,atype flow_l,atype t
         hila::out0<<"GFINFO using Iwasaki action\n";
 #elif GFLOWS==4 //DBW2
         hila::out0<<"GFINFO using DBW2 action\n";
+#elif GFLOWS==5 //CLOVER
+        hila::out0<<"GFINFO using clover action\n";
+#elif GFLOWS==6 //LOG-CLOVER
+        hila::out0<<"GFINFO using log-clover action\n";
 #else //WILSON
         hila::out0<<"GFINFO using Wilson's plaquette action\n";
 #endif
@@ -187,7 +199,7 @@ void measure_gradient_flow_stuff(const GaugeField<group>& V,atype flow_l,atype t
 }
 
 template <typename group,typename atype=hila::arithmetic_type<group>>
-atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype atol=1.0e-7,atype rtol=1.0e-7,atype tstep=0.0) {
+atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atype atol=1.0e-6,atype rtol=1.0e-6,atype tstep=0.0) {
     // wilson flow integration from flow scale l_start to l_end using 3rd order
     // 3-step Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
@@ -277,16 +289,16 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
 
     V0=V;
     bool stop=false;
-
+    tstep=step;
     while(t<tmax&&!stop) {
-
         if(t+step>=tmax) {
             step=tmax-t;
             stop=true;
         } else {
+            tstep=step;
             if(t+2.0*step>=tmax) {
                 step=0.501*(tmax-t);
-            }
+            } 
         }
 
         get_gf_force(V,k1);
@@ -325,7 +337,10 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
             onsites(ALL) {
                 reldiff[X]=(V2[d][X]*V[d][X].dagger()).project_to_algebra().max_abs()/(tatol+rtol*tk[d][X].max_abs());
             }
-            maxreldiff=max(maxreldiff,reldiff.max());
+            atype tmaxreldiff=reldiff.max();
+            if(tmaxreldiff>maxreldiff) {
+                maxreldiff=tmaxreldiff;
+            }
         }
  
         if(maxreldiff<1.0) {
@@ -336,10 +351,10 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
         } else {
             // repeat current iteration if step size was larger than maxstep
             V=V0;
+            stop=false;
         }
 
         // determine step size to achieve desired accuracy goal :
-        // (limit growth of step to at most factor maxstepmf=minmaxreldiff^(1/3)):
         if(maxreldiff>minmaxreldiff) {
             maxstep=step*pow(maxreldiff,-iesp);
         } else {
@@ -348,10 +363,10 @@ atype do_gradient_flow_adapt(GaugeField<group>& V,atype l_start,atype l_end,atyp
 
         // adjust step size :
         step=min((atype)0.9*maxstep,ubstep);
-        //hila::out0<<" maxreldiff: "<<maxreldiff<<" , maxstep: "<<maxstep<<" gf , step:"<<step<<"\n";
+        //hila::out0<<"t: "<<t<<" , maxreldiff: "<<maxreldiff<<" , maxstep: "<<maxstep<<" gf , step:"<<step<<"\n";
     }
 
-    return step;
+    return tstep;
 }
 
 #endif

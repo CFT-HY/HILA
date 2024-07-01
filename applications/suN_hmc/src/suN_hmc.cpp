@@ -174,7 +174,7 @@ template <typename group>
 void checkpoint(const GaugeField<group>& U,int trajectory,const parameters& p) {
     double t=hila::gettime();
     // name of config with extra suffix
-    std::string config_file=p.config_file+"_"+std::to_string(((trajectory+1)/p.n_save)%2);
+    std::string config_file=p.config_file+"_"+std::to_string(abs((trajectory+1)/p.n_save)%2);
     // save config
     U.config_write(config_file);
     // write run_status file
