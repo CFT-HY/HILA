@@ -192,14 +192,14 @@ class Matrix_t {
     }
 
     // cast to curious type
-    
+
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator Mtype &() {
         return *reinterpret_cast<Mtype *>(this);
     }
 
-    
+
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator const Mtype &() const {
@@ -207,11 +207,11 @@ class Matrix_t {
     }
 
     // automatically cast to generic matrix
-    
+
     inline operator Matrix<n, m, T> &() {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
-    
+
     inline operator const Matrix<n, m, T> &() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -581,7 +581,7 @@ class Matrix_t {
      *      0, 1};
      * \endcode
      */
-    
+
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only & {
@@ -592,7 +592,7 @@ class Matrix_t {
     }
 
     // assign from 0
-    
+
     inline Mtype &operator=(const std::nullptr_t &z) out_only & {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
@@ -601,7 +601,7 @@ class Matrix_t {
     }
 
     // Assign from "scalar" for square matrix
-    
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) out_only & {
 
@@ -616,7 +616,7 @@ class Matrix_t {
     }
 
     // Assign from diagonal matrix
-    
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const DiagonalMatrix<n, S> &rhs) out_only & {
         static_assert(n == m,
@@ -634,7 +634,7 @@ class Matrix_t {
 
 
     // Assign from initializer list
-    
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == n * m && "Initializer list has a wrong size in assignment");
@@ -677,7 +677,7 @@ class Matrix_t {
      * @param rhs Matrix to add
      * @return Mtype&
      */
-    
+
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator+=(const Matrix_t<n, m, S, MT> &rhs) & {
@@ -713,7 +713,7 @@ class Matrix_t {
      * @return template <typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>&
      */
-    
+
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) & {
@@ -724,7 +724,7 @@ class Matrix_t {
     }
 
     // add assign a scalar to square matrix
-    
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) & {
@@ -738,7 +738,7 @@ class Matrix_t {
     }
 
     // subtract assign type T and convertible
-    
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) & {
@@ -784,7 +784,7 @@ class Matrix_t {
      * @return template <int p, typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
      */
-    template <int p,typename S,typename MT,
+    template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const Matrix_t<m, p, S, MT> &rhs) & {
         static_assert(m == p, "can't assign result of *= to lhs Matrix, because doing so "
@@ -792,7 +792,7 @@ class Matrix_t {
         *this = *this * rhs;
         return *this;
     }
-    
+
 
     /*
     // same type square matrices:
@@ -820,7 +820,7 @@ class Matrix_t {
     */
 
     // multiply assign with scalar
-    
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const S rhs) & {
@@ -850,7 +850,7 @@ class Matrix_t {
      * @return template <int p, typename S, typename MT,
      * std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>&
      */
-    
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     Mtype &operator/=(const S rhs) & {
@@ -1158,22 +1158,22 @@ class Matrix_t {
     }
 
     auto max_abs() const {
-        hila::arithmetic_type<T> tres,res=0;
-        for(int i=0; i<n*m; i++) {
-            tres=::abs(c[i]);
-            if(tres>res) {
-                res=tres;
+        hila::arithmetic_type<T> tres, res = 0;
+        for (int i = 0; i < n * m; i++) {
+            tres = ::abs(c[i]);
+            if (tres > res) {
+                res = tres;
             }
         }
         return res;
     }
 
     auto min_abs() const {
-        hila::arithmetic_type<T> tres,res=::abs(c[0]);
-        for(int i=1; i<n*m; i++) {
-            tres=::abs(c[i]);
-            if(tres<res) {
-                res=tres;
+        hila::arithmetic_type<T> tres, res = ::abs(c[0]);
+        for (int i = 1; i < n * m; i++) {
+            tres = ::abs(c[i]);
+            if (tres < res) {
+                res = tres;
             }
         }
         return res;
@@ -1610,7 +1610,7 @@ class Matrix_t {
  * @tparam T Data type Matrix
  */
 template <int n, int m, typename T>
-class Matrix : public Matrix_t<n, m, T, Matrix<n,m,T>> {
+class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
   public:
     /// std incantation for field types
@@ -1665,11 +1665,10 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n,m,T>> {
      */
 
     // use the Base::Base -trick to inherit constructors and assignments
-    using Matrix_t<n,m,T,Matrix<n,m,T>>::Matrix_t;
+    using Matrix_t<n, m, T, Matrix<n, m, T>>::Matrix_t;
 
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator=;
-    Matrix & operator=(const Matrix & v) out_only & = default;
-
+    Matrix &operator=(const Matrix &v) out_only & = default;
 };
 
 namespace hila {
@@ -2308,7 +2307,7 @@ inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
 }
 
 /**
- * @brief compute product of two square matrices and write result to existing matrix 
+ * @brief compute product of two square matrices and write result to existing matrix
  *
  * @tparam Mt Matrix type
  * @param a Left Matrix
@@ -2318,14 +2317,14 @@ inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
  */
 // same type square matrices:
 template <typename Mt, std::enable_if_t<Mt::is_matrix() && Mt::is_square(), int> = 0>
-inline void mult(const Mt& a,const Mt& b, out_only Mt& res) {
-    constexpr int n=Mt::rows();
-    int i,j,k;
-    for(i=0; i<n; ++i) {
-        for(j=0; j<n; ++j) {
-            res.e(i,j)=a.e(i,0)*b.e(0,j);
-            for(k=1; k<n; ++k) {
-                res.e(i,j)+=a.e(i,k)*b.e(k,j);
+inline void mult(const Mt &a, const Mt &b, out_only Mt &res) {
+    constexpr int n = Mt::rows();
+    int i, j, k;
+    for (i = 0; i < n; ++i) {
+        for (j = 0; j < n; ++j) {
+            res.e(i, j) = a.e(i, 0) * b.e(0, j);
+            for (k = 1; k < n; ++k) {
+                res.e(i, j) += a.e(i, k) * b.e(k, j);
             }
         }
     }
@@ -2569,101 +2568,104 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
  * @param pl array of n+1 temporary nxn Matrices (optional)
  * @return void (if omat is provided) or Matrix_t<n,m,T,MT>
  */
-template <int n,int m,typename T,typename MT>
-inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& omat,Matrix_t<n,m,T,MT>(out_only &pl)[n+1]) {
-    static_assert(n==m,"chexp() only for square matrices");
+template <int n, int m, typename T, typename MT>
+inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT> &omat,
+                  Matrix_t<n, m, T, MT>(out_only &pl)[n + 1]) {
+    static_assert(n == m, "chexp() only for square matrices");
     // compute the first n matrix powers of mat and the corresponding traces :
     // the i-th matrix power of mat[][] is stored in pl[i][][]
-    T trpl[n+1]; // the trace of pl[i][][] is stored in trpl[i]
-    trpl[0]=n;
-    pl[1]=mat;
-    trpl[1]=trace(pl[1]);
-    int i,j,k;
-    for(i=2; i<=n; ++i) {
-        j=i/2;
-        k=i%2;
-        mult(pl[j],pl[j+k],pl[i]);
-        trpl[i]=trace(pl[i]);
+    T trpl[n + 1]; // the trace of pl[i][][] is stored in trpl[i]
+    trpl[0] = n;
+    pl[1] = mat;
+    trpl[1] = trace(pl[1]);
+    int i, j, k;
+    for (i = 2; i <= n; ++i) {
+        j = i / 2;
+        k = i % 2;
+        mult(pl[j], pl[j + k], pl[i]);
+        trpl[i] = trace(pl[i]);
     }
 
     // compute the characteristic polynomial coefficients crpl[] from the traced powers trpl[] :
-    T crpl[n+1];
-    crpl[n]=1;
-    for(j=1; j<=n; ++j) {
-        crpl[n-j]=0;
-        for(i=1; i<=j; ++i) {
-            crpl[n-j]-=crpl[n-(j-i)]*trpl[i];
+    T crpl[n + 1];
+    crpl[n] = 1;
+    for (j = 1; j <= n; ++j) {
+        crpl[n - j] = 0;
+        for (i = 1; i <= j; ++i) {
+            crpl[n - j] -= crpl[n - (j - i)] * trpl[i];
         }
-        crpl[n-j]/=j;
+        crpl[n - j] /= j;
     }
 
 
-    int mmax=15*n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
-    T al[n],pal[n]; // temp. Cayley-Hamilton coefficents
-    hila::arithmetic_type<T> wpf=1.0,twpf=1.0,ttwpf; // initial values for power series coefficnet and its running sum
+    int mmax = 15 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
+    T al[n], pal[n];   // temp. Cayley-Hamilton coefficents
+    hila::arithmetic_type<T>
+        wpf = 1.0,
+        twpf = 1.0, ttwpf; // initial values for power series coefficnet and its running sum
 
     // set initial values for the n entries in al[] and pal[] :
-    for(i=0; i<n; ++i) {
-        pal[i]=0;
-        al[i]=wpf;
-        wpf/=(i+1); //compute (i+1)-th power series coefficent from the i-th coefficient
-        twpf+=wpf;
+    for (i = 0; i < n; ++i) {
+        pal[i] = 0;
+        al[i] = wpf;
+        wpf /= (i + 1); // compute (i+1)-th power series coefficent from the i-th coefficient
+        twpf += wpf;
     }
-    pal[n-1]=1.0;
+    pal[n - 1] = 1.0;
 
     // next we iteratively add higher order power series terms to al[] till al[] stops changing
     // more precisely: the iteration will terminate as soon as twpf stops changing. Here twpf
-    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[] 
+    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[]
     // would have at iteration i, if no renormalization were used.
-    T ch,cho; // temporary variables for iteration
-    hila::arithmetic_type<T> s,rs=1.0; // temp variables used for renormalization of pal[]
-    ttwpf=twpf;
-    for(j=n; j<mmax; ++j) {
-        pal[n-1]*=rs;
-        ch=-pal[n-1]*crpl[0];
-        cho=pal[0]*rs;
-        pal[0]=ch;
-        s=squarenorm(ch);
-        al[0]+=wpf*ch;
-        for(i=1; i<n; ++i) {
-            ch=cho-pal[n-1]*crpl[i];
-            cho=pal[i]*rs;
-            pal[i]=ch;
-            s+=squarenorm(ch);
-            al[i]+=wpf*ch;
+    T ch, cho;                            // temporary variables for iteration
+    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    ttwpf = twpf;
+    for (j = n; j < mmax; ++j) {
+        pal[n - 1] *= rs;
+        ch = -pal[n - 1] * crpl[0];
+        cho = pal[0] * rs;
+        pal[0] = ch;
+        s = squarenorm(ch);
+        al[0] += wpf * ch;
+        for (i = 1; i < n; ++i) {
+            ch = cho - pal[n - 1] * crpl[i];
+            cho = pal[i] * rs;
+            pal[i] = ch;
+            s += squarenorm(ch);
+            al[i] += wpf * ch;
         }
 
-        if(s>1.0) {
-            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, 
+        if (s > 1.0) {
+            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s=std::sqrt(s);
-            wpf*=s/(j+1);
-            rs=1.0/s;
+            s = std::sqrt(s);
+            wpf *= s / (j + 1);
+            rs = 1.0 / s;
         } else {
-            wpf/=(j+1);
-            rs=1.0;
+            wpf /= (j + 1);
+            rs = 1.0;
         }
-        twpf+=wpf;
-        if(ttwpf==twpf) {
-            //terminate iteration when numeric value of twpf stops changing
+        twpf += wpf;
+        if (ttwpf == twpf) {
+            // terminate iteration when numeric value of twpf stops changing
             break;
         }
-        ttwpf=twpf;
+        ttwpf = twpf;
     }
-    //if(hila::myrank()==0) {
-    //    std::cout<<"chexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
-    //}
+    // if(hila::myrank()==0) {
+    //     std::cout<<"chexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
+    // }
 
     // form output matrix:
-    for(i=0; i<n; ++i) {
-        for(j=0; j<n; ++j) {
-            if(i==j) {
-                omat.e(i,j)=al[0];
+    for (i = 0; i < n; ++i) {
+        for (j = 0; j < n; ++j) {
+            if (i == j) {
+                omat.e(i, j) = al[0];
             } else {
-                omat.e(i,j)=0;
+                omat.e(i, j) = 0;
             }
-            for(k=1; k<n; ++k) {
-                omat.e(i,j)+=al[k]*pl[k].e(i,j);
+            for (k = 1; k < n; ++k) {
+                omat.e(i, j) += al[k] * pl[k].e(i, j);
             }
         }
     }
@@ -2683,103 +2685,106 @@ inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& oma
  * @param pl array of n+1 temporary nxn Matrices (optional)
  * @return Matrix_t<n, m, T, MT>
  */
-template <int n,int m,typename T,typename MT>
-inline Matrix_t<n,m,T,MT> chexp_b(const Matrix_t<n,m,T,MT>& mat,Matrix_t<n,m,T,MT>(out_only &pl)[n+1]) {
-    static_assert(n==m,"chexp() only for square matrices");
+template <int n, int m, typename T, typename MT>
+inline Matrix_t<n, m, T, MT> chexp_b(const Matrix_t<n, m, T, MT> &mat,
+                                     Matrix_t<n, m, T, MT>(out_only &pl)[n + 1]) {
+    static_assert(n == m, "chexp() only for square matrices");
 
     // compute the first n matrix powers of mat and the corresponding traces :
     // the i-th matrix power of mat[][] is stored in pl[i][][]
-    T trpl[n+1]; // the trace of pl[i][][] is stored in trpl[i]
-    trpl[0]=n;
-    pl[1]=mat;
-    trpl[1]=trace(mat);
-    int i,j,k;
-    for(i=2; i<=n; ++i) {
-        j=i/2;
-        k=i%2;
-        mult(pl[j],pl[j+k],pl[i]);
-        trpl[i]=trace(pl[i]);
+    T trpl[n + 1]; // the trace of pl[i][][] is stored in trpl[i]
+    trpl[0] = n;
+    pl[1] = mat;
+    trpl[1] = trace(mat);
+    int i, j, k;
+    for (i = 2; i <= n; ++i) {
+        j = i / 2;
+        k = i % 2;
+        mult(pl[j], pl[j + k], pl[i]);
+        trpl[i] = trace(pl[i]);
     }
 
     // compute the characteristic polynomial coefficients crpl[] from the traced powers trpl[] :
-    T crpl[n+1];
-    crpl[n]=1;
-    for(j=1; j<=n; ++j) {
-        crpl[n-j]=0;
-        for(i=1; i<=j; ++i) {
-            crpl[n-j]-=crpl[n-(j-i)]*trpl[i];
+    T crpl[n + 1];
+    crpl[n] = 1;
+    for (j = 1; j <= n; ++j) {
+        crpl[n - j] = 0;
+        for (i = 1; i <= j; ++i) {
+            crpl[n - j] -= crpl[n - (j - i)] * trpl[i];
         }
-        crpl[n-j]/=j;
+        crpl[n - j] /= j;
     }
 
 
-    int mmax=15*n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
-    T al[n],pal[n]; // temp. Cayley-Hamilton coefficents
-    hila::arithmetic_type<T> wpf=1.0,twpf=1.0,ttwpf; // initial values for power series coefficnet and its running sum
+    int mmax = 15 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
+    T al[n], pal[n];   // temp. Cayley-Hamilton coefficents
+    hila::arithmetic_type<T>
+        wpf = 1.0,
+        twpf = 1.0, ttwpf; // initial values for power series coefficnet and its running sum
 
     // set initial values for the n entries in al[] and pal[] :
-    for(i=0; i<n; ++i) {
-        pal[i]=0;
-        al[i]=wpf;
-        wpf/=(i+1); //compute (i+1)-th power series coefficent from the i-th coefficient
-        twpf+=wpf;
+    for (i = 0; i < n; ++i) {
+        pal[i] = 0;
+        al[i] = wpf;
+        wpf /= (i + 1); // compute (i+1)-th power series coefficent from the i-th coefficient
+        twpf += wpf;
     }
-    pal[n-1]=1.0;
+    pal[n - 1] = 1.0;
 
     // next we iteratively add higher order power series terms to al[] till al[] stops changing
     // more precisely: the iteration will terminate as soon as twpf stops changing. Here twpf
-    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[] 
+    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[]
     // would have at iteration i, if no renormalization were used.
-    T ch,cho; // temporary variables for iteration
-    hila::arithmetic_type<T> s,rs=1.0; // temp variables used for renormalization of pal[]
-    ttwpf=twpf;
-    for(j=n; j<mmax; ++j) {
-        pal[n-1]*=rs;
-        ch=-pal[n-1]*crpl[0];
-        cho=pal[0]*rs;
-        pal[0]=ch;
-        s=squarenorm(ch);
-        al[0]+=wpf*ch;
-        for(i=1; i<n; ++i) {
-            ch=cho-pal[n-1]*crpl[i];
-            cho=pal[i]*rs;
-            pal[i]=ch;
-            s+=squarenorm(ch);
-            al[i]+=wpf*ch;
+    T ch, cho;                            // temporary variables for iteration
+    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    ttwpf = twpf;
+    for (j = n; j < mmax; ++j) {
+        pal[n - 1] *= rs;
+        ch = -pal[n - 1] * crpl[0];
+        cho = pal[0] * rs;
+        pal[0] = ch;
+        s = squarenorm(ch);
+        al[0] += wpf * ch;
+        for (i = 1; i < n; ++i) {
+            ch = cho - pal[n - 1] * crpl[i];
+            cho = pal[i] * rs;
+            pal[i] = ch;
+            s += squarenorm(ch);
+            al[i] += wpf * ch;
         }
 
-        if(s>1.0) {
-            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, 
+        if (s > 1.0) {
+            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s=std::sqrt(s);
-            wpf*=s/(j+1);
-            rs=1.0/s;
+            s = std::sqrt(s);
+            wpf *= s / (j + 1);
+            rs = 1.0 / s;
         } else {
-            wpf/=(j+1);
-            rs=1.0;
+            wpf /= (j + 1);
+            rs = 1.0;
         }
-        twpf+=wpf;
-        if(ttwpf==twpf) {
-            //terminate iteration when numeric value of twpf stops changing
+        twpf += wpf;
+        if (ttwpf == twpf) {
+            // terminate iteration when numeric value of twpf stops changing
             break;
         }
-        ttwpf=twpf;
+        ttwpf = twpf;
     }
-    //if(hila::myrank()==0) {
-    //    std::cout<<"chexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
-    //}
+    // if(hila::myrank()==0) {
+    //     std::cout<<"chexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
+    // }
 
     // form output matrix:
-    Matrix_t<n,m,T,MT>& omat=pl[0];
-    for(i=0; i<n; ++i) {
-        for(j=0; j<n; ++j) {
-            if(i==j) {
-                omat.e(i,j)=al[0];
+    Matrix_t<n, m, T, MT> &omat = pl[0];
+    for (i = 0; i < n; ++i) {
+        for (j = 0; j < n; ++j) {
+            if (i == j) {
+                omat.e(i, j) = al[0];
             } else {
-                omat.e(i,j)=0;
+                omat.e(i, j) = 0;
             }
-            for(k=1; k<n; ++k) {
-                omat.e(i,j)+=al[k]*pl[k].e(i,j);
+            for (k = 1; k < n; ++k) {
+                omat.e(i, j) += al[k] * pl[k].e(i, j);
             }
         }
     }
@@ -2787,28 +2792,29 @@ inline Matrix_t<n,m,T,MT> chexp_b(const Matrix_t<n,m,T,MT>& mat,Matrix_t<n,m,T,M
 }
 
 // overload wrapper for chexp where omat is not provided
-template <int n,int m,typename T,typename MT>
-inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat,Matrix_t<n,m,T,MT>(out_only &pl)[n+1]) {
-    static_assert(n==m,"chexp() only for square matrices");
-    chexp(mat,pl[0],pl);
+template <int n, int m, typename T, typename MT>
+inline Matrix_t<n, m, T, MT> chexp(const Matrix_t<n, m, T, MT> &mat,
+                                   Matrix_t<n, m, T, MT>(out_only &pl)[n + 1]) {
+    static_assert(n == m, "chexp() only for square matrices");
+    chexp(mat, pl[0], pl);
     return pl[0];
 }
 
 // overload wrapper for chexp which creates the temporary matrix array pl[n+1] internally
-template <int n,int m,typename T,typename MT>
-inline void chexp(const Matrix_t<n,m,T,MT>& mat,out_only Matrix_t<n,m,T,MT>& omat) {
-    static_assert(n==m,"chexp() only for square matrices");
-    Matrix_t<n,m,T,MT> pl[n+1];
-    chexp(mat,omat,pl);
+template <int n, int m, typename T, typename MT>
+inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT> &omat) {
+    static_assert(n == m, "chexp() only for square matrices");
+    Matrix_t<n, m, T, MT> pl[n + 1];
+    chexp(mat, omat, pl);
 }
 
 // overload wrapper for chexp where omat is not provided
 // and which creates the temporary matrix array pl[n+1] internally
-template <int n,int m,typename T,typename MT>
-inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat) {
-    static_assert(n==m,"chexp() only for square matrices");
-    Matrix_t<n,m,T,MT> pl[n+1];
-    chexp(mat,pl[0],pl);
+template <int n, int m, typename T, typename MT>
+inline Matrix_t<n, m, T, MT> chexp(const Matrix_t<n, m, T, MT> &mat) {
+    static_assert(n == m, "chexp() only for square matrices");
+    Matrix_t<n, m, T, MT> pl[n + 1];
+    chexp(mat, pl[0], pl);
     return pl[0];
 }
 
@@ -2817,7 +2823,8 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat) {
 //  using iterative Cayley-Hamilton described in arXiv:2404.07704
 /**
  * @brief Calculate exp of a square matrix
- * @details Computation is done using iterative Cayley-Hamilton (cf. from arXiv:2404.07704) with minimal temporary storage
+ * @details Computation is done using iterative Cayley-Hamilton (cf. from arXiv:2404.07704) with
+ minimal temporary storage
 
  * @tparam n Number of rowsMa
  * @tparam T Matrix element type
@@ -2825,92 +2832,93 @@ inline Matrix_t<n,m,T,MT> chexp(const Matrix_t<n,m,T,MT>& mat) {
  * @param mat Matrix to compute exponential for
  * @return Matrix_t<n, m, T, MT>
  */
-template <int n,int m,typename T,typename MT>
-inline Matrix_t<n,m,T,MT> chsexp(const Matrix_t<n,m,T,MT>& mat) {
-    static_assert(n==m,"chsexp() only for square matrices");
+template <int n, int m, typename T, typename MT>
+inline Matrix_t<n, m, T, MT> chsexp(const Matrix_t<n, m, T, MT> &mat) {
+    static_assert(n == m, "chsexp() only for square matrices");
 
-    // compute the characteristic polynomial coefficients crpl[] with the Faddeev-LeVerrier algorithm :
-    int i,j,k;
-    Matrix_t<n,m,T,MT> tB[2];
-    T crpl[n+1];
-    crpl[n]=1.0;
-    int ip=0;
-    tB[ip]=1.;
-    T tc=trace(mat);
-    crpl[n-1]=tc;
-    tB[1-ip]=mat;
-    for(k=2; k<=n; ++k) {
-        tB[1-ip]-=tc;
-        mult(mat,tB[1-ip],tB[ip]);
-        tc=trace(tB[ip])/k;
-        crpl[n-k]=tc;
-        ip=1-ip;
+    // compute the characteristic polynomial coefficients crpl[] with the Faddeev-LeVerrier
+    // algorithm :
+    int i, j, k;
+    Matrix_t<n, m, T, MT> tB[2];
+    T crpl[n + 1];
+    crpl[n] = 1.0;
+    int ip = 0;
+    tB[ip] = 1.;
+    T tc = trace(mat);
+    crpl[n - 1] = tc;
+    tB[1 - ip] = mat;
+    for (k = 2; k <= n; ++k) {
+        tB[1 - ip] -= tc;
+        mult(mat, tB[1 - ip], tB[ip]);
+        tc = trace(tB[ip]) / k;
+        crpl[n - k] = tc;
+        ip = 1 - ip;
     }
 
 
-    int mmax=15*n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
-    T al[n],pal[n]; // temp. Cayley-Hamilton coefficents
-    hila::arithmetic_type<T> wpf=1.0,twpf=1.0,ttwpf; // leading coefficient of power series
+    int mmax = 15 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
+    T al[n], pal[n];   // temp. Cayley-Hamilton coefficents
+    hila::arithmetic_type<T> wpf = 1.0, twpf = 1.0, ttwpf; // leading coefficient of power series
     // set initial values for the n entries in al[] and pal[] :
-    for(i=0; i<n; ++i) {
-        pal[i]=0;
-        al[i]=wpf;
-        wpf/=(i+1); //compute (i+1)-th power series coefficent from the i-th coefficient
-        twpf+=wpf;
+    for (i = 0; i < n; ++i) {
+        pal[i] = 0;
+        al[i] = wpf;
+        wpf /= (i + 1); // compute (i+1)-th power series coefficent from the i-th coefficient
+        twpf += wpf;
     }
-    pal[n-1]=1.0;
+    pal[n - 1] = 1.0;
 
     // next we iteratively add higher order power series terms to al[] till al[] stops changing
     // more precisely: the iteration will terminate as soon as twpf stops changing. Here twpf
-    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[] 
-    // would have at iteration i, if no renormalization were used.    
-    T ch,cho; // temporary variables for iteration
-    hila::arithmetic_type<T> s,rs=1.0; // temp variables used for renormalization of pal[]
-    ttwpf=twpf;
-    for(j=n; j<mmax; ++j) {
-        pal[n-1]*=rs;
-        ch=-pal[n-1]*crpl[0];
-        cho=pal[0]*rs;
-        pal[0]=ch;
-        s=squarenorm(ch);
-        al[0]+=wpf*ch;
-        for(i=1; i<n; ++i) {
-            ch=cho-pal[n-1]*crpl[i];
-            cho=pal[i]*rs;
-            pal[i]=ch;
-            s+=squarenorm(ch);
-            al[i]+=wpf*ch;
+    // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[]
+    // would have at iteration i, if no renormalization were used.
+    T ch, cho;                            // temporary variables for iteration
+    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    ttwpf = twpf;
+    for (j = n; j < mmax; ++j) {
+        pal[n - 1] *= rs;
+        ch = -pal[n - 1] * crpl[0];
+        cho = pal[0] * rs;
+        pal[0] = ch;
+        s = squarenorm(ch);
+        al[0] += wpf * ch;
+        for (i = 1; i < n; ++i) {
+            ch = cho - pal[n - 1] * crpl[i];
+            cho = pal[i] * rs;
+            pal[i] = ch;
+            s += squarenorm(ch);
+            al[i] += wpf * ch;
         }
-        if(s>1.0) {
-            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, 
+        if (s > 1.0) {
+            // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s=std::sqrt(s);
-            wpf*=s/(j+1);
-            rs=1.0/s;
+            s = std::sqrt(s);
+            wpf *= s / (j + 1);
+            rs = 1.0 / s;
         } else {
-            wpf/=(j+1);
-            rs=1.0;
+            wpf /= (j + 1);
+            rs = 1.0;
         }
-        twpf+=wpf;
-        if(ttwpf==twpf) {
-            //terminate iteration
+        twpf += wpf;
+        if (ttwpf == twpf) {
+            // terminate iteration
             break;
         }
-        ttwpf=twpf;
+        ttwpf = twpf;
     }
-    //if(hila::myrank()==0) {
-    //    std::cout<<"chsexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
-    //}
+    // if(hila::myrank()==0) {
+    //     std::cout<<"chsexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
+    // }
 
     // form output matrix:
-    ip=0;
-    tB[ip]=mat;
-    tB[ip]*=al[n-1];
-    tB[ip]+=al[n-2];
-    for(i=2; i<n; ++i) {
-        mult(tB[ip],mat,tB[1-ip]);
-        tB[1-ip]+=al[n-i-1];
-        ip=1-ip;
+    ip = 0;
+    tB[ip] = mat;
+    tB[ip] *= al[n - 1];
+    tB[ip] += al[n - 2];
+    for (i = 2; i < n; ++i) {
+        mult(tB[ip], mat, tB[1 - ip]);
+        tB[1 - ip] += al[n - i - 1];
+        ip = 1 - ip;
     }
 
     return tB[ip];
