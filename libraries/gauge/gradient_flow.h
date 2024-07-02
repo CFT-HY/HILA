@@ -280,7 +280,10 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
             onsites(ALL) {
                 reldiff[X] = (tk[d][X].squarenorm());
             }
-            maxtk = max(maxtk, reldiff.max());
+            atype tmaxtk = reldiff.max();
+            if(tmaxtk>maxtk) {
+                maxtk = tmaxtk;
+            }
         }
         maxtk = sqrt(0.5 * maxtk);
 
@@ -348,8 +351,8 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
         atype maxreldiff = 0.0;
         foralldir(d) {
             onsites(ALL) {
-                reldiff[X] = (V2[d][X] * V[d][X].dagger()).project_to_algebra().max_abs() /
-                             (tatol + rtol * tk[d][X].max_abs());
+                reldiff[X] = (V2[d][X] * V[d][X].dagger()).project_to_algebra().norm() /
+                             (tatol + rtol * tk[d][X].norm());
             }
             atype tmaxreldiff = reldiff.max();
             if (tmaxreldiff > maxreldiff) {
@@ -377,8 +380,8 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
         // adjust step size :
         step = min((atype)0.9 * maxstep, ubstep);
-        // hila::out0<<"t: "<<t<<" , maxreldiff: "<<maxreldiff<<" , maxstep: "<<maxstep<<" gf ,
-        // step:"<<step<<"\n";
+        //hila::out0<<"t: "<<t<<" , maxreldiff: "<<maxreldiff<<" , maxstep: "
+        //            <<maxstep<<" gf , step:"<<step<<"\n";
     }
 
     return tstep;
