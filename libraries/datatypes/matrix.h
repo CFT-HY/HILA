@@ -497,7 +497,7 @@ class Matrix_t {
      *
      * @return const Mtype&
      */
-    inline const Mtype &operator+() const {
+    inline const auto &operator+() const {
         return *this;
     }
 
@@ -584,7 +584,7 @@ class Matrix_t {
 
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only & {
+    inline auto &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only & {
         for (int i = 0; i < n * m; i++) {
             c[i] = rhs.c[i];
         }
@@ -593,7 +593,7 @@ class Matrix_t {
 
     // assign from 0
 
-    inline Mtype &operator=(const std::nullptr_t &z) out_only & {
+    inline auto &operator=(const std::nullptr_t &z) out_only & {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
         }
@@ -603,7 +603,7 @@ class Matrix_t {
     // Assign from "scalar" for square matrix
 
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
-    inline Mtype &operator=(const S rhs) out_only & {
+    inline auto &operator=(const S rhs) out_only & {
 
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
@@ -618,7 +618,7 @@ class Matrix_t {
     // Assign from diagonal matrix
 
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline Mtype &operator=(const DiagonalMatrix<n, S> &rhs) out_only & {
+    inline auto &operator=(const DiagonalMatrix<n, S> &rhs) out_only & {
         static_assert(n == m,
                       "Assigning DiagonalMatrix to Matrix possible only for square matrices");
 
@@ -636,7 +636,7 @@ class Matrix_t {
     // Assign from initializer list
 
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Mtype &operator=(std::initializer_list<S> rhs) out_only & {
+    auto &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == n * m && "Initializer list has a wrong size in assignment");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
@@ -647,7 +647,7 @@ class Matrix_t {
 
     // Delete the rvalue-assign op
     template <typename S>
-    Mtype &operator=(const S &s) && = delete;
+    Matrix_t &operator=(const S &s) && = delete;
 
 
     /**
@@ -680,7 +680,7 @@ class Matrix_t {
 
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Mtype &operator+=(const Matrix_t<n, m, S, MT> &rhs) & {
+    auto &operator+=(const Matrix_t<n, m, S, MT> &rhs) & {
         for (int i = 0; i < n * m; i++) {
             c[i] += rhs.c[i];
         }
@@ -716,7 +716,7 @@ class Matrix_t {
 
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) & {
+    auto &operator-=(const Matrix_t<n, m, S, MT> &rhs) & {
         for (int i = 0; i < n * m; i++) {
             c[i] -= rhs.c[i];
         }
@@ -727,7 +727,7 @@ class Matrix_t {
 
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
-    Mtype &operator+=(const S &rhs) & {
+    auto &operator+=(const S &rhs) & {
 
         static_assert(n == m, "rows != columns : scalar addition possible for square matrix only!");
 
@@ -741,7 +741,7 @@ class Matrix_t {
 
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
-    Mtype &operator-=(const S rhs) & {
+    auto &operator-=(const S rhs) & {
         static_assert(n == m,
                       "rows != columns : scalar subtraction possible for square matrix only!");
         for (int i = 0; i < n; i++) {
@@ -786,7 +786,7 @@ class Matrix_t {
      */
     template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
-    Mtype &operator*=(const Matrix_t<m, p, S, MT> &rhs) & {
+    auto &operator*=(const Matrix_t<m, p, S, MT> &rhs) & {
         static_assert(m == p, "can't assign result of *= to lhs Matrix, because doing so "
                               "would change it's dimensions");
         *this = *this * rhs;
@@ -823,7 +823,7 @@ class Matrix_t {
 
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
-    Mtype &operator*=(const S rhs) & {
+    auto &operator*=(const S rhs) & {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs;
         }
@@ -853,7 +853,7 @@ class Matrix_t {
 
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
-    Mtype &operator/=(const S rhs) & {
+    auto &operator/=(const S rhs) & {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs;
         }
@@ -867,7 +867,7 @@ class Matrix_t {
      */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
-    Mtype &operator+=(const DiagonalMatrix<n, S> &rhs) & {
+    auto &operator+=(const DiagonalMatrix<n, S> &rhs) & {
         static_assert(n == m, "Assigning DiagonalMatrix possible only for square matrix");
 
         for (int i = 0; i < n; i++)
@@ -877,7 +877,7 @@ class Matrix_t {
 
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
-    Mtype &operator-=(const DiagonalMatrix<n, S> &rhs) & {
+    auto &operator-=(const DiagonalMatrix<n, S> &rhs) & {
         static_assert(n == m, "Assigning DiagonalMatrix possible only for square matrix");
 
         for (int i = 0; i < n; i++)
@@ -890,7 +890,7 @@ class Matrix_t {
      */
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
-    Mtype &operator*=(const DiagonalMatrix<m, S> &rhs) & {
+    auto &operator*=(const DiagonalMatrix<m, S> &rhs) & {
 
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++)
@@ -901,7 +901,7 @@ class Matrix_t {
 
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
-    Mtype &operator/=(const DiagonalMatrix<m, S> &rhs) & {
+    auto &operator/=(const DiagonalMatrix<m, S> &rhs) & {
 
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++)
@@ -927,7 +927,7 @@ class Matrix_t {
      * @return const Mtype&
      */
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    const Mtype &fill(const S rhs) out_only {
+    const auto &fill(const S rhs) out_only {
         for (int i = 0; i < n * m; i++)
             c[i] = rhs;
         return *this;
@@ -942,7 +942,7 @@ class Matrix_t {
      * @return const Rtype
      */
     template <int mm = m,
-              typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type,
+              typename Rtype = typename std::conditional<n == m, Matrix_t, Matrix<m, n, T>>::type,
               std::enable_if_t<(mm != 1 && n != 1), int> = 0>
     inline Rtype transpose() const {
         Rtype res;
