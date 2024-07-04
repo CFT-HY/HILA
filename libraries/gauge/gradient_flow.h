@@ -229,7 +229,7 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
     atype t = l_start * l_start / 8.0;
     atype tmax = l_end * l_end / 8.0;
 
-    atype tatol = sqrt(2.0) * atol;
+    atype tatol = atol * sqrt(2.0);
 
     // hila::out0<<"t: "<<t<<" , tmax: "<<tmax<<" , step: "<<tstep<<" , minmaxreldiff:
     // "<<minmaxreldiff<<"\n";
@@ -289,14 +289,16 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
         if (step == 0) {
             if (maxtk > maxstk) {
-                step = maxstk / maxtk; // adjust initial step size based on max. force magnitude
+                step = min(maxstk / maxtk,
+                           ubstep); // adjust initial step size based on max. force magnitude
                 hila::out0 << "GFINFO using max. gauge force (max_X |F(X)|=" << maxtk
                            << ") to set initial flow time step size: " << step << "\n";
             } else {
-                step = maxstk;
+                step = min((atype)1.0, ubstep);
             }
         } else if (step * maxtk > maxstk) {
-            step = maxstk / maxtk; // adjust initial step size based on max. force magnitude
+            step = min(maxstk / maxtk,
+                       ubstep); // adjust initial step size based on max. force magnitude
             hila::out0 << "GFINFO using max. gauge force (max_X |F(X)|=" << maxtk
                        << ") to set initial flow time step size: " << step << "\n";
         }
@@ -305,13 +307,12 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
     V0 = V;
     bool stop = false;
-    tstep = step;
     while (t < tmax && !stop) {
+        tstep = step;
         if (t + step >= tmax) {
             step = tmax - t;
             stop = true;
         } else {
-            tstep = step;
             if (t + 2.0 * step >= tmax) {
                 step = 0.501 * (tmax - t);
             }
