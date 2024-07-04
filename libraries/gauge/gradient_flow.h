@@ -167,7 +167,7 @@ void measure_gradient_flow_stuff(const GaugeField<group> &V, atype flow_l, atype
         // print legend for flow measurement output
         hila::out0 << "LGFLMEAS  l(ambda)        S-flow        S-plaq        E_plaq    dE_plaq/dl  "
                       "       E_clv     dE_clv/dl     Qtopo_clv         E_log     dE_log/dl     "
-                      "Qtopo_log   [t step size]\n";
+                      "Qtopo_log   [t_step_size]\n";
         first = false;
     }
     atype slocal = measure_gf_s(V) /
