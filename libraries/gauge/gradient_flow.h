@@ -222,12 +222,13 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
     atype maxstepmf = 1.0e2; // max. growth factor of adaptive step size
     atype minmaxreldiff = pow(maxstepmf, -esp);
-    atype ubstep = 0.45; // upper bound max. allowed step size
 
     // translate flow scale interval [l_start,l_end] to corresponding
     // flow time interval [t,tmax] :
     atype t = l_start * l_start / 8.0;
     atype tmax = l_end * l_end / 8.0;
+
+    atype ubstep = (tmax - t) / 3.0; // upper bound max. allowed step size
 
     atype tatol = atol * sqrt(2.0);
 
@@ -263,7 +264,7 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
     //
     atype b21 = -1.25, b22 = 2.0;
 
-    atype step = min(min(tstep, (atype)0.501 * (tmax - t)), ubstep); // initial step size
+    atype step = min(tstep, ubstep); // initial step size
 
     if (t == 0 || step == 0) {
         // when using a gauge action for gradient flow that is different from
@@ -307,12 +308,13 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
     V0 = V;
     bool stop = false;
+    tstep = step;
     while (t < tmax && !stop) {
-        tstep = step;
         if (t + step >= tmax) {
             step = tmax - t;
             stop = true;
         } else {
+            tstep = step;
             if (t + 2.0 * step >= tmax) {
                 step = 0.501 * (tmax - t);
             }
