@@ -47,8 +47,8 @@ T bp_iOsqmat(const T &U) {
     return tA1 * tA1;
 }
 
-template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_s_bp(const GaugeField<group> &U) {
+template <typename group>
+double measure_s_bp(const GaugeField<group> &U) {
     // measure the BP plaquette action
     Reduction<double> plaq = 0;
     plaq.allreduce(false).delayed(true);
@@ -62,7 +62,7 @@ atype measure_s_bp(const GaugeField<group> &U) {
                     1.0;
         }
     }
-    return (atype)plaq.value();
+    return plaq.value();
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>

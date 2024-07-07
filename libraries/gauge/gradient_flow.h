@@ -8,7 +8,7 @@
 #include "gauge/energy_and_topo_charge_log.h"
 #include "gauge/wilson_plaquette_action.h"
 #include "gauge/clover_action.h"
-#include "gauge/log_action.h"
+#include "gauge/log_clover_action.h"
 
 #ifdef GFLOWACTION
 #define GFLOWS GFLOWACTION
@@ -19,8 +19,11 @@
 #if GFLOWS == 1
 #include "gauge/bulk_prevention_action.h"
 #elif GFLOWS > 1
-#include "gauge/wilson_line_and_force.h"
+#if GFLOWS < 5
 #include "gauge/improved_action.h"
+#else
+#include "gauge/log_plaquette_action.h"
+#endif
 #endif
 
 #include "tools/string_format.h"
@@ -51,10 +54,8 @@ void get_gf_force(const GaugeField<group> &U, VectorField<Algebra<group>> &E) {
     atype c12 = -1.4088;         // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
     get_force_impr(U, E, eps * c11, eps * c12);
-#elif GFLOWS == 5 // CLOVER
-    get_force_clover(U, E, eps);
-#elif GFLOWS == 6 // LOG-CLOVER
-    get_force_log(U, E, eps);
+#elif GFLOWS == 5 // LOG-PLAQUETTE
+    get_force_log_plaq(U, E, eps);
 #else             // WILSON
     get_force_wplaq(U, E, eps);
 #endif
@@ -82,10 +83,8 @@ atype measure_gf_s(const GaugeField<group> &U) {
     atype c12 = -1.4088;         // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
     atype res = measure_s_impr(U, c11, c12);
-#elif GFLOWS == 5 // CLOVER
-    atype res = measure_s_clover(U);
-#elif GFLOWS == 6 // LOG-CLOVER
-    atype res = measure_s_log(U);
+#elif GFLOWS == 5 // LOG-PLAQUETTE
+    atype res = measure_s_log_plaq(U);
 #else             // WILSON
     atype res = measure_s_wplaq(U);
 #endif
@@ -102,7 +101,7 @@ atype measure_dE_wplaq_dt(const GaugeField<group> &U) {
     de.allreduce(false).delayed(true);
     VectorField<Algebra<group>> K, Kc;
     get_gf_force(U, K);
-    get_force_wplaq(U, Kc, 2.0);
+    get_force_wplaq(U, Kc, -2.0);
     foralldir(d) {
         onsites(ALL) {
             de += Kc[d][X].dot(K[d][X]);
@@ -117,7 +116,7 @@ atype measure_dE_clov_dt(const GaugeField<group> &U) {
     de.allreduce(false).delayed(true);
     VectorField<Algebra<group>> K, Kc;
     get_gf_force(U, K);
-    get_force_clover(U, Kc, 2.0);
+    get_force_clover(U, Kc, -2.0);
     foralldir(d) {
         onsites(ALL) {
             de += Kc[d][X].dot(K[d][X]);
@@ -132,7 +131,7 @@ atype measure_dE_log_dt(const GaugeField<group> &U) {
     de.allreduce(false).delayed(true);
     VectorField<Algebra<group>> K, Kc;
     get_gf_force(U, K);
-    get_force_log(U, Kc, 2.0);
+    get_force_log(U, Kc, -2.0);
     foralldir(d) {
         onsites(ALL) {
             de += Kc[d][X].dot(K[d][X]);
@@ -157,10 +156,8 @@ void measure_gradient_flow_stuff(const GaugeField<group> &V, atype flow_l, atype
         hila::out0 << "GFINFO using Iwasaki action\n";
 #elif GFLOWS == 4 // DBW2
         hila::out0 << "GFINFO using DBW2 action\n";
-#elif GFLOWS == 5 // CLOVER
-        hila::out0 << "GFINFO using clover action\n";
-#elif GFLOWS == 6 // LOG-CLOVER
-        hila::out0 << "GFINFO using log-clover action\n";
+#elif GFLOWS == 5 // LOG-PLAQUETTE
+        hila::out0 << "GFINFO using log-plaquette action\n";
 #else             // WILSON
         hila::out0 << "GFINFO using Wilson's plaquette action\n";
 #endif
@@ -178,16 +175,16 @@ void measure_gradient_flow_stuff(const GaugeField<group> &V, atype flow_l, atype
                   group::size(); // naive energy density (based on wilson plaquette action)
 
     // average energy density and toplogical charge from
-    // symmetric log definition of field strength tensor :
-    atype qtopolog, elog;
-    measure_topo_charge_and_energy_log(V, qtopolog, elog);
-    elog /= lattice.volume();
-
-    // average energy density and toplogical charge from
     // clover definition of field strength tensor :
     atype qtopocl, ecl;
     measure_topo_charge_and_energy_clover(V, qtopocl, ecl);
     ecl /= lattice.volume();
+
+    // average energy density and toplogical charge from
+    // symmetric log definition of field strength tensor :
+    atype qtopolog, elog;
+    measure_topo_charge_and_energy_log(V, qtopolog, elog);
+    elog /= lattice.volume();
 
     // derivative of plaquette energy density w.r.t. to flow time :
     atype deplaqdt = measure_dE_wplaq_dt(V) / lattice.volume();
@@ -271,7 +268,7 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
         // the one used to sample the gauge cofingurations, the initial force
         // can be huge. Therefore, if no t_step is provided as input, the inital
         // value for step is here adjustet so that
-        // step * <largest force component> = maxstk
+        // step * <largest local force> = maxstk
         atype maxstk = 1.0e-1;
 
         // get max. local gauge force:
