@@ -52,7 +52,7 @@ c12) {
 */
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_s_impr(const GaugeField<group> &U, atype c11, atype c12) {
+double measure_s_impr(const GaugeField<group> &U, atype c11, atype c12) {
     // measure the improved action for dir1<dir2
     Reduction<double> stot = 0;
     stot.allreduce(false).delayed(true);
@@ -82,7 +82,7 @@ atype measure_s_impr(const GaugeField<group> &U, atype c11, atype c12) {
                                  group::size());
         }
     }
-    return (atype)stot.value();
+    return stot.value();
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>

@@ -431,7 +431,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
         for (int i = 0; i < N_a; ++i) {
             r += this->e(i) * rhs.e(i);
         }
-        return -r * 0.5;
+        return r * 0.5;
     }
 };
 
@@ -489,18 +489,18 @@ Algebra<SU<N, T>> log(const SU<N, T> &a) {
         tres = tmat.project_to_algebra(trn);
         rn = 0;
         for (i = 0; i < Algebra<SU<N, T>>::N_a; ++i) {
-            res.e(i) += tres.e(i);
+            res.e(i) -= tres.e(i);
             rn += abs(res.e(i));
         }
         if (trn < fprec * (rn + 1.0)) {
             break;
         }
-        tmat = res.expand_scaled(-1.0);
+        tmat = res.expand();
         chexp(tmat, tmat2, pl);
         mult(a, tmat2, tmat);
     }
 
-    return res;
+    return -res;
 }
 
 

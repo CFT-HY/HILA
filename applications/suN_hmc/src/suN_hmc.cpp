@@ -16,8 +16,13 @@
 #include "gauge/bulk_prevention_action.h"
 #elif HMCS > 1
 #include "gauge/wilson_line_and_force.h"
+#if HMCS < 5
 #include "gauge/improved_action.h"
+#elif HMCS == 5
+#include "gauge/log_plaquette_action.h"
 #endif
+#endif
+
 
 #include "gauge/gradient_flow.h"
 #include "tools/string_format.h"
@@ -51,24 +56,26 @@ struct parameters {
 // HMC functions
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_s(const GaugeField<group> &U) {
+double measure_s(const GaugeField<group> &U) {
     // compute the value of the chosen gauge action (without beta/N factor)
 #if HMCS == 1 // BP
-    atype res = measure_s_bp(U);
+    double res = measure_s_bp(U);
 #elif HMCS == 2 // LW
     atype c12 = -1.0 / 12.0;     // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    atype res = measure_s_impr(U, c11, c12);
+    double res = measure_s_impr(U, c11, c12);
 #elif HMCS == 3 // IWASAKI
     atype c12 = -0.331;          // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    atype res = measure_s_impr(U, c11, c12);
+    double res = measure_s_impr(U, c11, c12);
 #elif HMCS == 4 // DBW2
     atype c12 = -1.4088;         // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    atype res = measure_s_impr(U, c11, c12);
+    double res = measure_s_impr(U, c11, c12);
+#elif HMCS == 5 // LOG-PLAQUETTE
+    double res = measure_s_log_plaq(U);
 #else           // WILSON
-    atype res = measure_s_wplaq(U);
+    double res = measure_s_wplaq(U);
 #endif
     return res;
 }
@@ -91,6 +98,8 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
     atype c12 = -1.4088;         // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
     get_force_impr_add(U, E, eps * c11, eps * c12);
+#elif HMCS == 5 // LOG-PLAQUETTE
+    get_force_log_plaq_add(U, E, eps);
 #else           // WILSON
     get_force_wplaq_add(U, E, eps);
 #endif
@@ -104,31 +113,31 @@ void update_U(GaugeField<group> &U, const VectorField<Algebra<group>> &E, atype 
     }
 }
 
-template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_e2(const VectorField<Algebra<group>> &E) {
+template <typename group>
+double measure_e2(const VectorField<Algebra<group>> &E) {
     // compute gauge kinetic energy from momentum field E
     Reduction<double> e2 = 0;
     e2.allreduce(false).delayed(true);
     foralldir(d) {
         onsites(ALL) e2 += E[d][X].squarenorm();
     }
-    return (atype)e2.value() / 2;
+    return e2.value() / 2;
 }
 
-template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
-                     const parameters &p, atype &plaq) {
+template <typename group>
+double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
+                     const parameters &p, double &plaq) {
     // measure the total action, consisting of plaquette and momentum term
     plaq = p.beta * measure_s(U);
-    atype e2 = measure_e2(E);
+    double e2 = measure_e2(E);
     return plaq + e2 / 2;
 }
 
-template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
+template <typename group>
+double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
                      const parameters &p) {
     // measure the total action, consisting of plaquette and momentum term
-    atype plaq = 0;
+    double plaq = 0;
     return measure_action(U, E, p, plaq);
 }
 
@@ -263,6 +272,10 @@ int main(int argc, char **argv) {
     hila::out0 << "SU(" << mygroup::size() << ") HMC with Iwasaki gauge action\n";
 #elif HMCS == 4
     hila::out0 << "SU(" << mygroup::size() << ") HMC with DBW2 gauge action\n";
+#elif HMCS == 5
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with log-plaquette gauge action\n";
+#elif HMCS == 6
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with topology suppressing gauge action\n";
 #else
     hila::out0 << "SU(" << mygroup::size() << ") HMC with Wilson's plaquette gauge action\n";
 #endif
@@ -318,6 +331,7 @@ int main(int argc, char **argv) {
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
+        hila::out0 << "cold start: initial link variables set to identity\n";
     }
 
     hila::timer update_timer("Updates");
@@ -368,13 +382,13 @@ int main(int argc, char **argv) {
 
         foralldir(d) onsites(ALL) E[d][X].gaussian_random();
 
-        ftype g_act_old;
-        ftype act_old = measure_action(U, E, p, g_act_old);
+        double g_act_old;
+        double act_old = measure_action(U, E, p, g_act_old);
 
         do_trajectory(U, E, p);
 
-        ftype g_act_new;
-        ftype act_new = measure_action(U, E, p, g_act_new);
+        double g_act_new;
+        double act_new = measure_action(U, E, p, g_act_new);
 
 
         bool reject = hila::broadcast(exp(act_old - act_new) < hila::random());
@@ -454,7 +468,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+        if (p.n_save > 0 && trajectory>=0 && (trajectory + 1) % p.n_save == 0) {
             checkpoint(U, trajectory, p);
         }
     }

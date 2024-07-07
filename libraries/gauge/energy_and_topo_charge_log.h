@@ -55,9 +55,9 @@ void measure_topo_charge_and_energy_log(const GaugeField<group> &U, atype &qtopo
         ++k;
     }
     onsites(ALL) {
-        qtopo += real(trace(F[0][X] * F[5][X]));
-        qtopo += -real(trace(F[1][X] * F[4][X]));
-        qtopo += real(trace(F[2][X] * F[3][X]));
+        qtopo += real(mul_trace(F[0][X], F[5][X]));
+        qtopo += -real(mul_trace(F[1][X], F[4][X]));
+        qtopo += real(mul_trace(F[2][X], F[3][X]));
 
         energy += F[0][X].squarenorm();
         energy += F[1][X].squarenorm();
