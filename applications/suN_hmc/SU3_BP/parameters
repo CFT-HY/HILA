@@ -1,9 +1,9 @@
 # This is a parameter file for SUN_hmc
 
 lattice size           12,12,12,12
-beta                   5.96
-dt                     0.01
-trajectory length      100
+beta                   2.0
+dt                     0.005
+trajectory length      200
 number of trajectories 82
 thermalization trajs   20
 gflow freq             10

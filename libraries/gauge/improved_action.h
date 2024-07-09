@@ -142,7 +142,7 @@ void get_force_impr_add(const GaugeField<group> &U, VectorField<Algebra<group>> 
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_force_impr(const GaugeField<group> &U, VectorField<Algebra<group>> &K, atype c11,
+void get_force_impr(const GaugeField<group> &U, out_only VectorField<Algebra<group>> &K, atype c11,
                     atype c12) {
     // compute the force for the improved action -S_{impr}=\beta/N*(c11*ReTr(plaq)+c12*ReTr(rect))
     // in an even faster way and write the results to K

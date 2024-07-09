@@ -10,7 +10,7 @@
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 void get_log_plaq_mat(const GaugeField<group> &U, Direction dir1, Direction dir2,
-                        Field<group> &C) {
+                      out_only Field<group> &C) {
     // sets C=log(U) where U is the plaquette variable panned by dir1 and dir2
     U[dir2].start_gather(dir1, ALL);
     U[dir1].start_gather(dir2, ALL);
@@ -69,7 +69,8 @@ void get_force_log_plaq_add(const GaugeField<group> &U, VectorField<Algebra<grou
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_force_log_plaq(const GaugeField<group> &U, VectorField<Algebra<group>> &K, atype eps = 1.0) {
+void get_force_log_plaq(const GaugeField<group> &U, out_only VectorField<Algebra<group>> &K,
+                        atype eps = 1.0) {
     // determine gauge force for clover action and store result in K
     foralldir(d1) {
         K[d1][ALL] = 0;

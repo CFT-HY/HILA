@@ -8,7 +8,7 @@
 // functions for Wilson's plaquette action -S_{impr}=\beta/N * \sum_{plaq} ReTr(plaq)
 
 template <typename T>
-void rstaplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity par = ALL) {
+void rstaplesum(const GaugeField<T> &U, out_only Field<T> &staples, Direction d1, Parity par = ALL) {
 
     Field<T> lower;
     bool first = true;
@@ -93,7 +93,8 @@ void get_force_wplaq_add(const GaugeField<group> &U, VectorField<Algebra<group>>
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_force_wplaq(const GaugeField<group> &U, VectorField<Algebra<group>> &K, atype eps = 1.0) {
+void get_force_wplaq(const GaugeField<group> &U, out_only VectorField<Algebra<group>> &K,
+                     atype eps = 1.0) {
     // compute the force for the plaquette action and write it to K
     Field<group> staple;
     foralldir(d) {
