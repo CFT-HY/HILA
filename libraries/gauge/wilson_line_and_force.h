@@ -10,7 +10,7 @@
 
 template <typename group>
 void get_wilson_line(const GaugeField<group> &U, const std::vector<Direction> &path,
-                     Field<group> &R) {
+                     out_only Field<group> &R) {
     // compute the Wilson line defined by the list of directions "path"
     int i, ip;
     int L = path.size();
@@ -106,7 +106,8 @@ void get_wloop_force_from_wl_add(const GaugeField<group> &U, const std::vector<D
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 void get_wloop_force_from_wl(const GaugeField<group> &U, const std::vector<Direction> &path,
-                             const Field<group> &W, atype eps, VectorField<Algebra<group>> &K) {
+                             const Field<group> &W, atype eps,
+                             out_only VectorField<Algebra<group>> &K) {
     // compute gauge force of Wilson loop "W", corresponding to "path" and store result in vector
     // field "K"
     foralldir(d1) {
@@ -155,7 +156,7 @@ void get_wloop_force_add(const GaugeField<group> &U, const std::vector<Direction
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 void get_wloop_force(const GaugeField<group> &U, const std::vector<Direction> &path, atype eps,
-                     VectorField<Algebra<group>> &K) {
+                     out_only VectorField<Algebra<group>> &K) {
     // compute gauge force of Wilson loop defined by "path" and store result in vector field "K"
     foralldir(d1) {
         K[d1][ALL] = 0;

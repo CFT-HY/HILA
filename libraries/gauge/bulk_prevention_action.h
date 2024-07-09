@@ -94,7 +94,8 @@ void get_force_bp_add(const GaugeField<group> &U, VectorField<Algebra<group>> &K
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_force_bp(const GaugeField<group> &U, VectorField<Algebra<group>> &K, atype eps = 1.0) {
+void get_force_bp(const GaugeField<group> &U, out_only VectorField<Algebra<group>> &K,
+                  atype eps = 1.0) {
     // compute force for BP action for n=2 according to Eq. (B5) of arXiv:2306.14319 and write it to
     // K
     foralldir(d1) {

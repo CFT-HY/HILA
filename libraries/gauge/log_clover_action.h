@@ -10,7 +10,7 @@
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 void get_log_clover_mat(const GaugeField<group> &U, Direction dir1, Direction dir2,
-                        Field<group> &Csum) {
+                        out_only Field<group> &Csum) {
     // sets Csum=(C[0]+C[1]+C[2]+C[3])/4 where C[0],C[1],C[2],C[3] are the logs of the clover-leaf
     // matrices in counter-clockwise order
 
@@ -101,7 +101,8 @@ void get_force_log_add(const GaugeField<group> &U, VectorField<Algebra<group>> &
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_force_log(const GaugeField<group> &U, VectorField<Algebra<group>> &K, atype eps = 1.0) {
+void get_force_log(const GaugeField<group> &U, out_only VectorField<Algebra<group>> &K,
+                   atype eps = 1.0) {
     // determine gauge force for clover action and store result in K
     foralldir(d1) {
         K[d1][ALL] = 0;
