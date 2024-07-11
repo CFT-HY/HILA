@@ -312,8 +312,8 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
             stop = true;
         } else {
             tstep = step;
-            if (t + 2.0 * step >= tmax) {
-                step = 0.501 * (tmax - t);
+            if (t + 1.5 * step >= tmax) {
+                step = 0.67 * (tmax - t);
             }
         }
 
