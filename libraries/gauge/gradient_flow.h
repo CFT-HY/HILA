@@ -225,7 +225,7 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
     atype t = l_start * l_start / 8.0;
     atype tmax = l_end * l_end / 8.0;
 
-    atype ubstep = (tmax - t) / 3.0; // upper bound max. allowed step size
+    atype ubstep = (tmax - t) / 3.0; // max. allowed time step
 
     atype tatol = atol * sqrt(2.0);
 
