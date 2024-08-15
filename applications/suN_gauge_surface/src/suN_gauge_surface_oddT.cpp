@@ -90,10 +90,10 @@ void staplesum_T_slice(const GaugeField<T> &U, Field<T> &staples, Parity par, Di
 
     foralldir(d2) if (d2 != d1) {
 
-        // anticipate that these are needed
-        // not really necessary, but may be faster
-        U[d2].start_gather(d1, ALL);
-        U[d1].start_gather(d2, ALL);
+        // // anticipate that these are needed
+        // // not really necessary, but may be faster
+        // U[d2].start_gather(d1, ALL);
+        // U[d1].start_gather(d2, ALL);
 
         // calculate first lower 'U' of the staple sum
         // do it on opp parity, on last timeslice and slice 0
