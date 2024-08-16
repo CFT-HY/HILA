@@ -21,11 +21,12 @@ void get_clover_leaves(const GaugeField<group> &U, Direction d1, Direction d2,
 
     onsites(ALL) {
         // d1-d2-plaquette that starts and ends at X
-        C[0][X] = U[d1][X] * U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
-        C[0][X] *= 0.25;
+        tF[X] = U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
+        tF[X] *= 0.25;
+        C[0][X] = U[d1][X] * tF[X];
 
         // parallel transport C[0][X] to X+d1 (use C[2][X] as temp. storage)
-        C[2][X] = U[d1][X].dagger() * C[0][X] * U[d1][X];
+        C[2][X] = tF[X] * U[d1][X];
     }
 
     C[2].start_gather(-d1, ALL);
