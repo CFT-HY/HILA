@@ -36,9 +36,18 @@ endif
 
 suN_gauge_surface: build/suN_gauge_surface ; @:
 
+suN_gauge_surface_oddT: build/suN_gauge_surface_oddT ; @:
+
 # Now the linking step for each target executable
 build/suN_gauge_surface: Makefile build/suN_gauge_surface.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/suN_gauge_surface.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
+
+# Now the linking step for each target executable
+build/suN_gauge_surface_oddT: Makefile build/suN_gauge_surface_oddT.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/suN_gauge_surface_oddT.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
+
+
+
 
 
 #build/suN_gauge_bare.o: src/suN_gauge_bare.h
