@@ -68,6 +68,44 @@ void get_wilson_line(const GaugeField<group> &U, const std::vector<Direction> &p
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 void get_wloop_force_from_wl_add(const GaugeField<group> &U, const std::vector<Direction> &path,
+                                 const Field<group> &W, VectorField<group> &K) {
+    // compute gauge force of Wilson loop "W", corresponding to "path" and add result to matrix
+    // field "K"
+    Field<group> R = W;
+    Field<group> R0;
+    int L = path.size();
+    int udirs[NDIRS] = {0};
+    Direction dir;
+    for (int i = 0; i < L; ++i) {
+        dir = path[i];
+        if (is_up_dir(dir)) {
+            if ((udirs[(int)dir]++) == 0) {
+                U[dir].start_gather(-dir, ALL);
+            }
+        }
+    }
+
+    for (int i = 0; i < L; ++i) {
+        dir = path[i];
+        R.start_gather(-dir, ALL);
+        if (is_up_dir(dir)) {
+            // link points in positive direction
+            onsites(ALL) K[dir][X] -= R[X];
+
+            onsites(ALL) mult(U[dir][X - dir].dagger(), R[X - dir], R0[X]);
+            onsites(ALL) mult(R0[X], U[dir][X - dir], R[X]);
+        } else {
+            // link points in negative direction
+            onsites(ALL) mult(U[-dir][X], R[X - dir], R0[X]);
+            onsites(ALL) mult(R0[X], U[-dir][X].dagger(), R[X]);
+
+            onsites(ALL) K[-dir][X] += R[X];
+        }
+    }
+}
+
+template <typename group, typename atype = hila::arithmetic_type<group>>
+void get_wloop_force_from_wl_add(const GaugeField<group> &U, const std::vector<Direction> &path,
                                  const Field<group> &W, atype eps, VectorField<Algebra<group>> &K) {
     // compute gauge force of Wilson loop "W", corresponding to "path" and add result to vector
     // field "K"

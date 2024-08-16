@@ -28,9 +28,18 @@
 #include "tools/string_format.h"
 #include "tools/floating_point_epsilon.h"
 
+#ifdef STOUTSMEAR
+#include "gauge/stout_smear.h"
+#define STOUTSTEPS STOUTSMEAR
+#else
+#define STOUTSTEPS 0
+#endif
 
-using ftype = float;
+
+using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
+
+ftype stoutc = 0.15;
 
 
 // define a struct to hold the input parameters: this
@@ -58,25 +67,37 @@ struct parameters {
 template <typename group, typename atype = hila::arithmetic_type<group>>
 double measure_s(const GaugeField<group> &U) {
     // compute the value of the chosen gauge action (without beta/N factor)
+#if STOUTSTEPS > 0
+
+    GaugeField<group> tU;
+    stout_smear(U, tU, stoutc, STOUTSTEPS);
+
+#else
+
+    const GaugeField<group> &tU = U;
+
+#endif
+
 #if HMCS == 1 // BP
-    double res = measure_s_bp(U);
+    double res = measure_s_bp(tU);
 #elif HMCS == 2 // LW
-    atype c12 = -1.0 / 12.0;     // rectangle weight
+    atype c12 = -1.0 / 12.0; // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    double res = measure_s_impr(U, c11, c12);
+    double res = measure_s_impr(tU, c11, c12);
 #elif HMCS == 3 // IWASAKI
     atype c12 = -0.331;          // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    double res = measure_s_impr(U, c11, c12);
+    double res = measure_s_impr(tU, c11, c12);
 #elif HMCS == 4 // DBW2
     atype c12 = -1.4088;         // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    double res = measure_s_impr(U, c11, c12);
+    double res = measure_s_impr(tU, c11, c12);
 #elif HMCS == 5 // LOG-PLAQUETTE
-    double res = measure_s_log_plaq(U);
+    double res = measure_s_log_plaq(tU);
 #else           // WILSON
-    double res = measure_s_wplaq(U);
-#endif
+    double res = measure_s_wplaq(tU);
+#endif // END HMCS
+
     return res;
 }
 
@@ -84,25 +105,56 @@ template <typename group, typename atype = hila::arithmetic_type<group>>
 void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype delta) {
     // compute the force for the chosen action and use it to evolve E
     atype eps = delta / group::size();
+
+#if STOUTSTEPS > 0
+
+    GaugeField<group> tUl[STOUTSTEPS+1];
+    stout_smear(U, tUl, stoutc);
+
+    VectorField<Algebra<group>> tE;
+
+    foralldir(d1) onsites(ALL) tE[d1][X] = 0;
+
+    GaugeField<group> &tU = tUl[STOUTSTEPS];
+
+#else // STOUTSTEPS==0
+
+    const GaugeField<group> &tU = U;
+    VectorField<Algebra<group>> &tE = E;
+
+#endif // END STOUTSTEPS
+
 #if HMCS == 1 // BP
-    get_force_bp_add(U, E, eps);
+    get_force_bp_add(tU, tE, eps);
 #elif HMCS == 2 // LW
     atype c12 = -1.0 / 12.0;     // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    get_force_impr_add(U, E, eps * c11, eps * c12);
+    get_force_impr_add(tU, tE, eps * c11, eps * c12);
 #elif HMCS == 3 // IWASAKI
     atype c12 = -0.331;          // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    get_force_impr_add(U, E, eps * c11, eps * c12);
+    get_force_impr_add(tU, tE, eps * c11, eps * c12);
 #elif HMCS == 4 // DBW2
     atype c12 = -1.4088;         // rectangle weight
     atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    get_force_impr_add(U, E, eps * c11, eps * c12);
+    get_force_impr_add(tU, tE, eps * c11, eps * c12);
 #elif HMCS == 5 // LOG-PLAQUETTE
-    get_force_log_plaq_add(U, E, eps);
+    get_force_log_plaq_add(tU, tE, eps);
 #else           // WILSON
-    get_force_wplaq_add(U, E, eps);
-#endif
+    get_force_wplaq_add(tU, tE, eps);
+#endif          // END HMCS
+
+#if STOUTSTEPS > 0
+
+    VectorField<Algebra<group>> KS;
+    stout_smear_force(tUl, tE, KS, stoutc);
+
+    foralldir(d1) {
+        onsites(ALL) E[d1][X] += KS[d1][X];
+    }
+
+#endif // END STOUTSTEPS
+
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
@@ -327,6 +379,53 @@ int main(int argc, char **argv) {
     // Alloc gauge field and momenta (E)
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
+
+    if (0 && hila::myrank() == 0) {
+        // test matrix exponential and corresponding differential computations
+        Alg_gen<NCOLOR, ftype> genlist[NCOLOR * NCOLOR - 1];
+        Algebra<mygroup>::generator_list(genlist);
+        if(false) {
+            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
+                hila::out0 << hila::prettyprint(genlist[i].to_matrix()) << "\n\n";
+            }
+        }
+        Matrix<NCOLOR * NCOLOR - 1, NCOLOR * NCOLOR - 1, ftype> omat;
+        if(false) {
+            mygroup tU1,tU2;
+            tU1.random();
+            tU2.random();
+            hila::out0 << "tU1:\n" << hila::prettyprint(tU1) << "\n";
+            hila::out0 << "tU2:\n" << hila::prettyprint(tU2) << "\n";
+            project_to_algebra_bilinear(tU1, tU2, omat, genlist);
+            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*tU1*t[]*tU2):\n" << hila::prettyprint(omat) << "\n";
+        }
+        Matrix<NCOLOR, NCOLOR, Complex<ftype>> V;
+        Matrix<NCOLOR, NCOLOR, Complex<ftype>> dV[NCOLOR][NCOLOR];
+        chexp(2.0*genlist[NCOLOR].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);
+        hila::out0 << "exp(A):\n" << hila::prettyprint(V) << "\n";
+        for (int i = 0; i < NCOLOR; ++i) {
+            for (int j = 0; j < NCOLOR; ++j) {
+                dV[i][j] = dV[i][j] * V.dagger();
+                hila::out0 << "dexp(A)/dA[" << i << "][" << j << "]*exp(-A):\n"
+                           << hila::prettyprint(dV[i][j]) << "\n";
+            }
+        }
+        project_to_algebra_bilinear(dV, omat, genlist);
+        hila::out0 << "dexp(A)^i/dA^j*exp(-A):\n" << hila::prettyprint(omat) << "\n";
+
+        Alg_gen<NCOLOR, ftype> genprodlist[NCOLOR * NCOLOR - 1][NCOLOR * NCOLOR - 1];
+        Algebra<mygroup>::generator_product_list(genlist,genprodlist);
+        if(false) {
+            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
+                for (int j = 0; j < NCOLOR * NCOLOR - 1; ++j) {
+                    hila::out0 << hila::prettyprint(genprodlist[i][j].to_matrix()) << "\n\n";
+                }
+            }
+        }
+        project_to_algebra_bilinear(V, omat, genprodlist);
+        hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*V*t[]):\n"
+                   << hila::prettyprint(omat) << "\n";
+    }
 
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
