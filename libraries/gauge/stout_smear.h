@@ -84,45 +84,6 @@ void stout_smear(const GaugeField<T> &U, GaugeField<T> &stout, atype coeff, int 
 // functions used to do stout smearing and perform the computation of the pullback of the force for
 // smeared actions:
 
-template <typename group, const int nstap=2*(NDIM-1)>
-void get_stout_plaquettes(const GaugeField<group> &U, Direction d1,
-                       VectorField<group>(out_only &S)[nstap], out_only Field<group> &Ssum) {
-    // compute the plaquettes spanned by directions (d1,d2), where d2 runs through all positive and
-    // negative directions which are orthogonal to d1. Individual plauqette fields get stored in
-    // S[d1][d2'] and their sum over d2' in Ssum.
-
-    foralldir(d2) if (d2 != d1) {
-        U[d2].start_gather(d1, ALL);
-        U[d1].start_gather(d2, ALL);
-    }
-    onsites(ALL){
-        Ssum[X] = 0;
-    }
-    Field<group> tF;
-
-    int k = 0;
-    int rk;
-    foralldir(d2) if (d2 != d1) {
-        onsites(ALL) {
-            tF[X] = U[d1][X + d2] * (U[d1][X] * U[d2][X + d1]).dagger();
-            // d1-d2-plaquette with positive d2 that starts and ends at X
-            S[k][d1][X] = (U[d2][X] * tF[X]).dagger();
-            tF[X] = tF[X] * U[d2][X];
-        }
-        tF.start_gather(-d2, ALL);
-        onsites(ALL) {
-            Ssum[X] += S[k][d1][X];
-        }
-        rk = nstap - 1 - k;
-        onsites(ALL) {
-            // d1-d2-plaquette with negative d2 that starts and ends at X
-            S[rk][d1][X] = tF[X - d2];
-            Ssum[X] += S[rk][d1][X];
-        }
-        ++k;
-    }
-}
-
 template <typename group, const int nstap = 2 * (NDIM - 1)>
 void get_stout_staples(const GaugeField<group> &U, Direction d1,
                           VectorField<group>(out_only &S)[nstap], out_only Field<group> &Ssum) {
@@ -199,19 +160,22 @@ void stout_smear_force(const GaugeField<T> (&stoutlist)[nst], const VectorField<
                 /*
                 T texp;
                 T dtexp[N][N];
-                chexp(plaqs[X].project_to_algebra_scaled(-coeff).expand(), texp, dtexp);
+                T tplaq = U[d1][X] * staps[X];
+                chexp(tplaq.project_to_algebra_scaled(-coeff).expand(), texp, dtexp);
 
                 T m0 = texp.dagger() * KS[d1][X].expand();
-                KS[d1][X] = (m0 * texp).project_to_algebra();
                 T m1; // equivalent of Gamma matrix, eq. (74) in [arXiv:hep-lat/0311018v1]:
                 for (int ic1 = 0; ic1 < N; ++ic1) {
                     for (int ic2 = 0; ic2 < N; ++ic2) {
                         m1.e(ic1, ic2) = mul_trace(m0, dtexp[ic2][ic1]);
                     }
                 }
-                // equivalent of Lambda matrix, eq. (73) in [arXiv:hep-lat/0311018v1],
-                // multiplied by coeff:
+                // equivalent of Lambda matrix, eq. (73) in [arXiv:hep-lat/0311018v1]:
                 K1[d1][X] = m1.project_to_algebra_scaled(coeff).expand();
+
+                KS[d1][X] = (m0 * texp - tplaq * K1[d1][X]).project_to_algebra();
+                
+                K1[d1][X] *= U[d1][X];
                 */
                 T mtexp;
                 T mdtexp;
@@ -252,6 +216,46 @@ void stout_smear_force(const GaugeField<T> (&stoutlist)[nst], const VectorField<
 }
 
 /*
+
+template <typename group, const int nstap=2*(NDIM-1)>
+void get_stout_plaquettes(const GaugeField<group> &U, Direction d1,
+                       VectorField<group>(out_only &S)[nstap], out_only Field<group> &Ssum) {
+    // compute the plaquettes spanned by directions (d1,d2), where d2 runs through all positive and
+    // negative directions which are orthogonal to d1. Individual plauqette fields get stored in
+    // S[d1][d2'] and their sum over d2' in Ssum.
+
+    foralldir(d2) if (d2 != d1) {
+        U[d2].start_gather(d1, ALL);
+        U[d1].start_gather(d2, ALL);
+    }
+    onsites(ALL){
+        Ssum[X] = 0;
+    }
+    Field<group> tF;
+
+    int k = 0;
+    int rk;
+    foralldir(d2) if (d2 != d1) {
+        onsites(ALL) {
+            tF[X] = U[d1][X + d2] * (U[d1][X] * U[d2][X + d1]).dagger();
+            // d1-d2-plaquette with positive d2 that starts and ends at X
+            S[k][d1][X] = (U[d2][X] * tF[X]).dagger();
+            tF[X] = tF[X] * U[d2][X];
+        }
+        tF.start_gather(-d2, ALL);
+        onsites(ALL) {
+            Ssum[X] += S[k][d1][X];
+        }
+        rk = nstap - 1 - k;
+        onsites(ALL) {
+            // d1-d2-plaquette with negative d2 that starts and ends at X
+            S[rk][d1][X] = tF[X - d2];
+            Ssum[X] += S[rk][d1][X];
+        }
+        ++k;
+    }
+}
+
 template <typename T, int nst, int N = T::rows(), int NSTP = 2 * (NDIM - 1),
           typename atype = hila::arithmetic_type<T>>
 void stout_smear_force(const GaugeField<T> (&stoutlist)[nst], const VectorField<Algebra<T>> &K,

@@ -2992,8 +2992,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     T al[n], pal[n];         // temp. Cayley-Hamilton coefficents
     hila::arithmetic_type<T>
         wpf = 1.0,
-        twpf = 1.0, ttwpf;   // initial values for power series coefficnet and its running sum
-
+        twpf = 1.0;          // initial values for power series coefficient and its running sum
 
     // set initial values for the n entries in al[] and pal[] :
     for (i = 0; i < n; ++i) {
@@ -3009,6 +3008,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[]
     // would have at iteration i, if no renormalization were used.
     T ch, cho;                            // temporary variables for iteration
+    hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
     hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
     T lpall[mmax];                      // will be filled with values of pal[n-1] at each iteration
     hila::arithmetic_type<T> rsl[mmax]; // will be filled with values of rs at each iteration
@@ -3087,8 +3087,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     trmdpl[0] = 0;
 
     T tpal, dal[n], dpal[n]; // temp. Cayley-Hamilton coefficents for differentials
-    Matrix_t<n, m, T, MT> &tmat =
-        dpl[0]; // dpl[0] is always zero and not required; we use it as temporary storage
+    Matrix_t<n, m, T, MT> &tmat = dpl[0]; // dpl[0] is not needed; we use it as temporary storage
     int ic1, ic2;
     for (ic1 = 0; ic1 < n; ++ic1) {
         for (ic2 = 0; ic2 < n; ++ic2) {
@@ -3155,7 +3154,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
                 }
             }
 
-            // write output matrix element for tr(omat[][]*dexp([][]/d) differential :
+            // set domat[ic2][ic1] = tr(exp(mat).dagger()*mmat*dexp(mat)/dmat[ic1][ic2]) :
             T tdomat = dal[0] * trmpl[0];
             for (k = 1; k < n; ++k) {
                 tdomat += dal[k] * trmpl[k] + al[k] * trmdpl[k];
@@ -3164,8 +3163,8 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
 
         }
     }
-
-    omat = omat * texp;
+    // set omat = exp(mat).dagger()*mmat*exp(mat) :
+    omat *= texp;
 }
 
 
