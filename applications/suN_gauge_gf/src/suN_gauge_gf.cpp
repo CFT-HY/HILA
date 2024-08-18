@@ -39,7 +39,7 @@ struct parameters {
 
 /**
  * @brief Wrapper update function
- * @details Updates Gauge Field one direction at a time first EVEN then ODD parity
+ * @details Gauge Field update sweep with randomly chosen parities and directions 
  *
  * @tparam group
  * @param U GaugeField to update
@@ -48,13 +48,14 @@ struct parameters {
  */
 template <typename group>
 void update(GaugeField<group> &U, const parameters &p, bool relax) {
-
-    foralldir(d) {
-        for (Parity par : {EVEN, ODD}) {
-
-            update_parity_dir(U, p, par, d, relax);
-        }
+    for (int i = 0; i < 2 * NDIM; ++i) {
+        int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
+        int tdir = tdp / 2;
+        int tpar = 1 + (tdp % 2);
+        //hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
+        update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax);
     }
+    //hila::out0 << "\n";
 }
 
 /**
@@ -110,7 +111,7 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 /**
  * @brief Evolve gauge field
  * @details Evolution happens by means of heat bath and over relaxation. For each heatbath update
- * (p.n_update) we update p.n_overrelax times with over relaxation.
+ * (p.n_update) we update on average also p.n_overrelax times with over relaxation.
  *
  * @tparam group
  * @param U
@@ -120,10 +121,11 @@ template <typename group>
 void do_trajectory(GaugeField<group> &U, const parameters &p) {
 
     for (int n = 0; n < p.n_update; n++) {
-        for (int i = 0; i < p.n_overrelax; i++) {
-            update(U, p, true);
+        for (int i = 0; i <= p.n_overrelax; i++) {
+            bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_overrelax)) != 0);
+            update(U, p, relax);
+            //hila::out0 << relax << "\n";
         }
-        update(U, p, false);
     }
     U.reunitarize_gauge();
 }
