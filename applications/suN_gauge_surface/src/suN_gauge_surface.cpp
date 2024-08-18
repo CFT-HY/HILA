@@ -8,6 +8,10 @@
 
 #include <fftw3.h>
 
+#ifndef NCOLOR
+#define NCOLOR 3
+#endif
+
 using mygroup = SU<NCOLOR, float>;
 
 enum class poly_limit { OFF, RANGE, PARABOLIC };
