@@ -124,6 +124,28 @@ inline void set_number_in_var(T &var, int i, const hila::arithmetic_type<T> val)
 }
 
 
+//////////////////////////////////////////////////////////////////////////////
+/// Helper functions 
+///   hila::is_std_array<T>::value
+///   hila::is_std_vector<T>::value
+/// are true if the type T is std::array/std::vector, otherwise false
+/// 
+//////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+struct is_std_array : std::false_type {};
+
+template<typename T, std::size_t N>
+struct is_std_array<std::array<T, N>> : std::true_type {};
+
+template<typename T>
+struct is_std_vector : std::false_type {};
+
+template<typename T>
+struct is_std_vector<std::vector<T>> : std::true_type {};
+
+
+
 } // namespace hila
 
 #endif
