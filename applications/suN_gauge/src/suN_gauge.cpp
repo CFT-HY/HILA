@@ -71,11 +71,11 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 template <typename group>
 void update(GaugeField<group> &U, const parameters &p, bool relax) {
 
-    foralldir(d) {
-        for (Parity par : {EVEN, ODD}) {
+    // go through dirs in random order
 
-            update_parity_dir(U, p, par, d, relax);
-        }
+    for (auto &dp : hila::shuffle_direction_and_parity()) {
+
+        update_parity_dir(U, p, dp.parity, dp.direction, relax);
     }
 }
 
