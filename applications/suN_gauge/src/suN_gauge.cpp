@@ -73,10 +73,14 @@ void update(GaugeField<group> &U, const parameters &p, bool relax) {
 
     // go through dirs in random order
 
-    for (auto &dp : hila::shuffle_direction_and_parity()) {
+     for (auto &dp : hila::shuffle_directions_and_parities()) {
+  
+       update_parity_dir(U, p, dp.parity, dp.direction, relax);
+   }
 
-        update_parity_dir(U, p, dp.parity, dp.direction, relax);
-    }
+//   for (Parity par : {EVEN, ODD}) foralldir(d) {
+//         update_parity_dir(U, p, par , d, relax);
+//     }
 }
 
 /**
