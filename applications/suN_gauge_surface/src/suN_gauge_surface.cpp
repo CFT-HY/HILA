@@ -536,11 +536,9 @@ bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
 template <typename group>
 void update(GaugeField<group> &U, const parameters &p, bool relax) {
 
-    foralldir(d) {
-        for (Parity par : {EVEN, ODD}) {
+    for (const auto &dp : hila::shuffle_directions_and_parities()) {
 
-            update_parity_dir(U, p, par, d, relax);
-        }
+        update_parity_dir(U, p, dp.parity, dp.direction, relax);
     }
 }
 
