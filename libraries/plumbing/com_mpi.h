@@ -133,7 +133,7 @@ namespace hila {
  * NOTE: the function must be called by all MPI ranks, otherwise the program will deadlock.
  *
  * The type of the variable _var_ can be any standard plain datatype (trivial type),
- * std::string or std::vector.
+ * std::string, std::vector or std::array
  *
  * For trivial types, the input _var_ can be non-modifiable value.  In this case
  * the broadcast value is obtained from the broadcast return value.
@@ -174,7 +174,7 @@ T broadcast(const T &var, int rank = 0) {
 template <typename T>
 void broadcast(std::vector<T> &list, int rank = 0) {
 
-    static_assert(std::is_trivial<T>::value, "broadcast(vector<T>) must have trivial T");
+    static_assert(std::is_trivial<T>::value, "broadcast(std::vector<T>) must have trivial T");
 
     if (hila::check_input)
         return;
@@ -192,6 +192,26 @@ void broadcast(std::vector<T> &list, int rank = 0) {
 
     broadcast_timer.stop();
 }
+
+/// And broadcast for std::array
+template <typename T,int n>
+void broadcast(std::array<T,n> &arr, int rank = 0) {
+
+    static_assert(std::is_trivial<T>::value, "broadcast(std::array<T>) must have trivial T");
+
+    if (hila::check_input)
+        return;
+
+    broadcast_timer.start();
+
+    // move vectors directly to the storage
+    MPI_Bcast((void *)arr.data(), sizeof(T) * n, MPI_BYTE, rank, lattice.mpi_comm_lat);
+
+    broadcast_timer.stop();
+}
+
+
+
 
 ///
 /// Bare pointers cannot be broadcast
