@@ -12,12 +12,13 @@
 #include "gauge/stout_smear.h"
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
+#include "gauge/checkpoint.h"
+
 
 #include <fftw3.h>
 
 // local includes
 #include "parameters.h"
-#include "checkpoint.h"
 
 /**
  * @brief Helper function to get valid z-coordinate index
@@ -73,14 +74,14 @@ void update(GaugeField<group> &U, const parameters &p, bool relax) {
 
     // go through dirs in random order
 
-     for (auto &dp : hila::shuffle_directions_and_parities()) {
-  
-       update_parity_dir(U, p, dp.parity, dp.direction, relax);
-   }
+    for (auto &dp : hila::shuffle_directions_and_parities()) {
 
-//   for (Parity par : {EVEN, ODD}) foralldir(d) {
-//         update_parity_dir(U, p, par , d, relax);
-//     }
+        update_parity_dir(U, p, dp.parity, dp.direction, relax);
+    }
+
+    //   for (Parity par : {EVEN, ODD}) foralldir(d) {
+    //         update_parity_dir(U, p, par , d, relax);
+    //     }
 }
 
 /**
@@ -214,7 +215,7 @@ int main(int argc, char **argv) {
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
 
-    restore_checkpoint(U, start_traj, p);
+    restore_checkpoint(U, p.config_file, p.n_trajectories, start_traj);
 
     // We need random number here
     if (!hila::is_rng_seeded())
@@ -248,7 +249,7 @@ int main(int argc, char **argv) {
         }
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
-            checkpoint(U, trajectory, p);
+            checkpoint(U, p.config_file, p.n_trajectories, trajectory);
         }
     }
 
