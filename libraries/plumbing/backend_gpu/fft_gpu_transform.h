@@ -301,12 +301,12 @@ void hila_fft<cmplx_t>::gather_data() {
     // post receive and send
     int n_comms = hila_pencil_comms[dir].size() - 1;
 
-    MPI_Request sendreq[n_comms], recreq[n_comms];
-    MPI_Status stat[n_comms];
+    std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
+    std::vector<MPI_Status> stat(n_comms);
 
 #ifndef GPU_AWARE_MPI
-    cmplx_t *send_p[n_comms];
-    cmplx_t *receive_p[n_comms];
+    std::vector<cmplx_t *> send_p(n_comms);
+    std::vector<cmplx_t *> receive_p(n_comms);
 #endif
 
     int i = 0;
@@ -364,8 +364,8 @@ void hila_fft<cmplx_t>::gather_data() {
 
     // and wait for the send and receive to complete
     if (n_comms > 0) {
-        MPI_Waitall(n_comms, recreq, stat);
-        MPI_Waitall(n_comms, sendreq, stat);
+        MPI_Waitall(n_comms, recreq.data(), stat.data());
+        MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
 #ifndef GPU_AWARE_MPI
         i = j = 0;
@@ -403,12 +403,12 @@ void hila_fft<cmplx_t>::scatter_data() {
 
     int n_comms = hila_pencil_comms[dir].size() - 1;
 
-    MPI_Request sendreq[n_comms], recreq[n_comms];
-    MPI_Status stat[n_comms];
+    std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
+    std::vector<MPI_Status> stat(n_comms);
 
 #ifndef GPU_AWARE_MPI
-    cmplx_t *send_p[n_comms];
-    cmplx_t *receive_p[n_comms];
+    std::vector<cmplx_t *> send_p(n_comms);
+    std::vector<cmplx_t *> receive_p(n_comms);
 #endif
 
     int i = 0;
@@ -458,8 +458,8 @@ void hila_fft<cmplx_t>::scatter_data() {
 
     // and wait for the send and receive to complete
     if (n_comms > 0) {
-        MPI_Waitall(n_comms, recreq, stat);
-        MPI_Waitall(n_comms, sendreq, stat);
+        MPI_Waitall(n_comms, recreq.data(), stat.data());
+        MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
 #ifndef GPU_AWARE_MPI
         i = 0;
