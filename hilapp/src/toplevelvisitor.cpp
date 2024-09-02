@@ -252,9 +252,12 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                 // Got constant -- interface changes in clang 12 or 13(!)
 #if defined(__clang_major__) && (__clang_major__ <= 11)
                 dirE->isIntegerConstantExpr(result, *Context);
-#else
+#elif defined(__clang_major__) && (__clang_major__ <= 15)
                 auto res = dirE->getIntegerConstantExpr(*Context);
                 result = res.getValue();
+#else
+                auto res = dirE->getIntegerConstantExpr(*Context);
+                result = res.value();
 #endif
 
                 // Op must be + or - --get the sign
@@ -891,9 +894,12 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
         llvm::APSInt result;
 #if defined(__clang_major__) && (__clang_major__ <= 11)
         DRE->isIntegerConstantExpr(result, *Context);
-#else
+#elif defined(__clang_major__) && (__clang_major__ <= 15)
         auto res = DRE->getIntegerConstantExpr(*Context);
         result = res.getValue();
+#else
+        auto res = DRE->getIntegerConstantExpr(*Context);
+        result = res.value();
 #endif
 
         // Value is fine
@@ -1587,7 +1593,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                 fip->dir_list.push_back(dp);
             }
         } // Direction
-    }     // p-loop
+    } // p-loop
 
     for (field_info &l : field_info_list) {
 
@@ -2355,18 +2361,18 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
             writeBuf->insert(ST, SSBefore.str(), true, true);
         }
     }
-    
-    
+
+
     // else if (!f->is()) {
 
     //     auto * def = f->getDefinition();
     //     prototype_vector.push_back({f, def, 0});
 
-    //     llvm::errs() << "*** GOT PROTO # " << prototype_vector.size() << ": " << f->getNameAsString();
-    //     SourceRange sr = f->getSourceRange();
-    //     unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
-    //     std::string name = srcMgr.getFilename(sr.getBegin()).str();
-    //     llvm::errs() << "   -- on line " << linenumber << "   file " << name << '\n';
+    //     llvm::errs() << "*** GOT PROTO # " << prototype_vector.size() << ": " <<
+    //     f->getNameAsString(); SourceRange sr = f->getSourceRange(); unsigned linenumber =
+    //     srcMgr.getSpellingLineNumber(sr.getBegin()); std::string name =
+    //     srcMgr.getFilename(sr.getBegin()).str(); llvm::errs() << "   -- on line " << linenumber
+    //     << "   file " << name << '\n';
 
 
     // }
