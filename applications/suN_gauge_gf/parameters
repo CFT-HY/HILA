@@ -9,8 +9,8 @@ thermalization trajs   50
 gflow freq             100
 gflow max lambda       12.
 gflow lambda step      0.1
-gflow abs. accuracy    1.0e-5
-gflow rel. accuracy    1.0e-5
+gflow abs. accuracy    1.0e-7
+gflow rel. accuracy    1.0e-4
 random seed            0
 trajs/saved            200
 config name            config

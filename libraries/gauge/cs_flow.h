@@ -371,7 +371,7 @@ atype do_cs_flow_adapt(GaugeField<group> &V, VectorField<Algebra<group>> &E,
         foralldir(d) {
             onsites(ALL) {
                 reldiff[X] = (V2[d][X] * V[d][X].dagger()).project_to_algebra().norm() /
-                             (tatol + rtol * tk[d][X].norm());
+                             (tatol + rtol * tk[d][X].norm() / step);
             }
             atype tmaxreldiff = reldiff.max();
             if (tmaxreldiff > maxreldiff) {
