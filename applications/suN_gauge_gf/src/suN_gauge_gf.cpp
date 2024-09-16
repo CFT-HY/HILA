@@ -12,7 +12,7 @@
 #define NCOLOR 3
 #endif
 
-using ftype = float;
+using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
 // define a struct to hold the input parameters: this

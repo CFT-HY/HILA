@@ -208,18 +208,17 @@ void measure_gradient_flow_stuff(const GaugeField<group> &V, atype flow_l, atype
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, atype atol = 1.0e-6,
-                             atype rtol = 1.0e-6, atype tstep = 0.0) {
+                             atype rtol = 1.0e-4, atype tstep = 0.0) {
     // wilson flow integration from flow scale l_start to l_end using 3rd order
     // 3-step Runge-Kutta (RK3) from arXiv:1006.4518 (cf. appendix C of
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
     // and embedded RK2 for adaptive step size
 
-    atype esp = 3.0; // expected error scaling power: err ~ step^(esp)
-                     //   - for global error: esp\approx 2.0
-                     //   - for single step error: esp\approx 3.0
-    atype iesp = 1.0 / esp;
+    atype esp = 3.0; // expected single step error scaling power: err ~ step^(esp)
+                     //   - for RK3 with embedded RK2: esp\approx 3.0
+    atype iesp = 1.0 / esp; // inverse single step error scaling power
 
-    atype maxstepmf = 1.0e2; // max. growth factor of adaptive step size
+    atype maxstepmf = 1.0e1; // max. growth factor of adaptive step size
     atype minmaxreldiff = pow(maxstepmf, -esp);
 
     // translate flow scale interval [l_start,l_end] to corresponding
@@ -314,9 +313,9 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
             stop = true;
         } else {
             tstep = step;
-            if (t + 1.5 * step >= tmax) {
-                step = 0.501 * (tmax - t);
-            }
+            //if (t + 1.5 * step >= tmax) {
+            //    step = 0.501 * (tmax - t);
+            //}
         }
 
         get_gf_force(V, k1);
@@ -354,7 +353,9 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
         foralldir(d) {
             onsites(ALL) {
                 reldiff[X] = (V2[d][X] * V[d][X].dagger()).project_to_algebra().norm() /
-                             (tatol + rtol * tk[d][X].norm());
+                             (tatol + rtol * tk[d][X].norm() / step);
+                // note: we divide tk.norm() by step to have consistent leading stepsize dependency  
+                // no mather whether relative or absolute error tollerance dominates
             }
             atype tmaxreldiff = reldiff.max();
             if (tmaxreldiff > maxreldiff) {
