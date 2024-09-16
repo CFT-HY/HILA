@@ -227,6 +227,13 @@ class lattice_struct {
     void setup_layout();
     void setup_nodes();
 
+    /// is the lattice initialized
+    bool is_initialized() const {
+        // using l_volume as the flag
+        return l_volume != 0;
+    }
+
+
     // Std accessors:
     // volume
     int64_t volume() const {
