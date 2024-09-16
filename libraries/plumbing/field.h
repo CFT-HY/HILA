@@ -1725,16 +1725,6 @@ auto operator/(Field<A> lhs, const B &rhs) {
     return lhs;
 }
 
-/**
- * @brief std:swap() for Fields
- */
-namespace std {
-template <typename T>
-void swap(Field<T> &A, Field<T> &B) {
-    std::swap(A.fs, B.fs);
-}
-} // namespace std
-
 namespace hila {
   
 /**
