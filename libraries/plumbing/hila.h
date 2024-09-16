@@ -39,4 +39,6 @@
 
 #include "plumbing/random.h"
 
+#include "plumbing/shuffle.h"
+
 #endif
