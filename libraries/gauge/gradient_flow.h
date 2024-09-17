@@ -215,18 +215,19 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
     // and embedded RK2 for adaptive step size
 
     atype esp = 3.0; // expected single step error scaling power: err ~ step^(esp)
-                     //   - for RK3 with embedded RK2: esp\approx 3.0
+                     //   - for RK3 with embedded RK2: esp \approx 3.0
     atype iesp = 1.0 / esp; // inverse single step error scaling power
 
-    atype maxstepmf = 1.0e1; // max. growth factor of adaptive step size
-    atype minmaxreldiff = pow(maxstepmf, -esp);
+    atype stepmf = 1.0;
+    atype maxstepmf = 10.0;  // max. growth factor of adaptive step size
+    atype minstepmf = 0.1; // min. growth factor of adaptive step size
 
     // translate flow scale interval [l_start,l_end] to corresponding
     // flow time interval [t,tmax] :
     atype t = l_start * l_start / 8.0;
     atype tmax = l_end * l_end / 8.0;
 
-    atype ubstep = (tmax - t) / 3.0; // max. allowed time step
+    atype ubstep = (tmax - t) / 2.0; // max. allowed time step
 
     atype tatol = atol * sqrt(2.0);
 
@@ -237,7 +238,6 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
     VectorField<Algebra<group>> k1, k2, tk;
     GaugeField<group> V2, V0;
     Field<atype> reldiff;
-    atype maxstep;
 
     // RK3 coefficients from arXiv:1006.4518 :
     // correspond to standard RK3 with Butcher-tableau
@@ -306,16 +306,11 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
     V0 = V;
     bool stop = false;
-    tstep = step;
     while (t < tmax && !stop) {
+        tstep = step;
         if (t + step >= tmax) {
             step = tmax - t;
             stop = true;
-        } else {
-            tstep = step;
-            //if (t + 1.5 * step >= tmax) {
-            //    step = 0.501 * (tmax - t);
-            //}
         }
 
         get_gf_force(V, k1);
@@ -349,7 +344,7 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
 
         // determine maximum difference between RK3 and RK2,
         // relative to desired accuracy :
-        atype maxreldiff = 0.0;
+        atype relerr = 0.0;
         foralldir(d) {
             onsites(ALL) {
                 reldiff[X] = (V2[d][X] * V[d][X].dagger()).project_to_algebra().norm() /
@@ -357,34 +352,33 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
                 // note: we divide tk.norm() by step to have consistent leading stepsize dependency  
                 // no mather whether relative or absolute error tollerance dominates
             }
-            atype tmaxreldiff = reldiff.max();
-            if (tmaxreldiff > maxreldiff) {
-                maxreldiff = tmaxreldiff;
+            atype trelerr = reldiff.max();
+            if (trelerr > relerr) {
+                relerr = trelerr;
             }
         }
 
-        if (maxreldiff < 1.0) {
+        if (relerr < 1.0) {
             // proceed to next iteration
             t += step;
             V.reunitarize_gauge();
             V0 = V;
         } else {
-            // repeat current iteration if step size was larger than maxstep
+            // repeat current iteration if single step error was too large
             V = V0;
             stop = false;
         }
 
         // determine step size to achieve desired accuracy goal :
-        if (maxreldiff > minmaxreldiff) {
-            maxstep = step * pow(maxreldiff, -iesp);
-        } else {
-            maxstep = step * maxstepmf;
-        }
+        stepmf = pow(relerr, -iesp);
+        if (stepmf <= minstepmf) {
+            stepmf = minstepmf;
+        } else if (stepmf >= maxstepmf) {
+            stepmf = maxstepmf;
+        } 
 
         // adjust step size :
-        step = min((atype)0.9 * maxstep, ubstep);
-        //hila::out0<<"t: "<<t<<" , maxreldiff: "<<maxreldiff<<" , maxstep: "
-        //            <<maxstep<<" gf , step:"<<step<<"\n";
+        step = min((atype)0.9 * stepmf * step, ubstep);
     }
 
     return tstep;
