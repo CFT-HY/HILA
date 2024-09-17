@@ -1322,17 +1322,15 @@ class Imaginary_t : public Complex<T> {
 ///////////////////////////////////////////////////////////////////////////////////////
 /// @brief Imaginary unit I - global variable
 ///
-/// Don't use #define'd I : this will conflict with some headers in rocm
 ///
-/// For some reason it is sufficient to use only __device__
-#if defined(CUDA) || defined(HIP)
-__device__
-#endif
-    constexpr Imaginary_t<double>
-        I(1.0);
+// separate definition for GPU kernel code and host (and generic) code
 
-// constexpr Complex<double> I(0,1);
-// #define I Imaginary_t<double>(1.0)
+#if defined(__GPU_DEVICE_COMPILE__)
+__device__ constexpr Imaginary_t<double> I(1.0);
+#else
+constexpr Imaginary_t<double> I(1.0);
+#endif
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
