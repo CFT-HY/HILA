@@ -230,8 +230,6 @@ atype do_cs_flow_adapt(GaugeField<group> &V, VectorField<Algebra<group>> &E,
     // and embedded RK2 for adaptive step size
 
     atype esp = 3.0; // expected error scaling power: err ~ step^(esp)
-                     //   - for global error: esp\approx 2.0
-                     //   - for single step error: esp\approx 3.0
     atype iesp = 1.0 / esp;
 
     atype maxstepmf = 1.0e2; // max. growth factor of adaptive step size

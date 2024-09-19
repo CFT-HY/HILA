@@ -2940,7 +2940,7 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
 }
 
 //  Calculate omat[i][j] = (exp(mat).dagger() * mmat * exp(mat))[i][j]
-//  and domat[i][j] = trace(exp(mat).dagger() * mmat * dexp(mat)/dmat[i][j]) for
+//  and domat[i][j] = trace(exp(mat).dagger() * mmat * dexp(mat)/dmat[j][i]) for
 //  given matrices mat and mmat, using iterative Cayley-Hamilton method (arXiv:2404.07704)
 //  for computing exp(mat) and dexp(mat)/dmat[][]
 /**

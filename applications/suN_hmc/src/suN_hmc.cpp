@@ -40,6 +40,7 @@ using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
 ftype stoutc = 0.15;
+int stout_nsteps = STOUTSTEPS;
 
 
 // define a struct to hold the input parameters: this
@@ -70,7 +71,7 @@ double measure_s(const GaugeField<group> &U) {
 #if STOUTSTEPS > 0
 
     GaugeField<group> tU;
-    stout_smear(U, tU, stoutc, STOUTSTEPS);
+    stout_smear(U, tU, stoutc, stout_nsteps);
 
 #else
 
@@ -108,14 +109,14 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 
 #if STOUTSTEPS > 0
 
-    GaugeField<group> tUl[STOUTSTEPS+1];
+    std::vector<GaugeField<group>> tUl(stout_nsteps+1);
     stout_smear(U, tUl, stoutc);
 
     VectorField<Algebra<group>> tE;
 
     foralldir(d1) onsites(ALL) tE[d1][X] = 0;
 
-    GaugeField<group> &tU = tUl[STOUTSTEPS];
+    GaugeField<group> &tU = tUl[stout_nsteps];
 
 #else // STOUTSTEPS==0
 
