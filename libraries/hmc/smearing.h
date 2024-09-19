@@ -124,9 +124,10 @@ template <typename sun> class stout_smeared_field : public gauge_field_base<sun>
 
     ~stout_smeared_field() {
         for (int step = 0; step < smear_steps - 1; step++) {
-            delete staples[step];
-            delete smeared_fields[step];
+            delete[] staples[step];
+            delete[] smeared_fields[step];
         }
+        delete[] staples[smear_steps - 1];
         free(staples);
         free(smeared_fields);
     }
