@@ -419,7 +419,7 @@ inline auto operator*(const SU2<A> &lhs, const Vector<2,B> &rhs) {
 // horizontalvector * SU2 (vec can be complex or real)
 template <typename A, typename B>
 inline auto operator*(const RowVector<2,B> &lhs, const SU2<A> &rhs) {
-    return rhs * lhs.convert_to_2x2_matrix();
+    return lhs * rhs.convert_to_2x2_matrix();
 }
 
 

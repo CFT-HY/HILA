@@ -315,24 +315,24 @@ void receive_from(int from_rank, std::vector<T> &data) {
 
 template <typename T>
 void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
-    T recv_data[send_count];
-    MPI_Datatype dtype;
 
     if (hila::check_input)
         return;
 
+    std::vector<T> recv_data(send_count);
+    MPI_Datatype dtype;
     dtype = get_MPI_number_type<T>();
 
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)value, (void *)recv_data,
-                      send_count * sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype, MPI_SUM,
+        MPI_Allreduce((void *)value, (void *)recv_data.data(),
+                      send_count * (sizeof(T) / sizeof(hila::arithmetic_type<T>)), dtype, MPI_SUM,
                       lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
-        MPI_Reduce((void *)value, (void *)recv_data,
-                   send_count * sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype, MPI_SUM, 0,
+        MPI_Reduce((void *)value, (void *)recv_data.data(),
+                   send_count * (sizeof(T) / sizeof(hila::arithmetic_type<T>)), dtype, MPI_SUM, 0,
                    lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
@@ -343,6 +343,7 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
 
 ///
 /// Reduce single variable across nodes.
+/// A bit suboptimal, because uses std::vector
 
 template <typename T>
 T reduce_node_sum(T &var, bool allreduce = true) {
@@ -354,7 +355,7 @@ T reduce_node_sum(T &var, bool allreduce = true) {
 
 template <typename T>
 void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
-    T recv_data[send_count];
+    std::vector<T> recv_data(send_count);
     MPI_Datatype dtype;
 
     if (hila::check_input)
@@ -364,12 +365,12 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
 
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)send_data, (void *)recv_data, send_count, dtype, MPI_PROD,
+        MPI_Allreduce((void *)send_data, (void *)recv_data.data(), send_count, dtype, MPI_PROD,
                       lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             send_data[i] = recv_data[i];
     } else {
-        MPI_Reduce((void *)send_data, (void *)recv_data, send_count, dtype, MPI_PROD, 0,
+        MPI_Reduce((void *)send_data, (void *)recv_data.data(), send_count, dtype, MPI_PROD, 0,
                    lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)

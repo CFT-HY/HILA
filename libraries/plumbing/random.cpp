@@ -87,6 +87,10 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 
     rng_is_initialized = true;
 
+    if (!lattice.is_initialized()) {
+        hila::error("lattice.initialize() must be called before hila::seed_random()");
+    }
+
 
     uint64_t n = hila::myrank();
     if (hila::partitions.number() > 1)
