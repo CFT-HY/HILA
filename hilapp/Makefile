@@ -167,6 +167,7 @@ endif
 
 
 CLANG_LIBS := \
+	-Wl,--start-group \
 	-lclangTooling \
 	-lclangASTMatchers \
 	-lclangFrontend \
@@ -176,8 +177,8 @@ CLANG_LIBS := \
 	-lclangSema \
 	-lclangEdit \
 	-lclangAnalysis \
+	-lclangTooling \
 	-lclangToolingCore \
-	-lclangAST \
 	-lclangRewrite \
 	-lclangLex \
 	-lclangBasic \
@@ -185,15 +186,24 @@ CLANG_LIBS := \
 	-lclangRewriteFrontend \
 	-lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers \
-	-lclangStaticAnalyzerCore
+	-lclangStaticAnalyzerCore \
+	-lclangAST \
+	-lclangToolingSyntax
 
 
 # Add new libs if clang version is > 14
 compare = $(shell if [ $(1) -gt $(2) ] ; then echo gt ; else echo le ; fi)
 
 ifeq ($(call compare,$(LLVM_VERSION),14),gt)
-   CLANG_LIBS += -lclangSupport
+	CLANG_LIBS += \
+		-lclangSupport \
+		-lclangAPINotes 
 endif
+
+# And close group
+CLANG_LIBS += -Wl,--end-group
+
+
 # Sources for this project
 
 
