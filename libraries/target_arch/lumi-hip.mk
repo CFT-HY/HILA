@@ -6,7 +6,9 @@
 
 $(info ########################################################################)
 $(info Target lumi-hip: remember to )
-$(info module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm/5.1.4 )
+$(info module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm )
+$(info lumi-hip DOES NOT WORK AFTER UPDATE TO ROCM 6.0.1, USE lumi-hip-CC INSTEAD )
+$(info SOMEBODY PLEASE REPAIR THIS )
 $(info ########################################################################)
 
 

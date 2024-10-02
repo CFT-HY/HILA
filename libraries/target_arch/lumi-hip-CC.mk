@@ -20,11 +20,11 @@ LD := CC
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti -O3 -xhip --offload-arch=gfx90a -fgpu-rdc -D__HIP_PLATFORM_AMD__=1
+CXXFLAGS := -std=c++17 -fno-rtti -O3 -xhip -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
 CXXFLAGS += -D__HIP_PLATFORM_HCC__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
-
+#
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
 # and copied here it must be told.  Instead of hunting the directories by hand, we can ask
@@ -56,7 +56,7 @@ HILA_INCLUDES += -I${ROCM_PATH}/hipfft/include/ -I${ROCM_PATH}/hipcub/include/hi
 # Linker libraries and possible options
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
-LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib 
+LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
 LDFLAGS += -L${ROCM_PATH}/hipfft/lib/ -lhipfft
 LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib
 
