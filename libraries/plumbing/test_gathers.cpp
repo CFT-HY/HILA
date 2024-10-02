@@ -72,13 +72,16 @@ void gather_test() {
 
 void test_std_gathers() {
     // gather_test<int>();
+    auto t0 = hila::gettime();
+
     gather_test();
 
 #if defined(CUDA) || defined(HIP)
     gpuMemPoolPurge();
 #endif
 
-    hila::timestamp("Communication tests done");
+    hila::out0 << "Communication tests done - time " << hila::gettime() - t0 << "s\n";
+
     print_dashed_line();
 
     if (hila::myrank() == 0)
