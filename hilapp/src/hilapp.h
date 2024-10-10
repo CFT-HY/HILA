@@ -114,6 +114,9 @@ struct global_state {
     //  std::vector<const TemplateParameterList *> class_templ_params = {};
     //  std::vector<const TemplateArgumentList *> class_templ_args = {};
     FunctionDecl *currentFunctionDecl = nullptr;
+    int namespace_level = 0;
+    SourceRange namespace_range;
+
     /// Describes a code location
     struct location_struct {
         SourceLocation function;

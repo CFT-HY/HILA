@@ -257,6 +257,20 @@ int srcBuf::find_original(SourceLocation start, const char c) {
     return find_original(get_index(start), c);
 }
 
+int srcBuf::find_original_reverse(int idx, const char c) {
+    std::string::size_type i = buf.rfind(c, idx);
+    if (i == std::string::npos)
+        return -1;
+    else
+        return i;
+}
+
+int srcBuf::find_original_reverse(SourceLocation start, const char c) {
+    return find_original_reverse(get_index(start), c);
+}
+
+
+
 int srcBuf::find_original(int idx, const std::string &s) {
     std::string::size_type i = buf.find(s, idx);
     if (i == std::string::npos)
