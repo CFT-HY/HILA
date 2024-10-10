@@ -16,7 +16,6 @@
 using gpurandState = curandState_t;
 #define gpurand_init curand_init
 #define gpurand_uniform curand_uniform
-#define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 #define gpuGetDeviceCount(a) GPU_CHECK(cudaGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(cudaSetDevice(dev))
 #define gpuGetLastError cudaGetLastError
@@ -30,8 +29,6 @@ using gpurandState = curandState_t;
 using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
 #define gpurand_uniform hiprand_uniform
-#define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
-    GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
 #define gpuGetDeviceCount(a) GPU_CHECK(hipGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(hipSetDevice(dev))
 #define gpuGetLastError hipGetLastError
@@ -41,7 +38,8 @@ using gpurandState = hiprandState_t;
 
 // Save "constants" lattice size and volume here
 __constant__ int64_t _d_volume;
-__constant__ int _d_size[NDIM];
+// __constant__ int _d_size[NDIM];
+__constant__ CoordinateVector _d_size;
 #ifndef EVEN_SITES_FIRST
 __constant__ int _d_nodesize[NDIM];
 __constant__ int _d_nodemin[NDIM];
@@ -134,15 +132,18 @@ __device__ __host__ int loop_lattice_size(Direction dir) {
     return lattice.size(dir);
 #endif
 }
+
 __device__ __host__ CoordinateVector loop_lattice_size(void) {
 #ifdef __GPU_DEVICE_COMPILE__
-    CoordinateVector v;
-    foralldir(d) v[d] = _d_size[d];
-    return v;
+    // CoordinateVector v;
+    // foralldir(d) v[d] = _d_size[d];
+    // return v;
+    return _d_size;
 #else
     return lattice.size();
 #endif
 }
+
 __device__ __host__ int64_t loop_lattice_volume(void) {
 #ifdef __GPU_DEVICE_COMPILE__
     return _d_volume;
