@@ -94,6 +94,9 @@ class srcBuf {
     int find_original(int idx, const std::string &s);
     int find_original(SourceLocation start, const std::string &c);
 
+    int find_original_reverse(int idx, const char c);
+    int find_original_reverse(SourceLocation start, const char c);
+
     int find_original_word(int idx, const std::string &s,
                            bool reverse = false); // finds full word
     int find_original_word(SourceLocation start, const std::string &s,
