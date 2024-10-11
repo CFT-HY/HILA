@@ -108,6 +108,10 @@ extern std::ofstream output_file;
 // better not rely on MPI or existence of objects any more.
 extern bool about_to_finish;
 
+// is the machine initialized?  This is set in hila::setup
+// does not tell if lattice is initialized
+extern bool is_initialized;
+
 // check_input is used to notify that we're just checking the
 // input values and will exit before fields are allocated.
 extern bool check_input;

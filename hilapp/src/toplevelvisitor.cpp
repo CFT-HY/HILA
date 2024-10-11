@@ -2753,7 +2753,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 auto dev_varname =
                     generate_constant_var_name(VD->getQualifiedNameAsString(), false, "");
 
-                std::stringstream cdecl;
+                std::stringstream cdecl, vardecl;
                 cdecl << "\n// ===================== hilapp: global variable "
                       << VD->getQualifiedNameAsString() << '\n';
                 cdecl << "// create unique type for specialization\n";
@@ -2765,19 +2765,24 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
 
                 cdecl << "__constant__ ";
 
+                vardecl << "\n// custom global declaration\n";
+
                 auto storageclass = VD->getStorageClass();
-                if (storageclass == StorageClass::SC_Extern)
+                if (storageclass == StorageClass::SC_Extern) {
                     cdecl << "extern ";
-                if (storageclass == StorageClass::SC_Static)
+                    vardecl << "extern ";
+                }
+                if (storageclass == StorageClass::SC_Static) {
                     cdecl << "static ";
+                    vardecl << "static ";
+                }
 
                 int a = typ.find("<");
                 int b = typ.rfind(">");
                 if (b == std::string::npos) {
                     llvm::errs()
                         << "hilapp: error in global variable type scan, should never happen..\n";
-                    llvm::errs() << " on line " << srcMgr.getSpellingLineNumber(sr.getBegin())
-                                 << " file " << srcMgr.getFilename(sr.getBegin()) << '\n';
+                    llvm::errs() << " on " << sr.printToString(srcMgr) << '\n';
                     exit(1);
                 }
 
@@ -2792,7 +2797,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                       << ">::copy_to_device() const {\n";
                 cdecl << "gpuMemcpyToSymbol(" << dev_varname << " , &(this->val), sizeof("
                       << vartype << "), 0, gpuMemcpyHostToDevice);\n";
-                cdecl << "}\n";
+                cdecl << "}\n\n";
 
                 // // and custom value function
                 // cdecl << "\n// specialized () operator\n";
@@ -2808,22 +2813,26 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
 
                 cdecl << "// ======================\n\n";
 
+                //  custom global var def
+
+                vardecl << "hila::global<" << vartype << ", " << customtype << "> "
+                        << VD->getNameAsString() << ";\n\n";
+
+
                 // get source buffer
                 srcBuf *sb = get_file_srcBuf(sr.getBegin());
 
-                // now find the end sourceloc of hila::global< type > a
-
-                a = sb->find_original_reverse(sr.getEnd(), '>');
-
-                if (a < 0) {
-                    llvm::errs()
-                        << "hilapp: error in global var type modification, should never happen..\n";
-                    llvm::errs() << " on line " << srcMgr.getSpellingLineNumber(sr.getBegin())
-                                 << " file " << srcMgr.getFilename(sr.getBegin()) << '\n';
-                    exit(1);
+                // Find the range of the vardecl including the trailing ;
+                int endloc = sb->find_original(sr.getEnd(), ';');
+                int beginloc = sb->get_index(sr.getBegin());
+                if (!sb->is_edited(beginloc)) {
+                    sb->comment_range(beginloc, endloc);
                 }
-                sb->insert(a, ", " + customtype);
 
+                // insert the new vardecl
+                sb->insert(beginloc, vardecl.str(), true, false);
+
+                // and insert the device var decl
                 SourceLocation sl;
                 if (global.namespace_level > 0) {
                     // within namespace, insert before namespace definition
@@ -2832,7 +2841,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                     sl = sr.getBegin();
                 }
 
-                sb->insert(sl, cdecl.str(), true, true);
+                sb->insert(sl, cdecl.str(), true, false);
             }
         }
     }
@@ -2913,8 +2922,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             if (error) {
 
                 llvm::errs() << "hilapp internal error: confusion in finding end loc of class\n";
-                llvm::errs() << " on line " << srcMgr.getSpellingLineNumber(sl) << " file "
-                             << srcMgr.getFilename(f->getBeginLoc()) << '\n';
+                llvm::errs() << " on " << sl.printToString(srcMgr) << '\n';
                 exit(1);
             }
 
