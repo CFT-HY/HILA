@@ -2749,6 +2749,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 // now insert device __constant__ variable declaration
 
                 SourceRange sr = D->getSourceRange();
+                sr = get_real_range(sr);   // if there are macros...
 
                 auto dev_varname =
                     generate_constant_var_name(VD->getQualifiedNameAsString(), false, "");
@@ -2820,11 +2821,12 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
 
 
                 // get source buffer
-                srcBuf *sb = get_file_srcBuf(sr.getBegin());
+                srcBuf *sb = get_file_srcBuf(sr.getEnd());
 
                 // Find the range of the vardecl including the trailing ;
                 int endloc = sb->find_original(sr.getEnd(), ';');
                 int beginloc = sb->get_index(sr.getBegin());
+
                 if (!sb->is_edited(beginloc)) {
                     sb->comment_range(beginloc, endloc);
                 }
