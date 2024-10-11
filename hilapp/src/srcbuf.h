@@ -35,19 +35,35 @@ class srcBuf {
     unsigned first_offset, full_length, original_size, true_size;
 
   public:
-    srcBuf() { clear(); }
+    srcBuf() {
+        clear();
+    }
 
-    ~srcBuf() { clear(); }
+    ~srcBuf() {
+        clear();
+    }
 
-    srcBuf(Rewriter *R, Expr *E) { create(R, E); }
-    srcBuf(Rewriter *R, Stmt *S) { create(R, S); }
-    srcBuf(Rewriter *R, Decl *D) { create(R, D); }
-    srcBuf(Rewriter *R, SourceRange sr) { create(R, sr); }
+    srcBuf(Rewriter *R, Expr *E) {
+        create(R, E);
+    }
+    srcBuf(Rewriter *R, Stmt *S) {
+        create(R, S);
+    }
+    srcBuf(Rewriter *R, Decl *D) {
+        create(R, D);
+    }
+    srcBuf(Rewriter *R, SourceRange sr) {
+        create(R, sr);
+    }
 
     int get_offset(SourceLocation s);
 
-    void off() { write_ok = false; }
-    void on() { write_ok = true; }
+    void off() {
+        write_ok = false;
+    }
+    void on() {
+        write_ok = true;
+    }
 
     /// This method returns the srcbuf index corresponding to sourcelocation
     int get_index(SourceLocation s) {
@@ -59,7 +75,9 @@ class srcBuf {
     /// returns the start and begin index of the sourcerange in std::pair
     std::pair<int, int> get_sourcerange_index(const SourceRange &sr);
 
-    unsigned size() { return true_size; }
+    unsigned size() {
+        return true_size;
+    }
 
     void create(Rewriter *R, const SourceRange &sr);
     void create(Rewriter *R, Expr *e);
@@ -86,7 +104,9 @@ class srcBuf {
     std::string dump();
 
     bool isOn();
-    bool is_modified() { return modified; }
+    bool is_modified() {
+        return modified;
+    }
 
     char get_original(int i);
     int find_original(int idx, const char c);
@@ -99,8 +119,7 @@ class srcBuf {
 
     int find_original_word(int idx, const std::string &s,
                            bool reverse = false); // finds full word
-    int find_original_word(SourceLocation start, const std::string &s,
-                           bool reverse = false);
+    int find_original_word(SourceLocation start, const std::string &s, bool reverse = false);
 
     /// give next or previous word or special char from buffer.  if idxp != nullptr, it
     /// contains the index
@@ -109,9 +128,9 @@ class srcBuf {
     std::string get_previous_original_word(int idx, int *idxp = nullptr);
     std::string get_previous_original_word(SourceLocation s, int *idxp = nullptr);
 
-    bool
-    is_edited(SourceLocation sl); // true if sl is edited (inserted, replaced or deleted)
-
+    bool is_edited(SourceLocation sl); // true if sl is edited (inserted, replaced or deleted)
+    bool is_edited(int i); 
+    
     bool is_extent(int i);
 
     void remove_extent(int i);
@@ -131,29 +150,26 @@ class srcBuf {
     int remove_semicolon_after(const Expr *E);
 
     // insert text - return is just insertion point + 1
-    int insert(int i, const std::string &s, bool incl_before = false,
-               bool indent = false);
+    int insert(int i, const std::string &s, bool incl_before = false, bool indent = false);
     int insert(SourceLocation sl, const std::string &s, bool incl_before = false,
                bool indent = false);
-    int insert(Expr *e, const std::string &s, bool incl_before = false,
-               bool indent = false);
+    int insert(Expr *e, const std::string &s, bool incl_before = false, bool indent = false);
     int insert_after(SourceLocation sl, const std::string &s, bool incl_before = false,
                      bool indent = false);
     int insert_above(int i, const std::string &s, bool incl_before, bool do_indent);
-    int insert_above(SourceLocation sl, const std::string &s, bool incl_before,
-                     bool do_indent);
+    int insert_above(SourceLocation sl, const std::string &s, bool incl_before, bool do_indent);
     int insert_above(Expr *e, const std::string &s, bool incl_before, bool do_indent);
 
     int comment_line(int i);
     int comment_line(SourceLocation sl);
     int comment_line(Expr *e);
+    int comment_range(int a, int b);
 
     // Find the end of previous statement and add after it
     int insert_before_stmt(int i, const std::string &s, bool incl_before, bool do_indent);
     int insert_before_stmt(SourceLocation sl, const std::string &s, bool incl_before,
                            bool do_indent);
-    int insert_before_stmt(Expr *e, const std::string &s, bool incl_before,
-                           bool do_indent);
+    int insert_before_stmt(Expr *e, const std::string &s, bool incl_before, bool do_indent);
 
     // replace is a remove + insert pair, should write with a single operation
     // return: next element from remove
@@ -172,8 +188,7 @@ class srcBuf {
     int replace_tokens(SourceRange r, const std::vector<std::string> &a,
                        const std::vector<std::string> &b);
     int replace_token(int start, int end, const std::string &a, const std::string &b);
-    int replace_tokens(const std::vector<std::string> &a,
-                       const std::vector<std::string> &b);
+    int replace_tokens(const std::vector<std::string> &a, const std::vector<std::string> &b);
 };
 
 #endif // HILAPP_SRCBUF_H

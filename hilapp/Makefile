@@ -91,7 +91,7 @@ $(info --------------------------------------------------------------)
 CXX := $(LLVM_BIN_PATH)/clang++
 
 # CXXFLAGS := -fno-rtti -std=c++17 -g
-CXXFLAGS := -fno-rtti -std=c++17 -O2
+CXXFLAGS := -fno-rtti -std=c++17 -O1
 
 
 # Directories where stuff is found and built
