@@ -109,8 +109,9 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 
 #if STOUTSTEPS > 0
 
-    std::vector<GaugeField<group>> tUl(stout_nsteps+1);
-    stout_smear(U, tUl, stoutc);
+    std::vector<GaugeField<group>> tUl(stout_nsteps + 1);
+    std::vector<VectorField<int>> niterl(stout_nsteps);
+    stout_smear(U, tUl, niterl, stoutc);
 
     VectorField<Algebra<group>> tE;
 
@@ -148,6 +149,7 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 #if STOUTSTEPS > 0
 
     VectorField<Algebra<group>> KS;
+    //nch_stout_smear_force(tUl, tE, KS, niterl, stoutc);
     stout_smear_force(tUl, tE, KS, stoutc);
 
     foralldir(d1) {
@@ -402,7 +404,7 @@ int main(int argc, char **argv) {
         }
         Matrix<NCOLOR, NCOLOR, Complex<ftype>> V;
         Matrix<NCOLOR, NCOLOR, Complex<ftype>> dV[NCOLOR][NCOLOR];
-        chexp(2.0*genlist[NCOLOR].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);
+        chexp(2.0*genlist[NCOLOR+1].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);
         hila::out0 << "exp(A):\n" << hila::prettyprint(V) << "\n";
         for (int i = 0; i < NCOLOR; ++i) {
             for (int j = 0; j < NCOLOR; ++j) {
@@ -414,18 +416,19 @@ int main(int argc, char **argv) {
         project_to_algebra_bilinear(dV, omat, genlist);
         hila::out0 << "dexp(A)^i/dA^j*exp(-A):\n" << hila::prettyprint(omat) << "\n";
 
-        Alg_gen<NCOLOR, ftype> genprodlist[NCOLOR * NCOLOR - 1][NCOLOR * NCOLOR - 1];
-        Algebra<mygroup>::generator_product_list(genlist,genprodlist);
-        if(false) {
+        if (false) {
+            Alg_gen<NCOLOR, ftype> genprodlist[NCOLOR * NCOLOR - 1][NCOLOR * NCOLOR - 1];
+            Algebra<mygroup>::generator_product_list(genlist, genprodlist);
+
             for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
                 for (int j = 0; j < NCOLOR * NCOLOR - 1; ++j) {
                     hila::out0 << hila::prettyprint(genprodlist[i][j].to_matrix()) << "\n\n";
                 }
             }
+            project_to_algebra_bilinear(V, omat, genprodlist);
+            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*V*t[]):\n"
+                    << hila::prettyprint(omat) << "\n";
         }
-        project_to_algebra_bilinear(V, omat, genprodlist);
-        hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*V*t[]):\n"
-                   << hila::prettyprint(omat) << "\n";
     }
 
     int start_traj = 0;
