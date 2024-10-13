@@ -676,7 +676,7 @@ void project_to_algebra_bilinear(const Matrix_t<N, N, T, MT> &w1,
                                  out_only Matrix<N * N - 1, N * N - 1, fT> &omat,
                                  const Alg_gen<N, fT> (&genprodlist)[N * N - 1][N * N - 1]) {
     // computes real matrix outmat[i][j] = 2 * ReTr(\lambda_i^{\dagger} * w1 * lambda_j)
-    // where the list of algebra generators is provided by genlist[]
+    // where the list of algebra generator products is provided by genprodlist[][]
     int i1, i2;
     fT temp;
     for (i1 = 0; i1 < N * N - 1; ++i1) {
@@ -704,8 +704,8 @@ template <const int N, typename T, typename MT>
 void project_to_algebra_bilinear(const MT (&w)[N][N],
                                  out_only Matrix<N * N - 1, N * N - 1, T> &omat,
                                  const Alg_gen<N, T> (&genlist)[N * N - 1]) {
-    // computes real matrix outmat[i][j] = 2 * Tr(\lambda_i^{\dagger} * w1 * lambda_j * w2)
-    // where the list of algebra generators is provided by genlist[]
+    // computes real matrix outmat[i][j] = 2 * Re(Tr(\lambda_i^{\dagger} * w1[k][l]) *
+    // \lambda_j[l][k]) where the list of algebra generators is provided by genlist[]
     int i1, i2;
     T temp;
     for (i1 = 0; i1 < N * N - 1; ++i1) {
@@ -727,7 +727,8 @@ void project_to_algebra_bilinear(const MT (&w)[N][N],
 template <int N, typename T, typename MT>
 void project_to_algebra_bilinear(const MT (&w)[N][N],
                                  out_only Matrix<N * N - 1, N * N - 1, T> &omat) {
-    // computes real matrix outmat[i][j] = 2 * Tr(\lambda_i^{\dagger} * w1 * lambda_j * w2)
+    // computes real matrix outmat[i][j] = 2 * Re(Tr(\lambda_i^{\dagger} * w1[k][l]) *
+    // \lambda_j[l][k])
     Alg_gen<N, T> genlist[N * N - 1];
     Algebra<SU<N, T>>::generator_list(genlist);
     project_to_algebra_bilinear(w, omat, genlist);
