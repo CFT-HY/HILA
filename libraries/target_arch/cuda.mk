@@ -11,11 +11,14 @@
 #%
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
-ifndef CUDA_VERSION
-	CUDA_VERSION = 11.6
-endif
-CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
-# CC = /usr/bin/nvcc
+ifdef CUDA_VERSION
+	CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
+	# CC = /usr/bin/nvcc
+else
+# if CUDA_VERSION not defined, use system nvcc
+	CC := nvcc
+endif	
+
 LD := $(CC) -std c++17
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards

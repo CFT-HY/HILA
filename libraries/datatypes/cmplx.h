@@ -136,7 +136,7 @@ class Complex {
 
     // constructor from single scalar value
     // Remember to mark this explicit, we do not want this to be invoked
-    // in automatic conversions (there should be methods)
+    // in automatic conversions (there should be methods) WHY NOT?
 
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     explicit constexpr Complex<T>(const S val) : re(val), im(0) {}

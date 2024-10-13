@@ -12,7 +12,7 @@
 #include "gauge/stout_smear.h"
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
-#include "gauge/checkpoint.h"
+#include "tools/checkpoint.h"
 
 
 #include <fftw3.h>
