@@ -28,6 +28,12 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
         return;
     }
 
+    // and treat a global variable reference v.value()
+    if (handle_global_var_method_call(Call)) {
+        parsing_state.skip_children = 1;
+        return;
+    }
+
     // Get the declaration of the function
     Decl *decl = Call->getCalleeDecl();
 
