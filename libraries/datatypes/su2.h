@@ -642,6 +642,12 @@ inline Algebra<SU2<T>> left_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &
     return res;
 }
 
+/// dot product for SU2 algebra: A dot B = A^a B^a = -2 Tr( A^a T^a B^b T^b )
+template<typename T>
+inline T su2_algebra_dot(const Algebra<SU2<T>> &A, const Algebra<SU2<T>> &B) {
+    return A.a * B.a + A.b * B.b + A.c*B.c;
+}
+
 template <typename T>
 inline T squarenorm(const Algebra<SU2<T>> &E) {
     return E.squarenorm();
