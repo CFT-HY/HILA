@@ -1,72 +1,96 @@
 #ifndef HILA_GLOBAL_H_
 #define HILA_GLOBAL_H_
-
 /**
- * hila::global<> variable class.
- * Special wrapper for "simple" types (elementary types, simple structs etc.).
- * Implemented on gpus automatically using __constant__ memory. All global variables
+ * @file globals.h
+ * @brief Definition of global variable class
+ */
+
+namespace hila {
+/**
+ * @brief Global variable class within hila namespace
+ *
+ * @details Special wrapper for "simple" types (elementary types, simple structs etc.).
+ * Implemented on gpus automatically using `__constant__` memory. All global variables
  * exist for the whole program lifetime.
  *
- * Variable declaration:
- * Declaration is possible on top (file) level only, not inside functions!
- *   > hila::global< type > globalvar;
- * For example  hila::global<Vector<4,Complex<double>> cvec1, cvec2;
+ * ## Variable declaration:
  *
- * Variable assingment:
- *   > globalvar = <value>;
+ * Declaration is possible on top (file) level only, not inside functions!
+ * \code{.cpp}
+ * hila::global<type> globalvar;
+ * \endcode
+ * For example
+ * \code{.cpp}
+ * hila::global<Vector<4,Complex<double>> cvec1, cvec2;
+ * \endcode
+ *
+ * ## Variable assingment:
+ * \code{.cpp}
+ * globalvar = <value>;
+ * \endcode
+ *
  * Assignment is not possible inside loops
  * Only "full" assignment is possible, not e.g. by field records
  *
- * The value of the variable is obtained with function-like "()"
- *   > globalvar()
+ * ## Variable access
+ *
+ * The value of the variable is obtained with function-like "()" call
+ * \code{.cpp}
+ * globalvar();
+ * \endcode
+ *
  * Variable can be used everywhere in the source file.
  *
- * Example:
- *          // at global file level
- *          struct param_t { double a,b[2]; };
+ * \code{.cpp}
+ * // at global file level
+ * struct param_t { double a,b[2]; };
  *
- *          hila::global<param_t> params;
+ * hila::global<param_t> params;
  *
- *          // define some function
- *          double myfunc(double dv) {
- *              return cos( dv / params().a );
- *          }
+ * // define some function
+ * double myfunc(double dv) {
+ *     return cos( dv / params().a );
+ * }
  *
- *          ...
- *          // inside main() or some other function - use helper struct to assign values
- *          param_t tmp;
- *          tmp.a = 3*M_PI;
- *          tmp.b[0] = ....
- *          tmp.b[1] = ...
- *          params = tmp;  // do the full struct assignment to global
+ * ...
+ * // inside main() or some other function - use helper struct to assign values
+ * param_t tmp;
+ * tmp.a = 3*M_PI;
+ * tmp.b[0] = ....
+ * tmp.b[1] = ...
+ * params = tmp;  // do the full struct assignment to global
  *
- *          ...
- *          Field<double> df;
- *          onsites(ALL) {
- *              df[X] = myfunc(X.x()) + params().b[0]/params().b[1];
- *          }
- *          hila::out0 << "Parameter a is " << params().a << '\n';
+ * ...
+ * Field<double> df;
+ * onsites(ALL) {
+ *     df[X] = myfunc(X.x()) + params().b[0]/params().b[1];
+ * }
+ * hila::out0 << "Parameter a is " << params().a << '\n';
+ * \endcode
+ *
+ * ## Additional information
  *
  * "extern" and "static" can be used, if there are several source files, with the usual meaning:
- *          extern hila::global<double> a;      // variable a (of identical type) is defined
- *                                              // in some other file
- *          static hila::global<mytype> par;    // par is invisible to other files
+ *
+ * \code{.cpp}
+ * extern hila::global<double> a;      // variable a (of identical type) is defined
+ *                                     // in some other file
+ * static hila::global<mytype> par;    // par is invisible to other files
+ * \endcode
  *
  * Declarations can be enclosed in namespaces:
- *          namespace myglobals {
- *          hila::global< double > a, b;
- *          }
- *          ...
+ * \code{.cpp}
+ * namespace myglobals {
+ *   hila::global<double> a, b;
+ * }
+ * ...
  *
- *          myglobals::a = 3;
- *          hila::out0 << "a has value " << myglobals::a() << '\n';
+ * myglobals::a = 3;
+ * hila::out0 << "a has value " << myglobals::a() << '\n';
+ * \endcode
  *
  * Variables cannot be initialized in declaration, because (possible) GPUs are not initialized.
- * In
  */
-
-
-namespace hila {
 template <typename T, typename custom = void>
 class global {
 
