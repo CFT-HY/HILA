@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include "hila.h"
 #include "utility.h"
-/// Helper function to get valid z-index coordinate
 
 void spectraldensity_surface(std::vector<float> &surf, std::vector<double> &npow,
                              std::vector<int> &hits) {
@@ -49,6 +48,24 @@ void spectraldensity_surface(std::vector<float> &surf, std::vector<double> &npow
     }
 }
 
+void wrap_surface(std::vector<float> &surface) {
+    float sum = std::accumulate(surface.begin(), surface.end(), 0.0f);
+    float average = sum / surface.size();
+    int half_lattice_z = lattice.size(e_z) / 2;
+    auto [min_it, max_it] = std::minmax_element(surface.begin(), surface.end());
+    float min_value = *min_it;
+    float max_value = *max_it;
+    if (abs(max_value - min_value) > lattice.size(e_z) * 0.9) {
+        for (auto &value : surface) {
+            if (average < half_lattice_z && value > half_lattice_z) {
+                value -= lattice.size(e_z);
+            } else if (average > half_lattice_z && value < half_lattice_z) {
+                value += lattice.size(e_z);
+            }
+        }
+    }
+}
+
 template <typename T>
 void measure_polyakov_field(const Field<T> &Ut, Field<Complex<float>> &polyakov_field) {
     Field<T> polyakov = Ut;
@@ -82,20 +99,20 @@ void smear_polyakov_field(Field<T> &polyakov_field, int nsmear, float smear_coef
 
         for (int i = 0; i < nsmear; i++) {
             onsites(ALL) if (X.coordinate(e_t) == 0) {
-                
+
                 pl2[X] = polyakov_field[X] +
                          smear_coeff * (polyakov_field[X + e_x] + polyakov_field[X - e_x] +
                                         polyakov_field[X + e_y] + polyakov_field[X - e_y]);
                 if (X.coordinate(e_z) == 0)
-                    pl2[X] = polyakov_field[X] +
-                        smear_coeff * (expi(-2 * M_PI * twist/NCOLOR)*polyakov_field[X + e_z] + polyakov_field[X - e_z]);
+                    pl2[X] +=
+                        smear_coeff * (expi(-2 * M_PI * twist / NCOLOR) * polyakov_field[X + e_z] +
+                                       polyakov_field[X - e_z]);
                 else if (X.coordinate(e_z) == 1)
-                    pl2[X] = polyakov_field[X] +
-                        smear_coeff *(polyakov_field[X + e_z] + expi(2 * M_PI * twist/NCOLOR)*polyakov_field[X - e_z]);
+                    pl2[X] +=
+                        smear_coeff * (polyakov_field[X + e_z] +
+                                       expi(2 * M_PI * twist / NCOLOR) * polyakov_field[X - e_z]);
                 else
-                    pl2[X] = polyakov_field[X] +
-                        smear_coeff *(polyakov_field[X + e_z] + polyakov_field[X - e_z]);
-                
+                    pl2[X] += smear_coeff * (polyakov_field[X + e_z] + polyakov_field[X - e_z]);
             }
 
             onsites(ALL) if (X.coordinate(e_t) == 0) {
@@ -127,9 +144,10 @@ void measure_polyakov_profile(Field<T> &polyakov_field, std::vector<T> &surface_
     }
     double inverse_surface_are = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
     surface_origin_profile = p_origin.vector();
-    surface_average_profile= p_surface_average.vector();
-    std::transform(surface_average_profile.begin(), surface_average_profile.end(), surface_average_profile.begin(),
-                [inverse_surface_are](T value) { return value * inverse_surface_are; });
+    surface_average_profile = p_surface_average.vector();
+    std::transform(surface_average_profile.begin(), surface_average_profile.end(),
+                   surface_average_profile.begin(),
+                   [inverse_surface_are](T value) { return value * inverse_surface_are; });
 }
 
 /**
@@ -149,8 +167,10 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
     if (first) {
         std::vector<MyType> dummy(lattice.size(e_z));
         for (int sl = 0; sl < p.n_smear.size(); sl++) {
-            print_formatted_numbers(dummy, "PRO " + std::to_string(sl) +" Origin polyakov smeared", true);
-            print_formatted_numbers(dummy,"PRO " + std::to_string(sl) + " Average polyakov smeared", true);
+            print_formatted_numbers(dummy, "PRO " + std::to_string(sl) + " Origin polyakov smeared",
+                                    true);
+            print_formatted_numbers(
+                dummy, "PRO " + std::to_string(sl) + " Average polyakov smeared", true);
             first = false;
         }
     }
@@ -183,7 +203,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
     int prev_smear = 0;
     for (int sl = 0; sl < p.n_smear.size(); sl++) {
 
-         // 2.1 Smear polyakov field
+        // 2.1 Smear polyakov field
         int smear = p.n_smear.at(sl);
         smear_polyakov_field(polyakov_field, smear - prev_smear, p.smear_coeff, p.twist_coeff);
         prev_smear = smear;
@@ -194,18 +214,23 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
             for (int j = 0; j < p.z_smear.at(sl); j++) {
                 double twist = p.twist_coeff;
                 twist /= NCOLOR;
-                hila::out0 << twist << '\n';
+                // hila::out0 << twist << '\n';
                 onsites(ALL) if (X.coordinate(e_t) == 0) {
- 
+
                     if (X.z() == 0)
                         sub_polyakov_field[X] =
-                            polyakov_field_z[X] + p.smear_coeff * (expi(-2 * M_PI * twist)*polyakov_field_z[X + e_z] + polyakov_field_z[X - e_z]);
+                            polyakov_field_z[X] +
+                            p.smear_coeff * (expi(-2 * M_PI * twist) * polyakov_field_z[X + e_z] +
+                                             polyakov_field_z[X - e_z]);
                     else if (X.z() == 1)
                         sub_polyakov_field[X] =
-                            polyakov_field_z[X] + p.smear_coeff * (polyakov_field_z[X + e_z] + expi(2 * M_PI * twist)*polyakov_field_z[X - e_z]);
+                            polyakov_field_z[X] +
+                            p.smear_coeff * (polyakov_field_z[X + e_z] +
+                                             expi(2 * M_PI * twist) * polyakov_field_z[X - e_z]);
                     else
                         sub_polyakov_field[X] =
-                            polyakov_field_z[X] + p.smear_coeff * (polyakov_field_z[X + e_z] + polyakov_field_z[X - e_z]);
+                            polyakov_field_z[X] +
+                            p.smear_coeff * (polyakov_field_z[X + e_z] + polyakov_field_z[X - e_z]);
                 }
                 onsites(ALL) if (X.coordinate(e_t) == 0) {
                     polyakov_field_z[X] = sub_polyakov_field[X] / (1 + 2 * p.smear_coeff);
@@ -218,18 +243,21 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         // double inverse_surface_are = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
         // for (int i = 0; i < surface_average_profile.size(); i++) {
         //     surface_average_profile[i] *= inverse_surface_are;
-        //     hila::out0 << "PRO " << sl << " " << i << " (" << surface_average_profile[i].re << ","
+        //     hila::out0 << "PRO " << sl << " " << i << " (" << surface_average_profile[i].re <<
+        //     ","
         //                << surface_average_profile[i].im << ") (" << surface_origin_profile[i].re
         //                << "," << surface_origin_profile[i].im << ")\n";
         // }
         // for (int i = 0; i < surface_average_profile.size(); i++) {
         //     surface_average_profile[i] *= inverse_surface_are;
-        //     hila::out0 << "Polyakov_smeared: " << surface_average_profile[i].re << " " << surface_average_profile[i].im << ", ";
+        //     hila::out0 << "Polyakov_smeared: " << surface_average_profile[i].re << " " <<
+        //     surface_average_profile[i].im << ", ";
         // }
-        hila::out0 << "PRO " << sl << "\n";
-        
-        print_formatted_numbers(surface_origin_profile,"PRO " + std::to_string(sl) + " Origin polyakov smeared", false);
-        print_formatted_numbers(surface_average_profile,"PRO " + std::to_string(sl) + " Average polyakov smeared", false);
+        // hila::out0 << "PRO " << sl << "\n";
+
+        // print_formatted_numbers(surface_origin_profile,"PRO " + std::to_string(sl) + " Origin
+        // polyakov smeared", false); print_formatted_numbers(surface_average_profile,"PRO " +
+        // std::to_string(sl) + " Average polyakov smeared", false);
         float min = 1e8, max = 0;
         int minloc, maxloc;
         for (int i = 0; i < surface_average_profile.size(); i++) {
@@ -242,14 +270,16 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                 maxloc = i;
             }
         }
-        hila::out0 << "PRO " << sl << " Min: " << surface_average_profile[minloc].abs() << " " << minloc << 
-                   "\nPRO " << sl << " Max: " << surface_average_profile[maxloc].abs()<< " " << maxloc << std::endl;
+        // hila::out0 << "PRO " << sl << " Min: " << surface_average_profile[minloc].abs() << " " <<
+        // minloc <<
+        //            "\nPRO " << sl << " Max: " << surface_average_profile[maxloc].abs()<< " " <<
+        //            maxloc << std::endl;
         hila::synchronize_threads();
-        //find the surface between minloc and maxloc
+        // find the surface between minloc and maxloc
         float surface_level = max * 0.5; // assume min is really 0
         int area = lattice.size(e_x) * lattice.size(e_y);
 
-        hila::out0 << "Surface_level" << sl << ' ' << surface_level << '\n';
+        // hila::out0 << "Surface_level" << sl << ' ' << surface_level << '\n';
 
         int startloc;
         if (maxloc > minloc)
@@ -257,10 +287,10 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         else
             startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
 
-        //starting positio for the other surface
-        //startloc2 = z_ind(startloc + lattice.size(e_z) / 2);
+        // starting positio for the other surface
+        // startloc2 = z_ind(startloc + lattice.size(e_z) / 2);
 
-        hila::out0 << "Start location: " << startloc << std::endl;
+        // hila::out0 << "Start location: " << startloc << std::endl;
 
         std::vector<float> surf_interpolated, surf_discrete;
         // Only allocate on first rank
@@ -274,44 +304,61 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         std::vector<MyType> polyakov_3D_volume;
         std::vector<MyType> line(lattice.size(e_z));
 
-        //get full xyz-volume t=0 slice to main node
+        // get full xyz-volume t=0 slice to main node
         polyakov_3D_volume = polyakov_field_z.get_slice({-1, -1, -1, 0});
-        //hila::out0 << traj << " " << p.n_trajectories << std::endl;
+        // hila::out0 << traj << " " << p.n_trajectories << std::endl;
 
         for (int y = 0; y < lattice.size(e_y); y++) {
-            //get now full xz-plane polyakov line to main node
-            //reduces MPI calls compared with doing line-by-line
+            // get now full xz-plane polyakov line to main node
+            // reduces MPI calls compared with doing line-by-line
             polyakov_3D_volume = polyakov_field_z.get_slice({-1, y, -1, 0});
             if (hila::myrank() == 0) {
                 for (int x = 0; x < lattice.size(e_x); x++) {
                     line = polyakov_field_z.get_slice({x, y, -1, 0});
 
-                    //copy ploop data to line - x runs fastest
+                    // copy ploop data to line - x runs fastest
                     for (int z = 0; z < lattice.size(e_z); z++) {
                         line[z] = polyakov_3D_volume[x + lattice.size(e_x) * (z)];
                     }
 
-                    //start search of the surface from the center between min and max
-                    int z = startloc;
+                    // start search of the surface from the center between min and max
+                    // int z = startloc;
 
-                    while (line[z_ind(z)].abs() > surface_level && startloc - z < lattice.size(e_z) *
-                    0.4)
-                        z--;
+                    // while (line[z_ind(z)].abs() > surface_level && startloc - z <
+                    // lattice.size(e_z) * 0.4)
+                    //     z--;
 
-                    while (line[z_ind(z + 1)].abs() <= surface_level &&
-                            z - startloc < lattice.size(e_z) * 0.4)
-                        z++;
-
-                    //hila::out0 << x << " " << y << " " << z +
-                    //    (surface_level - line[z_ind(z)].abs()) / (line[z_ind(z + 1)].abs() - line[z_ind(z)].abs()) << std::endl;
-                    //do linear interpolation
+                    // while (line[z_ind(z + 1)].abs() <= surface_level &&
+                    //         z - startloc < lattice.size(e_z) * 0.4)
+                    //     z++;
+                    min = 1e8;
+                    for (int i = 0; i < line.size(); i++) {
+                        if (min > line[i].abs()) {
+                            min = line[i].abs();
+                            minloc = i;
+                        }
+                    }
+                    int z = minloc;
+                    auto x_1 = line[z_ind(minloc - 1)].abs();
+                    auto x_2 = line[z_ind(minloc)].abs();
+                    auto x_3 = line[z_ind(minloc + 1)].abs();
+                    // hila::out0 << "Check loc: " << x_1 << " " << x_2 << " " << x_3 << "\n";
+                    // double interpolated_min = minloc - (1.0/2.0)*((x_2 - x_3)-(x_2 -
+                    // x_1))/(-1*(x_2 - x_3)-(x_2 - x_1));
+                    double interpolated_min =
+                        minloc - (x_3 - x_1) / ((2.0 * (x_3 + x_1 - 2.0 * x_2)));
+                    // hila::out0 << line[z_ind(minloc-1)].abs() << " " << line[z_ind(minloc)].abs()
+                    // << " " <<line[z_ind(minloc+1)].abs() << " " << interpolated_min <<" " <<
+                    // minloc<< std::endl;
+                    // do linear interpolation
                     surf_discrete[x + y * lattice.size(e_x)] = z;
-                    surf_interpolated[x + y * lattice.size(e_x)] =
-                        z +
-                        (surface_level - line[z_ind(z)].abs()) / (line[z_ind(z + 1)].abs() - line[z_ind(z)].abs());
+                    // surf_interpolated[x + y * lattice.size(e_x)] =
+                    //     z +
+                    //     (surface_level - line[z_ind(z)].abs()) / (line[z_ind(z + 1)].abs() -
+                    //     line[z_ind(z)].abs());
+                    surf_interpolated[x + y * lattice.size(e_x)] = interpolated_min;
 
-
-                    //and locate the other surface - start from Lz/2 offset
+                    // and locate the other surface - start from Lz/2 offset
 
                     // z = startloc2;
 
@@ -328,32 +375,30 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                     // surf2[x + y * lattice.size(e_x)] =
                     //     z +
                     //     (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
-                    
                 }
             }
-
-            
-
-            // if (hila::myrank() == 0) {
-            //     constexpr int pow_size = 200;
-            //     std::vector<double> npow(pow_size);
-            //     std::vector<int> hits(pow_size);
-
-            //     spectraldensity_surface(surf_interpolated, npow, hits);
-            //     //spectraldensity_surface(surf2, npow, hits);
-
-            //     for (int i = 0; i < pow_size; i++) {
-            //         if (hits[i] > 0)
-            //             hila::out0 << "POW" << sl << ' ' << i << ' ' << npow[i] / hits[i] << ' '
-            //                     << hits[i] << '\n';
-            //     }
-            // }
-
         }
-        if (traj == p.n_trajectories - 1 && sl == 1) {
-            write_surface(surf_interpolated,"surface_smooth",APPEND_FILE::TRUE, CLOSE_FILE::TRUE);
-        } else if (sl == p.n_smear.size() -1 ) {
-            write_surface(surf_interpolated,"surface_smooth",APPEND_FILE::TRUE, CLOSE_FILE::FALSE);
+
+        if (hila::myrank() == 0) {
+            constexpr int pow_size = 80;
+            std::vector<double> npow(pow_size);
+            std::vector<int> hits(pow_size);
+            wrap_surface(surf_interpolated);
+            spectraldensity_surface(surf_interpolated, npow, hits);
+            // spectraldensity_surface(surf2, npow, hits);
+
+
+            if (traj == p.n_trajectories - 1) {
+                write_fourier(npow, hits, pow_size, "fourier_profile_" + std::to_string(smear),
+                              APPEND_FILE::TRUE, CLOSE_FILE::TRUE);
+                write_surface(surf_interpolated, "surface_smooth_" + std::to_string(smear),
+                              APPEND_FILE::TRUE, CLOSE_FILE::TRUE);
+            } else {
+                write_fourier(npow, hits, pow_size, "fourier_profile_" + std::to_string(smear),
+                              APPEND_FILE::TRUE, CLOSE_FILE::FALSE);
+                write_surface(surf_interpolated, "surface_smooth_" + std::to_string(smear),
+                              APPEND_FILE::TRUE, CLOSE_FILE::FALSE);
+            }
         }
         // if (traj == p.n_trajectories - 1 && sl == 1) {
         //     write_surface(surf_discrete,"surface_discrete");

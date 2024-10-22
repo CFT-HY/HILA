@@ -36,40 +36,150 @@ void print_formatted_numbers(const std::vector<Complex<T>> &numbers, std::string
     }
 }
 
+// template <typename T>
+// void write_surface(std::vector<T> surf, std::string file_name, APPEND_FILE append_true,
+//                    CLOSE_FILE close_file) {
+
+//     static std::ofstream MFile; // Declare static ofstream object
+
+//     // Open file if not already open, based on append_true parameter
+//     if (!MFile.is_open()) {
+//         if (append_true == APPEND_FILE::TRUE)
+//             MFile.open(file_name, std::ios::app); // Append mode
+//         else
+//             MFile.open(file_name); // Default (overwrite) mode
+
+//         if (!MFile.is_open()) {
+//             std::cerr << "Error: Failed to open file " << file_name << std::endl;
+//             return;
+//         }
+
+//         std::cout << "Opened file " << file_name << std::endl;
+//     }
+//     // MFile.open("surface", std::ios_base::app);
+//     MFile << "volume: " << lattice.size(e_x) << " " << lattice.size(e_y) << " " << lattice.size(e_z)
+//           << " " << lattice.size(e_t) << std::endl;
+//     MFile << "x y z" << std::endl;
+//     for (int y = 0; y < lattice.size(e_y); y++) {
+//         for (int x = 0; x < lattice.size(e_x); x++) {
+//             if (hila::myrank() == 0)
+//                 MFile << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)] << std::endl;
+//         }
+//     }
+//     // Close file if specified by close_file parameter
+//     if (close_file == CLOSE_FILE::TRUE) {
+//         MFile.close();
+//         std::cout << "Closed file " << file_name << std::endl;
+//     }
+// }
 template <typename T>
 void write_surface(std::vector<T> surf, std::string file_name, APPEND_FILE append_true,
                    CLOSE_FILE close_file) {
 
-    static std::ofstream MFile; // Declare static ofstream object
+    std::ofstream MFile; // Declare non-static ofstream object
 
-    // Open file if not already open, based on append_true parameter
+    // Open file based on append_true parameter
+    if (append_true == APPEND_FILE::TRUE)
+        MFile.open(file_name, std::ios::app); // Append mode
+    else
+        MFile.open(file_name); // Default (overwrite) mode
+
     if (!MFile.is_open()) {
-        if (append_true == APPEND_FILE::TRUE)
-            MFile.open(file_name, std::ios::app); // Append mode
-        else
-            MFile.open(file_name); // Default (overwrite) mode
-
-        if (!MFile.is_open()) {
-            std::cerr << "Error: Failed to open file " << file_name << std::endl;
-            return;
-        }
-
-        std::cout << "Opened file " << file_name << std::endl;
+        std::cerr << "Error: Failed to open file " << file_name << std::endl;
+        return;
     }
-    // MFile.open("surface", std::ios_base::app);
+
+    // Write lattice size and surface data
     MFile << "volume: " << lattice.size(e_x) << " " << lattice.size(e_y) << " " << lattice.size(e_z)
           << " " << lattice.size(e_t) << std::endl;
     MFile << "x y z" << std::endl;
+
     for (int y = 0; y < lattice.size(e_y); y++) {
         for (int x = 0; x < lattice.size(e_x); x++) {
-            if (hila::myrank() == 0)
+            if (hila::myrank() == 0) {
                 MFile << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)] << std::endl;
+            }
         }
     }
+
     // Close file if specified by close_file parameter
     if (close_file == CLOSE_FILE::TRUE) {
         MFile.close();
         std::cout << "Closed file " << file_name << std::endl;
     }
 }
+
+// template <typename T>
+// void write_fourier(std::vector<T> npow, std::vector<int> hits, int pow_size, std::string file_name,
+//                    APPEND_FILE append_true, CLOSE_FILE close_file) {
+
+//     static std::ofstream MFile; // Declare static ofstream object
+
+//     // Open file if not already open, based on append_true parameter
+
+//     if (!MFile.is_open()) {
+//         if (append_true == APPEND_FILE::TRUE)
+//             MFile.open(file_name, std::ios::app); // Append mode
+//         else
+//             MFile.open(file_name); // Default (overwrite) mode
+
+//         if (!MFile.is_open()) {
+//             std::cerr << "Error: Failed to open file " << file_name << std::endl;
+//             return;
+//         }
+
+//         std::cout << "Opened file " << file_name << std::endl;
+//     }
+//     // MFile.open("surface", std::ios_base::app);
+//     MFile << "volume: " << lattice.size(e_x) << " " << lattice.size(e_y) << " " << lattice.size(e_z)
+//           << " " << lattice.size(e_t) << std::endl;
+//     MFile << "i"
+//           << " n/h"
+//           << " h" << std::endl;
+//     for (int i = 0; i < pow_size; i++) {
+//         if (hits[i] > 0)
+//             MFile << i << ' ' << npow[i] / hits[i] << ' ' << hits[i] << '\n';
+//     }
+//     // Close file if specified by close_file parameter
+//     if (close_file == CLOSE_FILE::TRUE) {
+//         MFile.close();
+//         std::cout << "Closed file " << file_name << std::endl;
+//     }
+// }
+
+template <typename T>
+void write_fourier(std::vector<T> npow, std::vector<int> hits, int pow_size, std::string file_name,
+                   APPEND_FILE append_true, CLOSE_FILE close_file) {
+
+    std::ofstream MFile; // Declare ofstream object
+
+    // Open file based on append_true parameter
+    if (append_true == APPEND_FILE::TRUE)
+        MFile.open(file_name, std::ios::app); // Append mode
+    else
+        MFile.open(file_name); // Default (overwrite) mode
+
+    if (!MFile.is_open()) {
+        std::cerr << "Error: Failed to open file " << file_name << std::endl;
+        return;
+    }
+
+    // Write lattice size and data
+    MFile << "volume: " << lattice.size(e_x) << " " << lattice.size(e_y) << " " << lattice.size(e_z)
+          << " " << lattice.size(e_t) << std::endl;
+    MFile << "i"
+          << " n/h"
+          << " h" << std::endl;
+    for (int i = 0; i < pow_size; i++) {
+        if (hits[i] > 0)
+            MFile << i << ' ' << npow[i] / hits[i] << ' ' << hits[i] << '\n';
+    }
+
+    // Close file if specified by close_file parameter
+    if (close_file == CLOSE_FILE::TRUE) {
+        MFile.close();
+        std::cout << "Closed file " << file_name << std::endl;
+    }
+}
+
 #endif
