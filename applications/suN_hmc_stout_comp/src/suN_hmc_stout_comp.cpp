@@ -29,7 +29,20 @@
 #include "tools/floating_point_epsilon.h"
 
 #ifdef STOUTSMEAR
+hila::timer sms_timer("Smearing (action)");
+hila::timer smf_timer("Smearing (force)");
+#if defined STOUTMODE && STOUTMODE>0
+#if STOUTMODE==1
+#include "gauge/stout_smear_nch.h"
+#elif STOUTMODE==2
+#include "gauge/stout_smear_nch_mixed.h"
+#else
 #include "gauge/stout_smear.h"
+#endif
+#else
+#define STOUTMODE 0
+#include "gauge/stout_smear.h"
+#endif
 #define STOUTSTEPS STOUTSMEAR
 #else
 #define STOUTSTEPS 0
@@ -69,10 +82,18 @@ template <typename group, typename atype = hila::arithmetic_type<group>>
 double measure_s(const GaugeField<group> &U) {
     // compute the value of the chosen gauge action (without beta/N factor)
 #if STOUTSTEPS > 0
-
+    sms_timer.start();
     GaugeField<group> tU;
+#if STOUTMODE == 0
     stout_smear(U, tU, stoutc, stout_nsteps);
-
+#elif STOUTMODE == 1
+    nch_stout_smear(U, tU, stoutc, stout_nsteps);
+#elif STOUTMODE == 2
+    nchm_stout_smear(U, tU, stoutc, stout_nsteps);
+#else
+    stout_smear(U, tU, stoutc, stout_nsteps);
+#endif
+    sms_timer.stop();
 #else
 
     const GaugeField<group> &tU = U;
@@ -108,16 +129,27 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
     atype eps = delta / group::size();
 
 #if STOUTSTEPS > 0
-
+    sms_timer.start();
     std::vector<GaugeField<group>> tUl(stout_nsteps + 1);
 
+#if STOUTMODE == 0
     stout_smear(U, tUl, stoutc);
+#elif STOUTMODE == 1
+    nch_stout_smear(U, tUl, stoutc);
+#elif STOUTMODE == 2
+    std::vector<VectorField<int>> niterl(stout_nsteps);
+    nchm_stout_smear(U, tUl, niterl, stoutc);
+#else
+    std::vector<GaugeField<group>> tUKl(stout_nsteps);
+    stout_smeark(U, tUl, tUKl, stoutc);
+#endif
 
     VectorField<Algebra<group>> tE;
 
     foralldir(d1) onsites(ALL) tE[d1][X] = 0;
 
     GaugeField<group> &tU = tUl[stout_nsteps];
+    sms_timer.stop();
 
 #else // STOUTSTEPS==0
 
@@ -147,14 +179,23 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 #endif          // END HMCS
 
 #if STOUTSTEPS > 0
-
+    smf_timer.start();
     VectorField<Algebra<group>> KS;
+
+#if STOUTMODE == 0
     stout_smear_force(tUl, tE, KS, stoutc);
+#elif STOUTMODE == 1
+    nch_stout_smear_force(tUl, tE, KS, stoutc);
+#elif STOUTMODE == 2
+    nchm_stout_smear_force(tUl, tE, KS, niterl, stoutc);
+#else
+    stout_smeark_force(tUl, tUKl, tE, KS, stoutc);
+#endif
 
     foralldir(d1) {
         onsites(ALL) E[d1][X] += KS[d1][X];
     }
-
+    smf_timer.stop();
 #endif // END STOUTSTEPS
 
 }
@@ -371,6 +412,19 @@ int main(int argc, char **argv) {
     p.config_file = par.get("config name");
 
     par.close(); // file is closed also when par goes out of scope
+
+#if STOUTSTEPS > 0
+    hila::out0 << "using stout smearing: nsteps=" << stout_nsteps << "  , c=" << stoutc << "  , ";
+#if STOUTMODE == 0
+    hila::out0 << "mode=CH\n";
+#elif STOUTMODE == 1
+    hila::out0 << "mode=NCH\n";
+#elif STOUTMODE == 2
+    hila::out0 << "mode=NCHM\n";
+#else
+    hila::out0 << "mode=CHK\n";
+#endif
+#endif
 
     // set up the lattice
     lattice.setup(lsize);
