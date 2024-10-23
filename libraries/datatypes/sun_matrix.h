@@ -614,7 +614,7 @@ template <int N, typename T>
 Algebra<SU<N, T>> log(const SU<N, T> &a) {
     int maxit = 5 * N;
     T fprec = fp<T>::epsilon * 10.0 * Algebra<SU<N, T>>::N_a;
-    Matrix_t<N, N, Complex<T>, SU<N, T>> pl[N + 1];
+    Matrix_t<N, N, Complex<T>, SU<N, T>> pl[N];
 
     SU<N, T> tmat = a, tmat2;
     Algebra<SU<N, T>> res = 0, tres;

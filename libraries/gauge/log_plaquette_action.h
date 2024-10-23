@@ -46,14 +46,13 @@ void get_force_log_plaq_add(const GaugeField<group> &U, VectorField<Algebra<grou
     Field<group> C;
 
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-        // get the 4 clover leave matrices C[][X] (ordered counter-clockwise in (dir1,dir2)-plane)
-        // and their anti-hermitian traceless sum Csum[X]
+        // get matrix log of the plaquette matrix in (dir1,dir2)-plane
         get_log_plaq_mat(U, dir1, dir2, C);
 
-        // define for each clover leaf matrix the correspondin path of gauge links
+        // define the path around the plaquette
         std::vector<Direction> path = {dir1, dir2, -dir1, -dir2};
 
-        // the force on the link (Y,dir) from the clover term with foot point X is:
+        // the force on the link (Y,dir) from the log of plaquette C with foot point X is:
         // F[dir][Y] = -d_{Y,dir}(-0.5*Tr(C*C))
         //           = 0.5*Tr((d_{Y,dir}C)*C) + 0.5*Tr(C*(d_{Y,dir}C))
         //           = Tr((d_{Y,dir}C)*C)
