@@ -35,7 +35,6 @@ hila::timer smf_timer("Smearing (force)");
 #if STOUTMODE==1
 #include "gauge/stout_smear_nch.h"
 #elif STOUTMODE==2
-#include "gauge/stout_smear.h"
 #include "gauge/stout_smear_nch_mixed.h"
 #else
 #include "gauge/stout_smear.h"
@@ -90,7 +89,7 @@ double measure_s(const GaugeField<group> &U) {
 #elif STOUTMODE == 1
     nch_stout_smear(U, tU, stoutc, stout_nsteps);
 #elif STOUTMODE == 2
-    stout_smear(U, tU, stoutc, stout_nsteps);
+    nchm_stout_smear(U, tU, stoutc, stout_nsteps);
 #else
     stout_smear(U, tU, stoutc, stout_nsteps);
 #endif
