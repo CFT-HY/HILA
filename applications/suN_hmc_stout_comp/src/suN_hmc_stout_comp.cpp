@@ -35,6 +35,7 @@ hila::timer smf_timer("Smearing (force)");
 #if STOUTMODE==1
 #include "gauge/stout_smear_nch.h"
 #elif STOUTMODE==2
+#include "gauge/stout_smear.h"
 #include "gauge/stout_smear_nch_mixed.h"
 #else
 #include "gauge/stout_smear.h"
