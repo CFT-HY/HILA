@@ -34,7 +34,7 @@
 DISTRO := $(shell cat /etc/*-release | grep -iE "^(ID=)" | cut -f2 -d"=")
 
 $(info --------------------------------------------------------------)
-$(info We are on $(DISTRO) ditribution)
+$(info We are on $(DISTRO) distribution)
 $(info --------------------------------------------------------------)
 
 # keep 14 as default for now
@@ -90,7 +90,9 @@ $(info --------------------------------------------------------------)
 # CXX := clang++
 CXX := $(LLVM_BIN_PATH)/clang++
 
-CXXFLAGS := -fno-rtti -std=c++17 -g
+# CXXFLAGS := -fno-rtti -std=c++17 -g
+CXXFLAGS := -fno-rtti -std=c++17 -O1
+
 
 # Directories where stuff is found and built
 SRCDIR := src
@@ -167,6 +169,7 @@ endif
 
 
 CLANG_LIBS := \
+	-Wl,--start-group \
 	-lclangTooling \
 	-lclangASTMatchers \
 	-lclangFrontend \
@@ -176,8 +179,8 @@ CLANG_LIBS := \
 	-lclangSema \
 	-lclangEdit \
 	-lclangAnalysis \
+	-lclangTooling \
 	-lclangToolingCore \
-	-lclangAST \
 	-lclangRewrite \
 	-lclangLex \
 	-lclangBasic \
@@ -185,15 +188,24 @@ CLANG_LIBS := \
 	-lclangRewriteFrontend \
 	-lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers \
-	-lclangStaticAnalyzerCore
+	-lclangStaticAnalyzerCore \
+	-lclangAST \
+	-lclangToolingSyntax
 
 
 # Add new libs if clang version is > 14
 compare = $(shell if [ $(1) -gt $(2) ] ; then echo gt ; else echo le ; fi)
 
 ifeq ($(call compare,$(LLVM_VERSION),14),gt)
-   CLANG_LIBS += -lclangSupport
+	CLANG_LIBS += \
+		-lclangSupport \
+		-lclangAPINotes 
 endif
+
+# And close group
+CLANG_LIBS += -Wl,--end-group
+
+
 # Sources for this project
 
 

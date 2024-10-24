@@ -82,6 +82,7 @@ using gpuError = cudaError;
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
 #define gpuMemset(a,b,c) GPU_CHECK(cudaMemset(a,b,c))
+#define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 
 #define GPUTYPESTR "CUDA"
 
@@ -134,6 +135,9 @@ using gpuError = hipError_t;
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
 #define gpuMemset(a,b,c) GPU_CHECK(hipMemset(a,b,c))
+#define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
+    GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
+
 
 #define GPUTYPESTR "HIP"
 
@@ -179,6 +183,11 @@ using gpuError = int;
 #define gpuMalloc(a, b) do {} while(0)
 #define gpuFree(a) do {} while(0)
 #define gpuMemcpy(a, b, siz, d) do {} while(0)
+#define gpuMemcpyHostToDevice 1
+#define gpuMemcpyDeviceToHost 2
+#define gpuMemset(a,b,c) do {} while(0)
+#define gpuMemcpyToSymbol(a, b, size, c, dir) do {} while(0)
+
 #define gpuMemPoolPurge() do {} while(0)
 #define gpuMemPoolReport() do {} while(0)
 
@@ -187,6 +196,10 @@ using gpuError = int;
 
 #define gpuStreamSynchronize(a) do {} while(0)
 #define gpuDeviceSynchronize() do {} while(0)
+
+#define gpuGetLastError cudaGetLastError
+
+
 // clang-format on
 
 
