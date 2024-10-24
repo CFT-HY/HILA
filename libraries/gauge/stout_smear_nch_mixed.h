@@ -1,5 +1,5 @@
-#ifndef STOUT_SMEAR_H_
-#define STOUT_SMEAR_H_
+#ifndef STOUT_SMEAR_NCH_MIXED_H_
+#define STOUT_SMEAR_NCH_MIXED_H_
 
 #include "hila.h"
 
