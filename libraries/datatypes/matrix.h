@@ -3082,7 +3082,6 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
     T cho;       // temporary variables for iteration
     hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
     hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
-    int jmax = mmax - 1;
     for (j = n; j < mmax; ++j) {
         s = 0;
         cho = pal[n - 1] * rs;
@@ -3109,7 +3108,6 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
         twpf += wpf;
         if (ttwpf == twpf) {
             // terminate iteration when numeric value of twpf stops changing
-            jmax = j;
             break;
         }
 
@@ -3266,7 +3264,6 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     T cho; // temporary variable for iteration
     hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
     hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
-    int jmax = mmax - 1;
     for (j = n; j < mmax; ++j) {
         s = 0;
         cho = pal[n - 1] * rs;
@@ -3293,7 +3290,6 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
         twpf += wpf;
         if (ttwpf == twpf) {
             // terminate iteration when numeric value of twpf stops changing
-            jmax = j;
             break;
         }
 
