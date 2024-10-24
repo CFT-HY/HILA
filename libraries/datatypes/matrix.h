@@ -2789,7 +2789,7 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
             r *= mat;
         }
         r += one;
-
+        r.reunitarize_gauge();
         return r;
     } else {
         Matrix_t<n, m, T, MT> r(1.0);
@@ -2835,6 +2835,7 @@ inline void mult_exp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T, M
             r *= mat;
         }
         r += one;
+        r.reunitarize_gauge();
         r = mmat * r;
     } else {
         r = mmat;
