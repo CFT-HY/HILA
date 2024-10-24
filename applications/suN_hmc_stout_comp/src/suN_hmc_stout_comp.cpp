@@ -89,7 +89,7 @@ double measure_s(const GaugeField<group> &U) {
 #elif STOUTMODE == 1
     nch_stout_smear(U, tU, stoutc, stout_nsteps);
 #elif STOUTMODE == 2
-    nchm_stout_smear(U, tU, stoutc, stout_nsteps);
+    stout_smear(U, tU, stoutc, stout_nsteps);
 #else
     stout_smear(U, tU, stoutc, stout_nsteps);
 #endif
