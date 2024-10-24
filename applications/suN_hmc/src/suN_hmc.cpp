@@ -392,15 +392,6 @@ int main(int argc, char **argv) {
             }
         }
         Matrix<NCOLOR * NCOLOR - 1, NCOLOR * NCOLOR - 1, ftype> omat;
-        if(false) {
-            mygroup tU1,tU2;
-            tU1.random();
-            tU2.random();
-            hila::out0 << "tU1:\n" << hila::prettyprint(tU1) << "\n";
-            hila::out0 << "tU2:\n" << hila::prettyprint(tU2) << "\n";
-            project_to_algebra_bilinear(tU1, tU2, omat, genlist);
-            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*tU1*t[]*tU2):\n" << hila::prettyprint(omat) << "\n";
-        }
         Matrix<NCOLOR, NCOLOR, Complex<ftype>> V;
         Matrix<NCOLOR, NCOLOR, Complex<ftype>> dV[NCOLOR][NCOLOR];
         chexp(2.0*genlist[NCOLOR+1].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);

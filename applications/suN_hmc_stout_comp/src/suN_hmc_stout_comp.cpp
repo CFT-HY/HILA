@@ -436,54 +436,6 @@ int main(int argc, char **argv) {
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
 
-    if (0 && hila::myrank() == 0) {
-        // test matrix exponential and corresponding differential computations
-        Alg_gen<NCOLOR, ftype> genlist[NCOLOR * NCOLOR - 1];
-        Algebra<mygroup>::generator_list(genlist);
-        if(false) {
-            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
-                hila::out0 << hila::prettyprint(genlist[i].to_matrix()) << "\n\n";
-            }
-        }
-        Matrix<NCOLOR * NCOLOR - 1, NCOLOR * NCOLOR - 1, ftype> omat;
-        if(false) {
-            mygroup tU1,tU2;
-            tU1.random();
-            tU2.random();
-            hila::out0 << "tU1:\n" << hila::prettyprint(tU1) << "\n";
-            hila::out0 << "tU2:\n" << hila::prettyprint(tU2) << "\n";
-            project_to_algebra_bilinear(tU1, tU2, omat, genlist);
-            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*tU1*t[]*tU2):\n" << hila::prettyprint(omat) << "\n";
-        }
-        Matrix<NCOLOR, NCOLOR, Complex<ftype>> V;
-        Matrix<NCOLOR, NCOLOR, Complex<ftype>> dV[NCOLOR][NCOLOR];
-        chexp(2.0*genlist[NCOLOR+1].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);
-        hila::out0 << "exp(A):\n" << hila::prettyprint(V) << "\n";
-        for (int i = 0; i < NCOLOR; ++i) {
-            for (int j = 0; j < NCOLOR; ++j) {
-                dV[i][j] = dV[i][j] * V.dagger();
-                hila::out0 << "dexp(A)/dA[" << i << "][" << j << "]*exp(-A):\n"
-                           << hila::prettyprint(dV[i][j]) << "\n";
-            }
-        }
-        project_to_algebra_bilinear(dV, omat, genlist);
-        hila::out0 << "dexp(A)^i/dA^j*exp(-A):\n" << hila::prettyprint(omat) << "\n";
-
-        if (false) {
-            Alg_gen<NCOLOR, ftype> genprodlist[NCOLOR * NCOLOR - 1][NCOLOR * NCOLOR - 1];
-            Algebra<mygroup>::generator_product_list(genlist, genprodlist);
-
-            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
-                for (int j = 0; j < NCOLOR * NCOLOR - 1; ++j) {
-                    hila::out0 << hila::prettyprint(genprodlist[i][j].to_matrix()) << "\n\n";
-                }
-            }
-            project_to_algebra_bilinear(V, omat, genprodlist);
-            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*V*t[]):\n"
-                    << hila::prettyprint(omat) << "\n";
-        }
-    }
-
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
