@@ -2789,6 +2789,7 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
             r *= mat;
         }
         r += one;
+
         return r;
     } else {
         Matrix_t<n, m, T, MT> r(1.0);
@@ -2834,7 +2835,6 @@ inline void mult_exp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T, M
             r *= mat;
         }
         r += one;
-
         r = mmat * r;
     } else {
         r = mmat;
@@ -2918,17 +2918,17 @@ inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT
         cho = pal[n - 1] * rs;
         for (i = n - 1; i > 0; --i) {
             pal[i] = pal[i - 1] * rs - cho * crpl[i];
-            s += squarenorm(pal[i]);
+            s += ::squarenorm(pal[i]);
             al[i] += wpf * pal[i];
         }
         pal[0] = -cho * crpl[0];
-        s += squarenorm(pal[0]);
+        s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
 
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = std::sqrt(s);
+            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
         } else {
@@ -3087,17 +3087,17 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
         cho = pal[n - 1] * rs;
         for (i = n - 1; i > 0; --i) {
             pal[i] = pal[i - 1] * rs - cho * crpl[i];
-            s += squarenorm(pal[i]);
+            s += ::squarenorm(pal[i]);
             al[i] += wpf * pal[i];
         }
         pal[0] = -cho * crpl[0];
-        s += squarenorm(pal[0]);
+        s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
 
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = std::sqrt(s);
+            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
         } else {
@@ -3269,17 +3269,17 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
         cho = pal[n - 1] * rs;
         for (i = n - 1; i > 0; --i) {
             pal[i] = pal[i - 1] * rs - cho * crpl[i];
-            s += squarenorm(pal[i]);
+            s += ::squarenorm(pal[i]);
             al[i] += wpf * pal[i];
         }
         pal[0] = -cho * crpl[0];
-        s += squarenorm(pal[0]);
+        s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
 
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = std::sqrt(s);
+            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
         } else {
@@ -3442,17 +3442,17 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
         cho = pal[n - 1] * rs;
         for (i = n - 1; i > 0; --i) {
             pal[i] = pal[i - 1] * rs - cho * crpl[i];
-            s += squarenorm(pal[i]);
+            s += ::squarenorm(pal[i]);
             al[i] += wpf * pal[i];
         }
         pal[0] = -cho * crpl[0];
-        s += squarenorm(pal[0]);
+        s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
 
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = std::sqrt(s);
+            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
         } else {
@@ -3631,19 +3631,19 @@ inline Matrix_t<n, m, T, MT> chsexp(const Matrix_t<n, m, T, MT> &mat) {
         ch = -pal[n - 1] * crpl[0];
         cho = pal[0] * rs;
         pal[0] = ch;
-        s = squarenorm(ch);
+        s = ::squarenorm(ch);
         al[0] += wpf * ch;
         for (i = 1; i < n; ++i) {
             ch = cho - pal[n - 1] * crpl[i];
             cho = pal[i] * rs;
             pal[i] = ch;
-            s += squarenorm(ch);
+            s += ::squarenorm(ch);
             al[i] += wpf * ch;
         }
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = std::sqrt(s);
+            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
         } else {
