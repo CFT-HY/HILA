@@ -141,7 +141,6 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, at
         onsites(ALL) {
             stout[d][X] =
                 chexp((U[d][X] * stout[d][X]).project_to_algebra_scaled(-coeff).expand()) * U[d][X];
-            stout[d][X].reunitarize();
         }
     }
 }

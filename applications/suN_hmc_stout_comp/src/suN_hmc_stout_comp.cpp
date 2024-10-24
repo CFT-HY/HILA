@@ -52,7 +52,7 @@ hila::timer smf_timer("Smearing (force)");
 using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
-ftype stoutc = 0.15;
+ftype stoutc = 0.1;
 int stout_nsteps = STOUTSTEPS;
 
 
