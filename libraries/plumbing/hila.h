@@ -21,6 +21,7 @@
 #include "plumbing/reduction.h"
 #include "plumbing/reductionvector.h"
 #include "plumbing/site_select.h"
+#include "plumbing/globals.h"
 
 //#if defined(CUDA) || defined(HIP)
 //#include "plumbing/backend_gpu/gpu_reduction.h"
@@ -38,5 +39,7 @@
 #endif
 
 #include "plumbing/random.h"
+
+#include "plumbing/shuffle.h"
 
 #endif
