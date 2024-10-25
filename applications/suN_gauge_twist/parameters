@@ -1,9 +1,9 @@
-lattice size        44,44,64,6 
+lattice size        10, 10, 20, 6
 beta                           10.85
 delta beta fraction            0
 overrelax steps                4
 updates in trajectory          1
-trajectories                   1000
+trajectories                   10000
 thermalization                 0
 random seed                    0
 traj/saved                     1000
@@ -11,8 +11,8 @@ config name                    config
 twist_coeff                    1
 
 updates/profile meas           20
-smearing steps                 48, 50, 52
+smearing steps                 10, 20, 30, 40, 50, 60
 smear coefficient              0.9
-z smearing steps               48, 50, 52
+z smearing steps               10, 20, 30, 40, 50, 60
 traj/surface                   100
 traj/polyakov dump             0
