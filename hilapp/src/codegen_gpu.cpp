@@ -103,13 +103,17 @@ void GeneralVisitor::handle_loop_constructor_gpu(call_info_struct &ci) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+// keep running index to disambiguate kernels
+static uint64_t kernel_index = 1;
+
 /// Help routine to write (part of) a name for a kernel
 std::string TopLevelVisitor::make_kernel_name() {
     return kernel_name_prefix +
-           clean_name(global.currentFunctionDecl->getNameInfo().getName().getAsString()) + "_" +
-           std::to_string(TheRewriter.getSourceMgr().
-                          // getSpellingLineNumber(global.location.loop));
-                          getFileOffset(global.location.loop));
+           clean_name(global.currentFunctionDecl->getNameInfo().getName().getAsString()) + "_K" +
+           //    std::to_string(TheRewriter.getSourceMgr().
+           //                   // getSpellingLineNumber(global.location.loop));
+           //                   getFileOffset(global.location.loop));
+           std::to_string(kernel_index++);
 }
 
 std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,

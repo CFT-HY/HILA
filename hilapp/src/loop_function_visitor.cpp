@@ -81,6 +81,8 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
     bool got_lattice;
     Stmt *assign_stmt;
 
+    int skip_children;
+
     // use the constructor which does not inherit var_info_list and var_decl_list
 
     loopFunctionVisitor(Rewriter &R, ASTContext *C) : GeneralVisitor(R, C) {
@@ -92,7 +94,32 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
         loop_function_calls = {};
         conditional_vars = {};
         got_lattice = false; // if function "lattice.size()" etc. do not trap on "lattice"
+        skip_children = 0;
     }
+
+
+    /// implement the "skip_children" method from TopLevelVisitor also here
+    bool TraverseStmt(Stmt *S) {
+        if (skip_children > 0)
+            skip_children++;
+        if (!skip_children)
+            RecursiveASTVisitor<loopFunctionVisitor>::TraverseStmt(S);
+        if (skip_children > 0)
+            skip_children--;
+        return true;
+    }
+
+    /// implement the "skip_children" method from TopLevelVisitor also here
+    bool TraverseDecl(Decl *D) {
+        if (skip_children > 0)
+            skip_children++;
+        if (!skip_children)
+            RecursiveASTVisitor<loopFunctionVisitor>::TraverseDecl(D);
+        if (skip_children > 0)
+            skip_children--;
+        return true;
+    }
+
 
     bool VisitStmt(Stmt *s) {
 
@@ -187,6 +214,12 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
 
             if (vdecl->hasExternalStorage() || vdecl->hasGlobalStorage()) {
 
+                // hila loop global var - we don't need to do anything
+                if (handle_global_var_ref(e)) {
+                    skip_children = 1;
+                    return true;
+                }
+
                 if (got_lattice && vdecl->getNameAsString() == "lattice") {
                     // now found the "lattice" in "lattice.size( .. )", clear
                     got_lattice = false;
@@ -270,8 +303,17 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
             return;
         }
 
+        // and treat a global variable reference v.value()
+        if (handle_global_var_method_call(Call)) {
+            skip_children = 1;
+            return;
+        }
+
         // Get the declaration of the function
         FunctionDecl *D = (FunctionDecl *)llvm::dyn_cast<FunctionDecl>(decl);
+
+        // is it global.value() -expr?
+
 
         bool contains_rng = false;
         if (has_pragma(D, pragma_hila::CONTAINS_RNG)) {
@@ -297,7 +339,7 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
             loop_info.contains_random = true;
 
         if (ci.is_vectorizable) {
-            if (has_pragma(D,pragma_hila::NOVECTOR)) {
+            if (has_pragma(D, pragma_hila::NOVECTOR)) {
                 ci.is_vectorizable = false;
             } else {
                 ci.is_vectorizable = contains_novector(D->getBody());
@@ -368,7 +410,9 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
                 }
 
                 // Now will meet the variable "lattice" in traversal, do not throw error
-                got_lattice = true;
+                // got_lattice = true;
+                // Skip children leaves instead
+                skip_children = 1;
 
                 return true;
 
@@ -676,7 +720,6 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
 
 
             backend_handle_loop_function(ci);
-
         }
 
     } else if (ci.ctordecl != nullptr) {
@@ -717,7 +760,7 @@ bool TopLevelVisitor::loop_function_check(Decl *d) {
 
     if (CXXConstructorDecl *cd = dyn_cast<CXXConstructorDecl>(d)) {
 
-        // go to inherited constructor in parent 
+        // go to inherited constructor in parent
         if (cd->isInheritingConstructor()) {
             cd = cd->getInheritedConstructor().getConstructor();
         }

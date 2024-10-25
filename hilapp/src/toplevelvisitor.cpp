@@ -252,9 +252,12 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                 // Got constant -- interface changes in clang 12 or 13(!)
 #if defined(__clang_major__) && (__clang_major__ <= 11)
                 dirE->isIntegerConstantExpr(result, *Context);
-#else
+#elif defined(__clang_major__) && (__clang_major__ <= 15)
                 auto res = dirE->getIntegerConstantExpr(*Context);
                 result = res.getValue();
+#else
+                auto res = dirE->getIntegerConstantExpr(*Context);
+                result = res.value();
 #endif
 
                 // Op must be + or - --get the sign
@@ -891,9 +894,12 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
         llvm::APSInt result;
 #if defined(__clang_major__) && (__clang_major__ <= 11)
         DRE->isIntegerConstantExpr(result, *Context);
-#else
+#elif defined(__clang_major__) && (__clang_major__ <= 15)
         auto res = DRE->getIntegerConstantExpr(*Context);
         result = res.getValue();
+#else
+        auto res = DRE->getIntegerConstantExpr(*Context);
+        result = res.value();
 #endif
 
         // Value is fine
@@ -1253,6 +1259,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             if (isa<VarDecl>(DRE->getDecl())) {
                 // now it should be var ref non-field
 
+                // hila loop global var check
+                if (handle_global_var_ref(DRE)) {
+                    parsing_state.skip_children = 1;
+                    is_assignment = false;
+                    return true;
+                }
+
                 // check if it is raw ptr access, mark if so
                 bool raw = (loop_info.has_pragma_access &&
                             find_word(loop_info.pragma_access_args,
@@ -1587,7 +1600,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                 fip->dir_list.push_back(dp);
             }
         } // Direction
-    }     // p-loop
+    } // p-loop
 
     for (field_info &l : field_info_list) {
 
@@ -2014,16 +2027,25 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
     if (isa<CompoundStmt>(s))
         parsing_state.ast_depth = -1;
 
-    Expr *E = dyn_cast<Expr>(s);
-
     // new stuff: if there is field[coordinate], modify these to appropriate
     // functions
 
-    if (is_field_with_coordinate_stmt(s))
+    if (handle_field_with_coordinate_stmt(s))
         return true;
+
+
+    // Check also global var refs, modify (these are possibly used in kernels...)
+    if (auto *CE = dyn_cast<CallExpr>(s)) {
+        if (handle_global_var_method_call(CE)) {
+            parsing_state.skip_children = 1;
+            return true;
+        }
+    }
+
 
     //  Finally, if we get to a Field[Parity] -expression without a loop or assignment
     //  flag error
+    Expr *E = dyn_cast<Expr>(s);
 
     if (E && is_field_parity_expr(E)) {
         reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
@@ -2063,7 +2085,7 @@ bool TopLevelVisitor::handle_field_coordinate_expr(Expr *e) {
     return false;
 }
 
-bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
+bool TopLevelVisitor::handle_field_with_coordinate_stmt(Stmt *s) {
 
     // Check first if this is field[c] = ... -stmt
 
@@ -2355,18 +2377,18 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
             writeBuf->insert(ST, SSBefore.str(), true, true);
         }
     }
-    
-    
+
+
     // else if (!f->is()) {
 
     //     auto * def = f->getDefinition();
     //     prototype_vector.push_back({f, def, 0});
 
-    //     llvm::errs() << "*** GOT PROTO # " << prototype_vector.size() << ": " << f->getNameAsString();
-    //     SourceRange sr = f->getSourceRange();
-    //     unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
-    //     std::string name = srcMgr.getFilename(sr.getBegin()).str();
-    //     llvm::errs() << "   -- on line " << linenumber << "   file " << name << '\n';
+    //     llvm::errs() << "*** GOT PROTO # " << prototype_vector.size() << ": " <<
+    //     f->getNameAsString(); SourceRange sr = f->getSourceRange(); unsigned linenumber =
+    //     srcMgr.getSpellingLineNumber(sr.getBegin()); std::string name =
+    //     srcMgr.getFilename(sr.getBegin()).str(); llvm::errs() << "   -- on line " << linenumber
+    //     << "   file " << name << '\n';
 
 
     // }
@@ -2690,9 +2712,8 @@ bool TopLevelVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-/// Find the element typealias here -- could not work
-/// directly with VisitTypeAliasTemplateDecl below, a bug??
 /// Also find the 'ast dump' pragma
+/// And the declarations of hila::global<> -variables
 /////////////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::VisitDecl(Decl *D) {
@@ -2701,7 +2722,132 @@ bool TopLevelVisitor::VisitDecl(Decl *D) {
         ast_dump(D);
     }
 
-    // THis does nothing here
+    // handle hila::global declarations
+    handle_global_var_decl(D);
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// global var decls
+/////////////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
+
+    // Did we find hila::global ?
+    if (auto *VD = dyn_cast<VarDecl>(D)) {
+        std::string typ = VD->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+        if (typ.find("hila::global<") != std::string::npos) {
+
+            if (!VD->isFileVarDecl()) {
+                reportDiag(DiagnosticsEngine::Level::Error, D->getSourceRange().getBegin(),
+                           "hila::global<> -declarations are possible only in file scope");
+                return true;
+            }
+
+            if (target.kernelize) {
+                // now insert device __constant__ variable declaration
+
+                SourceRange sr = D->getSourceRange();
+                sr = get_real_range(sr);   // if there are macros...
+
+                auto dev_varname =
+                    generate_constant_var_name(VD->getQualifiedNameAsString(), false, "");
+
+                std::stringstream cdecl, vardecl;
+                cdecl << "\n// ===================== hilapp: global variable "
+                      << VD->getQualifiedNameAsString() << '\n';
+                cdecl << "// create unique type for specialization\n";
+
+                auto customtype = "TYPE" + dev_varname;
+
+                // create unique typedef
+                cdecl << "struct " << customtype << " {};\n";
+
+                cdecl << "__constant__ ";
+
+                vardecl << "\n// custom global declaration\n";
+
+                auto storageclass = VD->getStorageClass();
+                if (storageclass == StorageClass::SC_Extern) {
+                    cdecl << "extern ";
+                    vardecl << "extern ";
+                }
+                if (storageclass == StorageClass::SC_Static) {
+                    cdecl << "static ";
+                    vardecl << "static ";
+                }
+
+                int a = typ.find("<");
+                int b = typ.rfind(">");
+                if (b == std::string::npos) {
+                    llvm::errs()
+                        << "hilapp: error in global variable type scan, should never happen..\n";
+                    llvm::errs() << " on " << sr.printToString(srcMgr) << '\n';
+                    exit(1);
+                }
+
+                auto vartype = typ.substr(a + 1, b - a - 1);
+
+                cdecl << vartype << ' ' << dev_varname << ";\n";
+
+                // finally, create custom copy function - member specialization
+                cdecl << "\n// specialized copy_to_device() function\n";
+                cdecl << "template <>\n";
+                cdecl << "inline void hila::global<" << vartype << ", " << customtype
+                      << ">::copy_to_device() const {\n";
+                cdecl << "gpuMemcpyToSymbol(" << dev_varname << " , &(this->val), sizeof("
+                      << vartype << "), 0, gpuMemcpyHostToDevice);\n";
+                cdecl << "}\n\n";
+
+                // // and custom value function
+                // cdecl << "\n// specialized () operator\n";
+                // cdecl << "template <>\n";
+                // cdecl << "__device__ __host__ inline const " << vartype << "& hila::global<"
+                //       << vartype << ", " << customtype << ">::operator()() const {\n";
+                // cdecl << "#ifdef __GPU_DEVICE_COMPILE__\n";
+                // cdecl << "return " + dev_varname + ";\n";
+                // cdecl << "#else\n";
+                // cdecl << "return this->val;\n";
+                // cdecl << "#endif\n";
+                // cdecl << "}\n";
+
+                cdecl << "// ======================\n\n";
+
+                //  custom global var def
+
+                vardecl << "hila::global<" << vartype << ", " << customtype << "> "
+                        << VD->getNameAsString() << ";\n\n";
+
+
+                // get source buffer
+                srcBuf *sb = get_file_srcBuf(sr.getEnd());
+
+                // Find the range of the vardecl including the trailing ;
+                int endloc = sb->find_original(sr.getEnd(), ';');
+                int beginloc = sb->get_index(sr.getBegin());
+
+                if (!sb->is_edited(beginloc)) {
+                    sb->comment_range(beginloc, endloc);
+                }
+
+                // insert the new vardecl
+                sb->insert(beginloc, vardecl.str(), true, false);
+
+                // and insert the device var decl
+                SourceLocation sl;
+                if (global.namespace_level > 0) {
+                    // within namespace, insert before namespace definition
+                    sl = global.namespace_range.getBegin();
+                } else {
+                    sl = sr.getBegin();
+                }
+
+                sb->insert(sl, cdecl.str(), true, false);
+            }
+        }
+    }
+
     return true;
 }
 
@@ -2778,8 +2924,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             if (error) {
 
                 llvm::errs() << "hilapp internal error: confusion in finding end loc of class\n";
-                llvm::errs() << " on line " << srcMgr.getSpellingLineNumber(sl) << " file "
-                             << srcMgr.getFilename(f->getBeginLoc()) << '\n';
+                llvm::errs() << " on " << sl.printToString(srcMgr) << '\n';
                 exit(1);
             }
 

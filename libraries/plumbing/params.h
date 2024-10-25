@@ -146,14 +146,14 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
-/** @brief GPU_SYNCHRONIZE_TIMERS : if set and !=0 synchronize GPU on timer calls, in order to obtain 
- *  meaningful timer values
- * 
+/** @brief GPU_SYNCHRONIZE_TIMERS : if set and !=0 synchronize GPU on timer calls, in order to
+ * obtain meaningful timer values
+ *
  * @details Because GPU kernel launch is asynchronous process, the timers by default may not measure
- * the actual time used in GPU kernel execution. Defining GPU_SYNCHRONIZE_TIMERS inserts GPU synchronization calls
- * to timers.  This is off by default, because this may slow down GPU code. Turn on in order to measure more
- * accurately the time spent in different parts of the code.
- */ 
+ * the actual time used in GPU kernel execution. Defining GPU_SYNCHRONIZE_TIMERS inserts GPU
+ * synchronization calls to timers.  This is off by default, because this may slow down GPU code.
+ * Turn on in order to measure more accurately the time spent in different parts of the code.
+ */
 
 #ifdef GPU_SYNCHRONIZE_TIMERS
 #if GPU_SYNCHRONIZE_TIMERS == 0
@@ -161,6 +161,17 @@
 #endif
 #endif
 
+
+/** @brief GPU_GLOBAL_ARG_MAX_SIZE : in some __global__functions gives the max size of variable
+ * passed directly as an argument of the function call. Larger value sizes are passed with
+ * gpuMemcopy() and a pointer. CUDA < 12.1 limits the total parameter size to 4K, >= 12.1 it is 32K.
+ * We set the default to 2K. in HIP/rocm I have not found the size. Passing as an arg is faster, but
+ * size limit is relevant only for big "matrices"
+ */
+
+#ifndef GPU_GLOBAL_ARG_MAX_SIZE
+#define GPU_GLOBAL_ARG_MAX_SIZE 2048
+#endif
 
 #endif // CUDA || HIP
 

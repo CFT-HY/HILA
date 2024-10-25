@@ -173,10 +173,12 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     bool handle_special_loop_function(CallExpr *Call);
 
+    bool handle_global_var_decl(Decl *D);
+
     // check if stmt is lf[par] = ... -type
     // bool is_field_parity_assignment(Stmt *s);
 
-    bool is_field_with_coordinate_stmt(Stmt *s);
+    bool handle_field_with_coordinate_stmt(Stmt *s);
     void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc, char optype);
     void field_with_coordinate_read(Expr *E);
     bool handle_field_coordinate_expr(Expr *e);

@@ -17,3 +17,6 @@ docs/html/*
 !docs/html/images/
 latex/
 html/
+.vs/slnx.sqlite
+*config*
+*run_status
