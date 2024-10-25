@@ -80,18 +80,18 @@ void hila_reduce_float_setup(float *d, int n) {
 void hila_reduce_sums() {
 
     if (n_double > 0) {
-        double work[n_double];
+        std::vector<double> work(n_double);
 
         reduction_timer.start();
 
         if (allreduce_on) {
-            MPI_Allreduce((void *)double_reduction_buffer.data(), work, n_double,
+            MPI_Allreduce((void *)double_reduction_buffer.data(), (void *)work.data(), n_double,
                           MPI_DOUBLE, MPI_SUM, lattice.mpi_comm_lat);
             for (int i = 0; i < n_double; i++)
                 *(double_reduction_ptrs[i]) = work[i];
 
         } else {
-            MPI_Reduce((void *)double_reduction_buffer.data(), work, n_double,
+            MPI_Reduce((void *)double_reduction_buffer.data(), work.data(), n_double,
                        MPI_DOUBLE, MPI_SUM, 0, lattice.mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_double; i++)
@@ -104,18 +104,18 @@ void hila_reduce_sums() {
     }
 
     if (n_float > 0) {
-        float work[n_float];
+        std::vector<float> work(n_float);
 
         reduction_timer.start();
 
         if (allreduce_on) {
-            MPI_Allreduce((void *)float_reduction_buffer.data(), work, n_float,
+            MPI_Allreduce((void *)float_reduction_buffer.data(), work.data(), n_float,
                           MPI_FLOAT, MPI_SUM, lattice.mpi_comm_lat);
             for (int i = 0; i < n_float; i++)
                 *(float_reduction_ptrs[i]) = work[i];
 
         } else {
-            MPI_Reduce((void *)float_reduction_buffer.data(), work, n_float, MPI_FLOAT,
+            MPI_Reduce((void *)float_reduction_buffer.data(), work.data(), n_float, MPI_FLOAT,
                        MPI_SUM, 0, lattice.mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_float; i++)

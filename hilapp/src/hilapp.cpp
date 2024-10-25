@@ -824,11 +824,17 @@ class MyASTConsumer : public ASTConsumer {
     void HandleToplevelDecl(SourceManager &SM, Decl *dp, SourceLocation beginloc) {
 
         if (NamespaceDecl *NSD = dyn_cast<NamespaceDecl>(dp)) {
+            if (global.namespace_level == 0) {
+                global.namespace_range = NSD->getSourceRange();
+            }
+            global.namespace_level++;
+
             // it is a namespace decl, go in independent decls
             for (Decl *d : NSD->decls()) {
                 beginloc = getrealbeginloc(d);
                 HandleToplevelDecl(SM, d, beginloc);
             }
+            global.namespace_level--;
 
         } else {
             // Now not namespace decl

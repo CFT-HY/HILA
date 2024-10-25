@@ -396,6 +396,16 @@ __global__ void gpu_set_value_kernel(T *vector, T value, int elems) {
     }
 }
 
+// passing a ptr instead of value directly
+template <typename T>
+__global__ void gpu_set_value_kernel_ptr(T *vector, const T* valptr, int elems) {
+    int Index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (Index < elems) {
+        vector[Index] = *valptr;
+    }
+}
+
+
 // template <typename T>
 // __global__ void gpu_set_zero_kernel(T *vector, int elems) {
 //     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -415,7 +425,19 @@ inline void gpu_set_zero(T *vec, size_t N) {
 template <typename T>
 void gpu_set_value(T *vec, const T &val, size_t N) {
     int blocks = N / N_threads + 1;
-    gpu_set_value_kernel<<<blocks, N_threads>>>(vec, val, N);
+    if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE)
+        // small T size, pass as arg to __global__
+        gpu_set_value_kernel<<<blocks, N_threads>>>(vec, val, N);
+    else {
+        // bigger size, memcopy
+        T *buf;
+        gpuMalloc(&buf, sizeof(T));
+        gpuMemcpy(buf, (char *)&val, sizeof(T), gpuMemcpyHostToDevice);
+
+        // call the kernel to set correct indexes
+        gpu_set_value_kernel_ptr<<<blocks, N_threads>>>(vec, buf, N);
+        gpuFree(buf);
+    }
 }
 
 // template <typename T>

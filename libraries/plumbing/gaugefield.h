@@ -228,11 +228,11 @@ class GaugeField {
 };
 
 
-/// Implement std::swap for gauge fields
-namespace std {
+/// Implement hila::swap for gauge fields
+namespace hila {
 template <typename T>
 void swap(GaugeField<T> &A, GaugeField<T> &B) {
-    foralldir(d) std::swap(A[d], B[d]);
+    foralldir(d) hila::swap(A[d], B[d]);
 }
 } // namespace std
 

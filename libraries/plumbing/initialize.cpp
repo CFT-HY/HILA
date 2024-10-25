@@ -7,6 +7,7 @@ std::ostream hila::out(NULL);
 std::ostream hila::out0(NULL);
 std::ofstream hila::output_file;
 bool hila::about_to_finish = false;
+bool hila::is_initialized = false;
 bool hila::check_input = false;
 int hila::check_with_nodes;
 const char *hila::input_file;
@@ -81,6 +82,9 @@ void hila::initialize(int argc, char **argv) {
 
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);
+
+    // set the initialized flag
+    hila::is_initialized = true;
 
     // Default output file - we're happy with this unless partitions
     // or otherwise indicated

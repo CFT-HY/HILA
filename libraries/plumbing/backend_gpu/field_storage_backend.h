@@ -89,20 +89,31 @@ __global__ void set_element_kernel(field_storage<T> field, T value, unsigned i,
 }
 
 template <typename T>
+__global__ void set_element_kernel_ptr(field_storage<T> field, const T *buf, unsigned i,
+                                       const unsigned field_alloc_size) {
+    field.set(*buf, i, field_alloc_size);
+}
+
+
+template <typename T>
 template <typename A>
 void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct &lattice) {
-    char *d_buffer;
     T t_value = value;
 
-    // Allocate space and copy the buffer to the device
-    //   gpuMalloc(&(d_buffer), sizeof(T));
-    //   gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
+    if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE) {
+        // pass element directly as arg
+        set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice.field_alloc_size());
+    } else {
+        // This branch is used for large variables:
+        // allocate space and copy the buffer to the device
+        T *d_buffer;
+        gpuMalloc(&(d_buffer), sizeof(T));
+        gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
-    // call the kernel to set correct indexes
-    //   set_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice.field_alloc_size());
-    //   gpuFree(d_buffer);
-
-    set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice.field_alloc_size());
+        // call the kernel to set correct indexes
+        set_element_kernel_ptr<<<1, 1>>>(*this, d_buffer, i, lattice.field_alloc_size());
+        gpuFree(d_buffer);
+    }
 }
 
 /// A kernel that gathers elements
