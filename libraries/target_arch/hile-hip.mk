@@ -22,7 +22,7 @@ ROCM_PATH := /opt/rocm
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++20 -fno-rtti -O3 -xhip -fgpu-rdc --offload-arch=gfx90a 
+CXXFLAGS := -std=c++17 -fno-rtti -O3 -xhip -fgpu-rdc --offload-arch=gfx90a 
 CXXFLAGS += -D__HIP_PLATFORM_AMD__=1 -D__HIP_PLATFORM_HCC__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
