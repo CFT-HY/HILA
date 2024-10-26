@@ -238,6 +238,8 @@ class GeneralVisitor {
 
     bool is_loop_constant(Expr *e);
 
+    bool contains_field_ref(Expr *e);
+
     bool class_has_base_type(CXXRecordDecl *d);
 
     bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> *vi);

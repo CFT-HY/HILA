@@ -1301,6 +1301,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // llvm::errs() << "  It's array expr "
             //              << TheRewriter.getRewrittenText(E->getSourceRange()) <<
             //              "\n";
+
+            // If there's a field ref in base subscript return, let us handle it separately. Note: assign
+            // should remain valid (if exists)
+            if (contains_field_ref(find_base_expr(E))) {
+                return true;
+            }
+
             auto a = dyn_cast<ArraySubscriptExpr>(E);
 
             // At this point this should be an allowed expression?
@@ -2749,7 +2756,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 // now insert device __constant__ variable declaration
 
                 SourceRange sr = D->getSourceRange();
-                sr = get_real_range(sr);   // if there are macros...
+                sr = get_real_range(sr); // if there are macros...
 
                 auto dev_varname =
                     generate_constant_var_name(VD->getQualifiedNameAsString(), false, "");
@@ -2983,8 +2990,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
                            tap->getAsType().getAsString().c_str());
 
                 // try to move the insertion point - fails, TODO: more carefully!
-                // ip =
-                // getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
+                ip = getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
             }
         }
     }

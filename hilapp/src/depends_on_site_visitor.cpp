@@ -165,3 +165,18 @@ bool GeneralVisitor::is_loop_constant(Expr *e) {
     // if nothing else found, check if there's rng generator - if so, not loop_constant
     return !contains_random(e);
 }
+
+////////////////////////////////////////////////////////////////////////////////////
+/// Check whether the expression contains X or X method, i.e. ref to field var
+////////////////////////////////////////////////////////////////////////////////////
+
+bool GeneralVisitor::contains_field_ref(Expr *e) {
+
+    // Init checker with loop local variable trap - we do not care about dependent_var list
+    isSiteDependentChecker checker(*this, nullptr, true);
+
+    checker.TraverseStmt(e);
+    return (checker.found_X || checker.found_X_method);
+
+}
+
