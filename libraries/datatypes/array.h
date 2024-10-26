@@ -192,6 +192,7 @@ class Array {
      * @param j column index
      * @return T matrix element type
      */
+#pragma hila loop_function
     inline T e(const int i, const int j) const {
         return c[i * m + j];
     }
@@ -202,6 +203,7 @@ class Array {
 
     // declare single e here too in case we have a vector
     // (one size == 1)
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
@@ -221,6 +223,7 @@ class Array {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
 
+#pragma hila loop_function
     const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -236,6 +239,7 @@ class Array {
         return *reinterpret_cast<Vector<n, T> *>(this);
     }
 
+#pragma hila loop_function
     const Vector<n, T> &asVector() const {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<const Vector<n, T> *>(this);
@@ -246,6 +250,7 @@ class Array {
         return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
     }
 
+#pragma hila loop_function
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
@@ -784,7 +789,7 @@ inline auto operator-(const Array<n, m, A> &a, const Array<n, m, B> &b) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<hila::is_complex_or_arithmetic<S>::value, int> = 0>
 inline auto operator+(const Array<n, m, T> &a, const S b) {
-    Array<n,m, hila::type_plus<T,S>> res;
+    Array<n, m, hila::type_plus<T, S>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = a.c[i] + b;
     return res;
@@ -801,7 +806,7 @@ inline auto operator+(const S b, const Array<n, m, T> &a) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
 inline auto operator-(const Array<n, m, T> &a, const S b) {
-    Array<n,m, hila::type_minus<T,S>> res;
+    Array<n, m, hila::type_minus<T, S>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = a.c[i] - b;
     return res;
@@ -811,7 +816,7 @@ inline auto operator-(const Array<n, m, T> &a, const S b) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
 inline auto operator-(const S b, const Array<n, m, T> &a) {
-    Array<n,m, hila::type_minus<S,T>> res;
+    Array<n, m, hila::type_minus<S, T>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = b - a.c[i];
     return res;
@@ -909,7 +914,7 @@ inline auto operator*(const Array<n, m, A> &a, const Array<n, m, B> &b) {
  */
 template <int n, int m, typename A, typename B>
 inline auto operator/(const Array<n, m, A> &a, const Array<n, m, B> &b) {
-    Array<n,m,hila::type_div<A,B>> res;
+    Array<n, m, hila::type_div<A, B>> res;
     for (int i = 0; i < n; i++)
         for (int j = 0; j < m; j++)
             res.e(i, j) = a.e(i, j) / b.e(i, j);
@@ -921,7 +926,7 @@ inline auto operator/(const Array<n, m, A> &a, const Array<n, m, B> &b) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<hila::is_complex_or_arithmetic<S>::value, int> = 0>
 inline auto operator*(const Array<n, m, T> &a, const S b) {
-    Array<n,m, hila::type_mul<T,S>> res;
+    Array<n, m, hila::type_mul<T, S>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = a.c[i] * b;
     return res;
@@ -939,7 +944,7 @@ inline auto operator*(const S b, const Array<n, m, T> &a) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<hila::is_complex_or_arithmetic<S>::value, int> = 0>
 inline auto operator/(const Array<n, m, T> &a, const S b) {
-    Array<n,m, hila::type_div<T,S>> res;
+    Array<n, m, hila::type_div<T, S>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = a.c[i] / b;
     return res;
@@ -949,12 +954,11 @@ inline auto operator/(const Array<n, m, T> &a, const S b) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<hila::is_complex_or_arithmetic<S>::value, int> = 0>
 inline auto operator/(const S b, const Array<n, m, T> &a) {
-    Array<n,m, hila::type_div<T,S>> res;
+    Array<n, m, hila::type_div<T, S>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = b / a.c[i];
     return res;
 }
-
 
 
 /**

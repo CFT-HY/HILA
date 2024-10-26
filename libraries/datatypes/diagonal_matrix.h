@@ -68,7 +68,8 @@ class DiagonalMatrix {
      * @brief Element access - e(i) gives diagonal element i
      *
      */
-
+    
+    #pragma hila loop_function
     inline T e(const int i) const {
         return c[i];
     }
