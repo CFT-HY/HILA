@@ -110,8 +110,9 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 #if STOUTSTEPS > 0
 
     std::vector<GaugeField<group>> tUl(stout_nsteps + 1);
-
-    stout_smear(U, tUl, stoutc);
+    std::vector<VectorField<group>> tUKl(stout_nsteps);
+    std::vector<VectorField<group>> tstapl(stout_nsteps);
+    stout_smeark(U, tUl, tstapl, tUKl, stoutc);
 
     VectorField<Algebra<group>> tE;
 
@@ -149,7 +150,7 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 #if STOUTSTEPS > 0
 
     VectorField<Algebra<group>> KS;
-    stout_smear_force(tUl, tE, KS, stoutc);
+    stout_smeark_force(tUl, tstapl, tUKl, tE, KS, stoutc);
 
     foralldir(d1) {
         onsites(ALL) E[d1][X] += KS[d1][X];
