@@ -131,17 +131,18 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 #if STOUTSTEPS > 0
     sms_timer.start();
     std::vector<GaugeField<group>> tUl(stout_nsteps + 1);
+    std::vector<VectorField<group>> tstapl(stout_nsteps);
 
 #if STOUTMODE == 0
-    stout_smear(U, tUl, stoutc);
+    stout_smear(U, tUl, tstapl, stoutc);
 #elif STOUTMODE == 1
-    nch_stout_smear(U, tUl, stoutc);
+    nch_stout_smear(U, tUl, tstapl, stoutc);
 #elif STOUTMODE == 2
     std::vector<VectorField<int>> niterl(stout_nsteps);
-    nchm_stout_smear(U, tUl, niterl, stoutc);
+    nchm_stout_smear(U, tUl, tstapl, niterl, stoutc);
 #else
-    std::vector<GaugeField<group>> tUKl(stout_nsteps);
-    stout_smeark(U, tUl, tUKl, stoutc);
+    std::vector<VectorField<group>> tUKl(stout_nsteps);
+    stout_smeark(U, tUl, tstapl, tUKl, stoutc);
 #endif
 
     VectorField<Algebra<group>> tE;
@@ -183,13 +184,13 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
     VectorField<Algebra<group>> KS;
 
 #if STOUTMODE == 0
-    stout_smear_force(tUl, tE, KS, stoutc);
+    stout_smear_force(tUl, tstapl, tE, KS, stoutc);
 #elif STOUTMODE == 1
-    nch_stout_smear_force(tUl, tE, KS, stoutc);
+    nch_stout_smear_force(tUl, tstapl, tE, KS, stoutc);
 #elif STOUTMODE == 2
-    nchm_stout_smear_force(tUl, tE, KS, niterl, stoutc);
+    nchm_stout_smear_force(tUl, tstapl, tE, KS, niterl, stoutc);
 #else
-    stout_smeark_force(tUl, tUKl, tE, KS, stoutc);
+    stout_smeark_force(tUl, tstapl, tUKl, tE, KS, stoutc);
 #endif
 
     foralldir(d1) {

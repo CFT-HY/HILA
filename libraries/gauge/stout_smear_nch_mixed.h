@@ -50,67 +50,6 @@ void nchm_staplesums(const GaugeField<T> &U, out_only GaugeField<T> &staples) {
     }
 }
 
-/**
- * @brief Compute staples and staple sums around all links
- * @details Compute staples and their sums around all positively oriented (i.e.
- * corresponding plaquettes are obtained by multiplying the staple matrices by
- * their corresponding positively oriented missing link variables)
-
- * @tparam T Matrix element type
- * @tparam nstap number of staples around each link
- * @param U input gauge field of type T
- * @param S array of nstap vector/gauge fields of type T
- * @param Ssum vector/gauge field of type T, containing the staple sums
- * @return void
- */
-template <typename T, const int nstap = 2 * (NDIM - 1)>
-void nchm_get_stout_staples(const GaugeField<T> &U, VectorField<T>(out_only &S)[nstap],
-                         out_only VectorField<T> &Ssum) {
-    Field<T> tF1, lw1;
-    foralldir(d1) {
-        foralldir(d2) if (d2 != d1) {
-            U[d2].start_gather(d1, ALL);
-        }
-    }
-    int l, rl, k, rk;
-    l = 0;
-    foralldir(d1) {
-        k = 0;
-        foralldir(d2) if (d2 != d1) {
-            onsites(ALL) {
-                // tF1[X] = (U[d1][X] * U[d2][X + d1]).dagger();
-                mult_aa(U[d1][X], U[d2][X + d1], tF1[X]);
-                // lw1[X] = tF1[X] * U[d2][X];
-                mult(tF1[X], U[d2][X], lw1[X]);
-            }
-
-            lw1.start_gather(-d2, ALL);
-            if(d1<d2) {
-                rl = l;
-            } else {
-                rl = l - 1;
-            }
-            onsites(ALL) {
-                // S[rl][d2][X] = U[d1][X + d2] * tF1[X];
-                mult(U[d1][X + d2], tF1[X], S[rl][d2][X]);
-            }
-            rk = nstap - 1 - k;
-            onsites(ALL) {
-                S[rk][d1][X] = lw1[X - d2];
-            }
-            ++k;
-        }
-        ++l;
-    }
-    foralldir(d1) {
-        onsites(ALL) Ssum[d1][X] = S[0][d1][X];
-        for (k = 1; k < nstap; ++k) {
-            onsites(ALL) Ssum[d1][X] += S[k][d1][X];
-        }
-    }
-}
-
-
 template <typename T, typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, out_only VectorField<int> &niter,
                   atype coeff) {
@@ -124,13 +63,28 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, ou
 }
 
 template <typename T, typename atype = hila::arithmetic_type<T>>
+void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout,
+                       out_only VectorField<T> &stap, out_only VectorField<int> &niter,
+                       atype coeff) {
+    nchm_staplesums(U, stap);
+    foralldir(d) {
+        onsites(ALL) {
+            stout[d][X] = chexp((U[d][X] * stap[d][X]).project_to_algebra_scaled(-coeff).expand(),
+                                niter[d][X]) *
+                          U[d][X];
+        }
+    }
+}
+
+template <typename T, typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear(const GaugeField<T> &U, out_only std::vector<GaugeField<T>> &stoutlist,
-                 out_only std::vector<VectorField<int>> &niterlist, atype coeff) {
+                      out_only std::vector<GaugeField<T>> &staplist,
+                      out_only std::vector<VectorField<int>> &niterlist, atype coeff) {
     // performs nst stout smearing steps on the gauge field U and stores the gague field obtained
     // after the i-th smearing step in stoutlist[i]
     stoutlist[0] = U; // original field
     for (int i = 1; i < stoutlist.size(); ++i) {
-        nchm_stout_smear1(stoutlist[i - 1], stoutlist[i], niterlist[i - 1], coeff);
+        nchm_stout_smear1(stoutlist[i - 1], stoutlist[i], staplist[i - 1], niterlist[i - 1], coeff);
     }
 }
 
@@ -145,6 +99,17 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, at
     }
 }
 
+template <typename T, typename atype = hila::arithmetic_type<T>>
+void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout,
+                       out_only GaugeField<T> &stap, atype coeff) {
+    nchm_staplesums(U, stap);
+    foralldir(d) {
+        onsites(ALL) {
+            stout[d][X] =
+                chexp((U[d][X] * stap[d][X]).project_to_algebra_scaled(-coeff).expand()) * U[d][X];
+        }
+    }
+}
 
 template <typename T, typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear(const GaugeField<T> &U, GaugeField<T> &stout, atype coeff, int iter) {
@@ -169,27 +134,26 @@ void nchm_stout_smear(const GaugeField<T> &U, GaugeField<T> &stout, atype coeff,
 template <typename T, int N = T::rows(), int NSTP = 2 * (NDIM - 1),
           typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear_force(const std::vector<GaugeField<T>> &stoutlist,
-                           const VectorField<Algebra<T>> &K, out_only VectorField<Algebra<T>> &KS,
-                           std::vector<VectorField<int>> &niterlist, atype coeff) {
+                            const std::vector<VectorField<T>> &staplist,
+                            const VectorField<Algebra<T>> &K, out_only VectorField<Algebra<T>> &KS,
+                            std::vector<VectorField<int>> &niterlist, atype coeff) {
     // uses the list stoutlist[] of smeared gauge fields to compute the pullback of the
     // algebra-valued force field K under the smearing and returns the force acting on the unsmeared
     // link variables as algebra-valued field KS
     // Note: our definition of the force field is different from the one used in
     // [arXiv:hep-lat/0311018v1], in order to match the force field representation used by our HMC
     // implementation.
-    VectorField<T> stapl[NSTP];
-    //Field<T> staps;
-    VectorField<T> staps;
     VectorField<T> K1;
+    Field<T> K21, K22, K23, K24;
 
     foralldir(d1) onsites(ALL) KS[d1][X] = K[d1][X];
 
     for (int i = stoutlist.size() - 2; i >= 0; --i) {
         const GaugeField<T> &U0 = stoutlist[i + 1];
         const GaugeField<T> &U = stoutlist[i];
+        const VectorField<T> &staps = staplist[i];
         const VectorField<int> &niter = niterlist[i];
 
-        nchm_get_stout_staples(U, stapl, staps);
         foralldir(d1) {
             //get_stout_staples(U, d1, stapl, staps);
             onsites(ALL) {
@@ -220,56 +184,33 @@ void nchm_stout_smear_force(const std::vector<GaugeField<T>> &stoutlist,
 
                 // multiply K1[d1] by U[d1]:
                 K1[d1][X] *= U[d1][X];
-                // (the latter is done so that the parallel transport of
-                // U[d1][X] * stapl[][d1][X] * K1[d1][X] in negative d1-direction, required
-                // in the next section, can be computed simply as stapl[][d1][X-d1] * K1[d1][X-d1]
-            }
-
-            // multiply all the stapl[][d1] by K1[d1] and start sending the resulting matrices
-            // to the neighboring sites in negative d1-direction:
-            // (this is done in the same order in which they will be used below)
-            int istp = 0;
-            int istn;
-            foralldir(d2) if (d2 != d1) {
-                onsites(ALL) stapl[istp][d1][X] *= K1[d1][X];
-                stapl[istp][d1].start_gather(-d1, ALL);
-                istn = NSTP - 1 - istp;
-                onsites(ALL) stapl[istn][d1][X] *= K1[d1][X];
-                stapl[istn][d1].start_gather(-d1, ALL);
-                ++istp;
             }
         }
 
-        foralldir(d1) {
-            // compute the equivalent of the terms in the curly bracket of eq.(75) in
-            // [arXiv:hep-lat/0311018v1]:
-            int istp = 0;
-            int istn;
-            foralldir(d2) if (d2 != d1) {
-                // term from d1-d2-plaquette for positive d2-direction:
-                onsites(ALL) {
-                    //staps[X] = stapl[istp][d1][X - d1];
-                    staps[d1][X] = stapl[istp][d1][X - d1];
-                }
-                // define for each modified stout staple matrix the correspondin path of gauge
-                // links:
-                std::vector<Direction> pathp = {d2, -d1, -d2};
-                //get_wloop_force_from_wl_add(U, pathp, staps, 1.0, KS);
-                get_wloop_force_from_wl_add(U, pathp, staps[d1], 1.0, KS);
+        // equivalent of remaining terms of eq.(75) in [arXiv:hep-lat/0311018v1]:
+        foralldir(d1) foralldir(d2) if (d1 != d2) {
+            onsites(ALL) {
+                T U2, U4, tM1;
 
-                // term from d1-d2-plaquette for negative d2-direction:
-                istn = NSTP - 1 - istp;
-                onsites(ALL) {
-                    //staps[X] = stapl[istn][d1][X - d1];
-                    staps[d1][X] = stapl[istn][d1][X - d1];
-                }
-                // define for each modified stout staple matrix the correspondin path of gauge
-                // links:
-                std::vector<Direction> pathn = {-d2, -d1, d2};
-                //get_wloop_force_from_wl_add(U, pathn, staps, 1.0, KS);
-                get_wloop_force_from_wl_add(U, pathn, staps[d1], 1.0, KS);
+                U2 = U[d2][X + d1];
+                U4 = U[d2][X].dagger();
 
-                ++istp;
+                tM1 = U2 * U[d1][X + d2].dagger();
+                K21[X] = U4 * K1[d1][X] * tM1;
+                tM1 *= U4;
+                K22[X] = tM1 * K1[d1][X];
+                K24[X] = K1[d1][X] * tM1;
+
+                tM1 = U2 * K1[d1][X + d2].dagger() * U4;
+                K23[X] = U[d1][X] * tM1;
+                K22[X] += tM1 * U[d1][X];
+
+                K24[X] += K23[X];
+            }
+
+            onsites(ALL) {
+                KS[d2][X] -= (K22[X - d1] - K24[X]).project_to_algebra();
+                KS[d1][X] -= (K23[X] - K21[X - d2]).project_to_algebra();
             }
         }
     }
