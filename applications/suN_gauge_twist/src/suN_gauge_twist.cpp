@@ -8,18 +8,21 @@
 #include <fftw3.h>
 #include <numeric>
 
+
 // local includes
 #include "checkpoint.h"
 #include "parameters.h"
 #include "twist_specific_methods.h"
+#include "polyakov_surface.h"
+#include "utility.h"
 
-/**
- * @brief Helper function to get valid z-coordinate index
- *
- * @param z
- * @return int
- */
-int z_ind(int z) { return (z + lattice.size(e_z)) % lattice.size(e_z); }
+// /**
+//  * @brief Helper function to get valid z-coordinate index
+//  *
+//  * @param z
+//  * @return int
+//  */
+// int z_ind(int z) { return (z + lattice.size(e_z)) % lattice.size(e_z); }
 
 /**
  * @brief Measures Polyakov lines and Wilson action
@@ -50,6 +53,8 @@ void measure_plaq(const GaugeField<group> &U, const parameters &p) {
   for (int i = 0; i < plaq.size(); i++) {
     hila::out0 << plaq[i] << " ";
   }
+  //hila::out0 << plaq[plaq.size()-1] << " ";
+  //hila::out0 << plaq << " ";
   hila::out0 << "\n";
 }
 
@@ -57,18 +62,26 @@ template <typename group>
 void measure_poly(const GaugeField<group> &U, const parameters &p) {
   static bool first = true;
   auto poly = measure_polyakov_twist(U);
+  // if (first) {
+  //   hila::out0 << "polyakov: ";
+  //   for (int i = 0; i < poly.size() - 1; i++)
+  //     hila::out0 << i << ", ";
+  //   hila::out0 << "sum \n";
+  //   first = false;
+  // }
+  // hila::out0 << "polyakov: ";
+  // for (int i = 0; i < poly.size(); i++) {
+  //   hila::out0 << poly[i] << ", ";
+  // }
   if (first) {
-    hila::out0 << "polyakov: ";
-    for (int i = 0; i < poly.size() - 1; i++)
-      hila::out0 << i << ", ";
-    hila::out0 << "sum \n";
+    print_formatted_numbers(poly,"polyakov",true,true);
+    print_formatted_numbers(poly,"polyakov",false,true);
     first = false;
+  } else {
+    print_formatted_numbers(poly,"polyakov",false,true);
   }
-  hila::out0 << "polyakov: ";
-  for (int i = 0; i < poly.size(); i++) {
-    hila::out0 << poly[i] << ", ";
-  }
-  hila::out0 << "\n";
+  //hila::out0 << poly[poly.size()-1] << ", ";
+  //hila::out0 << poly << ", ";
 }
 
 /**
@@ -201,6 +214,27 @@ int main(int argc, char **argv) {
   // measure surface properties and print "profile"
   p.config_file = par.get("config name");
   p.twist_coeff = par.get("twist_coeff");
+  if (par.get_item("updates/profile meas", {"off", "%i"}) == 1) {
+      p.n_profile = par.get();
+  } else {
+      p.n_profile = 0;
+  }
+  if (p.n_profile) {
+        p.n_smear = par.get("smearing steps");
+        p.smear_coeff = par.get("smear coefficient");
+        p.z_smear = par.get("z smearing steps");
+        p.n_surface = par.get("traj/surface");
+        p.n_dump_polyakov = par.get("traj/polyakov dump");
+
+        if (p.n_smear.size() != p.z_smear.size()) {
+            hila::out0 << "Error in input file: number of values in 'smearing steps' != 'z "
+                          "smearing steps'\n";
+            hila::terminate(0);
+        }
+
+    } else {
+        p.n_dump_polyakov = 0;
+    }
 
   par.close(); // file is closed also when par goes out of scope
 
@@ -210,9 +244,13 @@ int main(int argc, char **argv) {
 
   // Alloc gauge field
   GaugeField<mygroup> U;
-
   U = 1;
 
+  // onsites(ALL) {
+  //   if (X.t() == 0) {
+  //     U[e_t][X] = expi(4.0/3.0*M_PI);
+  //   }
+  // }
   // use negative trajectory for thermal
   int start_traj = -p.n_thermal;
 
@@ -245,9 +283,11 @@ int main(int argc, char **argv) {
     if (trajectory >= 0) {
       measure_timer.start();
 
-      measure_plaq(U, p);
+      //measure_plaq(U, p);
 
       measure_poly(U, p);
+
+      measure_polyakov_surface(U, p, trajectory);
 
       // hila::out0 << "Measure_end " << trajectory << std::endl;
 
@@ -259,6 +299,6 @@ int main(int argc, char **argv) {
     }
   }
   hila::out0 << "MEASURE end\n";
-
+  hila::out0 << expi(4.0/3.0*M_PI) << std::endl;
   hila::finishrun();
 }
