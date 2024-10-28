@@ -62,8 +62,6 @@ extern llvm::cl::opt<bool> dump_ast;
 extern llvm::cl::opt<bool> no_include;
 extern llvm::cl::opt<std::string> dummy_def;
 extern llvm::cl::opt<std::string> dummy_incl;
-extern llvm::cl::opt<bool> function_spec_no_inline;
-extern llvm::cl::opt<bool> method_spec_no_inline;
 extern llvm::cl::opt<bool> funcinfo;
 extern llvm::cl::opt<bool> no_output;
 extern llvm::cl::opt<bool> syntax_only;
