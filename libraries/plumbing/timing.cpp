@@ -104,13 +104,13 @@ void timer::report(bool print_not_timed) {
         double ttime = gettime();
         if (count > 0 && !is_error) {
             if (t_total / count > 0.1) {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f s  %8.4f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f s  %9.6f\n", label.c_str(),
                               t_total, (long)count, t_total / count, t_total / ttime);
             } else if (t_total / count > 1e-4) {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f ms %8.4f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f ms %9.6f\n", label.c_str(),
                               t_total, (long)count, 1e3 * t_total / count, t_total / ttime);
             } else {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f μs %8.4f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f μs %9.6f\n", label.c_str(),
                               t_total, (long)count, 1e6 * t_total / count, t_total / ttime);
             }
             hila::out << line;
@@ -138,17 +138,17 @@ void report_timers() {
 #endif
 #endif
 
-            hila::out << "TIMER REPORT:             total(sec)          calls     "
+            hila::out << "TIMER REPORT:             total(sec)          calls       "
                          "time/call  fraction\n";
             hila::out << "------------------------------------------------------------"
-                         "---------------\n";
+                         "-----------------\n";
 
             for (auto tp : timer_list) {
                 tp->report();
             }
 
             hila::out << "------------------------------------------------------------"
-                         "---------------\n";
+                         "-----------------\n";
         } else {
             hila::out << "No timers defined\n";
         }

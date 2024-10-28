@@ -3059,6 +3059,7 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
     Matrix_t<n, m, T, MT> kmats = 0, kh = 0; // matrices required for derivative terms
 
     // set initial values for the n entries in al[] and pal[], as well as for kmats and kh:
+    // (note: since kmats and kh are symmetric, we operate only on their upper triangles)
     for(i = 0; i < n; ++i) {
         pal[i] = 0;
         al[i] = wpf;
@@ -3112,6 +3113,7 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
         }
 
         // add new terms to kmats and update kh :
+        // (note: since kmats and kh are symmetric, we operate only on their upper triangles)
         for (i = n - 1; i >= 0; --i) {
             cho = kh.e(i, n - 1) * rs;
             for (k = n - 1; k > i; --k) {
@@ -3134,13 +3136,15 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
     }
 
     // form output matrix of derivative matrices domat[ic1][ic2] = dexp(mat)/dmat^{ic2}_{ic1} :
-    // ( i.e. domat[ic1][ic2].e(k, l) =  dexp(mat)^k_l/dmat^{ic2}_{ic1} 
+    // ( i.e. domat[ic1][ic2].e(k, l) =  dexp(mat)^k_l/dmat^{ic2}_{ic1}
     //                                = \sum_{i,j} kmats_{i,j} (mat^i)^{ic1}_l (mat^j)^k_{ic2} )
     // (note: in principle one could use symmetry domat[ic1][ic2].e(k, l) = domat[l][k].e(ic2, ic1),
     //  which would amount to  (i, j) <--> (j, i) with i = ic1 + n * ic2;  j = l + n * k; )
-    // i=0, j=0:
+    
+    // i=0: (treat i=0 case separately, since pl[0]=id is not used to avoid matrix-mult. by id)
+    // j=0: (treat j=0 case separately, since pl[0]=id is not used)
     kh = kmats.e(0, 0);
-    // i=0, j>0:
+    // j>0:
     for (j = 1; j < n; ++j) {
         mult_add(kmats.e(0, j), pl[j], kh);
     }
@@ -3156,9 +3160,9 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
     }    
     // i>0:
     for (i = 1; i < n; ++i) {
-        // j=0:
+        // j=0: (treat j=0 case separately, since pl[0]=id is not used)
         kh = kmats.e(0, i);
-        // j>0:
+        // j>0: (note: kmats is symmetric; only have upper triangle set)
         for (j = 1; j < i; ++j) {
             mult_add(kmats.e(j, i), pl[j], kh);
         }
@@ -3241,6 +3245,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     Matrix_t<n, m, T, MT> kmats = 0, kh = 0; // matrices required for derivative terms
 
     // set initial values for the n entries in al[] and pal[], as well as for kmats and kh:
+    // (note: since kmats and kh are symmetric, we operate only on their upper triangles)
     for (i = 0; i < n; ++i) {
         pal[i] = 0;
         al[i] = wpf;
@@ -3294,6 +3299,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
         }
 
         // add new terms to kmats and update kh :
+        // (note: since kmats and kh are symmetric, we operate only on their upper triangles)
         for (i = n-1; i >= 0; --i) {
             cho = kh.e(i, n - 1) * rs;
             for (k = n - 1; k > i; --k) {
@@ -3308,9 +3314,6 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
             kmats.e(i, i) += wpf * kh.e(i, i);
         }
     }
-    // if(hila::myrank()==0) {
-    //     std::cout<<"chexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
-    // }
 
     // from matrix texp = exp(mat):
     texp = al[0];
@@ -3323,20 +3326,24 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     // tomat = texp.dagger() * mmat;
     mult(texp.dagger(), mmat, tomat);
 
+    // computing domat[ic1][ic2] = tr(exp(mat).dagger() * mmat * dexp(mat)/dU^{ic2}_{ic1})
+    // from kmats[][] and the matrix powers of mat[][]:
+    // domat = \sum_{i=0}^{n-1} pl[i] * tomat * \sum_{j=0}^{n-1} kmats[i][j] * pl[j]
 
-    // computing tr(exp(mat).dagger() * mmat * dexp(mat)/dU^{ic1}_{ic2}) :
-    // i=0:
-    // j=0:
+    // i=0: (treat i=0 case separately, since pl[0]=id is not used to avoid matrix-mult. by id)
+    // j=0: (treat j=0 case separately, since pl[0]=id is not used)
     kh = kmats.e(0, 0);
+    // j>0:
     for (j = 1; j < n; ++j) {
         mult_add(kmats.e(0, j), pl[j], kh);
     }
+
     mult(tomat, kh, domat);
     // i>0:
     for (i = 1; i < n; ++i) {
-        // j=0:
+        // j=0: (treat j=0 case separately, since pl[0]=id is not used)
         kh = kmats.e(0, i);
-        // j>0:
+        // j>0: (note: kmats is symmetric; only have upper triangle set)
         for (j = 1; j < i; ++j) {
             mult_add(kmats.e(j, i), pl[j], kh);
         }
@@ -3413,6 +3420,7 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
     kmats = 0;
 
     // set initial values for the n entries in al[] and pal[], as well as for kmats and kh:
+    // (note: since kmats and kh are symmetric, we operate only on their upper triangles)
     for (i = 0; i < n; ++i) {
         pal[i] = 0;
         al[i] = wpf;
@@ -3468,6 +3476,7 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
         }
 
         // add new terms to kmats and update kh :
+        // (note: since kmats and kh are symmetric, we operate only on their upper triangles)
         for (i = n - 1; i >= 0; --i) {
             cho = kh.e(i, n - 1) * rs;
             for (k = n - 1; k > i; --k) {
@@ -3541,20 +3550,24 @@ inline void mult_chexpk_fast(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n,
     // tomat = texp.dagger() * mmat;
     mult(texp.dagger(), mmat, tomat);
 
-    // computing tr(exp(mat).dagger() * mmat * dexp(mat)/dU^{ic1}_{ic2}) :
-    // i=0:
-    // j=0:
+    // computing domat[ic1][ic2] = tr(exp(mat).dagger() * mmat * dexp(mat)/dU^{ic2}_{ic1})
+    // from kmats[][] and the matrix powers of mat[][]:
+    // domat = \sum_{i=0}^{n-1} pl[i] * tomat * \sum_{j=0}^{n-1} kmats[i][j] * pl[j]
+
+    // i=0: (treat i=0 case separately, since pl[0]=id is not used to avoid matrix-mult. by id)
+    // j=0: (treat j=0 case separately, since pl[0]=id is not used)
     kh = kmats.e(0, 0);
+    // j>0:
     for (j = 1; j < n; ++j) {
         mult_add(kmats.e(0, j), pl[j], kh);
     }
-    mult(tomat, kh, domat);
 
+    mult(tomat, kh, domat);
     // i>0:
     for (i = 1; i < n; ++i) {
-        // j=0:
+        // j=0: (treat j=0 case separately, since pl[0]=id is not used)
         kh = kmats.e(0, i);
-        // j>0:
+        // j>0: (note: kmats is symmetric; only have upper triangle set)
         for (j = 1; j < i; ++j) {
             mult_add(kmats.e(j, i), pl[j], kh);
         }
