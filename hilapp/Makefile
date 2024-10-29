@@ -215,8 +215,7 @@ HEADERS = \
   $(SRCDIR)/toplevelvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
-  $(SRCDIR)/optionsparser.h \
-  $(SRCDIR)/specialization_db.h
+  $(SRCDIR)/optionsparser.h
 
 
 OBJECTS = \
@@ -243,7 +242,6 @@ OBJECTS = \
   $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/sourceloc_utils.o \
-  $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
 
 

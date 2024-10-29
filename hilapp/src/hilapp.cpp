@@ -16,7 +16,6 @@
 #include "optionsparser.h"
 #include "stringops.h"
 #include "toplevelvisitor.h"
-#include "specialization_db.h"
 
 // definitions for global variables
 // lots of global state, which we do not bother passing around in arguments

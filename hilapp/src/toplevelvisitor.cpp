@@ -1,7 +1,7 @@
 #include "stringops.h"
 #include "hilapp.h"
 #include "toplevelvisitor.h"
-#include "specialization_db.h"
+
 #include <sstream>
 #include <iostream>
 #include <string>
