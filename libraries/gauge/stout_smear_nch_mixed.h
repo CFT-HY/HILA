@@ -51,12 +51,12 @@ void nchm_staplesums(const GaugeField<T> &U, out_only GaugeField<T> &staples) {
 }
 
 template <typename T, typename atype = hila::arithmetic_type<T>>
-void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, out_only VectorField<int> &niter,
-                  atype coeff) {
+void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout,
+                       out_only std::array<Field<int>, NDIM> &niter, atype coeff) {
     nchm_staplesums(U, stout);
     foralldir(d) {
         onsites(ALL) {
-            stout[d][X] = chexp((U[d][X] * stout[d][X]).project_to_algebra_scaled(-coeff).expand(),
+            stout[d][X] = altexp((U[d][X] * stout[d][X]).project_to_algebra_scaled(-coeff).expand(),
                                 niter[d][X]) * U[d][X];
         }
     }
@@ -64,13 +64,13 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, ou
 
 template <typename T, typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout,
-                       out_only VectorField<T> &stap, out_only VectorField<int> &niter,
-                       atype coeff) {
+                       out_only VectorField<T> &stap,
+                       out_only std::array<Field<int>, NDIM> &niter, atype coeff) {
     nchm_staplesums(U, stap);
     foralldir(d) {
         onsites(ALL) {
-            stout[d][X] = chexp((U[d][X] * stap[d][X]).project_to_algebra_scaled(-coeff).expand(),
-                                niter[d][X]) *
+            stout[d][X] = altexp((U[d][X] * stap[d][X]).project_to_algebra_scaled(-coeff).expand(),
+                              niter[d][X]) *
                           U[d][X];
         }
     }
@@ -79,7 +79,7 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout,
 template <typename T, typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear(const GaugeField<T> &U, out_only std::vector<GaugeField<T>> &stoutlist,
                       out_only std::vector<GaugeField<T>> &staplist,
-                      out_only std::vector<VectorField<int>> &niterlist, atype coeff) {
+                      out_only std::vector<std::array<Field<int>, NDIM>> &niterlist, atype coeff) {
     // performs nst stout smearing steps on the gauge field U and stores the gague field obtained
     // after the i-th smearing step in stoutlist[i]
     stoutlist[0] = U; // original field
@@ -94,7 +94,8 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout, at
     foralldir(d) {
         onsites(ALL) {
             stout[d][X] =
-                chexp((U[d][X] * stout[d][X]).project_to_algebra_scaled(-coeff).expand()) * U[d][X];
+                altexp((U[d][X] * stout[d][X]).project_to_algebra_scaled(-coeff).expand()) *
+                U[d][X];
         }
     }
 }
@@ -106,7 +107,7 @@ void nchm_stout_smear1(const GaugeField<T> &U, out_only GaugeField<T> &stout,
     foralldir(d) {
         onsites(ALL) {
             stout[d][X] =
-                chexp((U[d][X] * stap[d][X]).project_to_algebra_scaled(-coeff).expand()) * U[d][X];
+                altexp((U[d][X] * stap[d][X]).project_to_algebra_scaled(-coeff).expand()) * U[d][X];
         }
     }
 }
@@ -130,13 +131,34 @@ void nchm_stout_smear(const GaugeField<T> &U, GaugeField<T> &stout, atype coeff,
     }
 }
 
+template <typename T, typename atype = hila::arithmetic_type<T>>
+void nchm_stout_smear(const GaugeField<T> &U, GaugeField<T> &stout,
+                      std::vector<std::array<Field<int>, NDIM>> &niterlist, atype coeff) {
+    GaugeField<T> tmp;
+    int iter = niterlist.size();
+    if (iter % 2 == 0) {
+        stout = U;
+        for (int i = 0; i < iter / 2; ++i) {
+            nchm_stout_smear1(stout, tmp, niterlist[2 * i], coeff);
+            nchm_stout_smear1(tmp, stout, niterlist[2 * i + 1], coeff);
+        }
+    } else {
+        tmp = U;
+        for (int i = 0; i < iter / 2; ++i) {
+            nchm_stout_smear1(tmp, stout, niterlist[2 * i], coeff);
+            nchm_stout_smear1(stout, tmp, niterlist[2 * i + 1], coeff);
+        }
+        nchm_stout_smear1(tmp, stout, niterlist[iter - 1], coeff);
+    }
+}
+
 
 template <typename T, int N = T::rows(), int NSTP = 2 * (NDIM - 1),
           typename atype = hila::arithmetic_type<T>>
 void nchm_stout_smear_force(const std::vector<GaugeField<T>> &stoutlist,
                             const std::vector<VectorField<T>> &staplist,
                             const VectorField<Algebra<T>> &K, out_only VectorField<Algebra<T>> &KS,
-                            std::vector<VectorField<int>> &niterlist, atype coeff) {
+                            std::vector<std::array<Field<int>, NDIM>> &niterlist, atype coeff) {
     // uses the list stoutlist[] of smeared gauge fields to compute the pullback of the
     // algebra-valued force field K under the smearing and returns the force acting on the unsmeared
     // link variables as algebra-valued field KS
@@ -152,7 +174,7 @@ void nchm_stout_smear_force(const std::vector<GaugeField<T>> &stoutlist,
         const GaugeField<T> &U0 = stoutlist[i + 1];
         const GaugeField<T> &U = stoutlist[i];
         const VectorField<T> &staps = staplist[i];
-        const VectorField<int> &niter = niterlist[i];
+        const std::array<Field<int>, NDIM> &niter = niterlist[i];
 
         foralldir(d1) {
             //get_stout_staples(U, d1, stapl, staps);

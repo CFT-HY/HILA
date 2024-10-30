@@ -2577,6 +2577,39 @@ inline void mult_sub(const S &a, const Mt1 &b, Mt2 &res) {
     }
 }
 
+/**
+ * @brief compute product of two matrices and add result to existing matrix
+ *
+ * @tparam Mt1, Mt2, Mt3 Matrix types
+ * @param a Left Matrix of type Mt1
+ * @param b Right Matrix of type Mt2
+ * @param c Matrix of type Mt3 to which result gets written
+ * @return void
+ */
+template <typename Mt1, typename Mt2, typename Mt3, typename atype,
+          std::enable_if_t<Mt1::is_matrix() && Mt2::is_matrix() && Mt3::is_matrix(), int> = 0>
+inline void mult_add_scaled_and_get_norm(const Mt1 &a, const Mt2 &b, atype scalef, Mt3 &res, atype &resnorm) {
+    static_assert(Mt1::columns() == Mt2::rows() && Mt1::rows() == Mt3::rows() &&
+                      Mt2::columns() == Mt3::columns(),
+                  "mult_add(a,b,c): matrix sizes are not compatible");
+    constexpr int n = Mt1::rows();
+    constexpr int m = Mt2::columns();
+    constexpr int l = Mt2::rows();
+    int i, j, k;
+    resnorm = 0.0;
+    hila::arithmetic_type<Mt3> tres;
+    for (i = 0; i < n; ++i) {
+        for (j = 0; j < m; ++j) {
+            tres = a.e(i, 0) * b.e(0, j);
+            for (k = 1; k < l; ++k) {
+                tres += a.e(i, k) * b.e(k, j);
+            }
+            res.e(i, j) += scalef * tres;
+            resnorm += ::squarenorm(res.e(i, j));
+        }
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////
 
 
@@ -2795,6 +2828,70 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
         Matrix_t<n, m, T, MT> r(1.0);
         return r;
     }
+}
+
+/**
+ * @brief Calculate exp of a square matrix
+ * @details Computes till matrix norm converges within floating point accuracy
+ 
+ * @tparam n Number of rowsMa
+ * @tparam T Matrix element type
+ * @tparam MT Matrix type
+ * @param mat Matrix to compute exponential for
+ * @param niter (output) number of iteration performed till converges was reached
+ * @return Matrix_t<n, m, T, MT>
+ */
+template <int n, int m, typename T, typename MT, typename atype = hila::arithmetic_type<T>>
+inline Matrix_t<n, m, T, MT> altexp(const Matrix_t<n, m, T, MT> &mat, out_only int &niter) {
+    static_assert(n == m, "exp() only for square matrices");
+    atype one = 1.0;
+    Matrix_t<n, m, T, MT> r = mat, mpow = mat;
+    r += one;
+    atype orsqnorm, rsqnorm = r.squarenorm();
+    niter = 1;
+    for (int k = 2; k < n * 15; ++k) {
+        mpow *= mat;
+        mpow *= (one / k);
+        r += mpow;
+        orsqnorm = rsqnorm;
+        rsqnorm = r.squarenorm();
+        if(rsqnorm == orsqnorm) {
+            niter = k;
+            break;
+        }
+    }
+
+    return r;
+}
+
+/**
+ * @brief Calculate exp of a square matrix
+ * @details Computes till matrix norm converges within floating point accuracy
+
+ * @tparam n Number of rowsMa
+ * @tparam T Matrix element type
+ * @tparam MT Matrix type
+ * @param mat Matrix to compute exponential for
+ * @return Matrix_t<n, m, T, MT>
+ */
+template <int n, int m, typename T, typename MT, typename atype = hila::arithmetic_type<T>>
+inline Matrix_t<n, m, T, MT> altexp(const Matrix_t<n, m, T, MT> &mat) {
+    static_assert(n == m, "exp() only for square matrices");
+    atype one = 1.0;
+    Matrix_t<n, m, T, MT> r = mat, mpow = mat;
+    r += one;
+    atype orsqnorm, rsqnorm = r.squarenorm();
+    for (int k = 2; k < n * 15; ++k) {
+        mpow *= mat;
+        mpow *= (one / k);
+        r += mpow;
+        orsqnorm = rsqnorm;
+        rsqnorm = r.squarenorm();
+        if (rsqnorm == orsqnorm) {
+            break;
+        }
+    }
+    return r;
 }
 
 /**
