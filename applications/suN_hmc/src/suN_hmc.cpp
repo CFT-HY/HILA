@@ -437,6 +437,9 @@ int main(int argc, char **argv) {
     GaugeField<mygroup> U_old;
     int nreject = 0;
     ftype t_step0 = 0.0;
+    double g_act_old, act_old, g_act_new, act_new;
+    g_act_old = p.beta * measure_s(U);
+
     for (int trajectory = start_traj; trajectory < p.n_traj; ++trajectory) {
         if (trajectory < p.n_therm) {
             // during thermalization: start with 10% of normal step size (and trajectory length)
@@ -476,13 +479,11 @@ int main(int argc, char **argv) {
 
         foralldir(d) onsites(ALL) E[d][X].gaussian_random();
 
-        double g_act_old;
-        double act_old = measure_action(U, E, p, g_act_old);
+        act_old = g_act_old + measure_e2(E) / 2;
 
         do_trajectory(U, E, p);
 
-        double g_act_new;
-        double act_new = measure_action(U, E, p, g_act_new);
+        act_new = measure_action(U, E, p, g_act_new);
 
 
         bool reject = hila::broadcast(exp(act_old - act_new) < hila::random());
@@ -507,6 +508,7 @@ int main(int argc, char **argv) {
             U = U_old;
         } else {
             hila::out0 << " ACCEPT" << " --> S_GAUGE " << g_act_new;
+            g_act_old = g_act_new;
         }
         update_timer.stop();
 
