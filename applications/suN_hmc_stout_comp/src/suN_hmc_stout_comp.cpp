@@ -35,7 +35,7 @@ hila::timer smf_timer("Smearing (force)");
 #if STOUTMODE==1
 #include "gauge/stout_smear_nch.h"
 #elif STOUTMODE==2
-#include "gauge/stout_smear_nch_mixed.h"
+#include "gauge/stout_smear_nchm.h"
 #else
 #include "gauge/stout_smear.h"
 #endif
@@ -52,7 +52,7 @@ hila::timer smf_timer("Smearing (force)");
 using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
-ftype stoutc = 0.15;
+ftype stoutc = 0.5;
 int stout_nsteps = STOUTSTEPS;
 
 

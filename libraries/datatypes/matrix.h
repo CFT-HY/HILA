@@ -2832,8 +2832,9 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
 
 /**
  * @brief Calculate exp of a square matrix
- * @details Computes till matrix norm converges within floating point accuracy
- 
+ * @details Adds higher order terms till matrix norm converges within floating point accuracy and
+ * returns required number of iterations
+
  * @tparam n Number of rowsMa
  * @tparam T Matrix element type
  * @tparam MT Matrix type
@@ -2866,7 +2867,7 @@ inline Matrix_t<n, m, T, MT> altexp(const Matrix_t<n, m, T, MT> &mat, out_only i
 
 /**
  * @brief Calculate exp of a square matrix
- * @details Computes till matrix norm converges within floating point accuracy
+ * @details Adds hihger order terms till matrix norm converges within floating point accuracy
 
  * @tparam n Number of rowsMa
  * @tparam T Matrix element type
@@ -2919,7 +2920,6 @@ inline void mult_exp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T, M
         hila::arithmetic_type<T> one = 1.0;
         r = mat;
         dr = mmat;
-
         // doing the loop step-by-step should reduce temporaries
         for (int k = order; k > 1; k--) {
             r *= (one / k);
