@@ -281,6 +281,8 @@ class Matrix_t {
      * @param j column index
      * @return T matrix element type
      */
+
+#pragma hila loop_function
     inline T e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
@@ -292,6 +294,8 @@ class Matrix_t {
     }
     // declare single e here too in case we have a vector
     // (n || m == 1)
+
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
@@ -317,6 +321,8 @@ class Matrix_t {
      * @param i row or vector index depending on which is being indexed
      * @return T
      */
+
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T operator[](const int i) const {
         return c[i];
@@ -447,6 +453,7 @@ class Matrix_t {
      *
      * @return DiagonalMatrix<n,T>
      */
+    #pragma hila loop_function
     template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
