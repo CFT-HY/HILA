@@ -181,7 +181,7 @@ void bench_fft() {
 
 void bench_update() {
 
-    constexpr int n_update = 50;
+    constexpr int n_update = 500;
 
     hila::out0 << "\n-------------------------------------\n";
     hila::out0 << "NN-smear complex field " << n_update << " times\n";
@@ -208,8 +208,38 @@ void bench_update() {
 
     hila::out0 << "  Total time " << time << " s, one update " << time / n_update << ", per site "
                << time / n_update / lattice.volume() << '\n';
+}
 
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// Benchmark simple smear-update
 
+void bench_matrix_update() {
+
+    constexpr int n_update = 50;
+
+    hila::out0 << "\n-------------------------------------\n";
+    hila::out0 << "NN-mult SU(5) matrix field " << n_update << " times\n";
+
+    Field<SU<5, double>> df, rf;
+
+    df = 1;
+    rf = 1;
+
+    foralldir(d) onsites(ALL) {
+        rf[X] = rf[X] * df[X + d] * df[X - d];
+    }
+
+    auto time = hila::gettime();
+    for (int i = 0; i < n_update; i++) {
+        onsites(ALL) {
+            foralldir(d) rf[X] = df[X + d] * df[X - d];
+        }
+    }
+    hila::synchronize();
+    time = hila::gettime() - time;
+
+    hila::out0 << "  Total time " << time << " s, one update " << time / n_update << ", per site "
+               << time / n_update / lattice.volume() << '\n';
 }
 
 
@@ -250,6 +280,8 @@ int main(int argc, char **argv) {
     bench_fft();
 
     bench_update();
+
+    bench_matrix_update();
 
     hila::out0 << "\n##################################\n";
 
