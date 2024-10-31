@@ -160,6 +160,8 @@ class Complex {
      *
      * @return T Real part
      */
+
+    #pragma hila loop_function
     inline T real() const {
         return re;
     }
@@ -170,6 +172,8 @@ class Complex {
      *
      * @return T Imaginary part
      */
+
+    #pragma hila loop_function
     inline T imag() const {
         return im;
     }

@@ -37,7 +37,7 @@ HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | hipcc -xc++ --std=c++20 -W
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include
-HILAPP_INCLUDE_LIST += -I/opt/cray/pe/fftw/default/x86_64/include
+# HILAPP_INCLUDE_LIST += -I/include
 
 # Write hilapp inlcudes to a file 0hilapp_incl_dirs
 $(shell mkdir -p build)
@@ -52,7 +52,7 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 HILA_INCLUDES := -I${ROCM_PATH}/include -I${ROCM_PATH}/include/hip
 HILA_INCLUDES += -I${ROCM_PATH}/include/rocrand -I${ROCM_PATH}/include/hiprand 
 HILA_INCLUDES += -I${ROCM_PATH}/include/hipfft -I${ROCM_PATH}/include/hipcub
-HILA_INCLUDES += -I${CRAY_MPICH_DIR}/include
+HILA_INCLUDES += -I${CRAY_MPICH_DIR}/include -I${FFTW_ROOT}/include
 
 
 # Linker libraries and possible options
@@ -60,8 +60,8 @@ HILA_INCLUDES += -I${CRAY_MPICH_DIR}/include
 # LDLIBS  := -lfftw3 -lfftw3f -lm
 #LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
 LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
-LDFLAGS += -L${ROCM_PATH}/hipfft/lib/ -lhipfft
-LDFLAGS += -L${CRAY_MPICH_DIR}/lib ${PE_MPICH_GTL_DIR_amd_gfx90a} -lmpi ${PE_MPICH_GTL_LIBS_amd_gfx90a}
+LDFLAGS += -L${ROCM_PATH}/hipfft/lib/ -lhipfft -L${FFTW_ROOT}/lib/
+LDFLAGS += -L${CRAY_MPICH_DIR}/lib ${PE_MPICH_GTL_DIR_amd_gfx90a} -lmpi ${PE_MPICH_GTL_LIBS_amd_gfx90a} -lstdc++fs
 
 # These variables must be defined here
 #

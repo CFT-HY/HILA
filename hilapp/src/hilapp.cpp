@@ -16,7 +16,6 @@
 #include "optionsparser.h"
 #include "stringops.h"
 #include "toplevelvisitor.h"
-#include "specialization_db.h"
 
 // definitions for global variables
 // lots of global state, which we do not bother passing around in arguments
@@ -50,16 +49,6 @@ llvm::cl::opt<std::string> cmdline::dummy_def("D", llvm::cl::value_desc("macro[=
 llvm::cl::opt<std::string> cmdline::dummy_incl("I", llvm::cl::value_desc("directory"),
                                                llvm::cl::desc("Directory for include file search"),
                                                llvm::cl::cat(HilappCategory));
-
-llvm::cl::opt<bool> cmdline::function_spec_no_inline(
-    "function-spec-no-inline",
-    llvm::cl::desc("Do not mark generated function specializations \"inline\""),
-    llvm::cl::cat(HilappCategory));
-
-llvm::cl::opt<bool> cmdline::method_spec_no_inline(
-    "method-spec-no-inline",
-    llvm::cl::desc("Do not mark generated method specializations \"inline\""),
-    llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::allow_func_globals(
     "allow-func-globals",
@@ -1132,8 +1121,6 @@ class MyFrontendAction : public ASTFrontendAction {
                 write_output_file(cmdline::output_filename,
                                   get_file_buffer(TheRewriter, SM.getMainFileID())->dump());
 
-                if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline)
-                    write_specialization_db();
             } else {
                 llvm::errs() << program_name << ": not writing output due to compile errors\n";
             }

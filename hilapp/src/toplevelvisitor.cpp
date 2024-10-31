@@ -1,7 +1,7 @@
 #include "stringops.h"
 #include "hilapp.h"
 #include "toplevelvisitor.h"
-#include "specialization_db.h"
+
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -1301,6 +1301,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // llvm::errs() << "  It's array expr "
             //              << TheRewriter.getRewrittenText(E->getSourceRange()) <<
             //              "\n";
+
+            // If there's a field ref in base subscript return, let us handle it separately. Note:
+            // assign should remain valid (if exists)
+            if (contains_field_ref(find_base_expr(E))) {
+                return true;
+            }
+
             auto a = dyn_cast<ArraySubscriptExpr>(E);
 
             // At this point this should be an allowed expression?
@@ -2421,7 +2428,6 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // This handles all functions and methods. Parent is non-null for methods,
     // and then is_static gives the static flag
 
-    bool no_inline;
     bool is_static = false;
     CXXRecordDecl *parent = nullptr;
 
@@ -2431,9 +2437,6 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(f);
         parent = method->getParent();
         is_static = method->isStatic();
-        no_inline = cmdline::method_spec_no_inline;
-    } else {
-        no_inline = cmdline::function_spec_no_inline;
     }
 
     srcBuf *writeBuf_saved = writeBuf;
@@ -2582,7 +2585,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     //                         "static","");
     // }
 
-    if (!f->isInlineSpecified() && !no_inline)
+    if (!f->isInlineSpecified())
         funcBuf.insert(0, "inline ", true, true);
 
     for (int i = 0; i < ntemplates; i++) {
@@ -2595,40 +2598,30 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     SourceLocation insertion_point = spec_insertion_point(typeargs, global.location.bot, f);
 
     SourceRange decl_sr = get_func_decl_range(f);
-    std::string wheredefined = "";
-    if (f->isInlineSpecified() || !no_inline ||
-        !in_specialization_db(funcBuf.get(decl_sr), wheredefined)) {
-        // Now we should write the spec here
 
-        // llvm::errs() << "new func:\n" << funcBuf.dump() <<'\n';
-        // visit the body
-        SourceLocation save_kernel = global.location.kernels;
-        global.location.kernels = insertion_point;
+    // Now we should write the spec here
 
-        TraverseStmt(f->getBody());
+    // llvm::errs() << "new func:\n" << funcBuf.dump() <<'\n';
+    // visit the body
+    SourceLocation save_kernel = global.location.kernels;
+    global.location.kernels = insertion_point;
 
-        // llvm::errs() << "new func again:\n" << funcBuf.dump() <<'\n';
+    TraverseStmt(f->getBody());
 
-        // insert after the current toplevedecl
-        std::stringstream sb;
-        sb << "\n\n// ++++++++ hilapp generated function/method specialization\n"
-           << funcBuf.dump() << "\n// ++++++++\n\n";
+    // llvm::errs() << "new func again:\n" << funcBuf.dump() <<'\n';
 
-        // buffer is not necessarily in toplevelBuf, so:
+    // insert after the current toplevedecl
+    std::stringstream sb;
+    sb << "\n\n// ++++++++ hilapp generated function/method specialization\n"
+       << funcBuf.dump() << "\n// ++++++++\n\n";
 
-        srcBuf *filebuf = get_file_srcBuf(insertion_point);
-        filebuf->insert(insertion_point, sb.str(), false, true);
+    // buffer is not necessarily in toplevelBuf, so:
 
-        global.location.kernels = save_kernel;
-    } else {
-        // Now the function has been written before (and not inline)
-        // just insert declaration, defined on another compilation unit
-        toplevelBuf->insert(findChar(global.location.bot, '\n'),
-                            "\n// ++++++++ Generated specialization declaration, defined "
-                            "in compilation unit " +
-                                wheredefined + "\n" + funcBuf.get(decl_sr) + ";\n// ++++++++\n",
-                            false, false);
-    }
+    srcBuf *filebuf = get_file_srcBuf(insertion_point);
+    filebuf->insert(insertion_point, sb.str(), false, true);
+
+    global.location.kernels = save_kernel;
+
 
     writeBuf = writeBuf_saved;
     funcBuf.clear();
@@ -2749,7 +2742,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 // now insert device __constant__ variable declaration
 
                 SourceRange sr = D->getSourceRange();
-                sr = get_real_range(sr);   // if there are macros...
+                sr = get_real_range(sr); // if there are macros...
 
                 auto dev_varname =
                     generate_constant_var_name(VD->getQualifiedNameAsString(), false, "");
@@ -2983,8 +2976,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
                            tap->getAsType().getAsString().c_str());
 
                 // try to move the insertion point - fails, TODO: more carefully!
-                // ip =
-                // getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
+                ip = getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
             }
         }
     }
