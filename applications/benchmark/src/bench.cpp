@@ -194,6 +194,7 @@ void bench_update() {
         rf[X] = df[X];
         foralldir(d) rf[X] += df[X + d] + df[X - d];
     }
+    df.mark_changed(ALL);
 
     auto time = hila::gettime();
     for (int i = 0; i < n_update; i++) {
@@ -228,12 +229,14 @@ void bench_matrix_update() {
     foralldir(d) onsites(ALL) {
         rf[X] = rf[X] * df[X + d] * df[X - d];
     }
+    df.mark_changed(ALL);
 
     auto time = hila::gettime();
     for (int i = 0; i < n_update; i++) {
         onsites(ALL) {
-            foralldir(d) rf[X] = df[X + d] * df[X - d];
+            foralldir(d) rf[X] += df[X + d] * df[X - d];
         }
+        df.mark_changed(ALL);
     }
     hila::synchronize();
     time = hila::gettime() - time;
