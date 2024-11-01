@@ -4,7 +4,7 @@
 
 # Table of Contents
 1. [Dependencies](#dependencies)
-2. [Installation](#installation)
+2. [Build and Installation](#building-and-installation)
 
 # Dependencies {#dependencies}
 
@@ -68,7 +68,7 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 
 
-# Installation{#installation}
+# Building and Installation{#building-and-installation}
 
 Begin by cloning HILA repository:
 
@@ -76,15 +76,21 @@ Begin by cloning HILA repository:
 git clone https://github.com/CFT-HY/HILA
 ~~~
 
-The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source, and both steps have their respective containerization options available. The variety in options is to address different issues which arise in platform dependencies.
+The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source with proper dependency supports,  and both steps have their respective containerization options available. 
+In certain situation, users may face on issue about building HILA preprocessor. This usually is caused by lack of [LLVM/Clang](https://llvm.org) support. There are few tested strategies to deal with this problem, read [HILA home page](https://cft-hy.github.io/HILA.home/install) for details.
+The variety in options is to address different issues which arise in platform dependencies.
 
 When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.
 
 ## Platforms
 
-### LINUX
+### LINUX Workstation{#workstation}
 
-HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the HILA preprocessor directly.
+HILA has originally been developed on linux, hence all of the available options can be used. Most of mainstream LINUX distributions should have direct dependency supports of [source](#hila-preprocessor) building from their package mangers. 
+Alternatively, user could also set up pre-built [singualrity](#singularity) container of HILA preprocessor to avoid dependencies problem. Additionally one can opt to use the [docker](#docker) container which installs the HILA preprocessor directly.
+
+If the user wishes to constantly use or switch between different versions of [LLVM/Clang](https://llvm.org) for new features, a secure and efficient way is using [Spack](https://spack.readthedocs.io/en/latest) ported LLVM building. 
+This is particularly helpful for building and managing LLVM/Clang easily on [HPC](#HPC) platforms. For the details of Spack building, please jump to [HPC building](#HPC) section.
 
 > __NOTE__: It is advised to use the docker container only for development purposes, since containerization can add computational overhead. This is especially evident in containerized MPI communication.
 >
@@ -95,16 +101,28 @@ HILA has originally been developed on linux, hence all of the available options 
 
 On mac the installation of the HILA preprocessor dependencies and HILA application dependencies can be tedious, and in some cases impossible. Availability of clang libtoolbox is open ended. For this reason the best option is to use the available [docker](#docker) container.
 
+On the other hand, HPC library building system [Spack](https://spack.readthedocs.io/en/latest/getting_started.html) has quite good support on MacOS, user may go through same process as those on [HPC](#HPC) platform to build LLVM/Clang after Spack is properly installed onto MacOS. 
 
 ### WINDOWS
 
 On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. One can also opt to use WSL, in this case see LINUX installation instructions.
 
 
-### HPC
+### HPC{#HPC}
 
-On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platforms the best solution is to opt to use the [singularity](#singularity) container. 
+On supercomputing platforms the HILA application dependencies are most likely available. However, the availability of dependencies of HILA preprocessor frequently turns out be issue, since lack of open-box [LLVM/Clang](https://llvm.org) support on HPC platform. 
 
+As discussed in [HILA home page](https://cft-hy.github.io/HILA.home/install), there are few tested strategies to deal with this problem. These strategies utilize different properties or features available on hardware architectures or carefully designed library building systems and containerization.
+Among them, the suggested solutions are library building/managing system and containerization of HILA preprocessor. The former includes the remarkable [Spack](https://spack.readthedocs.io/en/latest) project, as well as [EasyBuild](https://easybuild.io).
+While best example of the later one on HPC system is the [singularity](#singularity) container. 
+
+Most of properly maintained computing clusters have pre-installed and -configured [Spack](https://spack.readthedocs.io/en/latest) system. 
+If user has had experiences of Spack, then it will just works as-is, and building the LLVM/Clang with different versions could be achieved by few commands with Spack module loaded.
+Moreover, every built LLVM/Clang appears as loadable module which can be used in same way as system modules.
+
+For step-by-step guide of [Spack](https://spack.readthedocs.io/en/latest) building [LLVM/Clang](https://llvm.org), please read article [Use Spack Build and Install LLVM on Workstation or Supercomputer](https://tekniiquann.github.io/2024/08/03/Sapck-Install-LLVM-on-Workstation-or-HPC-Platform.html).
+On computing platform without module system such as [Linux Workstation](#workstation), command `spack find --path llvm` will return the installation location, which is necessary information for [builing HILA preprocessor](#hila-preprocessor). 
+In this case, user may pass the absolute path through shell variable or GNU Make flag.
 
 * **After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
