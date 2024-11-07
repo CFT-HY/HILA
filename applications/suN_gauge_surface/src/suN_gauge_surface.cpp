@@ -227,7 +227,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     auto plaq = measure_plaq_db(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
-    hila::out0 << "MEAS " << std::setprecision(8);
+    hila::out0 << "MEAS " << std::setprecision(14);
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
     if (p.polyakov_pot == poly_limit::PARABOLIC) {
@@ -317,7 +317,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         measure_polyakov_field(U[e_t], pl);
     }
 
-    hila::out0 << std::setprecision(5);
+    hila::out0 << std::setprecision(7);
 
     std::vector<float> profile, prof1;
 

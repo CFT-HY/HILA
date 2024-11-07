@@ -284,7 +284,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     auto plaq = measure_plaq_db(U, p.odd_T_extent) / pnorm;
 
-    hila::out0 << "MEAS " << std::setprecision(8);
+    hila::out0 << "MEAS " << std::setprecision(14);
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
     if (p.polyakov_pot == poly_limit::PARABOLIC) {
@@ -374,7 +374,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         measure_polyakov_field(U[e_t], pl);
     }
 
-    hila::out0 << std::setprecision(5);
+    hila::out0 << std::setprecision(8);
 
     std::vector<float> profile, prof1;
 
@@ -440,7 +440,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
             surf2.resize(area);
         }
 
-        hila::out0 << std::setprecision(6);
+        hila::out0 << std::setprecision(8);
 
         std::vector<float> poly;
         std::vector<float> line(lattice.size(e_z));

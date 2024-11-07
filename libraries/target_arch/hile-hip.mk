@@ -61,7 +61,7 @@ HILA_INCLUDES += -I${CRAY_MPICH_DIR}/include -I${FFTW_ROOT}/include
 #LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
 LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
 LDFLAGS += -L${ROCM_PATH}/hipfft/lib/ -lhipfft -L${FFTW_ROOT}/lib/
-LDFLAGS += -L${CRAY_MPICH_DIR}/lib ${PE_MPICH_GTL_DIR_amd_gfx90a} -lmpi ${PE_MPICH_GTL_LIBS_amd_gfx90a} -lstdc++fs
+LDFLAGS += -L${CRAY_MPICH_DIR}/lib ${PE_MPICH_GTL_DIR_amd_gfx90a} ${PE_MPICH_GTL_LIBS_amd_gfx90a} -lmpi -lstdc++fs
 
 # These variables must be defined here
 #
