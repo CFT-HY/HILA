@@ -1,7 +1,13 @@
 /**
  * @file bench.cpp
  * @author Kari Rummukainen
- * @brief simple benchmark application, measures performance of various operations
+ * @brief Simple benchmark application
+ * @details Measures performance of the following operations
+ * - Random number generator
+ * - 3x3 matrix multiplication
+ * - Nearest neighbour communication
+ * - FFT
+ * - Simple smear update
  */
 #include "hila.h"
 
