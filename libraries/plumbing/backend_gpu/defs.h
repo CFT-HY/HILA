@@ -79,6 +79,7 @@ using gpuError = cudaError;
 #define gpuMemcpy(a, b, c, d) GPU_CHECK(cudaMemcpy(a, b, c, d))
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
+#define gpuMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
 #define gpuMemset(a,b,c) GPU_CHECK(cudaMemset(a,b,c))
@@ -132,6 +133,7 @@ using gpuError = hipError_t;
 #define gpuMemcpy(a, b, siz, d) GPU_CHECK(hipMemcpy(a, b, siz, d))
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
+#define gpuMemcpyDeviceToDevice hipMemcpyDeviceToDevice
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
 #define gpuMemset(a,b,c) GPU_CHECK(hipMemset(a,b,c))
