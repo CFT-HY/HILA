@@ -1,4 +1,7 @@
 
+// Define below to deactivate "extern" in global var defs
+#define IN_HILA_GPU
+
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
@@ -36,15 +39,15 @@ using gpurandState = hiprandState_t;
 
 #endif
 
-// Save "constants" lattice size and volume here
-__constant__ int64_t _d_volume;
-// __constant__ int _d_size[NDIM];
-__constant__ CoordinateVector _d_size;
-#ifndef EVEN_SITES_FIRST
-__constant__ int _d_nodesize[NDIM];
-__constant__ int _d_nodemin[NDIM];
-__constant__ int _d_nodefactor[NDIM];
-#endif
+// // Save "constants" lattice size and volume here
+// __constant__ int64_t _d_volume;
+// // __constant__ int _d_size[NDIM];
+// __constant__ CoordinateVector _d_size;
+// #ifndef EVEN_SITES_FIRST
+// __constant__ int _d_nodesize[NDIM];
+// __constant__ int _d_nodemin[NDIM];
+// __constant__ int _d_nodefactor[NDIM];
+// #endif
 
 /* Random number generator */
 static gpurandState *gpurandstateptr;
@@ -124,57 +127,59 @@ __device__ __host__ double hila::random() {
 #endif
 }
 
-// Then, define global functions loop_lattice_size() and _volume()
-__device__ __host__ int loop_lattice_size(Direction dir) {
-#ifdef __GPU_DEVICE_COMPILE__
-    return _d_size[dir];
-#else
-    return lattice.size(dir);
-#endif
-}
+// // Then, define global functions loop_lattice_size() and _volume()
+// __device__ __host__ int loop_lattice_size(Direction dir) {
+// #ifdef __GPU_DEVICE_COMPILE__
+//     return _d_size[dir];
+// #else
+//     return lattice.size(dir);
+// #endif
+// }
 
-__device__ __host__ CoordinateVector loop_lattice_size(void) {
-#ifdef __GPU_DEVICE_COMPILE__
-    // CoordinateVector v;
-    // foralldir(d) v[d] = _d_size[d];
-    // return v;
-    return _d_size;
-#else
-    return lattice.size();
-#endif
-}
+// __device__ __host__ CoordinateVector loop_lattice_size(void) {
+// #ifdef __GPU_DEVICE_COMPILE__
+//     // CoordinateVector v;
+//     // foralldir(d) v[d] = _d_size[d];
+//     // return v;
+//     return _d_size;
+// #else
+//     return lattice.size();
+// #endif
+// }
 
-__device__ __host__ int64_t loop_lattice_volume(void) {
-#ifdef __GPU_DEVICE_COMPILE__
-    return _d_volume;
-#else
-    return lattice.volume();
-#endif
-}
+// __device__ __host__ int64_t loop_lattice_volume(void) {
+// #ifdef __GPU_DEVICE_COMPILE__
+//     return _d_volume;
+// #else
+//     return lattice.volume();
+// #endif
+// }
 
-#ifndef EVEN_SITES_FIRST
+// #ifndef EVEN_SITES_FIRST
 
-__device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
-    CoordinateVector c;
-    unsigned vdiv, ndiv;
+// __device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
+//     CoordinateVector c;
+//     unsigned vdiv, ndiv;
 
-    vdiv = idx;
-    for (int d = 0; d < NDIM - 1; ++d) {
-        ndiv = vdiv / _d_nodesize[d];
-        c[d] = vdiv - ndiv * _d_nodesize[d] + _d_nodemin[d];
-        vdiv = ndiv;
-    }
-    c[NDIM - 1] = vdiv + _d_nodemin[NDIM - 1];
+//     vdiv = idx;
+//     for (int d = 0; d < NDIM - 1; ++d) {
+//         ndiv = vdiv / _d_nodesize[d];
+//         c[d] = vdiv - ndiv * _d_nodesize[d] + _d_nodemin[d];
+//         vdiv = ndiv;
+//     }
+//     c[NDIM - 1] = vdiv + _d_nodemin[NDIM - 1];
 
-    return c;
-}
+//     return c;
+// }
 
-__device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
-    return (idx / _d_nodefactor[dir]) % _d_nodesize[dir] + _d_nodemin[dir];
-}
+// __device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
+//     return (idx / _d_nodefactor[dir]) % _d_nodesize[dir] + _d_nodemin[dir];
+// }
 
-#endif
-
+///////////////////////////////////////////////////////////////////////////////////////
+// Setup the lattice struct on GPUs:
+// allocate neighbour and coordinate arrays
+// setup global variables in __constant__ memory
 
 void backend_lattice_struct::setup(lattice_struct &lattice) {
     CoordinateVector *tmp;
@@ -217,13 +222,28 @@ void backend_lattice_struct::setup(lattice_struct &lattice) {
     // Other backend_lattice parameters
     field_alloc_size = lattice.field_alloc_size();
 
-    int64_t v = lattice.volume();
-    gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
-    int s[NDIM];
-    foralldir(d) s[d] = lattice.size(d);
-    gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+    set_lattice_globals(lattice);
+
+}
+
+#endif // not HILAPP
+
+// set some gobal variables, visible on GPUs
+// thus, hilapp needs to see this definition
+
+void backend_lattice_struct::set_lattice_globals(lattice_struct &lattice) {
+
+    _d_volume = lattice.volume();
+    _d_size = lattice.size();
+
+    // int64_t v = lattice.volume();
+    // gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
+    // int s[NDIM];
+    // foralldir(d) s[d] = lattice.size(d);
+    // gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
 #ifndef EVEN_SITES_FIRST
+
     foralldir(d) s[d] = lattice.mynode.size[d];
     gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
@@ -235,6 +255,9 @@ void backend_lattice_struct::setup(lattice_struct &lattice) {
 
 #endif
 }
+
+#ifndef HILAPP
+// again, hilapp can skip this part
 
 void initialize_gpu(int rank, int device) {
     int n_devices, my_device;
@@ -409,4 +432,7 @@ void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int lin
     }
 }
 
-#endif
+#endif  // not HILAPP
+
+
+
