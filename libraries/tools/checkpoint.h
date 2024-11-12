@@ -1,19 +1,24 @@
+/**
+ * @file checkpoint.h
+ * @brief Checkpointing functions for saving and restoring lattice configurations
+ *
+ */
 #ifndef CHECKPOINT_H
 #define CHECKPOINT_H
 
 #include "hila.h"
 
 // <filesystem> can be in different locations, check...
-#if __has_include (<filesystem>)
+#if __has_include(<filesystem>)
 #include <filesystem>
 namespace filesys_ns = std::filesystem;
 
-#elif __has_include (<experimental/filesystem>)
+#elif __has_include(<experimental/filesystem>)
 #include <experimental/filesystem>
 namespace filesys_ns = std::experimental::filesystem;
 
 #else
-static_assert(0,"Neither <filesystem> nor <experimental/filesystem> found!");
+static_assert(0, "Neither <filesystem> nor <experimental/filesystem> found!");
 
 #endif
 
@@ -78,8 +83,8 @@ bool restore_checkpoint(GaugeField<group> &U, const std::string &config_file, in
         hila::out0 << "RESTORING FROM CHECKPOINT:\n";
         int traj = status.get("trajectories");
         if (traj != n_trajectories) {
-            hila::out0 << "Number of trajectories set in 'run_status' " << n_trajectories
-                       << " -> " << traj << '\n';
+            hila::out0 << "Number of trajectories set in 'run_status' " << n_trajectories << " -> "
+                       << traj << '\n';
             n_trajectories = traj;
         }
 
