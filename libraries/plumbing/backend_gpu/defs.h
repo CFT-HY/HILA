@@ -88,7 +88,7 @@ using gpuError = cudaError;
 #define GPUTYPESTR "CUDA"
 
 #ifdef __CUDA_ARCH__
-#define __GPU_DEVICE_COMPILE__ __CUDA_ARCH__
+#define _GPU_DEVICE_COMPILE_ __CUDA_ARCH__
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -144,7 +144,7 @@ using gpuError = hipError_t;
 #define GPUTYPESTR "HIP"
 
 #ifdef __HIP_DEVICE_COMPILE__
-#define __GPU_DEVICE_COMPILE__ __HIP_DEVICE_COMPILE__
+#define _GPU_DEVICE_COMPILE_ __HIP_DEVICE_COMPILE__
 #endif
 
 #endif

@@ -739,7 +739,7 @@ bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
 
                 srcBuf *sb = get_file_srcBuf(sr.getBegin());
 
-                std::string repl = "\n#ifdef __GPU_DEVICE_COMPILE__\n";
+                std::string repl = "\n#ifdef _GPU_DEVICE_COMPILE_\n";
                 repl.append(constvarname);
                 repl.append("\n#else\n");
                 repl.append(get_stmt_str(CE));
@@ -834,7 +834,7 @@ bool GeneralVisitor::handle_global_var_ref(DeclRefExpr *DRE) {
 
     //     llvm::errs() << "Replacing text  " << sb->get(sr);
 
-    //     std::string repl = "\n#ifdef __GPU_DEVICE_COMPILE__\n";
+    //     std::string repl = "\n#ifdef _GPU_DEVICE_COMPILE_\n";
     //     repl.append(constvarname);
     //     repl.append("\n#else\n");
     //     repl.append(get_stmt_str(DRE));
