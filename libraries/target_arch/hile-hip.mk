@@ -33,7 +33,7 @@ CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | hipcc -xc++ --std=c++20 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include
@@ -59,7 +59,7 @@ HILA_INCLUDES += -I${CRAY_MPICH_DIR}/include -I${FFTW_ROOT}/include
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
 #LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
-LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
+LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 -lhsa-runtime64
 LDFLAGS += -L${ROCM_PATH}/hipfft/lib/ -lhipfft -L${FFTW_ROOT}/lib/
 LDFLAGS += -L${CRAY_MPICH_DIR}/lib ${PE_MPICH_GTL_DIR_amd_gfx90a} ${PE_MPICH_GTL_LIBS_amd_gfx90a} -lmpi -lstdc++fs
 
