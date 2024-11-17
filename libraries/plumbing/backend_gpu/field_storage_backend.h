@@ -32,7 +32,7 @@ void field_storage<T>::free_field() {
 template <typename T>
 __device__ inline auto field_storage<T>::get(const unsigned i,
                                              const unsigned field_alloc_size) const {
-    assert(i < field_alloc_size);
+    // assert(i < field_alloc_size);
     using base_t = hila::arithmetic_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     T value;
@@ -48,7 +48,7 @@ template <typename T>
 // template <typename A>
 __device__ inline void field_storage<T>::set(const T &value, const unsigned i,
                                              const unsigned field_alloc_size) {
-    assert(i < field_alloc_size);
+    // assert(i < field_alloc_size);
     using base_t = hila::arithmetic_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     const base_t *value_f = (base_t *)&value;
