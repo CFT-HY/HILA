@@ -74,6 +74,11 @@ void test_std_gathers() {
     // gather_test<int>();
     auto t0 = hila::gettime();
 
+#ifdef MPI_BENCHMARK_TEST
+    hila::out0 << "MPI_BENCHMARK_TEST defined, not doing communication tests!\n";
+    return;
+#endif
+
     gather_test();
 
 #if defined(CUDA) || defined(HIP)
