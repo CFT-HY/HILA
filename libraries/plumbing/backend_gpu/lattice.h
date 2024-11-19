@@ -1,6 +1,9 @@
 #ifndef _BACKEND_LATTICE_H_
 #define _BACKEND_LATTICE_H_
 
+#include "coordinates.h"
+#include "globals.h"
+
 /// Lattice related data that needs to be communicated
 /// to kernels
 struct backend_lattice_struct {
@@ -23,7 +26,6 @@ struct backend_lattice_struct {
     /// Finally a pointer to the list of coordinates, stored on device
     CoordinateVector *d_coordinates;
 
-//#if defined(__CUDACC__) || defined(__HIPCC__)
 #if defined(CUDA) || defined(HIP)
 
     /// get the coordinates at a given site
@@ -48,17 +50,68 @@ struct backend_lattice_struct {
     /// setup the backend lattice data
     void setup(lattice_struct &lattice);
 
+    void set_lattice_globals( lattice_struct &lattice);
+
 };
 
-//#if defined(__CUDACC__) || defined(__HIPCC__)
-#if defined(CUDA) || defined(HIP)
+////////////////////////////////////////////////////////////////////////////
+// Define here some globals and inline functions
 
-// define also loop_lattice_size() and _volume() methods for cuda
-
-__host__ __device__ int loop_lattice_size(Direction d);
-__host__ __device__ CoordinateVector loop_lattice_size(void);
-__host__ __device__ int64_t loop_lattice_volume(void);
-
+#ifdef IN_HILA_GPU
+#define HILA_GPU_EXTERN /* nothing */
+#else 
+#define HILA_GPU_EXTERN extern
 #endif
+
+// Save "constants" lattice size and volume here
+HILA_GPU_EXTERN hila::global<int64_t> _d_volume;
+HILA_GPU_EXTERN hila::global<CoordinateVector> _d_size;
+
+#ifndef EVEN_SITES_FIRST
+HILA_GPU_EXTERN hila::global<CoordinateVector> _d_nodesize;
+HILA_GPU_EXTERN hila::global<CoordinateVector> _d_nodemin;
+HILA_GPU_EXTERN hila::global<CoordinateVector> _d_nodefactor;
+#endif
+
+
+// Then, define global functions loop_lattice_size() and _volume()
+#pragma hila loop_function
+inline int loop_lattice_size(Direction dir) {
+    return _d_size()[dir];
+}
+
+#pragma hila loop_function
+inline CoordinateVector loop_lattice_size(void) {
+    return _d_size();
+}
+
+#pragma hila loop_function
+inline int64_t loop_lattice_volume(void) {
+    return _d_volume();
+}
+
+#ifndef EVEN_SITES_FIRST
+
+inline __device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
+    CoordinateVector c;
+    unsigned vdiv, ndiv;
+
+    vdiv = idx;
+    for (int d = 0; d < NDIM - 1; ++d) {
+        ndiv = vdiv / _d_nodesize()[d];
+        c[d] = vdiv - ndiv * _d_nodesize()[d] + _d_nodemin()[d];
+        vdiv = ndiv;
+    }
+    c[NDIM - 1] = vdiv + _d_nodemin()[NDIM - 1];
+
+    return c;
+}
+
+inline __device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
+    return (idx / _d_nodefactor()[dir]) % _d_nodesize()[dir] + _d_nodemin()[dir];
+}
+
+#endif   // not EVEN_SITES_FIRST
+
 
 #endif

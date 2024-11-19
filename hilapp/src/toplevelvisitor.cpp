@@ -2798,7 +2798,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 // cdecl << "template <>\n";
                 // cdecl << "__device__ __host__ inline const " << vartype << "& hila::global<"
                 //       << vartype << ", " << customtype << ">::operator()() const {\n";
-                // cdecl << "#ifdef __GPU_DEVICE_COMPILE__\n";
+                // cdecl << "#ifdef _GPU_DEVICE_COMPILE_\n";
                 // cdecl << "return " + dev_varname + ";\n";
                 // cdecl << "#else\n";
                 // cdecl << "return this->val;\n";

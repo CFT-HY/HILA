@@ -40,7 +40,7 @@ HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
 # Linker libraries and possible options
 
-LDLIBS  := -lstdc++fs -lfftw3 -lfftw3f -lm
+LDLIBS  := -lstdc++fs -lfftw3 -lfftw3f -lm -lstdc++fs
 LDFLAGS := $(CXXFLAGS)
 
 # These variables must be defined here
