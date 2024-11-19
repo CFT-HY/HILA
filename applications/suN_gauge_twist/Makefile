@@ -24,6 +24,7 @@ include $(HILA_DIR)/libraries/main.mk
 HILAPP_OPTS += -check-init
 
 APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL}
+APP_OBJECTS = build/multicanonical.o
 
 #APP_HEADERS += twist_specific_methods.hpp checkpoint.h parameters.h
 # With multiple targets we want to use "make target", not "make build/target".
@@ -32,8 +33,8 @@ APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL}
 suN_gauge_twist: build/suN_gauge_twist ; @:
 
 # Now the linking step for each target executable
-build/suN_gauge_twist: Makefile build/suN_gauge_twist.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/suN_gauge_twist.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
+build/suN_gauge_twist: Makefile build/suN_gauge_twist.o $(APP_OBJECTS) $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/suN_gauge_twist.o $(APP_OBJECTS) $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
 
 #build/suN_gauge_bare.o: src/suN_gauge_bare.h
 build/suN_gauge_twist.o: src/suN_gauge_twist.cpp src/polyakov_surface.h src/utility.h src/checkpoint.h src/parameters.h src/twist_specific_methods.h
