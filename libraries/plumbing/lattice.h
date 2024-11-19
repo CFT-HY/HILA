@@ -406,14 +406,6 @@ extern lattice_struct lattice;
 extern std::vector<lattice_struct *> lattices;
 
 
-#if defined(CUDA) || defined(HIP)
-__device__ __host__ int loop_lattice_size(Direction d);
-#else
-inline int loop_lattice_size(Direction d) {
-    return lattice.size(d);
-}
-#endif
-
 
 #ifdef VANILLA
 #include "plumbing/backend_cpu/lattice.h"

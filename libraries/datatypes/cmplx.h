@@ -1329,7 +1329,7 @@ class Imaginary_t : public Complex<T> {
 ///
 // separate definition for GPU kernel code and host (and generic) code
 
-#if defined(__GPU_DEVICE_COMPILE__)
+#if defined(_GPU_DEVICE_COMPILE_)
 __device__ constexpr Imaginary_t<double> I(1.0);
 #else
 constexpr Imaginary_t<double> I(1.0);

@@ -646,13 +646,15 @@ int srcBuf::replace_tokens(int start, int end, const std::vector<std::string> &a
                 }
             }
         } else {
-            if (i > 0 && buf[i] == '/' && buf[i - 1] == '/') {
+            if (i + 1 <= end && buf[i] == '/' && buf[i + 1] == '/') {
                 // skip commented lines
                 for (i++; i <= end && buf[i] != '\n'; i++)
                     ;
-            } else if (i > 0 && buf[i - 1] == '/' && buf[i] == '*') {
-                // c-stype comment
-                i = buf.find("*/", i + 1) + 2;
+            } else if (i + 1 <= end && buf[i] == '/' && buf[i + 1] == '*') {
+                // c-style comment
+                i = buf.find("*/", i + 1);
+                assert(i != std::string::npos && "Did not find '*/'. Unclosed c-style comment."); // TODO: better error message
+                i += 2; // skip over '*/'
             } else if (buf[i] == '#') {
                 // skip preproc lines #
                 for (i++; i <= end && buf[i] != '\n'; i++)
