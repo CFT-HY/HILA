@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - documentation
+      - master
 
 jobs:
   build_release:
