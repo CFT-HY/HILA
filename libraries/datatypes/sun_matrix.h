@@ -18,6 +18,78 @@
 template <typename G>
 class Algebra;
 
+template <typename T>
+class sparse_el {
+  public:
+    using base_type = hila::arithmetic_type<T>;
+    using argument_type = T;
+    int ind1;
+    int ind2;
+    T val;
+    sparse_el<T>() = default;
+    ~sparse_el<T>() = default;
+    sparse_el<T>(const sparse_el<T> &a) = default;
+    sparse_el<T>(int i1, int i2, const T &v) : ind1(i1), ind2(i2), val(v) {}
+
+    inline sparse_el<T> &operator=(const sparse_el<T> &s) & = default;
+    sparse_el<T> &set(const sparse_el<T> &s) {
+        ind1 = s.ind1;
+        ind2 = s.ind2;
+        val = s.val;
+        return *this;
+    }
+
+    sparse_el<T> &set(int i1, int i2, const T &v) {
+        ind1 = i1;
+        ind2 = i2;
+        val = v;
+        return *this;
+    }
+};
+
+template <int N, typename T>
+class Alg_gen {
+  public:
+    using base_type = T;
+    using argument_type = Complex<T>;
+    int size;
+    sparse_el<Complex<T>> c[N];
+    Alg_gen() : size(0){};
+    ~Alg_gen() = default;
+    inline Alg_gen &operator=(const Alg_gen &s) & = default;
+    Alg_gen &push(sparse_el<T> tel) {
+        c[size] = tel;
+        ++size;
+        return *this;
+    }
+    Alg_gen &push(int i1, int i2, const T &v) {
+        c[size].set(i1, i2, Complex<T>(v,0.0));
+        ++size;
+        return *this;
+    }
+    Alg_gen &push(int i1, int i2, const Complex<T> &v) {
+        c[size].set(i1, i2, v);
+        ++size;
+        return *this;
+    }
+    sparse_el<T> pop() {
+        sparse_el<T> res(c[size - 1]);
+        --size;
+        return res;
+    }
+    Matrix<N, N, Complex<T>> to_matrix() const {
+        Matrix<N, N, Complex<T>> res=0;
+        for (int i = 0; i < size; ++i) {
+            res.e(c[i].ind1, c[i].ind2) = c[i].val;
+        }
+        return res;
+    }
+    Alg_gen &empty() {
+        size = 0;
+        return *this;
+    }
+};
+
 /**
  * @brief Class for SU(N) matrix
  * @details Class for Special unitary group SU(N).
@@ -330,6 +402,69 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
     // Define \lambda's so that diagonals come first
 
     /// expand algebra to matrix rep - antihermitean
+
+    static void generator_list(Alg_gen<N, T>(out_only &gen_list)[N_a]) {
+        // set gen_list to contain N_a=N^2-1 generators of su(N) as sparse matrices
+        // (sparse -> list of non-zero elements (ind1,ind2,val))
+        for (int i = 1; i < N; ++i) {
+            gen_list[i - 1].empty();
+            for (int j = 0; j < i; ++j) {
+                gen_list[i - 1].push(j, j, Complex<T>(0, 1.0 / sqrt(2.0 * (i * (i + 1)))));
+            }
+            gen_list[i - 1].push(i, i, Complex<T>(0, -i / sqrt(2.0 * (i * (i + 1)))));
+        }
+
+        int k = n_diag;
+        for (int i = 0; i < N - 1; i++) {
+            for (int j = i + 1; j < N; j++) {
+                gen_list[k].empty();
+                gen_list[k].push(i, j, Complex<T>(0.5, 0));
+                gen_list[k].push(j, i, Complex<T>(-0.5, 0));
+                ++k;
+                gen_list[k].empty();
+                gen_list[k].push(i, j, Complex<T>(0, 0.5));
+                gen_list[k].push(j, i, Complex<T>(0, 0.5));
+                ++k;
+            }
+        }
+    }
+
+    static void generator_product_list(const Alg_gen<N, T>(&gen_list)[N_a], Alg_gen<N, T>(out_only &gen_prod_list)[N_a][N_a]) {
+        // set gen_prod_list[i][j]=\lambda_i \lambda_j as sparse matrices
+        // (sparse -> list of non-zero elements (ind1,ind2,val))
+        Matrix<N, N, Complex<T>> temp;
+        int i1, i2, j1, j2;
+        for (i1 = 0; i1 < N * N - 1; ++i1) {
+            const auto &gen1 = gen_list[i1];
+            for (i2 = 0; i2 < N * N - 1; ++i2) {
+                temp = 0;
+                const auto &gen2 = gen_list[i2];
+                for (auto el1 = gen1.c; el1 != gen1.c + gen1.size; ++el1) {
+                    for (auto el2 = gen2.c; el2 != gen2.c + gen2.size; ++el2) {
+                        if(el1->ind2==el2->ind1) {
+                            temp.e(el1->ind1, el2->ind2) += el1->val*el2->val;
+                        }
+                    }
+                }
+                for (j1 = 0; j1 < N; ++j1) {
+                    for (j2 = 0; j2 < N; ++j2) {
+                        if(temp.e(j1,j2)!=0) {
+                            gen_prod_list[i1][i2].push(j1, j2, temp.e(j1, j2));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    static void generator_product_list(Alg_gen<N, T>(out_only &gen_prod_list)[N_a][N_a]) {
+        // set gen_prod_list[i][j]=2 \lambda_i \lambda_j as sparse matrices
+        // (sparse -> list of non-zero elements (ind1,ind2,val))
+        Alg_gen<N, T> gen_list[N_a];
+        generator_list(gen_list);
+        generator_product_list(gen_list, gen_prod_list);
+    }
+
     SU<N, T> expand() const {
         SU<N, T> m;
 
@@ -431,7 +566,7 @@ class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
         for (int i = 0; i < N_a; ++i) {
             r += this->e(i) * rhs.e(i);
         }
-        return -r * 0.5;
+        return r * 0.5;
     }
 };
 
@@ -479,7 +614,7 @@ template <int N, typename T>
 Algebra<SU<N, T>> log(const SU<N, T> &a) {
     int maxit = 5 * N;
     T fprec = fp<T>::epsilon * 10.0 * Algebra<SU<N, T>>::N_a;
-    Matrix_t<N, N, Complex<T>, SU<N, T>> pl[N + 1];
+    Matrix_t<N, N, Complex<T>, SU<N, T>> pl[N];
 
     SU<N, T> tmat = a, tmat2;
     Algebra<SU<N, T>> res = 0, tres;
@@ -489,20 +624,115 @@ Algebra<SU<N, T>> log(const SU<N, T> &a) {
         tres = tmat.project_to_algebra(trn);
         rn = 0;
         for (i = 0; i < Algebra<SU<N, T>>::N_a; ++i) {
-            res.e(i) += tres.e(i);
+            res.e(i) -= tres.e(i);
             rn += abs(res.e(i));
         }
         if (trn < fprec * (rn + 1.0)) {
             break;
         }
-        tmat = res.expand_scaled(-1.0);
+        tmat = res.expand();
         chexp(tmat, tmat2, pl);
         mult(a, tmat2, tmat);
     }
 
-    return res;
+    return -res;
 }
 
+template <int N, typename T, typename MT, typename fT = hila::arithmetic_type<T>>
+void project_to_algebra_bilinear(const Matrix_t<N, N, T, MT> &w1, const Matrix_t<N, N, T, MT> &w2,
+                                 out_only Matrix<N * N - 1, N * N - 1, fT> &omat,
+                                 const Alg_gen<N, fT> (&genlist)[N * N - 1]) {
+    // computes real matrix outmat[i][j] = 2 * Tr(\lambda_i^{\dagger} * w1 * lambda_j * w2)
+    // where the list of algebra generators is provided by genlist[]
+    int i1, i2;
+    fT temp;
+    for (i1 = 0; i1 < N * N - 1; ++i1) {
+        const auto &gen1 = genlist[i1];
+        for (i2 = 0; i2 < N * N - 1; ++i2) {
+            temp = 0;
+            const auto &gen2 = genlist[i2];
+            for (auto el1 = gen1.c; el1 != gen1.c + gen1.size; ++el1) {
+                for (auto el2 = gen2.c; el2 != gen2.c + gen2.size; ++el2) {
+                    temp += real(el1->val * w1.e(el1->ind2, el2->ind1) * el2->val *
+                                 w2.e(el2->ind2, el1->ind1));
+                }
+            }
+            omat.e(i1, i2) = -2.0 * temp;
+        }
+    }
+}
+
+template <int N, typename T, typename MT, typename fT = hila::arithmetic_type<T>>
+void project_to_algebra_bilinear(const Matrix_t<N, N, T, MT> &w1, const Matrix_t<N, N, T, MT> &w2,
+                                 out_only Matrix<N * N - 1, N * N - 1, fT> &omat) {
+    // computes real matrix outmat[i][j] = 2 * Tr(\lambda_i^{\dagger} * w1 * lambda_j * w2)
+    Alg_gen<N, fT> genlist[N * N - 1];
+    Algebra<SU<N, fT>>::generator_list(genlist);
+    project_to_algebra_bilinear(w1, w2, omat, genlist);
+}
+
+template <int N, typename T, typename MT, typename fT = hila::arithmetic_type<T>>
+void project_to_algebra_bilinear(const Matrix_t<N, N, T, MT> &w1,
+                                 out_only Matrix<N * N - 1, N * N - 1, fT> &omat,
+                                 const Alg_gen<N, fT> (&genprodlist)[N * N - 1][N * N - 1]) {
+    // computes real matrix outmat[i][j] = 2 * ReTr(\lambda_i^{\dagger} * w1 * lambda_j)
+    // where the list of algebra generator products is provided by genprodlist[][]
+    int i1, i2;
+    fT temp;
+    for (i1 = 0; i1 < N * N - 1; ++i1) {
+        for (i2 = 0; i2 < N * N - 1; ++i2) {
+            const auto &gen = genprodlist[i2][i1];
+            temp = 0;
+            for (auto el1 = gen.c; el1 != gen.c + gen.size; ++el1) {
+                temp += real(el1->val * w1.e(el1->ind2, el1->ind1));
+            }
+            omat.e(i1, i2) = -2.0 * temp;
+        }
+    }
+}
+
+template <int N, typename T, typename MT, typename fT = hila::arithmetic_type<T>>
+void project_to_algebra_bilinear(const Matrix_t<N, N, T, MT> &w1,
+                                 out_only Matrix<N * N - 1, N * N - 1, fT> &omat) {
+    // computes real matrix outmat[i][j] = 2 * ReTr(\lambda_i^{\dagger} * w1 * lambda_j)
+    Alg_gen<N, fT> genprodlist[N * N - 1][N * N - 1];
+    Algebra<SU<N, fT>>::generator_product_list(genprodlist);
+    project_to_algebra_bilinear(w1, omat, genprodlist);
+}
+
+template <const int N, typename T, typename MT>
+void project_to_algebra_bilinear(const MT (&w)[N][N],
+                                 out_only Matrix<N * N - 1, N * N - 1, T> &omat,
+                                 const Alg_gen<N, T> (&genlist)[N * N - 1]) {
+    // computes real matrix outmat[i][j] = 2 * Re(Tr(\lambda_i^{\dagger} * w1[k][l]) *
+    // \lambda_j[l][k]) where the list of algebra generators is provided by genlist[]
+    int i1, i2;
+    T temp;
+    for (i1 = 0; i1 < N * N - 1; ++i1) {
+        const auto &gen1 = genlist[i1];
+        for (i2 = 0; i2 < N * N - 1; ++i2) {
+            temp = 0;
+            const auto &gen2 = genlist[i2];
+            for (auto el1 = gen1.c; el1 != gen1.c + gen1.size; ++el1) {
+                for (auto el2 = gen2.c; el2 != gen2.c + gen2.size; ++el2) {
+                    temp +=
+                        real(el1->val * w[el2->ind1][el2->ind2].e(el1->ind2, el1->ind1) * el2->val);
+                }
+            }
+            omat.e(i1, i2) = -2.0 * temp;
+        }
+    }
+}
+
+template <int N, typename T, typename MT>
+void project_to_algebra_bilinear(const MT (&w)[N][N],
+                                 out_only Matrix<N * N - 1, N * N - 1, T> &omat) {
+    // computes real matrix outmat[i][j] = 2 * Re(Tr(\lambda_i^{\dagger} * w1[k][l]) *
+    // \lambda_j[l][k])
+    Alg_gen<N, T> genlist[N * N - 1];
+    Algebra<SU<N, T>>::generator_list(genlist);
+    project_to_algebra_bilinear(w, omat, genlist);
+}
 
 namespace hila {
 

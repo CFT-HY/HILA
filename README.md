@@ -26,7 +26,7 @@ Field<double> g = 0;
 onsites(ALL) f[X].gaussian_random();
 
 foralldir(d){
-  g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
+  g[ALL] += abs(f[X + d] - 2 * f[X] + f[X - d]);
 }
 ```
 

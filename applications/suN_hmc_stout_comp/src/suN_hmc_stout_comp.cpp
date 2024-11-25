@@ -29,7 +29,20 @@
 #include "tools/floating_point_epsilon.h"
 
 #ifdef STOUTSMEAR
+hila::timer sms_timer("Smearing (action)");
+hila::timer smf_timer("Smearing (force)");
+#if defined STOUTMODE && STOUTMODE>0
+#if STOUTMODE==1
+#include "gauge/stout_smear_nch.h"
+#elif STOUTMODE==2
+#include "gauge/stout_smear_nchm.h"
+#else
 #include "gauge/stout_smear.h"
+#endif
+#else
+#define STOUTMODE 0
+#include "gauge/stout_smear.h"
+#endif
 #define STOUTSTEPS STOUTSMEAR
 #else
 #define STOUTSTEPS 0
@@ -39,7 +52,7 @@
 using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
-ftype stoutc = 0.15;
+ftype stoutc = 0.5;
 int stout_nsteps = STOUTSTEPS;
 
 
@@ -69,10 +82,34 @@ template <typename group, typename atype = hila::arithmetic_type<group>>
 double measure_s(const GaugeField<group> &U) {
     // compute the value of the chosen gauge action (without beta/N factor)
 #if STOUTSTEPS > 0
-
+    sms_timer.start();
     GaugeField<group> tU;
+#if STOUTMODE == 0
     stout_smear(U, tU, stoutc, stout_nsteps);
-
+#elif STOUTMODE == 1
+    nch_stout_smear(U, tU, stoutc, stout_nsteps);
+#elif STOUTMODE == 2
+    std::vector<std::array<Field<int>, NDIM>> niterl(stout_nsteps);
+    nchm_stout_smear(U, tU, niterl, stoutc);
+    int maxiter = 0;
+    for(int i=0; i<niterl.size(); ++i) {
+        maxiter = 0;
+        Field<double> titerl;
+        foralldir(d) {
+            onsites(ALL) {
+                titerl[X] = (double)niterl[i][d][X];
+            }
+            int tmaxiter = titerl.max();
+            if(tmaxiter>maxiter) {
+                maxiter = tmaxiter;
+            }
+        }
+        hila::out0 << "stout step "<<i<<" exp niter: " << maxiter << "\n";
+    }
+#else
+    stout_smear(U, tU, stoutc, stout_nsteps);
+#endif
+    sms_timer.stop();
 #else
 
     const GaugeField<group> &tU = U;
@@ -108,17 +145,28 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
     atype eps = delta / group::size();
 
 #if STOUTSTEPS > 0
-
+    sms_timer.start();
     std::vector<GaugeField<group>> tUl(stout_nsteps + 1);
-    std::vector<VectorField<group>> tUKl(stout_nsteps);
     std::vector<VectorField<group>> tstapl(stout_nsteps);
+
+#if STOUTMODE == 0
+    stout_smear(U, tUl, tstapl, stoutc);
+#elif STOUTMODE == 1
+    nch_stout_smear(U, tUl, tstapl, stoutc);
+#elif STOUTMODE == 2
+    std::vector<std::array<Field<int>, NDIM>> niterl(stout_nsteps);
+    nchm_stout_smear(U, tUl, tstapl, niterl, stoutc);
+#else
+    std::vector<VectorField<group>> tUKl(stout_nsteps);
     stout_smeark(U, tUl, tstapl, tUKl, stoutc);
+#endif
 
     VectorField<Algebra<group>> tE;
 
     foralldir(d1) onsites(ALL) tE[d1][X] = 0;
 
     GaugeField<group> &tU = tUl[stout_nsteps];
+    sms_timer.stop();
 
 #else // STOUTSTEPS==0
 
@@ -148,14 +196,23 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
 #endif          // END HMCS
 
 #if STOUTSTEPS > 0
-
+    smf_timer.start();
     VectorField<Algebra<group>> KS;
+
+#if STOUTMODE == 0
+    stout_smear_force(tUl, tstapl, tE, KS, stoutc);
+#elif STOUTMODE == 1
+    nch_stout_smear_force(tUl, tstapl, tE, KS, stoutc);
+#elif STOUTMODE == 2
+    nchm_stout_smear_force(tUl, tstapl, tE, KS, niterl, stoutc);
+#else
     stout_smeark_force(tUl, tstapl, tUKl, tE, KS, stoutc);
+#endif
 
     foralldir(d1) {
         onsites(ALL) E[d1][X] += KS[d1][X];
     }
-
+    smf_timer.stop();
 #endif // END STOUTSTEPS
 
 }
@@ -373,6 +430,19 @@ int main(int argc, char **argv) {
 
     par.close(); // file is closed also when par goes out of scope
 
+#if STOUTSTEPS > 0
+    hila::out0 << "using stout smearing: nsteps=" << stout_nsteps << "  , c=" << stoutc << "  , ";
+#if STOUTMODE == 0
+    hila::out0 << "mode=CH\n";
+#elif STOUTMODE == 1
+    hila::out0 << "mode=NCH\n";
+#elif STOUTMODE == 2
+    hila::out0 << "mode=NCHM\n";
+#else
+    hila::out0 << "mode=CHK\n";
+#endif
+#endif
+
     // set up the lattice
     lattice.setup(lsize);
 
@@ -382,45 +452,6 @@ int main(int argc, char **argv) {
     // Alloc gauge field and momenta (E)
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
-
-    if (0 && hila::myrank() == 0) {
-        // test matrix exponential and corresponding differential computations
-        Alg_gen<NCOLOR, ftype> genlist[NCOLOR * NCOLOR - 1];
-        Algebra<mygroup>::generator_list(genlist);
-        if(false) {
-            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
-                hila::out0 << hila::prettyprint(genlist[i].to_matrix()) << "\n\n";
-            }
-        }
-        Matrix<NCOLOR * NCOLOR - 1, NCOLOR * NCOLOR - 1, ftype> omat;
-        Matrix<NCOLOR, NCOLOR, Complex<ftype>> V;
-        Matrix<NCOLOR, NCOLOR, Complex<ftype>> dV[NCOLOR][NCOLOR];
-        chexp(2.0*genlist[NCOLOR+1].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);
-        hila::out0 << "exp(A):\n" << hila::prettyprint(V) << "\n";
-        for (int i = 0; i < NCOLOR; ++i) {
-            for (int j = 0; j < NCOLOR; ++j) {
-                dV[i][j] = dV[i][j] * V.dagger();
-                hila::out0 << "dexp(A)/dA[" << i << "][" << j << "]*exp(-A):\n"
-                           << hila::prettyprint(dV[i][j]) << "\n";
-            }
-        }
-        project_to_algebra_bilinear(dV, omat, genlist);
-        hila::out0 << "dexp(A)^i/dA^j*exp(-A):\n" << hila::prettyprint(omat) << "\n";
-
-        if (false) {
-            Alg_gen<NCOLOR, ftype> genprodlist[NCOLOR * NCOLOR - 1][NCOLOR * NCOLOR - 1];
-            Algebra<mygroup>::generator_product_list(genlist, genprodlist);
-
-            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
-                for (int j = 0; j < NCOLOR * NCOLOR - 1; ++j) {
-                    hila::out0 << hila::prettyprint(genprodlist[i][j].to_matrix()) << "\n\n";
-                }
-            }
-            project_to_algebra_bilinear(V, omat, genprodlist);
-            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*V*t[]):\n"
-                    << hila::prettyprint(omat) << "\n";
-        }
-    }
 
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
