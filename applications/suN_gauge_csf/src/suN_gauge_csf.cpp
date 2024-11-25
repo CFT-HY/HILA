@@ -4,6 +4,7 @@
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
 #include "gauge/staples.h"
+#include "gauge/cs_flow.h"
 #include "gauge/gradient_flow.h"
 #include "tools/string_format.h"
 #include "tools/floating_point_epsilon.h"
@@ -12,7 +13,7 @@
 #define NCOLOR 3
 #endif
 
-using ftype = double;
+using ftype = float;
 using mygroup = SU<NCOLOR, ftype>;
 
 // define a struct to hold the input parameters: this
@@ -28,6 +29,10 @@ struct parameters {
     ftype gflow_l_step; // flow scale interval between flow measurements
     ftype gflow_a_accu; // desired absolute accuracy of gradient flow integration steps
     ftype gflow_r_accu; // desired relative accuracy of gradient flow integration steps
+    int num_csflows;     // number of repetitions of gradient flow with different cs-flow-evolved configs.
+    ftype csflow_t_step;  // flow scale at which gradient flow stops
+    ftype csflow_a_accu; // desired absolute accuracy of gradient flow integration steps
+    ftype csflow_r_accu; // desired relative accuracy of gradient flow integration steps
     int n_save;         // number of trajectories between config. check point
     std::string config_file;
     ftype time_offset;
@@ -39,7 +44,7 @@ struct parameters {
 
 /**
  * @brief Wrapper update function
- * @details Gauge Field update sweep with randomly chosen parities and directions 
+ * @details Gauge Field update sweep with randomly chosen parities and directions
  *
  * @tparam group
  * @param U GaugeField to update
@@ -52,10 +57,10 @@ void update(GaugeField<group> &U, const parameters &p, bool relax) {
         int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
         int tdir = tdp / 2;
         int tpar = 1 + (tdp % 2);
-        //hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
+        // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
         update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax);
     }
-    //hila::out0 << "\n";
+    // hila::out0 << "\n";
 }
 
 /**
@@ -124,7 +129,7 @@ void do_trajectory(GaugeField<group> &U, const parameters &p) {
         for (int i = 0; i <= p.n_overrelax; i++) {
             bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_overrelax)) != 0);
             update(U, p, relax);
-            //hila::out0 << relax << "\n";
+            // hila::out0 << relax << "\n";
         }
     }
     U.reunitarize_gauge();
@@ -251,16 +256,24 @@ int main(int argc, char **argv) {
     p.n_overrelax = par.get("overrelax steps");
     // number of thermalization trajectories
     p.n_therm = par.get("thermalization trajs");
-    // wilson flow frequency (number of traj. between w. flow measurement)
+    // gradient flow frequency (number of traj. between w. flow measurement)
     p.gflow_freq = par.get("gflow freq");
-    // wilson flow max. flow-distance
+    // gradient flow max. flow-distance
     p.gflow_max_l = par.get("gflow max lambda");
-    // wilson flow flow-distance step size
+    // gradient flow flow-distance step size
     p.gflow_l_step = par.get("gflow lambda step");
-    // wilson flow absolute accuracy (per integration step)
+    // gradient flow absolute accuracy (per integration step)
     p.gflow_a_accu = par.get("gflow abs. accuracy");
-    // wilson flow relative accuracy (per integration step)
+    // gradient flow relative accuracy (per integration step)
     p.gflow_r_accu = par.get("gflow rel. accuracy");
+    // cs flow frequency (number of traj. between w. flow measurement)
+    p.num_csflows = par.get("number of csflows");
+    // cs flow flow-distance step size
+    p.csflow_t_step = par.get("csflow t step");
+    // cs flow absolute accuracy (per integration step)
+    p.csflow_a_accu = par.get("csflow abs. accuracy");
+    // cs flow relative accuracy (per integration step)
+    p.csflow_r_accu = par.get("csflow rel. accuracy");
     // random seed = 0 -> get seed from time
     long seed = par.get("random seed");
     // save config and checkpoint
@@ -291,6 +304,7 @@ int main(int argc, char **argv) {
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
     hila::timer gf_timer("Gradient Flow");
+    hila::timer csf_timer("CS Flow");
 
     ftype t_step0 = 0;
     for (int trajectory = start_traj; trajectory < p.n_traj; ++trajectory) {
@@ -323,34 +337,50 @@ int main(int argc, char **argv) {
                 int gtrajectory = trajectory / p.gflow_freq;
                 if (p.gflow_l_step > 0) {
 
-                    gf_timer.start();
 
-                    int nflow_steps = (int)(p.gflow_max_l / p.gflow_l_step);
-                    ftype gftime = hila::gettime();
-                    hila::out0 << "Gflow_start " << gtrajectory << '\n';
+                    for (int ics = 0; ics < p.num_csflows; ++ics) {
+                        
+                        foralldir(d) onsites(ALL) E[d][X].gaussian_random();
 
-                    GaugeField<mygroup> V = U;
+                        csf_timer.start();
 
-                    ftype t_step = t_step0;
-                    measure_gradient_flow_stuff(V, (ftype)0.0, t_step);
-                    t_step = do_gradient_flow_adapt(V, (ftype)0.0, p.gflow_l_step, p.gflow_a_accu,
-                                                    p.gflow_r_accu, t_step);
-                    measure_gradient_flow_stuff(V, p.gflow_l_step, t_step);
-                    t_step0 = t_step;
+                        do_cs_flow_adapt(U, E, p.csflow_t_step, p.csflow_a_accu, p.csflow_r_accu);
 
-                    for (int i = 1; i < nflow_steps; ++i) {
+                        csf_timer.stop();
+                    
 
-                        t_step =
-                            do_gradient_flow_adapt(V, i * p.gflow_l_step, (i + 1) * p.gflow_l_step,
-                                                   p.gflow_a_accu, p.gflow_r_accu, t_step);
 
-                        measure_gradient_flow_stuff(V, (i + 1) * p.gflow_l_step, t_step);
+                        gf_timer.start();
+
+                        int nflow_steps = (int)(p.gflow_max_l / p.gflow_l_step);
+
+                        ftype gftime = hila::gettime();
+                        hila::out0 << "Gflow_start " << gtrajectory << '\n';
+
+                        GaugeField<mygroup> V = U;
+
+                        ftype t_step = t_step0;
+                        measure_gradient_flow_stuff(V, (ftype)0.0, t_step);
+                        t_step = do_gradient_flow_adapt(V, (ftype)0.0, p.gflow_l_step, p.gflow_a_accu,
+                                                        p.gflow_r_accu, t_step);
+                        measure_gradient_flow_stuff(V, p.gflow_l_step, t_step);
+                        t_step0 = t_step;
+
+                        for (int i = 1; i < nflow_steps; ++i) {
+
+                            t_step =
+                                do_gradient_flow_adapt(V, i * p.gflow_l_step, (i + 1) * p.gflow_l_step,
+                                                    p.gflow_a_accu, p.gflow_r_accu, t_step);
+
+                            measure_gradient_flow_stuff(V, (i + 1) * p.gflow_l_step, t_step);
+                        }
+
+                        hila::out0 << "Gflow_end " << gtrajectory << "    time " << std::setprecision(3)
+                                << hila::gettime() - gftime << '\n';
+
+                        gf_timer.stop();
                     }
 
-                    hila::out0 << "Gflow_end " << gtrajectory << "    time " << std::setprecision(3)
-                               << hila::gettime() - gftime << '\n';
-
-                    gf_timer.stop();
                 }
             }
         }
