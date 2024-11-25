@@ -27,6 +27,10 @@ struct parameters {
     int n_surface;
     int n_dump_polyakov;
     int twist_coeff;
+    int muca_action;
+    int muca_poly;
+    int muca_updates;
+    int measure_surface;
 };
 
 #endif
