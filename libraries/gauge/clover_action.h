@@ -9,9 +9,9 @@
 // functions for clover gauge action
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_clover_leaves(const GaugeField<group> &U, Direction d1, Direction d2, Field<group> (&C)[4],
-                       Field<group> &Csum) {
-    // assignes the clover leave matrices in counter-clockwise order to C[0],C[1],C[2],C[3] and sets
+void get_clover_leaves(const GaugeField<group> &U, Direction d1, Direction d2,
+                       Field<group>(out_only &C)[4], out_only Field<group> &Csum) {
+    // assignes the clover leaf matrices in counter-clockwise order to C[0],C[1],C[2],C[3] and sets
     // Csum to the full Clover matrix, i.e. to the anti-hermitian tracless part of
     // (C[0]+C[1]+C[2]+C[3])/4
 
@@ -21,11 +21,12 @@ void get_clover_leaves(const GaugeField<group> &U, Direction d1, Direction d2, F
 
     onsites(ALL) {
         // d1-d2-plaquette that starts and ends at X
-        C[0][X] = U[d1][X] * U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
-        C[0][X] *= 0.25;
+        tF[X] = U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
+        tF[X] *= 0.25;
+        C[0][X] = U[d1][X] * tF[X];
 
         // parallel transport C[0][X] to X+d1 (use C[2][X] as temp. storage)
-        C[2][X] = U[d1][X].dagger() * C[0][X] * U[d1][X];
+        C[2][X] = tF[X] * U[d1][X];
     }
 
     C[2].start_gather(-d1, ALL);
@@ -65,8 +66,8 @@ void get_clover_leaves(const GaugeField<group> &U, Direction d1, Direction d2, F
     }
 }
 
-template <typename group, typename atype = hila::arithmetic_type<group>>
-atype measure_s_clover(const GaugeField<group> &U) {
+template <typename group>
+double measure_s_clover(const GaugeField<group> &U) {
     // measure the clover action for dir1<dir2
     // (just to have same normalization as with plaquette action)
     Reduction<double> stot = 0;
@@ -76,10 +77,10 @@ atype measure_s_clover(const GaugeField<group> &U) {
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
         get_clover_leaves(U, dir1, dir2, C, Csum);
         onsites(ALL) {
-            stot += -0.5 * real(mul_trace(Csum[X], Csum[X]));
+            stot += 0.5 * Csum[X].squarenorm();
         }
     }
-    return (atype)stot.value() / group::size();
+    return stot.value() / group::size();
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
@@ -91,11 +92,11 @@ void get_force_clover_add(const GaugeField<group> &U, VectorField<Algebra<group>
 
     Field<group> tC;
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-        // get the 4 clover leave matrices C[][X] (ordered counter-clockwise in (dir1,dir2)-plane)
+        // get the 4 clover leaf matrices C[][X] (ordered counter-clockwise in (dir1,dir2)-plane)
         // and their anti-hermitian traceless sum Csum[X]
         get_clover_leaves(U, dir1, dir2, C, Csum);
 
-        // define for each clover leave matrix the correspondin path of gauge links
+        // define for each clover leaf matrix the correspondin path of gauge links
         std::vector<Direction> paths[4] = {{dir1, dir2, -dir1, -dir2},
                                            {dir2, -dir1, -dir2, dir1},
                                            {-dir1, -dir2, dir1, dir2},
@@ -123,7 +124,8 @@ void get_force_clover_add(const GaugeField<group> &U, VectorField<Algebra<group>
 }
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
-void get_force_clover(const GaugeField<group> &U, VectorField<Algebra<group>> &K, atype eps = 1.0) {
+void get_force_clover(const GaugeField<group> &U, out_only VectorField<Algebra<group>> &K,
+                      atype eps = 1.0) {
     // determine gauge force for clover action and store result in K
     foralldir(d1) {
         K[d1][ALL] = 0;
