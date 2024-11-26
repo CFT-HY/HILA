@@ -29,7 +29,7 @@ public:
 
     constexpr levi_civita() {
         int tarr0[N+1]; // inital sequence and permutation sign :
-        // sequence {0,1,...} :
+        // sequence {0,1,2,...,N-1} :
         for(int i=0; i<N; ++i) {
             tarr0[i]=i;
         }
