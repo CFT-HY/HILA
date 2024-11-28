@@ -300,7 +300,7 @@ void gpu_device_info() {
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
 
-        hila::out << "Threads in use: " << N_threads << '\n';
+        hila::out << "Thread block size used: " << N_threads << '\n';
 
 // Following should be OK in open MPI
 #ifdef OPEN_MPI
@@ -355,7 +355,7 @@ void gpu_device_info() {
                   << props.maxThreadsDim[1] << ", " << props.maxThreadsDim[2] << " ]" << '\n';
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
-        hila::out << "Threads in use: " << N_threads << '\n';
+        hila::out << "Thread block size used: " << N_threads << '\n';
     }
 }
 

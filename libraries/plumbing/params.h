@@ -180,7 +180,7 @@
 
 #if defined(CUDA)
 
-// General # of threads
+// General # of threads in a thread block
 #ifndef N_threads
 #define N_threads 256
 #endif
@@ -209,7 +209,7 @@
 
 #if defined(HIP)
 
-// General # of threads
+// General # of threads in a thread block
 #ifndef N_threads
 #define N_threads 256
 #endif
