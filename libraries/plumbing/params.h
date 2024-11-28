@@ -63,8 +63,9 @@
 #endif
 #endif
 
-// Size of the write buffer in field writes, in bytes
-// Larger buffer -> less MPI calls in writing, but more memory
+/// WRITE_BUFFER SIZE
+/// Size of the write buffer in field writes, in bytes
+/// Larger buffer -> less MPI calls in writing, but more memory
 #ifndef WRITE_BUFFER_SIZE
 #define WRITE_BUFFER_SIZE 2000000
 #endif
@@ -77,71 +78,74 @@
 // Special defines for GPU targets
 #if defined(CUDA) || defined(HIP)
 
-// Use gpu memory pool by default
-// set off by using -DGPU_MEMORY_POOL=0 in Makefile
+/// Use gpu memory pool by default
+/// turn off by using -DGPU_MEMORY_POOL=0 in Makefile
 #ifndef GPU_MEMORY_POOL
 #define GPU_MEMORY_POOL
 #elif GPU_MEMORY_POOL == 0
 #undef GPU_MEMORY_POOL
 #endif
 
-// Undef cuda/hip -aware mpi at makefile with -DGPU_AWARE_MPI=0
+/// GPU_AWARE_MPI
+/// By default GPU aware MPI is on. Turn it off in Makefile with -DGPU_AWARE_MPI=0
 #ifndef GPU_AWARE_MPI
 #define GPU_AWARE_MPI 1
 #elif GPU_AWARE_MPI == 0
 #undef GPU_AWARE_MPI
 #endif
 
-// GPU_RNG_THREAD_BLOCKS
-// Number of thread blocks (of N_threads threads) to use in onsites()-loops containing random
-// numbers. GPU_RNG_THREAD_BLOCKS=0 or undefined means use one RNG on each lattice site, and the
-// thread block number is not restricted.  RNG takes about 48 B/generator (with XORWOW). When
-// GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS) generators are in use, which
-// reduces the memory footprint substantially (and bandwidth demand) Too small number slows down
-// onsites()-loops containing RNGs, because less threads are active. Example:
-//     Field<Vector<4,double>> vfield;
-//     onsites(ALL) {
-//        vfield[X].gaussian_random();      // there's RNG here, so this onsites() is handled by
-//                                          // GPU_RNG_THREAD_BLOCKS thread blocks
-//     }
-// GPU_RNG_THREAD_BLOCKS<0 disables GPU random numbers entirely, and loops like above will crash if
-// executed. hilapp will emit a warning, but program is compiled
+/// GPU_RNG_THREAD_BLOCKS
+/// Number of thread blocks (of N_threads threads) to use in onsites()-loops containing random
+/// numbers. GPU_RNG_THREAD_BLOCKS=0 or undefined means use one RNG on each lattice site, and the
+/// thread block number is not restricted.  RNG takes about 48 B/generator (with XORWOW). When
+/// GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS) generators are in use, which
+/// reduces the memory footprint substantially (and bandwidth demand) Too small number slows down
+/// onsites()-loops containing RNGs, because less threads are active. Example:
+///     Field<Vector<4,double>> vfield;
+///     onsites(ALL) {
+///        vfield[X].gaussian_random();      // there's RNG here, so this onsites() is handled by
+///                                          // GPU_RNG_THREAD_BLOCKS thread blocks
+///     }
+/// GPU_RNG_THREAD_BLOCKS<0 disables GPU random numbers entirely, and loops like above will crash if
+/// executed. hilapp will emit a warning, but program is compiled
+///
+///  Default: 32 seems to be OK compromise. Can be set to 0 if memory is not a problem.
 
 #ifndef GPU_RNG_THREAD_BLOCKS
 #define GPU_RNG_THREAD_BLOCKS 32
 #endif
 
-// GPU_VECTOR_REDUCTION_THREAD_BLOCKS
-// # of thread blocks (of N_threads threads) used in ReductionVector (weighted histogram) ops.
-// A value > 0 for GPU_VECTOR_REDUCTION_THREAD_BLOCKS means that the onsites-loop where the
-// reduction is done is handled by GPU_VECTOR_REDUCTION_THREAD_BLOCKS thread blocks of N_threads
-// threads.  Each thread handles its own histogram, thus there are
-// (GPU_VECTOR_REDUCTION_THREAD_BLOCKS*N_threads) working copies of the histogram which are then
-// combined. Too small value slows the loop where this happens computation, too large uses
-// (temporarily) more memory. Example:
-//      ReductionVector<double> rv(100);
-//      Field<int> index;
-//      ... (set index to values 0 .. 99)
-//      onsites(ALL) {
-//           rv[index[X]] += ..
-//           ..
-//      }
-//
-// GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 or undefined means that the thread block number is not
-// restricted and only a single histogram is used with atomic operations (atomicAdd).  This
-// can be slower, but the performance is GPU hardware/driver dependent.  In some
-// cases GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 turns out to be faster.
-//
-// Default: 32 is currently OK compromise (32 thread blocks)
+/// GPU_VECTOR_REDUCTION_THREAD_BLOCKS
+/// # of thread blocks (of N_threads threads) used in ReductionVector (weighted histogram) ops.
+/// A value > 0 for GPU_VECTOR_REDUCTION_THREAD_BLOCKS means that the onsites-loop where the
+/// reduction is done is handled by GPU_VECTOR_REDUCTION_THREAD_BLOCKS thread blocks of N_threads
+/// threads.  Each thread handles its own histogram, thus there are
+/// (GPU_VECTOR_REDUCTION_THREAD_BLOCKS*N_threads) working copies of the histogram which are then
+/// combined. Too small value slows the loop where this happens computation, too large uses
+/// (temporarily) more memory. Example:
+///      ReductionVector<double> rv(100);
+///      Field<int> index;
+///      ... (set index to values 0 .. 99)
+///      onsites(ALL) {
+///           rv[index[X]] += ..
+///           ..
+///      }
+///
+/// GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 or undefined means that the thread block number is not
+/// restricted and only a single histogram is used with atomic operations (atomicAdd).  This
+/// can be slower, but the performance is GPU hardware/driver dependent.  In some
+/// cases GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 turns out to be faster.
+///
+/// Default: 32 is currently OK compromise (32 thread blocks)
 
 #ifndef GPU_VECTOR_REDUCTION_THREAD_BLOCKS
 #define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
 #endif
 
-// GPUFFT_BATCH_SIZE:
-// How many complex fft's in parallel - large value faster, small less memory.
-// Performance is reduced if the value is too small, but levels to a ~constant
-// when sufficiently large.
+/// GPUFFT_BATCH_SIZE
+/// How many complex fft's in parallel - large value can be faster, small uses less memory.
+/// Performance is reduced if the value is too small, but levels to a ~constant
+/// when sufficiently large.
 #ifndef GPUFFT_BATCH_SIZE
 #define GPUFFT_BATCH_SIZE 256
 #endif
@@ -180,7 +184,7 @@
 
 #if defined(CUDA)
 
-// General # of threads in a thread block
+/// General number of threads in a thread block
 #ifndef N_threads
 #define N_threads 256
 #endif
@@ -209,7 +213,7 @@
 
 #if defined(HIP)
 
-// General # of threads in a thread block
+// General number of threads in a thread block
 #ifndef N_threads
 #define N_threads 256
 #endif
