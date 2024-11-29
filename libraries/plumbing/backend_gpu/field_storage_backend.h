@@ -35,13 +35,23 @@ __device__ inline auto field_storage<T>::get(const unsigned i,
     // assert(i < field_alloc_size);
     using base_t = hila::arithmetic_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
-    T value;
-    base_t *value_f = (base_t *)&value;
-    base_t *fp = (base_t *)(fieldbuf);
+    union {
+        T value;
+        base_t arr[n_elements];
+    } u;
+    const base_t *fp = (base_t *)(fieldbuf);
     for (unsigned e = 0; e < n_elements; e++) {
-        value_f[e] = fp[e * field_alloc_size + i];
+         u.arr[e] = fp[e * field_alloc_size + i];
     }
-    return value;
+    return u.value;
+
+    // T value;
+    // base_t *value_f = (base_t *)&value;
+    // base_t *fp = (base_t *)(fieldbuf);
+    // for (unsigned e = 0; e < n_elements; e++) {
+    //     value_f[e] = fp[e * field_alloc_size + i];
+    // }
+    // return value;
 }
 
 template <typename T>
@@ -51,6 +61,7 @@ __device__ inline void field_storage<T>::set(const T &value, const unsigned i,
     // assert(i < field_alloc_size);
     using base_t = hila::arithmetic_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
+
     const base_t *value_f = (base_t *)&value;
     base_t *fp = (base_t *)(fieldbuf);
     for (unsigned e = 0; e < n_elements; e++) {
@@ -150,6 +161,8 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     gpuFree(d_buffer);
 }
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+
 /// A kernel that gathers elements negated
 // requires unary -
 template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
@@ -193,6 +206,8 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
         gpuFree(d_buffer);
     }
 }
+
+#endif
 
 template <typename T>
 __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer, unsigned *site_index,
