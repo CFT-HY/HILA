@@ -1,6 +1,6 @@
 # This is a parameter file for SUN_gauge_gf
 
-lattice size           12,12,12,12
+lattice size           14,12,12,12
 beta                   6.
 number of trajectories 302
 updates in trajectory  1

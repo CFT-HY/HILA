@@ -1,15 +1,17 @@
 #include "hila.h"
-#include "gauge/polyakov.h"
-#include "gauge/wilson_plaquette_action.h"
+#include "gauge/staples.h"
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
-#include "gauge/staples.h"
 #include "gauge/gradient_flow.h"
 #include "tools/string_format.h"
 #include "tools/floating_point_epsilon.h"
 
 #ifndef NCOLOR
 #define NCOLOR 3
+#endif
+
+#ifndef BCOPEN
+#define BCOPEN -1
 #endif
 
 using ftype = double;
@@ -39,21 +41,22 @@ struct parameters {
 
 /**
  * @brief Wrapper update function
- * @details Gauge Field update sweep with randomly chosen parities and directions 
+ * @details Gauge Field update sweep with randomly chosen parities and directions
  *
  * @tparam group
  * @param U GaugeField to update
  * @param p Parameter struct
  * @param relax If true evolves GaugeField with over relaxation if false then with heat bath
+ * @param plaqw plaquette weights
  */
 template <typename group>
-void update(GaugeField<group> &U, const parameters &p, bool relax) {
+void update(GaugeField<group> &U, const parameters &p, bool relax, const plaqw_t<ftype> &plaqw) {
     for (int i = 0; i < 2 * NDIM; ++i) {
         int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
         int tdir = tdp / 2;
         int tpar = 1 + (tdp % 2);
         //hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax);
+        update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax, plaqw);
     }
     //hila::out0 << "\n";
 }
@@ -69,10 +72,11 @@ void update(GaugeField<group> &U, const parameters &p, bool relax) {
  * @param par Parity
  * @param d Direction to evolve
  * @param relax If true evolves GaugeField with over relaxation if false then with heat bath
+ * @param plaqw plaquette weights
  */
 template <typename group>
 void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Direction d,
-                       bool relax) {
+                       bool relax, const plaqw_t<ftype> &plaqw) {
 
     static hila::timer hb_timer("Heatbath");
     static hila::timer or_timer("Overrelax");
@@ -82,7 +86,8 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
     staples_timer.start();
 
-    staplesum(U, staples, d, par);
+    staplesum(U, staples, d, plaqw, par);
+
     staples_timer.stop();
 
     if (relax) {
@@ -90,11 +95,13 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
         or_timer.start();
 
         onsites(par) {
+            if(plaqw[d][d][X] != 0) {
 #ifdef SUN_OVERRELAX_dFJ
-            suN_overrelax_dFJ(U[d][X], staples[X], p.beta);
+                suN_overrelax_dFJ(U[d][X], staples[X], p.beta);
 #else
-            suN_overrelax(U[d][X], staples[X]);
+                suN_overrelax(U[d][X], staples[X]);
 #endif
+            }
         }
         or_timer.stop();
 
@@ -102,7 +109,9 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
         hb_timer.start();
         onsites(par) {
-            suN_heatbath(U[d][X], staples[X], p.beta);
+            if (plaqw[d][d][X] != 0) {
+                suN_heatbath(U[d][X], staples[X], p.beta);
+            }
         }
         hb_timer.stop();
     }
@@ -118,12 +127,12 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
  * @param p
  */
 template <typename group>
-void do_trajectory(GaugeField<group> &U, const parameters &p) {
+void do_trajectory(GaugeField<group> &U, const plaqw_t<ftype> &plaqw, const parameters &p) {
 
     for (int n = 0; n < p.n_update; n++) {
         for (int i = 0; i <= p.n_overrelax; i++) {
             bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_overrelax)) != 0);
-            update(U, p, relax);
+            update(U, p, relax, plaqw);
             //hila::out0 << relax << "\n";
         }
     }
@@ -135,10 +144,117 @@ void do_trajectory(GaugeField<group> &U, const parameters &p) {
 // measurement functions
 
 template <typename group>
-void measure_stuff(const GaugeField<group> &U) {
+std::vector<double> measure_s_wplaq_ps(const GaugeField<group> &U, Direction obd,
+                                       const plaqw_t<ftype> &plaqw) {
+    // measure the total Wilson plaquette action for the gauge field U
+    int obdlsize = lattice.size(obd);
+    ReductionVector<double> plaql(obdlsize);
+    plaql = 0.0;
+    plaql.allreduce(false).delayed(true);
+    double normf = 2.0 / (NDIM * (NDIM - 1) * lattice.volume() / obdlsize);
+
+    foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+        U[dir2].start_gather(dir1, ALL);
+        U[dir1].start_gather(dir2, ALL);
+        onsites(ALL) {
+            double tplq = (1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
+                                            (U[dir2][X] * U[dir1][X + dir2]).dagger())) /
+                                     group::size()) *
+                          plaqw[dir1][dir2][X] * normf;
+            int obdind = X.coordinate(obd);
+            if (dir1 != obd && dir2 != obd) {
+                plaql[obdind] += tplq;
+            } else {
+                if (obdind > 0 && obdind < obdlsize - 1) {
+                    if (obdind == 1) {
+                        plaql[obdind] += tplq;
+                        plaql[obdind + 1] += 0.5 * tplq;
+                    } else if (obdind == obdlsize - 2) {
+                        plaql[obdind] += 0.5 * tplq;
+                        plaql[obdind + 1] += tplq;
+                    } else {
+                        plaql[obdind] += 0.5 * tplq;
+                        plaql[obdind + 1] += 0.5 * tplq;
+                    }
+                }
+            }
+        }
+    }
+    plaql.reduce();
+    return plaql.vector();
+}
+
+/**
+ * @brief Measure Polyakov lines to direction dir
+ * @details Naive implementation, includes extra communication
+ * @tparam T GaugeField Group
+ * @param U GaugeField to measure
+ * @param dir Direction
+ * @return Complex<double>
+ */
+template <typename T>
+std::vector<Complex<double>> measure_polyakov_ps(const GaugeField<T> &U, Direction obd,
+                                                 Direction dir = Direction(NDIM - 1)) {
+
+    Field<T> polyakov = U[dir];
+
+    // mult links so that polyakov[X.dir == 0] contains the polyakov loop
+    for (int plane = lattice.size(dir) - 2; plane >= 0; plane--) {
+
+        // safe_access(polyakov) pragma allows the expression below, otherwise
+        // hilapp would reject it because X and X+dir can refer to the same
+        // site on different "iterations" of the loop.  However, here this
+        // is restricted on single dir-plane so it works but we must tell it to hilapp.
+
+#pragma hila safe_access(polyakov)
+        onsites(ALL) {
+            if (X.coordinate(dir) == plane) {
+                polyakov[X] = U[dir][X] * polyakov[X + dir];
+            }
+        }
+    }
+
+    ReductionVector<Complex<double>> ploopl(lattice.size(obd));
+    ploopl = 0.0;
+    ploopl.allreduce(false).delayed(true);
+
+    int obdlsize = lattice.size(obd);
+    double normf = 1.0 / (lattice.volume() / (lattice.size(dir) * obdlsize));
+
+    onsites(ALL) if (X.coordinate(dir) == 0) {
+        ploopl[X.coordinate(obd)] += trace(polyakov[X]) * normf;
+    }
+    ploopl.reduce();
+
+    return ploopl.vector();
+}
+
+template <typename group>
+void measure_stuff(const GaugeField<group> &U, const plaqw_t<ftype> &plaqw) {
     // perform measurements on current gauge and momentum pair (U, E) and
     // print results in formatted form to standard output
     static bool first = true;
+#if BCOPEN >= 0 && BCOPEN < NDIM
+    if (first) {
+        // print legend for measurement output
+        hila::out0 << "LMPLAQPS:     plaq[1]       plaq[2]       plaq[3]       plaq[4]          ...\n";
+        hila::out0 << "LMPOLPS:      P[1].re       P[1].im       P[2].re       P[2].im          ...\n";
+        first = false;
+    }
+    Direction obd = Direction(BCOPEN);
+    auto plaql = measure_s_wplaq_ps(U, obd, plaqw);
+    auto polyl = measure_polyakov_ps(U, obd, e_t);
+    hila::out0 << "MPLAQPS";
+    for (int i = 1; i < lattice.size(obd); ++i) {
+        hila::out0 << string_format(" % 0.6e", plaql[i]);
+    }
+    hila::out0 << '\n';
+    hila::out0 << "MPOLPS ";
+    for (int i = 1; i < lattice.size(obd); ++i) {
+        hila::out0 << string_format(" % 0.6e % 0.6e", polyl[i].real(), polyl[i].imag());
+    }
+    hila::out0 << '\n';
+#else
     if (first) {
         // print legend for measurement output
         hila::out0 << "LMEAS:        plaq        P.real        P.imag\n";
@@ -147,7 +263,8 @@ void measure_stuff(const GaugeField<group> &U) {
     auto plaq = measure_s_wplaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
     auto poly = measure_polyakov(U, e_t);
     hila::out0 << string_format("MEAS % 0.6e % 0.6e % 0.6e", plaq, poly.real(), poly.imag())
-               << '\n';
+            << '\n';
+#endif
 }
 
 // end measurement functions
@@ -280,6 +397,41 @@ int main(int argc, char **argv) {
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
 
+    plaqw_t<ftype> plaqw;
+    foralldir(d1) {
+        foralldir(d2) {
+            onsites(ALL) {
+                plaqw[d1][d2][X] = 1.0;
+            }
+        }
+    }
+
+#if BCOPEN>=0 && BCOPEN<NDIM
+    Direction obd = Direction(BCOPEN);
+    hila::out0 << "Using open boundary conditions in " << obd << "-direction\n";
+    foralldir(d1) {
+        foralldir(d2) {
+            onsites(ALL) {
+                if (X.coordinate(obd) == 0) {
+                    plaqw[d1][d2][X] = 0;
+                }
+                if (X.coordinate(obd) == 1) {
+                    if (d1 != obd && d2 != obd) {
+                        //plaqw[d1][d2][X] = 0.5;
+                    }
+                }
+                if (X.coordinate(obd) == lattice.size(obd) - 1) {
+                    if (d1 != obd && d2 != obd) {
+                        //plaqw[d1][d2][X] = 0.5;
+                    } else {
+                        plaqw[d1][d2][X] = 0;
+                    }
+                }
+            }
+        }
+    }
+#endif //END BCOPEN
+
     // use negative trajectory for thermal
     int start_traj = -p.n_therm;
 
@@ -299,7 +451,7 @@ int main(int argc, char **argv) {
 
         update_timer.start();
 
-        do_trajectory(U, p);
+        do_trajectory(U, plaqw, p);
 
         // put sync here in order to get approx gpu timing
         hila::synchronize_threads();
@@ -309,7 +461,7 @@ int main(int argc, char **argv) {
 
         hila::out0 << "Measure_start " << trajectory << '\n';
 
-        measure_stuff(U);
+        measure_stuff(U, plaqw);
 
         hila::out0 << "Measure_end " << trajectory << '\n';
 
