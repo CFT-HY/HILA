@@ -1,4 +1,8 @@
 /**
 
 \page multi_canonical Multi Canonical
+
+The multicanonical.cpp tool is meant for systems where the update exhibits critical freezing and cannot fully traverse the phase space as intended in a reasonable time frame.
+
+An example code for implementing multicanonical sampling is given under multicanonical_example.cpp
 */

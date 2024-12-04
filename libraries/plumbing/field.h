@@ -278,7 +278,8 @@ class Field {
 
         // put here some implementation checks for field vars
 #ifdef VECTORIZED
-        static_assert(sizeof(hila::arithmetic_type<T>) == 4 || sizeof(hila::arithmetic_type<T>) == 8,
+        static_assert(sizeof(hila::arithmetic_type<T>) == 4 ||
+                          sizeof(hila::arithmetic_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
@@ -753,6 +754,24 @@ class Field {
      */
     Field<T> &operator=(const Field<T> &rhs) {
         (*this)[ALL] = rhs[X];
+
+        // // This is direct memcpy version of the routine, slightly faster on cpus
+        //         if (this->fs == rhs.fs)
+        //             return *this;
+        //
+        //         assert(this->fs->lattice_id == rhs.fs->lattice_id &&
+        //                "Cannot assign fields which belong to different lattices!");
+        //
+        // #if !defined(CUDA) && !defined(HIP)
+        //         memcpy(this->field_buffer(), rhs.field_buffer(), sizeof(T) *
+        //         lattice.mynode.volume());
+        // #else
+        //         gpuMemcpy(this->field_buffer(), rhs.field_buffer(), sizeof(T) *
+        //         lattice.mynode.volume(),
+        //                   gpuMemcpyDeviceToDevice);
+        // #endif
+        //         this->mark_changed(ALL);
+
         return *this;
     }
 
@@ -1033,7 +1052,7 @@ class Field {
     /**
      * @brief Field comparison operator.
      * @details Fields are equal if their content is element-by-element equal
-     * 
+     *
      * @param rhs Field to compare Field with
      * @return true
      * @return false
@@ -1726,10 +1745,10 @@ auto operator/(Field<A> lhs, const B &rhs) {
 }
 
 namespace hila {
-  
+
 /**
  * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
- */  
+ */
 template <typename T>
 void swap(Field<T> &A, Field<T> &B) {
     std::swap(A.fs, B.fs);

@@ -330,7 +330,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         // buffer can be separate or in Field buffer
         receive_buffer = fs->get_receive_buffer(d, par, from_node);
 
-        size_t n = from_node.n_sites(par) * size / size_type;
+        // size_t n = from_node.n_sites(par) * size / size_type;
+        size_t n = from_node.n_sites(par) * size;
 
         if (n >= (1ULL << 31)) {
             hila::out << "Too large MPI message!  Size " << n << '\n';
@@ -340,7 +341,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         post_receive_timer.start();
 
         // c++ version does not return errors
-        MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice.mpi_comm_lat,
+        // was mpi_type
+        MPI_Irecv(receive_buffer, (int)n, MPI_BYTE, from_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
 
         post_receive_timer.stop();
@@ -356,9 +358,13 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
+#ifndef MPI_BENCHMARK_TEST
         fs->gather_comm_elements(d, par, send_buffer, to_node);
+#endif
 
-        size_t n = sites * size / size_type;
+        // size_t n = sites * size / size_type;
+        size_t n = sites * size;
+
 #ifdef GPU_AWARE_MPI
         gpuStreamSynchronize(0);
         // gpuDeviceSynchronize();
@@ -366,7 +372,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
         start_send_timer.start();
 
-        MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice.mpi_comm_lat,
+        // was mpi_type
+        MPI_Isend(send_buffer, (int)n, MPI_BYTE, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
 
         start_send_timer.stop();
@@ -376,7 +383,9 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     // NOTE: there should be no danger of MPI and shuffle overwriting, MPI writes
     // to halo buffers only if no permutation is needed.  With a permutation MPI
     // uses special receive buffer
+#ifndef MPI_BENCHMARK_TEST
     fs->set_local_boundary_elements(d, par);
+#endif
 
     return get_dir_mask(d);
 }
@@ -461,7 +470,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
             wait_receive_timer.stop();
 
-#ifndef VANILLA
+#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) 
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
 #endif
         }
