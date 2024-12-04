@@ -6,8 +6,8 @@ number of trajectories 302
 updates in trajectory  1
 overrelax steps        4
 thermalization trajs   50
-gflow freq             100
-gflow max lambda       12.
+gflow freq             0
+gflow max lambda       0.
 gflow lambda step      0.1
 gflow abs. accuracy    1.0e-7
 gflow rel. accuracy    1.0e-4

@@ -14,6 +14,11 @@
 #define BCOPEN -1
 #endif
 
+#if BCOPEN==-1
+#include "gauge/polyakov.h"
+#include "gauge/wilson_plaquette_action.h"
+#endif
+
 using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
