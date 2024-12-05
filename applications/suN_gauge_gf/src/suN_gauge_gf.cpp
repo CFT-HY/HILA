@@ -422,12 +422,12 @@ int main(int argc, char **argv) {
                 }
                 if (X.coordinate(obd) == 1) {
                     if (d1 != obd && d2 != obd) {
-                        //plaqw[d1][d2][X] = 0.5;
+                        plaqw[d1][d2][X] = 0.5;
                     }
                 }
                 if (X.coordinate(obd) == lattice.size(obd) - 1) {
                     if (d1 != obd && d2 != obd) {
-                        //plaqw[d1][d2][X] = 0.5;
+                        plaqw[d1][d2][X] = 0.5;
                     } else {
                         plaqw[d1][d2][X] = 0;
                     }
