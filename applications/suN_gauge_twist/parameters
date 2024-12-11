@@ -1,14 +1,14 @@
-lattice size        44, 44, 64, 6
-beta                           10.796888
+lattice size        36, 36, 48, 6
+beta                           24.94307
 delta beta fraction            0
-overrelax steps                4
+overrelax steps                1
 updates in trajectory          1
 trajectories                   10000
-thermalization                 0
+thermalization                 10
 random seed                    0
 traj/saved                     1000
 config name                    config
-twist_coeff                    1
+twist_coeff                    0
 
 updates/profile meas           20
 smearing steps                 10, 20
@@ -16,7 +16,9 @@ smear coefficient              0.9
 z smearing steps               10, 20
 traj/surface                   100
 traj/polyakov dump             0
-muca_action                    0
-muca_poly                      1
-muca_updates                   0
-measure_surface                1
+muca_action                    1
+muca_poly                      0
+muca_updates                   1
+measure_surface                0
+
+initial_state                  cold

@@ -11,17 +11,17 @@ output file name base       ./example
 weight file location        NONE
 iteration method 	    direct
 hard walls 	            NO
-max OP               	    0.175
-min OP               	    0
-bin number           	    40
+max OP               	    0.44813
+min OP               	    0.44725
+bin number           	    50
 iteration visuals           NO
 
 #Direct iteration method
 finish condition            all_visited
-DIM sample size             100
-DIM visit check interval    100
-add initial                 1
-add minimum                 0.001
+DIM sample size             30
+DIM visit check interval    20
+add initial                 0.0000001
+add minimum                 0.0000000001
 
 #Canonical iteration method
 CIM sample size             10
