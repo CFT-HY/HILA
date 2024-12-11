@@ -39,8 +39,7 @@ extern hila::timer
         reduction_wait_timer,
         broadcast_timer,
         send_timer,
-        cancel_send_timer,
-        cancel_receive_timer,
+        drop_comms_timer,
         partition_sync_timer;
 // clang-format on
 
