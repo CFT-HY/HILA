@@ -77,15 +77,15 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
     // '\n';
 
     // check if lambda function call:
-    if(CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)){
-        if(isLambdaCallOperator(MD)){
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+        if (isLambdaCallOperator(MD)) {
             // CXXRecordDecl *RD = MD->getParent();
             // check if lambda is defined inside the loop:
-            for(var_decl &vd : var_decl_list){
-                if(vd.scope >= 0 && vd.decl->hasInit()){
-                    if(LambdaExpr *LE = dyn_cast<LambdaExpr>(vd.decl->getInit())){
-                        if(LE->getCallOperator() == MD){
-                            // found local decl for the lambda 
+            for (var_decl &vd : var_decl_list) {
+                if (vd.scope >= 0 && vd.decl->hasInit()) {
+                    if (LambdaExpr *LE = dyn_cast<LambdaExpr>(vd.decl->getInit())) {
+                        if (LE->getCallOperator() == MD) {
+                            // found local decl for the lambda
                             ci.is_loop_local_lambda = true;
                             break;
                         }
@@ -769,5 +769,5 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 void TopLevelVisitor::process_loop_functions() {
 
     // spin off to a new visitor
-    visit_loop_functions(loop_function_calls);
+    visit_loop_function_calls(loop_function_calls);
 }

@@ -169,7 +169,7 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     void process_loop_functions();
 
-    void visit_loop_functions(std::vector<call_info_struct> &calls);
+    void visit_loop_function_calls(std::vector<call_info_struct> &calls);
 
     bool handle_special_loop_function(CallExpr *Call);
 
