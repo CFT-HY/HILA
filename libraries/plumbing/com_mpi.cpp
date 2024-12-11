@@ -16,8 +16,7 @@ hila::timer reduction_timer("MPI reduction");
 hila::timer reduction_wait_timer("MPI reduction wait");
 hila::timer broadcast_timer("MPI broadcast");
 hila::timer send_timer("MPI send field");
-hila::timer cancel_send_timer("MPI cancel send");
-hila::timer cancel_receive_timer("MPI cancel receive");
+hila::timer drop_comms_timer("MPI wait drop_comms");
 hila::timer partition_sync_timer("partition sync");
 
 // let us house the partitions-struct here
