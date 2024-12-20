@@ -393,8 +393,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 /// @internal
 ///  wait_gather(): Wait for communication at parity par from
 ///  Direction d completes the communication in the function.
-///  If the communication has not started yet, also calls
-///  start_gather()
 ///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
@@ -426,9 +424,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
     // care
 
     // check here consistency, this should never happen
-    if (p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)) {
-        exit(1);
-    }
+    assert(!(p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)));
 
     Parity par;
     int n_wait = 1;
@@ -449,14 +445,11 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             par = EVEN;
         else if (is_gather_started(d, EVEN) && is_gather_started(d, ODD)) {
             n_wait = 2; // need to wait for both!
-            par = ALL;
+            par = EVEN; // will be flipped
         } else {
             exit(1);
         }
     }
-
-    if (n_wait == 2)
-        par = EVEN; // we'll flip both
 
     for (int wait_i = 0; wait_i < n_wait; ++wait_i) {
 

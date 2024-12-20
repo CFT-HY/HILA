@@ -39,9 +39,6 @@ void free_device_rng();
 #include <cuda_runtime.h>
 #include <cub/cub.cuh>
 
-// THis set in params.h now
-// #define N_threads 256 // Threads per block for CUDA   TODO: make configurable?
-
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
 
@@ -100,9 +97,6 @@ using gpuError = cudaError;
 #include <hiprand/hiprand.h>
 
 //#include <hipcub/hipcub.hpp>*
-
-// Set in params.h now
-// #define N_threads 256 // Threads per block for CUDAs
 
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess
