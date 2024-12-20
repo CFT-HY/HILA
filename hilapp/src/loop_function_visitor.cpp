@@ -628,7 +628,7 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
-    /// Loop through functions seen - almost copy of the visit_loop_functions below, but
+    /// Loop through functions seen - almost copy of the visit_loop_function_calls below, but
     /// callable from the visitor itself
     ///////////////////////////////////////////////////////////////////////////////////
 
@@ -650,7 +650,7 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
 /// Entry point from top level here
 ///////////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::visit_loop_functions(std::vector<call_info_struct> &calls) {
+void TopLevelVisitor::visit_loop_function_calls(std::vector<call_info_struct> &calls) {
 
     visited_decls.clear();
 
