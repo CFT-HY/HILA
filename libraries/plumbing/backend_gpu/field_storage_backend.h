@@ -290,6 +290,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
 
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
+#ifdef SPECIAL_BOUNDARY_CONDITIONS    
     if (antiperiodic) {
 
         if constexpr (hila::has_unary_minus<T>::value) {
@@ -301,6 +302,10 @@ void field_storage<T>::gather_comm_elements(T *buffer,
         gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                              lattice.field_alloc_size());
     }
+#else
+    gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+                                                         lattice.field_alloc_size());
+#endif    
 
 #ifndef GPU_AWARE_MPI
     // Copy the result to the host
