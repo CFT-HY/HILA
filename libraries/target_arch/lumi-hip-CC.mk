@@ -6,7 +6,14 @@
 
 $(info ########################################################################)
 $(info Target lumi-hip-CC: remember to )
-$(info module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm )
+$(info   module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm )
+$(info )
+$(info Arcording to note of changes of  update of August-September 2024 from LUMI team,)
+$(info LUMI/24.04 is the only truly-supported software stack, you may condider use LUMI/24.03 and its toolchains to make workflow smooth.)
+$(info To load LUMI/24.03 with Cray Clang compiler, AMD GPU gfx90a libs, ROCm and toolchain run )
+$(info )
+$(info   module --force purge && module --force unload LUMI)
+$(info   module load LUMI/24.03 partition/G cpeCray/24.03 buildtools/24.03 rocm/6.0.3 )
 $(info ########################################################################)
 
 
@@ -20,7 +27,7 @@ LD := CC
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti -O3 -xhip -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
+CXXFLAGS := -std=c++17 -fno-rtti -O3 -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
 CXXFLAGS += -D__HIP_PLATFORM_HCC__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
