@@ -199,8 +199,14 @@ build/%.cpt: %.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
 	@mkdir -p build
 	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
 
+# Clang's AMD GPU support option -xhip should be put just before *.cpt source file.
+ifeq ($(ARCH), lumi-hip-CC)
+build/%.o : build/%.cpt
+	$(CC) $(CXXFLAGS) $(APP_OPTS) $(HILA_OPTS) -xhip $< -c -o $@
+else
 build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $(APP_OPTS) $(HILA_OPTS) $< -c -o $@
+endif
 
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	@mkdir -p build
