@@ -5,8 +5,17 @@
 #
 
 $(info ########################################################################)
-$(info Target lumi: remember to )
-$(info   module load PrgEnv-gnu cray-mpich cray-fftw )
+$(info Target lumi for LUMI-C: remember to )
+$(info   module load PrgEnv-gnu cray-mpich cray-fftw if you want to use Cray PE.)
+$(info )
+$(info Arcording to note of changes of  update of August-September 2024 from LUMI team,)
+$(info LUMI/24.04 is the only truly-supported software stack, you may condider use LUMI/24.03 and its toolchains to make workflow smooth.)
+$(info To load LUMI/24.03 with GNU compiler and its toolchains such as fftw, cmake run )
+$(info )
+$(info   module --force purge && module --force unload LUMI )
+$(info   module load LUMI/24.03 partition/C cpeGNU/24.03 buildtools/24.03 cray-fftw/3.3.10.7 )
+$(info )
+$(info LUMI/24.03 contains EasyBuild extra-packages building system, read LUMI documentaion to learn more.)
 $(info ########################################################################)
 
 
@@ -17,7 +26,7 @@ CC := CC
 LD := CC
 
 # Define compilation flags
-CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
+CXXFLAGS  := -Ofast -flto=auto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
