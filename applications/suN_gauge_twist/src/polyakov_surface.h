@@ -132,16 +132,16 @@ void smear_polyakov_field(Field<T> &polyakov_field, int nsmear, float smear_coef
  * \f$y=0\f$
  * @param surface_average_profile z-index Polyakov field sum
  */
-template <typename T>
-void measure_polyakov_profile(Field<T> &polyakov_field, std::vector<T> &surface_origin_profile,
+template <typename U, typename T>
+void measure_polyakov_profile(Field<U> &polyakov_field, std::vector<T> &surface_origin_profile,
                               std::vector<T> &surface_average_profile) {
     ReductionVector<T> p_surface_average(lattice.size(e_z)), p_origin(lattice.size(e_z));
     p_surface_average.allreduce(false);
     p_origin.allreduce(false);
     onsites(ALL) if (X.coordinate(e_t) == 0) {
-        p_surface_average[X.z()] += polyakov_field[X];
+        p_surface_average[X.z()] += abs(polyakov_field[X]);
         if (X.x() == 0 && X.y() == 0)
-            p_origin[X.z()] += polyakov_field[X];
+            p_origin[X.z()] += abs(polyakov_field[X]);
     }
     double inverse_surface_are = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
     surface_origin_profile = p_origin.vector();
@@ -162,19 +162,8 @@ void measure_polyakov_profile(Field<T> &polyakov_field, std::vector<T> &surface_
 template <typename group>
 void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int traj) {
     // Keep track of printing label
-    static bool first = true;
     using MyType = Complex<float>;
     Field<MyType> polyakov_field;
-    if (first) {
-        std::vector<MyType> dummy(lattice.size(e_z));
-        for (int sl = 0; sl < p.n_smear.size(); sl++) {
-            print_formatted_numbers(dummy, "PRO " + std::to_string(sl) + " Origin polyakov smeared",
-                                    true);
-            print_formatted_numbers(
-                dummy, "PRO " + std::to_string(sl) + " Average polyakov smeared", true);
-            first = false;
-        }
-    }
     // 1. First we measure Polyakov field
     if (0) {
         // this section does local sums of poly lines
@@ -198,7 +187,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
     hila::out0 << std::setprecision(5);
 
-    std::vector<MyType> surface_origin_profile, surface_average_profile;
+    std::vector<double> surface_origin_profile, surface_average_profile;
 
     // 2. Smearing subprocess
     int prev_smear = 0;
@@ -239,7 +228,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
             }
         }
 
-        measure_polyakov_profile(polyakov_field_z, surface_origin_profile, surface_average_profile);
+        measure_polyakov_profile<MyType,double>(polyakov_field_z, surface_origin_profile, surface_average_profile);
 
         // double inverse_surface_are = 1.0 / (lattice.size(e_x) *
         // lattice.size(e_y)); for (int i = 0; i < surface_average_profile.size();
@@ -259,15 +248,15 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         // }
         // hila::out0 << "PRO " << sl << "\n";
 
-        // print_formatted_numbers(surface_origin_profile,"PRO " +
-        // std::to_string(sl) + " Origin polyakov smeared", false);
-        // print_formatted_numbers(surface_average_profile,"PRO " +
-        // std::to_string(sl) + " Average polyakov smeared", false);
+        print_formatted_numbers(surface_origin_profile,"PRO " +
+            std::to_string(sl) + " Origin polyakov smeared", false);
+        print_formatted_numbers(surface_average_profile,"PRO " +
+            std::to_string(sl) + " Average polyakov smeared", false);
         float min = 1e8;
         int minloc_global;
         for (int i = 0; i < surface_average_profile.size(); i++) {
-            if (min > surface_average_profile[i].abs()) {
-                min = surface_average_profile[i].abs();
+            if (min > surface_average_profile[i]) {
+                min = surface_average_profile[i];
                 minloc_global = i;
             }
         }
@@ -334,12 +323,28 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                     // while (line[z_ind(z + 1)].abs() <= surface_level &&
                     //         z - startloc < lattice.size(e_z) * 0.4)
                     //     z++;
-                    min = 1e8;
+                    // min = 1e8;
+                    // int minloc;
+                    // for (int i = 0; i < line.size(); i++) {
+                    //     if (min > line[i].abs()) {
+                    //         min = line[i].abs();
+                    //         minloc = i;
+                    //     }
+                    // }
+                    // FIND LOCAL MIN BASED OFF OF GLOBAL MINIMA
                     int minloc;
-                    for (int i = 0; i < line.size(); i++) {
-                        if (min > line[i].abs()) {
-                            min = line[i].abs();
-                            minloc = i;
+                    if (line[minloc_global].abs() < line[minloc_global+1].abs() && line[minloc_global].abs() < line[minloc_global-1].abs()) {
+                        minloc = minloc_global;
+                    } else {
+                        for (int i = 1; i < line.size()/2; i++) {
+                            if (line[minloc_global+i].abs() < line[minloc_global+i+1].abs() && line[minloc_global+i].abs() < line[minloc_global+i-1].abs()) {
+                                minloc = minloc_global+i;
+                                break;
+                            }
+                            if (line[minloc_global-i].abs() < line[minloc_global-i+1].abs() && line[minloc_global-i].abs() < line[minloc_global-i-1].abs()) {
+                                minloc = minloc_global-i;
+                                break;
+                            }
                         }
                     }
                     int z = minloc;

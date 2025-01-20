@@ -36,16 +36,10 @@
 template <typename group>
 void measure_plaq(const GaugeField<group> &U, const parameters &p) {
 
-  static bool first = true;
 
   auto plaq = measure_plaq_with_z(
       U, p.twist_coeff); /// (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
-  if (first) {
-    print_formatted_numbers(plaq, "plaquette", true, true);
-    print_formatted_numbers(plaq, "plaquette", false, true);
-    first = false;
-  }
   print_formatted_numbers(plaq, "plaquette", false, true);
 }
 
@@ -60,16 +54,9 @@ template <typename group>
 void measure_plaq_multicanonical(const GaugeField<group> &U,
                                  const parameters &p) {
 
-  static bool first = true;
-
   auto plaq = measure_plaq_with_z(
       U, p.twist_coeff); /// (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
-  if (first) {
-    print_formatted_numbers(plaq, "plaquette", true, true);
-    print_formatted_numbers(plaq, "plaquette", false, true);
-    first = false;
-  }
   print_formatted_numbers(plaq, "plaquette", false, true);
   hila::out0 << "muca_plaquette: " << hila::muca::weight(plaq.back()) << '\n';
 }
@@ -402,7 +389,6 @@ int main(int argc, char **argv) {
     iterate_weights_multicanonical(U, p);
   }
   // muca_timer.stop();
-
   hila::out0 << "MEASURE start\n";
   void (*do_trajectory_ptr)(GaugeField<mygroup> &, const parameters &);
   void (*measure_plaquette_ptr)(const GaugeField<mygroup> &,
