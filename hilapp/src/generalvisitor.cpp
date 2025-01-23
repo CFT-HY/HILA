@@ -739,13 +739,23 @@ bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
 
                 srcBuf *sb = get_file_srcBuf(sr.getBegin());
 
-                std::string repl = "\n#ifdef _GPU_DEVICE_COMPILE_\n";
+                std::string repl = "\n#ifdef ";
+                if (target.cuda) {
+                    repl.append("__CUDA_ARCH__");
+                } else if (target.hip) {
+                    repl.append("__HIP_DEVICE_COMPILE__");
+                } else {
+                    llvm::errs() << "Internal error: target.kernelize without cuda or hip?\n";
+                    got_error = true;
+                }
+                repl.append("\n");
                 repl.append(constvarname);
                 repl.append("\n#else\n");
                 repl.append(get_stmt_str(CE));
                 repl.append("\n#endif\n");
 
-                sb->replace(sr, repl);
+                sb->replace(sr, "");
+                sb->insert(sr.getBegin(), repl, false, true);
             }
 
         } else {
