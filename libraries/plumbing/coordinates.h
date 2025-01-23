@@ -322,22 +322,10 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     //     return v;
     // }
 
-    /// Assign from 0
-    inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
-        foralldir(d) this->e(d) = 0;
-        return *this;
-    }
-
-    /// Assign from initializer list
-    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) out_only & {
-        assert(rhs.size() == NDIM && "Initializer list has a wrong size in assignment");
-        int i = 0;
-        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
-            this->e(i) = *it;
-        }
-        return *this;
-    }
+    /// 
+    // Inherit assignment from Vector<NDIM,int>
+    // contains also initializer list
+    using Vector<NDIM, int>::operator=;
 
     // Assign from direction
     inline CoordinateVector_t &operator=(Direction d) out_only & {
