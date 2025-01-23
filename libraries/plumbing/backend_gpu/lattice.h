@@ -92,7 +92,8 @@ inline int64_t loop_lattice_volume(void) {
 
 #ifndef EVEN_SITES_FIRST
 
-inline __device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
+#pragma hila loop_function
+inline const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
     CoordinateVector c;
     unsigned vdiv, ndiv;
 
@@ -107,7 +108,8 @@ inline __device__ const CoordinateVector backend_lattice_struct::coordinates(uns
     return c;
 }
 
-inline __device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
+#pragma hila loop_function
+inline int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
     return (idx / _d_nodefactor()[dir]) % _d_nodesize()[dir] + _d_nodemin()[dir];
 }
 
