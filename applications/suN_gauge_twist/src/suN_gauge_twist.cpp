@@ -67,12 +67,11 @@ template <typename group>
 void measure_poly(const GaugeField<group> &U, const parameters &p) {
   auto poly_z = measure_polyakov_with_z(U);
   auto poly_abs = measure_polyakov_with_z_abs(U);
-  auto poly = measure_polyakov(U);
 
   print_formatted_numbers(poly_z, "polyakov z", false, true);
   print_formatted_numbers(poly_abs, "polyakov abs z", false, true);
   hila::out0 << "polyakov: " << poly_z.back() << '\n';
-  hila::out0 << "polyakov abs: " << poly_abs.back() << '\n';
+  hila::out0 << "polyakov abs: " << poly_abs.back()/lattice.size(e_z) << '\n';
 }
 
 template <typename group>
