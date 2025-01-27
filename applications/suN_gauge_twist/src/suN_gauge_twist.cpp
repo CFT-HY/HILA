@@ -1,4 +1,5 @@
 #include "gauge/staples.h"
+#include "gauge/polyakov.h"
 #include "gauge/stout_smear.h"
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
@@ -37,10 +38,11 @@ template <typename group>
 void measure_plaq(const GaugeField<group> &U, const parameters &p) {
 
 
-  auto plaq = measure_plaq_with_z(
-      U, p.twist_coeff); /// (lattice.volume() * NDIM * (NDIM - 1) / 2);
+  auto plaq_z = measure_plaq_with_z(
+      U, p.twist_coeff);
 
-  print_formatted_numbers(plaq, "plaquette", false, true);
+  print_formatted_numbers(plaq_z, "plaquette z", false, true);
+  hila::out0 << "plaquette: " << plaq_z.back() << '\n';
 }
 
 /**
@@ -63,14 +65,14 @@ void measure_plaq_multicanonical(const GaugeField<group> &U,
 
 template <typename group>
 void measure_poly(const GaugeField<group> &U, const parameters &p) {
-  auto poly = measure_polyakov_with_z(U);
+  auto poly_z = measure_polyakov_with_z(U);
   auto poly_abs = measure_polyakov_with_z_abs(U);
+  auto poly = measure_polyakov(U);
 
-  print_formatted_numbers(poly, "polyakov", false, true);
-  print_formatted_numbers(poly_abs, "polyakov abs", false, true);
-
-  hila::out0 << "polyakov last: " << poly.back() << '\n';
-  hila::out0 << "polyakov abs last: " << poly_abs.back() << '\n';
+  print_formatted_numbers(poly_z, "polyakov z", false, true);
+  print_formatted_numbers(poly_abs, "polyakov abs z", false, true);
+  hila::out0 << "polyakov: " << poly_z.back() << '\n';
+  hila::out0 << "polyakov abs: " << poly_abs.back() << '\n';
 }
 
 template <typename group>
@@ -441,6 +443,7 @@ int main(int argc, char **argv) {
       checkpoint(U, trajectory, p);
     }
   }
+  
   hila::out0 << "MEASURE end\n";
   hila::out0 << expi(4.0 / 3.0 * M_PI) << std::endl;
   hila::finishrun();
