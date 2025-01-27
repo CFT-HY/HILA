@@ -929,8 +929,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // }
         kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
         if (r.reduction_type == reduction::SUM) {
-            kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-                   << " < d_lattice.loop_end) {\n";
+            kernel << "if(threadIdx.x < _H_i) {\n";
+            // kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
+            //        << " < d_lattice.loop_end) {\n";
+
             // STD
             // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
             //        << "sh[threadIdx.x+_H_i];\n";
@@ -939,8 +941,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
-            kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-                   << " < d_lattice.loop_end) {\n";
+            kernel << "if(threadIdx.x < _H_i) {\n";
+            // kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
+            //        << " < d_lattice.loop_end) {\n";
+
             kernel << r.loop_name << "sh[threadIdx.x] *= " << r.loop_name
                    << "sh[threadIdx.x+_H_i];\n";
             kernel << "}\n";
