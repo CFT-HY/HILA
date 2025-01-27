@@ -259,6 +259,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         } else if (ar.type == array_ref::REDUCTION) {
 
             // Now there is reductionvector - do we have special reduction blocks or use atomic?
+            // revisit this below and write out the "header"
 
             std::string rv_block_str;
             if (is_macro_defined("GPU_VECTOR_REDUCTION_THREAD_BLOCKS", &rv_block_str)) {
@@ -276,37 +277,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     }
                 }
             }
-
-            ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
-
-            code << ar.element_type << " * " << ar.new_name << ";\n";
-
-            std::stringstream array_size; // keep size expression in string
-
-            if (loop_has_reductionvector_blocks) {
-                code << "// Create reduction array with " << thread_block_number
-                     << " * N_threads parallel reductions\n";
-
-                array_size << ar.size_expr << " * N_threads * " << thread_block_number;
-
-            } else {
-                code << "// Create reduction array - using atomicAdd for accumulation\n";
-
-                array_size << ar.size_expr;
-            }
-
-            code << "gpuMalloc( & " << ar.new_name << ", " << array_size.str() << " * sizeof("
-                 << ar.element_type << "));\n";
-
-            if (ar.reduction_type == reduction::SUM) {
-                code << "gpu_set_zero(" << ar.new_name << ", " << array_size.str() << ");\n";
-            }
-
-            if (ar.reduction_type == reduction::PRODUCT) {
-                code << "gpu_set_value(" << ar.new_name << ", 1, " << array_size.str() << ");\n";
-            }
-
-            code << "check_device_error(\"allocate_reduction\");\n";
         }
     }
 
@@ -355,16 +325,51 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     for (reduction_expr &r : reduction_list) {
 
         code << r.type << " * dev_" << r.reduction_name << ";\n";
-        code << "gpuMalloc( & dev_" << r.reduction_name << ","
-             << "sizeof(" << r.type << ") * N_blocks );\n";
+        code << "gpuMalloc( & dev_" << r.reduction_name << "," << "sizeof(" << r.type
+             << ") * N_blocks );\n";
         if (r.reduction_type == reduction::SUM) {
-            code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
+            // no need to zero the array
+            // code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
         }
         if (r.reduction_type == reduction::PRODUCT) {
             code << "gpu_set_value(dev_" << r.reduction_name << ", 1, N_blocks);\n";
         }
     }
 
+    // Write vector reduction header
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
+
+            ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
+
+            code << ar.element_type << " * " << ar.new_name << ";\n";
+
+            std::stringstream array_size; // keep size expression in string
+
+            if (loop_has_reductionvector_blocks) {
+                code << "// Create reduction array with (N_blocks * N_threads) parallel "
+                        "reductions\n";
+                array_size << ar.size_expr << " * N_threads * N_blocks";
+
+            } else {
+                code << "// Create reduction array - using atomicAdd for accumulation\n";
+                array_size << ar.size_expr;
+            }
+
+            code << "gpuMalloc( & " << ar.new_name << ", " << array_size.str() << " * sizeof("
+                 << ar.element_type << "));\n";
+
+            if (ar.reduction_type == reduction::SUM) {
+                code << "gpu_set_zero(" << ar.new_name << ", " << array_size.str() << ");\n";
+            }
+
+            if (ar.reduction_type == reduction::PRODUCT) {
+                code << "gpu_set_value(" << ar.new_name << ", 1, " << array_size.str() << ");\n";
+            }
+
+            code << "check_device_error(\"allocate_reduction\");\n";
+        }
+    }
 
     // and for selections
     for (selection_info &s : selection_info_list) {
@@ -930,8 +935,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
         if (r.reduction_type == reduction::SUM) {
             kernel << "if(threadIdx.x < _H_i) {\n";
-            // kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-            //        << " < d_lattice.loop_end) {\n";
 
             // STD
             // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
@@ -942,8 +945,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << "__syncthreads();\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             kernel << "if(threadIdx.x < _H_i) {\n";
-            // kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-            //        << " < d_lattice.loop_end) {\n";
 
             kernel << r.loop_name << "sh[threadIdx.x] *= " << r.loop_name
                    << "sh[threadIdx.x+_H_i];\n";
@@ -989,15 +990,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 // (code in hila_gpu.cpp)
 
                 code << "sum_blocked_vectorreduction(" << ar.new_name << ", " << ar.size_expr
-                     << ", " << thread_block_number << " * N_threads);\n";
+                     << ", N_blocks * N_threads);\n";
 
                 // after this the data can be collected from the array as in non-blocked reduction!
             }
 
             code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr << ");\n";
             code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", " << ar.size_expr
-                 << " * sizeof(" << ar.element_type << "), "
-                 << "gpuMemcpyDeviceToHost);\n\n";
+                 << " * sizeof(" << ar.element_type << "), " << "gpuMemcpyDeviceToHost);\n\n";
 
             code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr << "; _H_tmp_idx++) "
                  << ar.name << "[_H_tmp_idx]";
@@ -1019,12 +1019,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // Run reduction
         if (r.reduction_type == reduction::SUM) {
             code << r.reduction_name << " = gpu_reduce_sum( dev_" << r.reduction_name
-                 << ", N_blocks"
-                 << ");\n";
+                 << ", N_blocks" << ");\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             code << r.reduction_name << " = gpu_reduce_product( dev_" << r.reduction_name
-                 << ", N_blocks"
-                 << ");\n";
+                 << ", N_blocks" << ");\n";
         }
         // Free memory allocated for the reduction
         code << "gpuFree(dev_" << r.reduction_name << ");\n";
