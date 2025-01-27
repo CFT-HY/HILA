@@ -332,46 +332,39 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                     //     }
                     // }
                     // FIND LOCAL MIN BASED OFF OF GLOBAL MINIMA
+
+                    // THINK HERE
                     int minloc;
-                    if (line[minloc_global].abs() < line[minloc_global+1].abs() && line[minloc_global].abs() < line[minloc_global-1].abs()) {
+                    if (line[z_ind(minloc_global)].abs() < line[z_ind(minloc_global+1)].abs() && line[z_ind(minloc_global)].abs() < line[z_ind(minloc_global-1)].abs()) {
                         minloc = minloc_global;
                     } else {
                         for (int i = 1; i < line.size()/2; i++) {
-                            if (line[minloc_global+i].abs() < line[minloc_global+i+1].abs() && line[minloc_global+i].abs() < line[minloc_global+i-1].abs()) {
+                            if (line[z_ind(minloc_global+i)].abs() < line[z_ind(minloc_global+i+1)].abs() && line[z_ind(minloc_global+i)].abs() < line[z_ind(minloc_global+i-1)].abs()) {
                                 minloc = minloc_global+i;
                                 break;
                             }
-                            if (line[minloc_global-i].abs() < line[minloc_global-i+1].abs() && line[minloc_global-i].abs() < line[minloc_global-i-1].abs()) {
+                            if (line[z_ind(minloc_global-i)].abs() < line[z_ind(minloc_global-i+1)].abs() && line[z_ind(minloc_global-i)].abs() < line[z_ind(minloc_global-i-1)].abs()) {
                                 minloc = minloc_global-i;
                                 break;
                             }
                         }
                     }
                     int z = minloc;
-                    auto x_1 = line[z_ind(minloc - 1)].abs();
+                    auto x_1 = line[z_ind(minloc-1)].abs();
                     auto x_2 = line[z_ind(minloc)].abs();
-                    auto x_3 = line[z_ind(minloc + 1)].abs();
+                    auto x_3 = line[z_ind(minloc+1)].abs();
                     // hila::out0 << "Check loc: " << x_1 << " " << x_2 << " " << x_3 <<
-                    // "\n"; double interpolated_min = minloc - (1.0/2.0)*((x_2 -
-                    // x_3)-(x_2 - x_1))/(-1*(x_2 - x_3)-(x_2 - x_1));
+                    // "\n"; 
+                    //double interpolated_min = minloc - (1.0/2.0)*((x_2 - x_3)-(x_2 - x_1))/(-1*(x_2 - x_3)-(x_2 - x_1));
                     double interpolated_min =
-                        minloc - (x_3 - x_1) / ((2.0 * (x_3 + x_1 - 2.0 * x_2)));
+                        minloc - abs(x_3 - x_1) / ((2.0 * abs(x_3 + x_1 - 2.0 * x_2)));
 
-                    if (interpolated_min > minloc_global + 0.5 * lattice.size(e_z)) {
-                        interpolated_min -= lattice.size(e_z);
-                    } else if (interpolated_min < minloc_global - 0.5 * lattice.size(e_z)) {
-                        interpolated_min += lattice.size(e_z);
-                    }
-                    // hila::out0 << line[z_ind(minloc-1)].abs() << " " <<
-                    // line[z_ind(minloc)].abs()
-                    // << " " <<line[z_ind(minloc+1)].abs() << " " <<
-                    // interpolated_min
-                    // <<" " << minloc<< std::endl; do linear interpolation
-                    // surf_discrete[x + y * lattice.size(e_x)] = z;
-                    // surf_interpolated[x + y * lattice.size(e_x)] =
-                    //     z +
-                    //     (surface_level - line[z_ind(z)].abs()) / (line[z_ind(z +
-                    //     1)].abs() - line[z_ind(z)].abs());
+//                    if (interpolated_min > minloc_global + 0.5 * lattice.size(e_z)) {
+//                        interpolated_min -= lattice.size(e_z);
+//                    } else if (interpolated_min < minloc_global - 0.5 * lattice.size(e_z)) {
+//                        interpolated_min += lattice.size(e_z);
+//                    }
+                    
                     surf_interpolated[x + y * lattice.size(e_x)] = interpolated_min;
 
                     // and locate the other surface - start from Lz/2 offset
