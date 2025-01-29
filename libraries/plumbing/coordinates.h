@@ -322,6 +322,16 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     //     return v;
     // }
 
+    /// 
+
+    /// Assignment from vector
+    template <typename S,
+              std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    inline CoordinateVector_t &operator=(const Vector<NDIM,S> &v) out_only & {
+        foralldir(d) this->e(d) = v[d];
+        return *this;
+    }
+    
     /// Assign from 0
     inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
         foralldir(d) this->e(d) = 0;
