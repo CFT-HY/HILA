@@ -357,7 +357,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                     // "\n"; 
                     //double interpolated_min = minloc - (1.0/2.0)*((x_2 - x_3)-(x_2 - x_1))/(-1*(x_2 - x_3)-(x_2 - x_1));
                     double interpolated_min =
-                        minloc - abs(x_3 - x_1) / ((2.0 * abs(x_3 + x_1 - 2.0 * x_2)));
+                        minloc - (x_3 - x_1) / ((2.0 * abs(x_3 + x_1 - 2.0 * x_2)));
 
 //                    if (interpolated_min > minloc_global + 0.5 * lattice.size(e_z)) {
 //                        interpolated_min -= lattice.size(e_z);
