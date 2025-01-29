@@ -42,7 +42,8 @@
 
 #ifndef EVEN_SITES_FIRST
 /**
- * @brief  EVEN_SITES_FIRST is default. To traverse odd sites first set -DEVEN_SITES_FIRST=0
+ * @brief  EVEN_SITES_FIRST is default. To traverse sites on natural (parity invariant) order use
+ * -DEVEN_SITES_FIRST=0
  */
 #define EVEN_SITES_FIRST
 #elif EVEN_SITES_FIRST == 0
