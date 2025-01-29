@@ -5,6 +5,12 @@ on:
     branches:
       - documentation
       - master
+  worflow_dispatch:
+    inputs:
+      build:
+        description: 'Build the singularity container'
+        required: true
+        default: 'false'
 
 jobs:
   build_release:
