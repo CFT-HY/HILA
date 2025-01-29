@@ -9,12 +9,10 @@ on:
     inputs:
       build:
         description: 'Build the singularity container'
-        required: true
-        default: 'false'
 
 jobs:
   build_release:
-    if: "contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
+    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
     name: build_nightly_release
     runs-on: ubuntu-latest
     steps:
