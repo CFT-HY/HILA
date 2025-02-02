@@ -23,13 +23,13 @@ class cmdlinearguments {
     cmdlinearguments();
     void initialise_args(int argc0, char **argv0);
     std::vector<std::string> values(std::string);
-    void add_flag(std::string flag, std::string help_text);
+    void add_flag(std::string flag, std::string help_text, int number = -1);
     void print_help();
     int flag_set(const char *flag);
     bool flag_present(const char *flag);
     long get_int(const char *flag, int i = 0);
     double get_double(const char *flag, int i = 0);
-    std::string get_string(const char *flag, int i = 0);
+    std::string get_string(const char *flag, int i = 0, bool clear = false);
 
 };
 

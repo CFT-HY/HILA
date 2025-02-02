@@ -5,10 +5,15 @@
 #include <type_traits>
 #include "defs.h"
 #include "input.h"
+#include "cmdline.h"
 #include <errno.h>
 #include <iomanip>
 
 #define COMMENT_CHAR '#'
+
+#define CMDLINE_USED_FLAG "#ÄÄ#"
+
+static int input_file_count = 0;
 
 //////////////////////////////////////////////////////////////////////////////
 // Parameter file input system
@@ -23,6 +28,9 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
     extern const char *input_file;
 
     std::string fname;
+
+    file_number = ++input_file_count;
+    cmdline_p.clear();
 
     if (use_cmdline && input_file != nullptr) {
 
@@ -78,9 +86,26 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
 
 void input::close() {
     if (is_initialized && !use_cin) {
-        inputfile.close();
+        if (inputfile.is_open())
+            inputfile.close();
         is_initialized = false;
     }
+
+    // check if some cmdline -p args are unused
+    bool is_unused = false;
+    if (hila::myrank() == 0 && file_number == 1 && cmdline_p.size() > 0) {
+        for (int i = 0; i < cmdline_p.size(); i += 2) {
+            if (cmdline_p[i] != CMDLINE_USED_FLAG) {
+                hila::out0 << "Error: unused command line -p argument, flag " << cmdline_p[i]
+                           << '\n';
+                is_unused = true;
+            }
+        }
+    }
+    hila::broadcast(is_unused);
+    if (is_unused)
+        hila::finishrun();
+
     if (speaking)
         print_dashed_line();
 
@@ -112,7 +137,7 @@ bool input::get_line() {
 
         is_line_printed = false; // not yet printed
     }
-    return true;                 // sync this at another spot
+    return true; // sync this at another spot
 }
 
 // print the read-in line with a bit special formatting
@@ -271,10 +296,37 @@ bool input::handle_key(const std::string &key) {
             return false;
         }
 
+        // check the command line args, if this is the first input file
+        scan_cmdline(key, end_of_key);
+
         print_linebuf(end_of_key);
     }
     return true;
 }
+
+
+void input::scan_cmdline(const std::string &key, int &end_of_key) {
+
+    if (file_number == 1) {
+        if (cmdline_p.size() == 0 && hila::cmdline.flag_present("-p")) {
+            cmdline_p = hila::cmdline.values("-p");
+        }
+
+        for (int i = 0; i < cmdline_p.size(); i += 2) {
+            if (cmdline_p[i] == key) {
+
+                cmdline_p[i] = CMDLINE_USED_FLAG;
+                linebuffer = key + " " + cmdline_p.at(i + 1);
+                lb_start = key.size();
+                end_of_key = lb_start;
+                if (speaking)
+                    hila::out0 << "OVERRIDE from command line: " << key << ":\n";
+                break;
+            }
+        }
+    }
+}
+
 
 // is the input string int/double/string and return it
 
