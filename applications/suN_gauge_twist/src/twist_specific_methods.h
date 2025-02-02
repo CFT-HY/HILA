@@ -77,17 +77,17 @@ void staplesum_twist(const GaugeField<T> &U, Field<T> &staples, Direction d1,
  */
 template <typename T>
 std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff) {
-  Reduction<double> plaq;
   ReductionVector<double> plaq_vec(lattice.size(e_z) + 1);
   plaq_vec = 0;
-  plaq.allreduce(false);
   plaq_vec.allreduce(false);
   GaugeField<double> twist = 0;
+
   onsites(ALL) {
     if (X.z() == 0 && X.t() == 0) {
       twist[e_z][X] = -twist_coeff;
     }
   }
+
   foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
 
     onsites(ALL) {
@@ -96,18 +96,19 @@ std::vector<double> measure_plaq_with_z(GaugeField<T> U, int twist_coeff) {
                      trace(U[dir1][X] * U[dir2][X + dir1] *
                            U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
                     T::size();
-      plaq += p;
+      plaq_vec[lattice.size(e_z)] += p;
       plaq_vec[X.z()] += p;
     }
   }
-  plaq_vec[lattice.size(e_z)] =
-      plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) / 2);
-  for (int i = 0; i < plaq_vec.size() - 1; i++) {
+  // plaq_vec[lattice.size(e_z)] =
+  //     plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+  for (int i = 0; i < plaq_vec.size(); i++) {
     plaq_vec[i] /= (lattice.volume() * NDIM * (NDIM - 1)) / 2;
   }
 
   return plaq_vec.vector();
 }
+
 
 /**
  * @brief Measure Polyakov lines to direction dir bining based on z index
@@ -146,11 +147,10 @@ measure_polyakov_with_z(const GaugeField<T> &U,
   ploop_z = 0;
   onsites(ALL) if (X.coordinate(dir) == 0) {
     Complex<double> p = trace(polyakov[X]);
-    ploop += p;
+    ploop_z[lattice.size(e_z)] += p;
     ploop_z[X.z()] += p;
   }
-  ploop_z[lattice.size(e_z)] = ploop / (lattice.volume() / lattice.size(dir));
-  for (int i = 0; i < ploop_z.size() - 1; i++) {
+  for (int i = 0; i < ploop_z.size(); i++) {
     ploop_z[i] /= (lattice.volume() / lattice.size(dir));
   }
   // return average polyakov
@@ -195,11 +195,10 @@ measure_polyakov_with_z_abs(const GaugeField<T> &U,
   ploop_z = 0;
   onsites(ALL) if (X.coordinate(dir) == 0) {
     double p = abs(trace(polyakov[X]));
-    ploop += p;
+    ploop_z[lattice.size(e_z)] += p;
     ploop_z[X.z()] += p;
   }
-  ploop_z[lattice.size(e_z)] = ploop / (lattice.volume() / lattice.size(dir));
-  for (int i = 0; i < ploop_z.size() - 1; i++) {
+  for (int i = 0; i < ploop_z.size(); i++) {
     ploop_z[i] /= (lattice.size(e_x) * lattice.size(e_y));
   }
   // return average polyakov
