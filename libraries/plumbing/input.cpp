@@ -25,17 +25,17 @@ namespace hila {
 static std::string empty_key("");
 
 bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_error) {
-    extern const char *input_file;
 
     std::string fname;
 
     file_number = ++input_file_count;
     cmdline_p.clear();
 
-    if (use_cmdline && input_file != nullptr) {
+    if (use_cmdline && input_file_count == 1 && hila::cmdline.flag_present("-i")) {
+        // input_file_count guarantees this is done only 1st time
 
-        fname = input_file;
-        input_file = nullptr; // set this null, so that it is not used again
+        fname = hila::cmdline.get_string("-i");
+
     } else {
         fname = file_name;
     }
@@ -57,14 +57,20 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             } else {
                 use_cin = false;
                 inputfile.open(fname);
+                if (!inputfile.is_open()) {
+                    if(hila::partitions.number() > 1) {
+                        // try to open inputfile from upper level
+                        filename = "../" + fname;
+                        inputfile.open(filename);
+                    }
+                }
+
                 if (inputfile.is_open()) {
                     is_initialized = true;
-
                     if (speaking)
                         print_dashed_line("Reading file " + filename);
 
                 } else {
-
                     if (speaking) {
                         if (exit_on_error)
                             hila::out0 << "ERROR: ";
@@ -76,6 +82,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             }
         }
     }
+    
     hila::broadcast(got_error);
     if (got_error && exit_on_error) {
         hila::finishrun();

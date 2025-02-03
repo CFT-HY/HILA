@@ -117,9 +117,6 @@ extern bool is_initialized;
 extern bool check_input;
 extern int check_with_nodes;
 
-// optional input filename
-extern const char *input_file;
-
 enum sort { unsorted, ascending, descending };
 
 void initialize(int argc, char **argv);
@@ -205,6 +202,21 @@ void abort_communications(int status);
 
 // and print a dashed line
 void print_dashed_line(const std::string &txt = {});
+
+
+// <filesystem> can be in different locations, check...
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace filesys_ns = std::filesystem;
+
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace filesys_ns = std::experimental::filesystem;
+
+#else
+static_assert(0, "Neither <filesystem> nor <experimental/filesystem> found!");
+
+#endif
 
 
 #endif

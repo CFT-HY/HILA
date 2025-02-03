@@ -10,10 +10,10 @@ bool hila::about_to_finish = false;
 bool hila::is_initialized = false;
 bool hila::check_input = false;
 int hila::check_with_nodes;
-const char *hila::input_file;
 logger_class hila::log;
 
-
+void setup_partitions();
+void setup_output();
 void vector_type_info();
 
 #include <limits.h>
@@ -49,8 +49,6 @@ int get_onoff(std::string flag) {
 #ifdef DEBUG_NAN
 #include <fenv.h>
 #endif
-
-void setup_partitions();
 
 /**
  * @brief Read in command line arguments. Initialise default stream and MPI communication
@@ -97,16 +95,14 @@ void hila::initialize(int argc, char **argv) {
     // Set the inbuilt command-line flags and their corresponding help texts
     hila::cmdline.add_flag("-t", "cpu time limit");
     hila::cmdline.add_flag("-o", "output filename (default: stdout)");
-    hila::cmdline.add_flag(
-        "-i",
-        "input filename (overrides the 1st hila::input() name)\nuse '-i -' for standard input");
+    hila::cmdline.add_flag("-i", "input filename (overrides the 1st hila::input() name)\n"
+                                 "use '-i -' for standard input");
     hila::cmdline.add_flag("-device",
                            "in GPU runs using only 1 GPU, choose this GPU number (default 0)");
     hila::cmdline.add_flag("-check", "check input & layout with <nodes>-nodes & exit\nonly with 1 "
                                      "real MPI node (don't use mpirun)");
     hila::cmdline.add_flag("-n", "number of nodes used in layout check, only relevant with -check");
     hila::cmdline.add_flag("-partitions", "number of partitioned lattice streams");
-    hila::cmdline.add_flag("-sync", "synchronize partition runs (on/off) (default = off)");
 
     hila::cmdline.add_flag("-p",
                            "parameter overriding the input file, enter as\n"
@@ -157,41 +153,14 @@ void hila::initialize(int argc, char **argv) {
 
     setup_partitions();
 
-    // check the output file if partitions not used
-    if (hila::partitions.number() == 1) {
-        int do_exit = 0;
-        if (hila::myrank() == 0) {
-            if (hila::cmdline.flag_present("-o")) {
-                // Quits if '-o' was left without an argument
-                std::string name;
-                if (hila::cmdline.flag_set("-o"))
-                    name = hila::cmdline.get_string("-o");
-                else {
-                    hila::out0 << "The name of the output file must be provided after flag '-o'!\n";
-                    do_exit = 1;
-                }
-                // If found, open the file for the output
-                if (!hila::check_input) {
-                    hila::output_file.open(name, std::ios::out | std::ios::app);
-                    if (hila::output_file.fail()) {
-                        hila::out << "Cannot open output file " << name << '\n';
-                        do_exit = 1;
-                    } else {
-                        hila::out0 << "Output is now directed to the file '" << name << "'.\n";
-                        hila::out.flush();
-                        hila::out.rdbuf(
-                            hila::output_file.rdbuf()); // output now points to output_redirect
+    setup_output();
 
-                        if (hila::myrank() == 0)
-                            hila::out0.rdbuf(hila::out.rdbuf());
-                    }
-                }
-            }
-        }
-        hila::broadcast(do_exit);
-        if (do_exit)
-            hila::finishrun();
+    if (hila::partitions.number() > 1) {
+        hila::out0 << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
+                   << hila::partitions.number() << " partitions, this "
+                   << hila::partitions.mylattice() << " ----\n";
     }
+
 
     if (hila::myrank() == 0) {
         print_dashed_line("HILA lattice framework");
@@ -234,13 +203,9 @@ void hila::initialize(int argc, char **argv) {
         hila::out0 << "No runtime limit given\n";
     }
 
-    hila::input_file = nullptr;
     if (hila::cmdline.flag_present("-i")) {
         // Quits if '-i' given without a string argument
-        // Copy to a static variable to preserve the memory address
-        static const std::string input_string = hila::cmdline.get_string("-i");
-        hila::input_file = input_string.c_str();
-        hila::out0 << "Input file from command line: " << hila::input_file << "\n";
+        hila::out0 << "Input file from command line: " << hila::cmdline.get_string("-i") << "\n";
     }
 
 #if defined(OPENMP)
@@ -355,6 +320,50 @@ void hila::finishrun() {
     exit(0);
 }
 
+
+////////////////////////////////////////////////////////////////
+/// Setup standard output file (hila::out0)
+////////////////////////////////////////////////////////////////
+
+void setup_output() {
+
+    bool do_exit = false;
+
+    if (hila::myrank() == 0) {
+        if (hila::cmdline.flag_present("-o")) {
+            // Quits if '-o' was left without an argument
+            std::string name;
+            if (hila::cmdline.flag_set("-o"))
+                name = hila::cmdline.get_string("-o");
+            else {
+                hila::out0 << "The name of the output file must be provided after flag '-o'!\n";
+                do_exit = true;
+            }
+            // If found, open the file for the output
+            if (!hila::check_input) {
+                hila::output_file.open(name, std::ios::out | std::ios::app);
+                if (hila::output_file.fail()) {
+                    hila::out << "Cannot open output file " << name << '\n';
+                    do_exit = true;
+                } else {
+                    hila::out0 << "Output is now directed to the file '" << name << "'.\n";
+                    hila::out.flush();
+                    hila::out.rdbuf(
+                        hila::output_file.rdbuf()); // output now points to output_redirect
+
+                    if (hila::myrank() == 0)
+                        hila::out0.rdbuf(hila::out.rdbuf());
+                }
+            }
+        }
+    }
+
+    hila::broadcast(do_exit);
+    if (do_exit)
+        hila::finishrun();
+}
+
+
 /******************************************************
  * Open parameter file - moved here in order to
  * enable partition division if requested
@@ -396,11 +405,13 @@ FILE *open_parameter_file()
  * Handle command line arguments
  *   partitions=nn
  *   sync=yes / sync=no
- *   out=name
  * here
  */
 
+
 void setup_partitions() {
+
+    std::string partition_dir("partition");
 
     // get partitions cmdlinearg first
     if (hila::cmdline.flag_present("-partitions")) {
@@ -411,9 +422,9 @@ void setup_partitions() {
                           "integer (or argument omitted)\n";
             hila::finishrun();
         } else
-            hila::partitions._number = lnum;
+            hila::partitions.set_number(lnum);
     } else
-        hila::partitions._number = 1;
+        hila::partitions.set_number(1);
 
     if (hila::partitions.number() == 1)
         return;
@@ -426,66 +437,58 @@ void setup_partitions() {
         hila::finishrun();
     }
 
+    hila::out0 << "REST OF OUTPUT TO DIRECTORIES " << partition_dir << "N\n";
+
 #if defined(BLUEGENE_LAYOUT)
-    hila::partitions._mylattice = bg_layout_partitions(hila::partitions.number());
+    hila::partitions.set_mylattice(bg_layout_partitions(hila::partitions.number()));
 #else // generic
-    hila::partitions._mylattice =
-        (hila::myrank() * hila::partitions.number()) / hila::number_of_nodes();
+    hila::partitions.set_mylattice((hila::myrank() * hila::partitions.number()) /
+                                   hila::number_of_nodes());
     /* and divide system into partitions */
     if (!hila::check_input)
         split_into_partitions(hila::partitions.mylattice());
 #endif
-    std::string fname;
-    if (hila::cmdline.flag_present("-o")) {
-        std::string opt = hila::cmdline.get_string("-o");
-        fname = opt + std::to_string(hila::partitions.mylattice());
-    } else
-        fname = DEFAULT_OUTPUT_NAME + std::to_string(hila::partitions.mylattice());
+
+    std::string dirname = partition_dir + std::to_string(hila::partitions.mylattice());
+    if (hila::myrank() == 0) {
+        filesys_ns::create_directory(dirname);
+    }
+    hila::synchronize();
+    // change to new dir
+    filesys_ns::current_path(dirname);
 
     // now need to open output file
 
     hila::out.flush(); // this should be cout at this stage
 
-    // all nodes open the file -- perhaps not?  Leave only node 0
-    int do_exit = 0;
-    if (hila::myrank() == 0 && !hila::check_input) {
-        hila::output_file.open(fname, std::ios::out | std::ios::app);
-        if (hila::output_file.fail()) {
-            std::cout << "Cannot open output file " << fname << '\n';
-            do_exit = 1;
+    // is output file named? (-o on cmdline)  then do nothing here
+
+    if (!hila::cmdline.flag_present("-o")) {
+        int do_exit = 0;
+
+        if (!hila::check_input) {
+            hila::output_file.open(DEFAULT_OUTPUT_NAME, std::ios::out | std::ios::app);
+            if (hila::output_file.fail()) {
+                std::cout << "Cannot open output file " << DEFAULT_OUTPUT_NAME << '\n';
+                do_exit = 1;
+            }
+        }
+
+        hila::broadcast(do_exit);
+
+        if (do_exit)
+            hila::finishrun();
+
+        hila::out.flush();
+        if (!hila::check_input) {
+            hila::out.rdbuf(hila::output_file.rdbuf());
+            // output now points to output_redirect
+            if (hila::myrank() == 0) {
+                hila::out0.rdbuf(hila::out.rdbuf());
+            }
         }
     }
 
-    hila::broadcast(do_exit);
-
-    if (do_exit)
-        hila::finishrun();
-
-    hila::out.flush();
-    if (!hila::check_input) {
-        hila::out.rdbuf(hila::output_file.rdbuf());
-        // output now points to output_redirect
-        if (hila::myrank() == 0) {
-            hila::out0.rdbuf(hila::out.rdbuf());
-        }
-    }
-    hila::out0 << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
-               << hila::partitions.number() << " partitions, this " << hila::partitions.mylattice()
-               << " ----\n";
-
-
-    /* Default sync is no */
-    if (hila::cmdline.flag_present("-sync")) {
-        std::string onoffopt = hila::cmdline.get_string("-sync");
-        if (get_onoff(onoffopt) == 1) {
-            hila::partitions._sync = true;
-            hila::out0 << "Synchronising partition trajectories\n";
-        }
-    } else {
-        hila::partitions._sync = false;
-        hila::out0 << "Not synchronising the partition trajectories\n"
-                   << "Use '-sync on' command line argument to override\n";
-    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
