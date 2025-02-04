@@ -53,7 +53,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             if (fname == "-") {
                 use_cin = true;
                 if (speaking)
-                    print_dashed_line("Reading from standard input");
+                    hila::print_dashed_line("Reading from standard input");
             } else {
                 use_cin = false;
                 inputfile.open(fname);
@@ -68,7 +68,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
                 if (inputfile.is_open()) {
                     is_initialized = true;
                     if (speaking)
-                        print_dashed_line("Reading file " + filename);
+                        hila::print_dashed_line("Reading file " + filename);
 
                 } else {
                     if (speaking) {
@@ -114,7 +114,7 @@ void input::close() {
         hila::finishrun();
 
     if (speaking)
-        print_dashed_line();
+        hila::print_dashed_line();
 
     // automatic cleaning of other vars
 }

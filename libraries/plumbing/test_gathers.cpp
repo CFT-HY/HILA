@@ -87,7 +87,7 @@ void test_std_gathers() {
 
     hila::out0 << "Communication tests done - time " << hila::gettime() - t0 << "s\n";
 
-    print_dashed_line();
+    hila::print_dashed_line();
 
     if (hila::myrank() == 0)
         hila::out.flush();
