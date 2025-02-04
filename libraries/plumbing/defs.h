@@ -132,7 +132,16 @@ int myrank();
 int number_of_nodes();
 /// synchronize mpi
 void synchronize();
+void synchronize_partitions();
 
+void initialize_communications(int &argc, char ***argv);
+void split_into_partitions(int rank);
+bool is_comm_initialized(void);
+void finish_communications();
+void abort_communications(int status);
+
+// and print a dashed line
+void print_dashed_line(const std::string &txt = {});
 
 } // namespace hila
 
@@ -192,16 +201,6 @@ constexpr inline void swap(T &a, T &b) {
 
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
-
-
-void initialize_communications(int &argc, char ***argv);
-void split_into_partitions(int rank);
-bool is_comm_initialized(void);
-void finish_communications();
-void abort_communications(int status);
-
-// and print a dashed line
-void print_dashed_line(const std::string &txt = {});
 
 
 // <filesystem> can be in different locations, check...

@@ -20,7 +20,7 @@ void lattice_struct::setup_layout() {
     int nfactors[NPRIMES];
     CoordinateVector nodesiz;
 
-    print_dashed_line();
+    hila::print_dashed_line();
     hila::out0 << "LAYOUT: lattice size  ";
     foralldir(d) {
         if (d != 0)
@@ -221,5 +221,5 @@ void lattice_struct::setup_layout() {
     nodes.create_remap();
 
 
-    print_dashed_line();
+    hila::print_dashed_line();
 }
