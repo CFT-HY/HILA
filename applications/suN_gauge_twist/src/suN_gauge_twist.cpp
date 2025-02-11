@@ -277,6 +277,7 @@ int main(int argc, char **argv) {
   hila::cmdline.add_flag("-config", "Config filename");
   hila::cmdline.add_flag("-ntraj", "Number of trajectories");
   hila::cmdline.add_flag("-lsize", "Lattice size");
+  hila::cmdline.add_flag("-out-folder", "Output folder");
   hila::initialize(argc, argv);
 
   hila::out0 << "SU(" << mygroup::size() << ") heat bath + overrelax update\n";
@@ -302,7 +303,7 @@ int main(int argc, char **argv) {
   p.n_save = par.get("traj/saved");
   // measure surface properties and print "profile"
   p.config_file = par.get("config name");
-  p.twist_coeff = par.get("twist_coeff");
+  p.twist_coeff = par.get("twist coeff");
 
   if (par.get_item("updates/profile meas", {"off", "%i"}) == 1) {
     p.n_profile = par.get();
@@ -340,7 +341,7 @@ int main(int argc, char **argv) {
   }
   if (hila::cmdline.flag_present("-twist")) {
     p.twist_coeff = hila::cmdline.get_int("-twist");
-    hila::out0 << "twist_coeff     " << p.twist_coeff << std::endl;
+    hila::out0 << "twist coeff     " << p.twist_coeff << std::endl;
   }
   if (hila::cmdline.flag_present("-config")) {
     p.config_file = hila::cmdline.get_string("-config");
@@ -358,6 +359,11 @@ int main(int argc, char **argv) {
       hila::out0 << lsize[i] << " ";
     }
     hila::out0 << std::endl;
+  }
+  if (hila::cmdline.flag_present("-out-folder")) {
+    p.out_folder = hila::cmdline.get_string("-out-folder");
+  } else {
+    p.out_folder = "./";
   }
   // setting up the lattice is convenient to do after reading
   // the parameter
