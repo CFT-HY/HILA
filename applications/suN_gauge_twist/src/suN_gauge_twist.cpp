@@ -71,7 +71,7 @@ void measure_poly(const GaugeField<group> &U, const parameters &p) {
   print_formatted_numbers(poly_z, "polyakov z", false, true);
   print_formatted_numbers(poly_abs, "polyakov abs z", false, true);
   hila::out0 << "polyakov: " << poly_z.back() << '\n';
-  hila::out0 << "polyakov abs: " << poly_abs.back()/lattice.size(e_z) << '\n';
+  hila::out0 << "polyakov abs: " << poly_abs.back() << '\n';
 }
 
 template <typename group>
@@ -80,8 +80,10 @@ void measure_poly_multicanonical(const GaugeField<group> &U,
   auto poly = measure_polyakov_with_z(U);
   auto poly_abs = measure_polyakov_with_z_abs(U);
 
-  print_formatted_numbers(poly, "polyakov", false, true);
-  print_formatted_numbers(poly_abs, "polyakov abs", false, true);
+  print_formatted_numbers(poly, "polyakov z", false, true);
+  print_formatted_numbers(poly_abs, "polyakov abs z", false, true);
+  hila::out0 << "polyakov: " << poly.back() << '\n';
+  hila::out0 << "polyakov abs: " << poly_abs.back() << '\n';
 
   hila::out0 << "muca_polyakov: " << hila::muca::weight(poly_abs.back())
              << '\n';
@@ -251,11 +253,16 @@ void iterate_weights_multicanonical(GaugeField<mygroup> U,
       auto OP = measure_plaq_with_z(U, p.twist_coeff);
       auto P = measure_polyakov_with_z(U);
       hila::out0 << "Order parameter: " << OP.back() << std::endl;
-      hila::out0 << "polyakov: " << P.back() << std::endl;
+      hila::out0 << "polyakov muca: " << P.back() << std::endl;
       iterate_status = hila::muca::iterate_weights(OP.back());
     } else {
       auto OP = measure_polyakov_with_z_abs(U);
+      auto Plaq = measure_plaq_with_z(U, p.twist_coeff);
+      auto Poly = measure_polyakov_with_z(U);
       hila::out0 << "Order parameter: " << abs(OP.back()) << std::endl;
+      hila::out0 << "plaquette muca: "<< Plaq.back() << std::endl;
+      hila::out0 << "polyakov muca: "<< Poly.back() << std::endl;
+
       iterate_status = hila::muca::iterate_weights(OP.back());
     }
   }
@@ -295,7 +302,7 @@ int main(int argc, char **argv) {
   p.n_save = par.get("traj/saved");
   // measure surface properties and print "profile"
   p.config_file = par.get("config name");
-  p.twist_coeff = par.get("twist coeff");
+  p.twist_coeff = par.get("twist_coeff");
 
   if (par.get_item("updates/profile meas", {"off", "%i"}) == 1) {
     p.n_profile = par.get();
