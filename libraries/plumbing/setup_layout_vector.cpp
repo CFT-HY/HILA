@@ -19,7 +19,7 @@ void lattice_struct::setup_layout() {
     int nfactors[NPRIMES];
     CoordinateVector nodesiz;
 
-    print_dashed_line();
+    hila::print_dashed_line();
     hila::out0 << "LAYOUT: subnode lattice, with " << VECTOR_SIZE / sizeof(float)
             << " subnodes\n"
             << "Enabling vector length " << VECTOR_SIZE * 8
@@ -357,5 +357,5 @@ void lattice_struct::setup_layout() {
     nodes.create_remap();
 
 
-    print_dashed_line();
+    hila::print_dashed_line();
 }

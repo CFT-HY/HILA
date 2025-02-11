@@ -27,12 +27,17 @@ void cmdlinearguments::quit_with_help() {
 /// @var std::string argmap_val::help_text
 /// @brief A string describing the use of the flag
 ///
+/// @var int argmap_val::number
+/// @brief number of args for each flag.  < 0: unspecified
+///
 /// @var bool argmap_val::present
 /// @brief A boolean telling whether the flag was found in argv
 ////////////////////////////////////////////////////////////////////////////////
 struct argmap_val {
     strvec val_strings;
+    std::string aux;
     std::string help_text;
+    int number;
     bool present;
 };
 
@@ -65,7 +70,7 @@ void cmdlinearguments::initialise_args(int argc0, char **argv0) {
 /// @param flag   flag given as string
 /// @return vector of arguments
 ////////////////////////////////////////////////////////////////////////////////
-strvec cmdlinearguments::values(std::string flag) {
+strvec cmdlinearguments::values(const std::string &flag) {
     strvec valvec = argmap[flag].val_strings;
     if (argmap.count(flag) == 0) {
         hila::out0 << "Flag '" << flag << "' is not recognized!\n";
@@ -89,15 +94,18 @@ strvec cmdlinearguments::values(std::string flag) {
 ///                    Will be printed when error occurs. For formatting, a newline
 ///                    can be used to split the help_text, as it will help with
 ///                    correct formatting in print_help().
+/// @param number      required number of args for each key appearance.  default -1: number
+///                    unspecified
 ////////////////////////////////////////////////////////////////////////////////
-void cmdlinearguments::add_flag(std::string flag, std::string help_text) {
+void cmdlinearguments::add_flag(const std::string &flag, const std::string &help_text,
+                                std::string aux, int number) {
     if (argmap.count(flag) > 0) {
         hila::out0 << "\n###################################################\n";
         hila::out0 << "# Flag " << flag << " is already set! Terminating.\n";
         hila::out0 << "###################################################\n\n";
         quit_with_help();
     } else {
-        argmap[flag] = {std::vector<std::string>(), help_text, false};
+        argmap[flag] = {std::vector<std::string>(), aux, help_text, number, false};
     }
 }
 
@@ -126,7 +134,10 @@ strvec cmdlinearguments::read_arg_vector(const char *flag) {
     for (int i = 0; i < argc; i++) {
         const char *p = argv[i];
         // check if its the flag
+        int n = 0;
+        bool match = false;
         if (std::strcmp(p, flag) == 0) {
+            match = true;
             // Indicate that the flag has been spotted in argv
             argmap[flag].present = true;
             // Slate for removal and move onto the
@@ -145,6 +156,7 @@ strvec cmdlinearguments::read_arg_vector(const char *flag) {
                 *(p_ind++) = 1;
                 uargs.push_back(std::string(p));
                 i++;
+                n++;
                 if (i < argc)
                     p = argv[i];
                 else
@@ -160,6 +172,18 @@ strvec cmdlinearguments::read_arg_vector(const char *flag) {
                 i--;
             }
         }
+
+        if (match) {
+
+            if (argmap[flag].number >= 0) {
+                if (argmap[flag].number != n) {
+                    hila::out0 << "Error: command line flag " << flag << " requires "
+                               << argmap[flag].number << " arguments\n";
+                    quit_with_help();
+                }
+            }
+        }
+
         p_ind++;
     }
     // Effectively remove user arguments from argv
@@ -214,14 +238,15 @@ strvec cmdlinearguments::parse_help(std::string help_text) {
 void cmdlinearguments::print_help() {
     hila::out0 << "Recognized command-line flags and their possible arguments:\n";
 
+    const std::string padding = "                        ";
     for (auto const &p : argmap) {
-        std::string flag = p.first;
-        std::string help = p.second.help_text;
+        const std::string &flag = p.first;
+        const std::string &help = p.second.help_text;
+        const std::string &aux = p.second.aux;
         strvec help_vec = parse_help(help);
-        hila::out0 << "    " << flag << std::setw(20 - flag.length()) << ": " << help_vec[0]
-                   << "\n";
+        hila::out0 << "  " << flag << " " << aux << std::setw(22 - flag.length() - aux.length() - 1)
+                   << ": " << help_vec[0] << "\n";
         for (int i = 1; i < help_vec.size(); i++) {
-            std::string padding = "                        ";
             hila::out0 << padding << help_vec[i] << "\n";
         }
     }
@@ -340,12 +365,15 @@ double cmdlinearguments::get_double(const char *flag, int i) {
 /// @param i      index of the desired entry (default = 0);
 /// @return the desired entry
 ////////////////////////////////////////////////////////////////////////////////
-std::string cmdlinearguments::get_string(const char *flag, int i) {
+std::string cmdlinearguments::get_string(const char *flag, int i, bool clear) {
     int set = flag_set(flag);
     if (set) {
-        if (i < set)
-            return argmap[flag].val_strings[i];
-        else {
+        if (i < set) {
+            auto t = argmap[flag].val_strings[i];
+            if (clear)
+                argmap[flag].val_strings[i].clear();
+            return t;
+        } else {
             hila::out0 << "Flag '" << flag << "' has only " << set + 1
                        << " entries. Can't return index " << i << ".\n";
             hila::out0 << "Terminating.\n";
