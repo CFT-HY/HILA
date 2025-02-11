@@ -1,0 +1,34 @@
+/**
+
+\page partitions Divide MPI processes into independent partitions
+
+# Divide MPI processes into partitions
+
+With the command (assuming mpirun is used in the system)
+~~~bash
+   mpirun -np <N_nodes>  <hila-program-name> -partitions <N_partitions>
+~~~
+divides the N_nodes MPI processes into N_partitions sets, which start running independent
+lattice streams. The run output is in subdirectories `partition0`, `partition1`, ... .
+
+The subdirectories are created if they do not exist before the run. Subdirectories may contain 
+their own parameter files, starting configurations etc. If the input parameter files do not exist 
+in the subdirectories, it is searched for on the parent directory. 
+
+Random number seeds are offset for each partition stream, ensuring different sequences.
+
+NOTE: N_nodes must be divisible by N_partitions.
+
+NOTE: At the end of the run, partitions wait for each other to finish before exiting. Thus, the 
+computational load should be approximately equal for each partition for optimal use of computing time.
+
+Subdirectories can be given different prefix name with command
+~~~bash
+   mpirun -np <N_nodes>  <hila-program-name> -partitions <N_partitions> <directory-prefix>
+~~~
+
+Example use case: batch system provides GPU resources in units of 8 GPUs (e.g. one full physical node).
+However, the task runs optimally on 2 GPUs. Using partitions 8 GPUs can be split into 4 independent runs.
+
+
+*/

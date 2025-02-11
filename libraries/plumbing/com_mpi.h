@@ -8,18 +8,34 @@
 // let us house the partitions-struct here
 namespace hila {
 class partitions_struct {
-  public:
+  private:
     unsigned _number, _mylattice;
     bool _sync;
 
-    unsigned number() {
+    public: 
+
+    unsigned number() const {
         return _number;
     }
-    unsigned mylattice() {
+
+    void set_number(const unsigned u) {
+        _number = u;
+    }
+
+    unsigned mylattice() const {
         return _mylattice;
     }
-    bool sync() {
+
+    void set_mylattice(const unsigned l) {
+        _mylattice = l;
+    }
+
+    bool sync() const {
         return _sync;
+    }
+
+    void set_sync(bool s) {
+        _sync = s;
     }
 };
 

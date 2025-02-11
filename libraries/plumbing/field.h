@@ -1913,7 +1913,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v) const {
 template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
 
-    if (is_comm_initialized()) {
+    if (hila::is_comm_initialized()) {
         if (is_gather_started(d, ALL)) {
             drop_comms_timer.start();
             wait_gather(d, ALL);
