@@ -31,6 +31,7 @@ struct parameters {
     int muca_poly;
     int muca_updates;
     int measure_surface;
+    std::string out_folder;
 };
 
 #endif
