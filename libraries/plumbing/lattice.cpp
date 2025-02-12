@@ -134,13 +134,11 @@ bool lattice_struct::is_on_mynode(const CoordinateVector &loc) const {
 #ifndef SUBNODE_LAYOUT
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
-    int dir, l, s;
-    unsigned i;
 
-    i = l = loc[NDIM - 1] - mynode.min[NDIM - 1];
-    s = loc[NDIM - 1];
-    for (dir = NDIM - 2; dir >= 0; dir--) {
-        l = loc[dir] - mynode.min[dir];
+    unsigned i = loc[NDIM - 1] - mynode.min[NDIM - 1];
+    int s = loc[NDIM - 1];
+    for (int dir = NDIM - 2; dir >= 0; dir--) {
+        int l = loc[dir] - mynode.min[dir];
         i = i * mynode.size[dir] + l;
         s += loc[dir];
     }
@@ -162,14 +160,12 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 ///////////////////////////////////////////////////////////////////////
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned nodeid) const {
-    int dir, l, s;
-    unsigned i;
     const node_info &ni = nodes.nodelist[nodeid];
 
-    i = l = loc[NDIM - 1] - ni.min[NDIM - 1];
-    s = loc[NDIM - 1];
-    for (dir = NDIM - 2; dir >= 0; dir--) {
-        l = loc[dir] - ni.min[dir];
+    unsigned i = loc[NDIM - 1] - ni.min[NDIM - 1];
+    int s = loc[NDIM - 1];
+    for (int dir = NDIM - 2; dir >= 0; dir--) {
+        int l = loc[dir] - ni.min[dir];
         i = i * ni.size[dir] + l;
         s += loc[dir];
     }
