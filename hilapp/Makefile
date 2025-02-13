@@ -215,7 +215,8 @@ HEADERS = \
   $(SRCDIR)/toplevelvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
-  $(SRCDIR)/optionsparser.h
+  $(SRCDIR)/optionsparser.h \
+  ../libraries/hila_signatures.h
 
 
 OBJECTS = \
