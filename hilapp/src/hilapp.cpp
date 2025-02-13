@@ -17,6 +17,11 @@
 #include "stringops.h"
 #include "toplevelvisitor.h"
 
+
+#if __has_include("../../libraries/hila_signatures.h")
+#include "../../libraries/hila_signatures.h"
+#endif
+
 // definitions for global variables
 // lots of global state, which we do not bother passing around in arguments
 ClassTemplateDecl *field_decl = nullptr;
@@ -319,7 +324,7 @@ void check_pragmas(std::string &arg, SourceLocation prloc, SourceLocation refloc
                 // exit pragma scan loop
                 break;
             } // if found
-        }     // for
+        } // for
 
         if (!found_now) {
             auto &DE = myCompilerInstance->getDiagnostics();
@@ -807,6 +812,62 @@ class MyASTConsumer : public ASTConsumer {
         return beginloc;
     }
 
+    // Function to check signatures in compiled hilapp executable versus the source file.
+    // These have to satisfy the constraints in order to ensure successful compilation
+
+    bool check_signatures() {
+
+        llvm::errs() << "HILA SIGNATURE A IS " << HILA_SIGNATURE_NUMBER << '\n';
+
+
+#ifdef HILA_SIGNATURE_NUMBER
+        // do checks only if signatures are in code
+
+        llvm::errs() << "HILA SIGNATURE IS " << HILA_SIGNATURE_NUMBER << '\n';
+
+        std::string s;
+
+        if (is_macro_defined("HILA_SIGNATURE_NUMBER", &s) &&
+            !is_macro_defined("NO_SIGNATURE_CHECK")) {
+            // Now signatures defined in source, check
+            auto code_signature = std::atoi(s.c_str());
+
+            if (is_macro_defined("MINIMUM_HILAPP_SIGNATURE", &s)) {
+                auto min_signature = std::atoi(s.c_str());
+
+                if (min_signature > HILA_SIGNATURE_NUMBER) {
+                    // Now source wants higher hilapp signature
+
+                    llvm::errs()
+                        << "******* ERROR: hila source requires hilapp signature >= "
+                        << min_signature << ", but hilapp executable has signature "
+                        << HILA_SIGNATURE_NUMBER << ".\n "
+                        << "        Recompile hilapp with current code version.\n"
+                        << "This check can be omitted by defining NO_SIGNATURE_CHECK, but it "
+                           "may lead to incorrect program.\n";
+
+                    exit(1);
+                }
+            }
+
+            if (code_signature < MINIMUM_HILA_SIGNATURE) {
+                // Now hilapp is too new for the code!
+
+                llvm::errs() << "******* ERROR: hila source has signature " << code_signature
+                             << ", but hilapp executable requires >= " << MINIMUM_HILA_SIGNATURE
+                             << ".\n " 
+                             << "        Update hila framework source.\n"
+                             << "This check can be omitted by defining NO_SIGNATURE_CHECK, but it "
+                                "may lead to incorrect program.\n";
+
+                exit(1);
+            }
+        }
+#endif
+
+        return true;
+    }
+
 
     // handle one top level declaration, going in namespace declarations for
     // locations for generating kernels and specializations
@@ -862,6 +923,11 @@ class MyASTConsumer : public ASTConsumer {
         // tud->dump();
 
         Visitor.reset_parsing_state();
+
+        if (!check_signatures()) {
+            state::compile_errors_occurred = true;
+            return;
+        }
 
         // Traverse each declaration in the translation unit
         for (Decl *d : tud->decls()) {

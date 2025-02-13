@@ -17,11 +17,12 @@
 /// If 1 is not true, an error message is printed suggesting recompilation of hilapp.
 /// If 2 is not true, an error message suggests updating hila framework (git pull)
 ///
-/// Usually the signature numbers can be all equal, incremented together
+/// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible 
+/// change is made.  This is the default below.
 
-#define HILA_SIGNATURE_NUMBER 1
+#define HILA_SIGNATURE_NUMBER    1
 
 #define MINIMUM_HILAPP_SIGNATURE 1
-#define MINIMUM_HILA_SIGNATURE 1
+#define MINIMUM_HILA_SIGNATURE   1
 
 #endif
