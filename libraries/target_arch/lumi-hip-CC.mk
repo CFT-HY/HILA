@@ -15,6 +15,8 @@ $(info To load LUMI/24.03 with Cray Clang compiler, AMD GPU gfx90a libs, ROCm an
 $(info )
 $(info   module --force purge && module --force unload LUMI)
 $(info   module load LUMI/24.03 partition/G cpeCray/24.03 buildtools/24.03 rocm/6.0.3 )
+$(info LUMI/24.03 contains EasyBuild extra-packages building system, read LUMI documentaion to learn more.)
+$(info Moreover, the compiler wrapper CC has full konwledge of C++ standard include files, which are significant for hilapp functionality.)
 $(info ########################################################################)
 
 
@@ -39,7 +41,12 @@ CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 -xhip
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+# when  module load LUMI/24.03 partition/C cpeGNU/24.03 are loaded, the compiler wrapper CC
+# is inface Clang 17.0.1, whcih know the pathes of Clang c++ 17 std include files.
+# Then the good practice to get HILAPP_INCLUDE_LIST is call CC -xc++ --std=c++17 -Wp,-v - otherthan us g++
+
+# HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | CC -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include
