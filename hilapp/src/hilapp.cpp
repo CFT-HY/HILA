@@ -817,13 +817,8 @@ class MyASTConsumer : public ASTConsumer {
 
     bool check_signatures() {
 
-        llvm::errs() << "HILA SIGNATURE A IS " << HILA_SIGNATURE_NUMBER << '\n';
-
-
 #ifdef HILA_SIGNATURE_NUMBER
         // do checks only if signatures are in code
-
-        llvm::errs() << "HILA SIGNATURE IS " << HILA_SIGNATURE_NUMBER << '\n';
 
         std::string s;
 
@@ -855,8 +850,7 @@ class MyASTConsumer : public ASTConsumer {
 
                 llvm::errs() << "******* ERROR: hila source has signature " << code_signature
                              << ", but hilapp executable requires >= " << MINIMUM_HILA_SIGNATURE
-                             << ".\n " 
-                             << "        Update hila framework source.\n"
+                             << ".\n " << "        Update hila framework source.\n"
                              << "This check can be omitted by defining NO_SIGNATURE_CHECK, but it "
                                 "may lead to incorrect program.\n";
 
