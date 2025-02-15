@@ -2933,11 +2933,19 @@ template <int n, int m, typename T, typename MT, typename Mt,
 inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT> &omat,
                   Mt(out_only &pl)[n]) {
     static_assert(n == m, "chexp() only for square matrices");
+    // determine scaling factor:
+    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm=norm(mat), sfac=1.0;
+    int nb = 0;
+    while (matnorm * sfac >= sclim) {
+        sfac *= 0.5;
+        ++nb;
+    }
     // compute the first n matrix powers of mat and the corresponding traces :
     // the i-th matrix power of mat[][] is stored in pl[i][][]
     T trpl[n + 1]; // the trace of pl[i][][] is stored in trpl[i]
     trpl[0] = n;
     pl[1] = mat;
+    pl[1] *= sfac;
     trpl[1] = trace(pl[1]);
     int i, j, k;
     for (i = 2; i < n; ++i) {
@@ -2983,7 +2991,7 @@ inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT
     // would have at iteration i, if no renormalization were used.
     T cho;    // temporary variables for iteration
     hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
-    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    hila::arithmetic_type<T> s, rs = 1.0, rss; // temp variables used for renormalization of pal[]
     for (j = n; j < mmax; ++j) {
         s = 0;
         cho = pal[n - 1] * rs;
@@ -2995,19 +3003,21 @@ inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT
         pal[0] = -cho * crpl[0];
         s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
-
+        
+        s = sqrt(s);
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
+            rss = 1.0;
         } else {
             wpf /= (j + 1);
             rs = 1.0;
+            rss = s;
         }
         ttwpf = twpf;
-        twpf += wpf;
+        twpf += wpf * rss;
         if (ttwpf == twpf) {
             // terminate iteration when numeric value of twpf stops changing
             break;
@@ -3016,6 +3026,24 @@ inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT
     // if(hila::myrank()==0) {
     //     std::cout<<"chexp niter: "<<j<<" ("<<j-n<<")"<<std::endl;
     // }
+
+    // compute coefficients for the nb-times squared exponential of the scaled matrix:
+    for (k = 0; k < nb; ++k) {
+        cho = al[0];
+        for(i=0; i<n; ++i) {
+            trpl[i] = pal[i] = al[i];
+            al[i] *= cho;
+        }
+        for (j = 1; j < n; ++j) {
+            cho = pal[n - 1];
+            for (i = n - 1; i > 0; --i) {
+                pal[i] = pal[i - 1] - cho * crpl[i];
+                al[i] += trpl[j] * pal[i];
+            }
+            pal[0] = -cho * crpl[0];
+            al[0] += trpl[j] * pal[0];
+        }
+    }
 
     // form output matrix:
     omat = al[0];
@@ -3093,11 +3121,20 @@ template <int n, int m, typename T, typename MT, typename Mt,
 inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT> &omat,
                   Mt(out_only &domat)[n][m]) {
     static_assert(n == m, "chexp() only for square matrices");
+    // determine scaling factor:
+    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm = norm(mat), sfac = 1.0;
+    int nb = 0;
+    while (matnorm * sfac >= sclim) {
+        sfac *= 0.5;
+        ++nb;
+    }
+
     // compute the first n matrix powers of mat and the corresponding traces :
     Matrix_t<n, m, T, MT> pl[n]; // the i-th matrix power of mat[][] is stored in pl[i][][]
     T trpl[n + 1];                   // the trace of pl[i][][] is stored in trpl[i]
     trpl[0] = (T)n;
     pl[1] = mat;
+    pl[1] *= sfac;
     trpl[1] = trace(pl[1]);
     int i, j, k, l;
     for (i = 2; i < n; ++i) {
@@ -3153,7 +3190,7 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
     // would have at iteration i, if no renormalization were used.
     T cho;       // temporary variables for iteration
     hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
-    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    hila::arithmetic_type<T> s, rs = 1.0, rss; // temp variables used for renormalization of pal[]
     for (j = n; j < mmax; ++j) {
         s = 0;
         cho = pal[n - 1] * rs;
@@ -3165,19 +3202,20 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
         pal[0] = -cho * crpl[0];
         s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
-
+        s = sqrt(s);
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
+            rss = 1.0;
         } else {
             wpf /= (j + 1);
             rs = 1.0;
+            rss = s;
         }
         ttwpf = twpf;
-        twpf += wpf;
+        twpf += wpf * rss;
         if (ttwpf == twpf) {
             // terminate iteration when numeric value of twpf stops changing
             break;
@@ -3199,6 +3237,40 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
             kmats.e(i, i) += wpf * kh.e(i, i);
         }
     }
+
+
+    // compute coefficients for the nb-times squared exponential of the scaled matrix:
+    for (k = 0; k < nb; ++k) {
+        cho = al[0];
+        for (i = 0; i < n; ++i) {
+            trpl[i] = pal[i] = al[i];
+            kh.e(i, i) = 0.5 * kmats.e(i, i);
+            kmats.e(i, i) = 2.0 * kh.e(0, i) * al[i];
+            for (j = i + 1; j < n; ++j) {
+                kh.e(j, i) = kh.e(i, j) =
+                    0.5 * kmats.e(i, j); // define symmetric kh[][] to avoid case-distinctions
+                                             // in computations below
+                kmats.e(i, j) = kh.e(0, i) * al[j] + kh.e(0, j) * al[i];
+            }
+            al[i] *= cho;
+        }
+        for (l = 1; l < n; ++l) {
+            cho = pal[n - 1];
+            for (i = n - 1; i > 0; --i) {
+                pal[i] = pal[i - 1] - cho * crpl[i];
+                al[i] += trpl[l] * pal[i];
+                for (j = i; j < n; ++j) {
+                    kmats.e(i, j) += kh.e(i, l) * pal[j] + kh.e(l, j) * pal[i];
+                }
+            }
+            pal[0] = -cho * crpl[0];
+            al[0] += trpl[l] * pal[0];
+            for (j = 0; j < n; ++j) {
+                kmats.e(0, j) += kh.e(0, l) * pal[j] + kh.e(l, j) * pal[0];
+            }
+        }
+    }
+
 
     // form output matrix omat = exp(mat) :
     omat = al[0];
@@ -3276,6 +3348,13 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
                        out_only Matrix_t<n, m, T, MT> &omat,
                        out_only Matrix_t<n, m, T, MT> &domat) {
     static_assert(n == m, "mult_chexp() only for square matrices");
+    // determine scaling factor:
+    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm = norm(mat), sfac = 1.0;
+    int nb = 0;
+    while (matnorm * sfac >= sclim) {
+        sfac *= 0.5;
+        ++nb;
+    }
 
     // compute the first n matrix powers of mat and the corresponding traces :
     Matrix_t<n, m, T, MT> pl[n];         // the i-th matrix power of mat[][] is stored in pl[i][][]
@@ -3283,8 +3362,9 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     Matrix_t<n, m, T, MT> &texp = pl[0]; // temp. storage for result of exponentiation
 
     pl[1] = mat;
+    pl[1] *= sfac;
     trpl[1] = trace(pl[1]);
-    int i, j, k;
+    int i, j, k, l;
     for (i = 2; i < n; ++i) {
         j = i / 2;
         k = i % 2;
@@ -3339,7 +3419,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
     // would have at iteration i, if no renormalization were used.
     T cho; // temporary variable for iteration
     hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
-    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    hila::arithmetic_type<T> s, rs = 1.0, rss; // temp variables used for renormalization of pal[]
     for (j = n; j < mmax; ++j) {
         s = 0;
         cho = pal[n - 1] * rs;
@@ -3352,18 +3432,20 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
         s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
 
+        s = sqrt(s);
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
+            rss = 1.0;
         } else {
             wpf /= (j + 1);
             rs = 1.0;
+            rss = s;
         }
         ttwpf = twpf;
-        twpf += wpf;
+        twpf += wpf * rss;
         if (ttwpf == twpf) {
             // terminate iteration when numeric value of twpf stops changing
             break;
@@ -3385,6 +3467,40 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
             kmats.e(i, i) += wpf * kh.e(i, i);
         }
     }
+
+
+    // compute coefficients for the nb-times squared exponential of the scaled matrix:
+    for (k = 0; k < nb; ++k) {
+        cho = al[0];
+        for (i = 0; i < n; ++i) {
+            trpl[i] = pal[i] = al[i];
+            kh.e(i, i) = 0.5 * kmats.e(i, i);
+            kmats.e(i, i) = 2.0 * kh.e(0, i) * al[i];
+            for (j = i + 1; j < n; ++j) {
+                kh.e(j, i) = kh.e(i, j) =
+                    0.5 * kmats.e(i, j); // define symmetric kh[][] to avoid case-distinctions
+                                             // in computations below
+                kmats.e(i, j) = kh.e(0, i) * al[j] + kh.e(0, j) * al[i];
+            }
+            al[i] *= cho;
+        }
+        for (l = 1; l < n; ++l) {
+            cho = pal[n - 1];
+            for (i = n - 1; i > 0; --i) {
+                pal[i] = pal[i - 1] - cho * crpl[i];
+                al[i] += trpl[l] * pal[i];
+                for (j = i; j < n; ++j) {
+                    kmats.e(i, j) += kh.e(i, l) * pal[j] + kh.e(l, j) * pal[i];
+                }
+            }
+            pal[0] = -cho * crpl[0];
+            al[0] += trpl[l] * pal[0];
+            for (j = 0; j < n; ++j) {
+                kmats.e(0, j) += kh.e(0, l) * pal[j] + kh.e(l, j) * pal[0];
+            }
+        }
+    }
+
 
     // from matrix texp = exp(mat):
     texp = al[0];
@@ -3453,6 +3569,14 @@ template <int n, int m, typename T, typename MT>
 inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT> &omat,
                   out_only Matrix_t<n, m, T, MT> &kmats) {
     static_assert(n == m, "chexpk() only for square matrices");
+    // determine scaling factor:
+    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm = norm(mat), sfac = 1.0;
+    int nb = 0;
+    while (matnorm * sfac >= sclim) {
+        sfac *= 0.5;
+        ++nb;
+    }
+
     // compute the first n matrix powers of mat and the corresponding traces :
     Matrix_t<n, m, T, MT> pl[n]; // the i-th matrix power of mat[][] is stored in pl[i][][]
     T trpl[n + 1];               // the trace of pl[i][][] is stored in trpl[i]
@@ -3514,7 +3638,7 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
     // would have at iteration i, if no renormalization were used.
     T cho, tcrp;       // temporary variables for iteration
     hila::arithmetic_type<T> ttwpf;       // temporary variable for convergence check
-    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    hila::arithmetic_type<T> s, rs = 1.0, rss; // temp variables used for renormalization of pal[]
     int jmax = mmax - 1;
     for (j = n; j < mmax; ++j) {
         s = 0;
@@ -3528,18 +3652,20 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
         s += ::squarenorm(pal[0]);
         al[0] += wpf * pal[0];
 
+        s = sqrt(s);
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
+            rss = 1.0;
         } else {
             wpf /= (j + 1);
             rs = 1.0;
+            rss = s;
         }
         ttwpf = twpf;
-        twpf += wpf;
+        twpf += wpf * rss;
         if (ttwpf == twpf) {
             // terminate iteration when numeric value of twpf stops changing
             jmax = j;
@@ -3562,6 +3688,39 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
             kmats.e(i, i) += wpf * kh.e(i, i);
         }
     }
+
+    // compute coefficients for the nb-times squared exponential of the scaled matrix:
+    for (k = 0; k < nb; ++k) {
+        cho = al[0];
+        for (i = 0; i < n; ++i) {
+            trpl[i] = pal[i] = al[i];
+            kh.e(i, i) = 0.5 * kmats.e(i, i);
+            kmats.e(i, i) = 2.0 * kh.e(0, i) * al[i];
+            for (j = i + 1; j < n; ++j) {
+                kh.e(j, i) = kh.e(i, j) =
+                    0.5 * kmats.e(i, j); // define symmetric kh[][] to avoid case-distinctions
+                                         // in computations below
+                kmats.e(i, j) = kh.e(0, i) * al[j] + kh.e(0, j) * al[i];
+            }
+            al[i] *= cho;
+        }
+        for (l = 1; l < n; ++l) {
+            cho = pal[n - 1];
+            for (i = n - 1; i > 0; --i) {
+                pal[i] = pal[i - 1] - cho * crpl[i];
+                al[i] += trpl[l] * pal[i];
+                for (j = i; j < n; ++j) {
+                    kmats.e(i, j) += kh.e(i, l) * pal[j] + kh.e(l, j) * pal[i];
+                }
+            }
+            pal[0] = -cho * crpl[0];
+            al[0] += trpl[l] * pal[0];
+            for (j = 0; j < n; ++j) {
+                kmats.e(0, j) += kh.e(0, l) * pal[j] + kh.e(l, j) * pal[0];
+            }
+        }
+    }
+
 
     // form output matrix omat :
     omat = al[0];
@@ -3709,7 +3868,7 @@ inline Matrix_t<n, m, T, MT> chsexp(const Matrix_t<n, m, T, MT> &mat) {
     // is the sum \sum_{i=0}^{j} s_i/i!, with s_i referring to the magnitude the vector pal[]
     // would have at iteration i, if no renormalization were used.
     T ch, cho;                            // temporary variables for iteration
-    hila::arithmetic_type<T> s, rs = 1.0; // temp variables used for renormalization of pal[]
+    hila::arithmetic_type<T> s, rs = 1.0, rss; // temp variables used for renormalization of pal[]
     for (j = n; j < mmax; ++j) {
         pal[n - 1] *= rs;
         ch = -pal[n - 1] * crpl[0];
@@ -3724,18 +3883,21 @@ inline Matrix_t<n, m, T, MT> chsexp(const Matrix_t<n, m, T, MT> &mat) {
             s += ::squarenorm(ch);
             al[i] += wpf * ch;
         }
+
+        s = sqrt(s);
         if (s > 1.0) {
             // if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration,
             // and multiply wpf by s to compensate
-            s = sqrt(s);
             wpf *= s / (j + 1);
             rs = 1.0 / s;
+            rss = 1.0;
         } else {
             wpf /= (j + 1);
             rs = 1.0;
+            rss = s;
         }
         ttwpf = twpf;
-        twpf += wpf;
+        twpf += wpf * rss;
         if (ttwpf == twpf) {
             // terminate iteration
             break;
