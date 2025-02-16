@@ -137,9 +137,7 @@ class ReductionVector {
 
     /// Destructor cleans up communications if they are in progress
     ~ReductionVector() {
-        if (comm_is_on) {
-            MPI_Cancel(&request);
-        }
+        wait();
     }
 
     /// And access operators - these do in practice everything already!

@@ -7,32 +7,32 @@
 The input files and the lattice layout can be checked with the 
 commands (after the application program has been built)
 ~~~bash
-   <hila-program-name> -check
-   <hila-program-name> -check -n <number-of-nodes>       # without spaces
+   <hila-program-name> -check <number-of-nodes>    
 ~~~
 This runs the program without initializing MPI, Cuda or other hardware features and
 exits at `lattice.setup()` before any large memory allocations are made.  If the 
-number-of-nodes argument is given, program reports how the node layout is done.
+number-of-nodes argument is larger than 1, program reports if the lattice layout can be made
+and how it is done.
 
 __Example__: 
 
-Running `hila_example` in directory `hila/applications/hila_example` with the command `build/hila_example -check -n 32` checks the input file and the layout for 32 nodes.
+Running `hila_example` in directory `hila/applications/hila_example` with the command `build/hila_example -check 32` checks the input file and the layout for 32 nodes.
 
 ~~~bash
 cd applications/hila_example
 make -j4 hila_simple_example
-./build/hila_simple_example -check -n 32
+./build/hila_simple_example -check 32
 ~~~
 
 <details> 
 <summary> Expected output </summary>
 
 ~~~bash
-$ ./build/hila_example -check -n 32
+$ ./build/hila_example -check 32
 ****** INPUT AND LAYOUT CHECK ******
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_example
-with command line arguments '-check -n 32 '
+with command line arguments '-check 32 '
 Code version: git SHA d117618b
 Compiled Jun 21 2023 at 11:28:48
 with options: EVEN_SITES_FIRST
@@ -70,11 +70,11 @@ If the application source had a typo in parameter reading, for example `lsize = 
 <summary> Expected output </summary>
 
 ~~~bash
-$ ./build/hila_example -check -n 32
+$ ./build/hila_example -check 32
 ****** INPUT AND LAYOUT CHECK ******
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_example
-with command line arguments '-check -n 32 '
+with command line arguments '-check 32 '
 Code version: git SHA d117618b
 Compiled Jun 21 2023 at 11:28:48
 with options: EVEN_SITES_FIRST
@@ -98,11 +98,11 @@ Additionally if the node layout is insufficient then the output would be:
 <summary> Expected output </summary>
 
 ~~~bash
-$ ./build/hila_example -check -n 7
+$ ./build/hila_example -check 7
 ****** INPUT AND LAYOUT CHECK ******
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_example
-with command line arguments '-check -n 7 '
+with command line arguments '-check 7'
 Code version: git SHA d117618b
 Compiled Jun 21 2023 at 11:28:48
 with options: EVEN_SITES_FIRST

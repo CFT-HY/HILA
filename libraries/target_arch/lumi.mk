@@ -5,8 +5,18 @@
 #
 
 $(info ########################################################################)
-$(info Target lumi: remember to )
-$(info   module load PrgEnv-gnu cray-mpich cray-fftw )
+$(info Target lumi for LUMI-C: remember to )
+$(info   module load PrgEnv-gnu cray-mpich cray-fftw if you want to use Cray PE.)
+$(info )
+$(info Arcording to note of changes of  update of August-September 2024 from LUMI team,)
+$(info LUMI/24.04 is the only truly-supported software stack, you may condider use LUMI/24.03 and its toolchains to make workflow smooth.)
+$(info To load LUMI/24.03 with GNU compiler and its toolchains such as fftw, cmake run )
+$(info )
+$(info   module --force purge && module --force unload LUMI )
+$(info   module load LUMI/24.03 partition/C cpeGNU/24.03 buildtools/24.03 cray-fftw/3.3.10.7 )
+$(info )
+$(info LUMI/24.03 contains EasyBuild extra-packages building system, read LUMI documentaion to learn more.)
+$(info Moreover, the compiler wrapper CC has full konwledge of C++ standard include files, which are significant for hilapp functionality.)
 $(info ########################################################################)
 
 
@@ -17,7 +27,7 @@ CC := CC
 LD := CC
 
 # Define compilation flags
-CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
+CXXFLAGS  := -Ofast -flto=auto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
@@ -26,7 +36,12 @@ CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+# when  module load LUMI/24.03 partition/C cpeGNU/24.03 are loaded, the compiler wrapper CC
+# is inface Clang 17.0.1, whcih know the pathes of Clang c++ 17 std include files.
+# Then the good practice to get HILAPP_INCLUDE_LIST is call CC -xc++ --std=c++17 -Wp,-v - otherthan us g++
+
+# HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | CC -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
 
 
 # stddef.h again!

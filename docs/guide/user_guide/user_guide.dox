@@ -10,6 +10,7 @@ This section is comprehensive description of the functionality HILA offers. For 
 - \subpage datatypes
 - \subpage input_library
 - \subpage test_input_and_layout
+- \subpage partitions
 - \subpage hilapp_tool
 - \subpage utility
 */

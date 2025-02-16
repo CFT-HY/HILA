@@ -16,8 +16,7 @@ hila::timer reduction_timer("MPI reduction");
 hila::timer reduction_wait_timer("MPI reduction wait");
 hila::timer broadcast_timer("MPI broadcast");
 hila::timer send_timer("MPI send field");
-hila::timer cancel_send_timer("MPI cancel send");
-hila::timer cancel_receive_timer("MPI cancel receive");
+hila::timer drop_comms_timer("MPI wait drop_comms");
 hila::timer partition_sync_timer("partition sync");
 
 // let us house the partitions-struct here
@@ -142,7 +141,7 @@ bool hila::get_allreduce() {
 
 /* Machine initialization */
 #include <sys/types.h>
-void initialize_communications(int &argc, char ***argv) {
+void hila::initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
     if (!mpi_initialized) {
 
@@ -173,12 +172,12 @@ void initialize_communications(int &argc, char ***argv) {
 }
 
 // check if MPI is on
-bool is_comm_initialized(void) {
+bool hila::is_comm_initialized(void) {
     return mpi_initialized;
 }
 
 /* version of exit for multinode processes -- kill all nodes */
-void abort_communications(int status) {
+void hila::abort_communications(int status) {
     if (mpi_initialized) {
         mpi_initialized = false;
         MPI_Abort(lattices[0]->mpi_comm_lat, 0);
@@ -186,7 +185,7 @@ void abort_communications(int status) {
 }
 
 /* clean exit from all nodes */
-void finish_communications() {
+void hila::finish_communications() {
     // turn off mpi -- this is needed to avoid mpi calls in destructors
     mpi_initialized = false;
     hila::about_to_finish = true;
@@ -275,11 +274,11 @@ int get_next_msg_tag() {
 }
 
 
-// Split the communicator to subvolumes, using MPI_Comm_split
-// New MPI_Comm is the global mpi_comm_lat
-// NOTE: no attempt made here to reorder the nodes
+/// Split the communicator to subvolumes, using MPI_Comm_split
+/// New MPI_Comm is the global mpi_comm_lat
+/// NOTE: no attempt made here to reorder the nodes
 
-void split_into_partitions(int this_lattice) {
+void hila::split_into_partitions(int this_lattice) {
 
     if (hila::check_input)
         return;
@@ -294,27 +293,7 @@ void split_into_partitions(int this_lattice) {
     MPI_Comm_size(lattice.mpi_comm_lat, &lattice.nodes.number);
 }
 
-#if 0
-
-// Switch comm frame global-sublat
-// for use in io_status_file
-
-void reset_comm(bool global)
-{
-  static MPI_Comm mpi_comm_saved;
-  static int set = 0;
-
-  g_sync_partitions();
-  if (global) {
-    mpi_comm_saved = lattice.mpi_comm_lat;
-    lattice.mpi_comm_lat = MPI_COMM_WORLD;
-    set = 1;
-  } else {
-    if (!set) halt("Comm set error!");
-    lattice.mpi_comm_lat = mpi_comm_saved;
-    set = 0;
-  }
-  mynode = hila::myrank();
+void hila::synchronize_partitions() {
+    if (partitions.number() > 1)
+        MPI_Barrier(MPI_COMM_WORLD);
 }
-
-#endif

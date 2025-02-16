@@ -2569,7 +2569,10 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         // Declarations with a trailing return type behave weirdly, they have empty
         // ReturnTypeSourceRange, but the getDeclaredReturnType is the explicit return
         // type.
-        if (TheRewriter.getRewrittenText(f->getReturnTypeSourceRange()) == "") {
+
+        if (f->getReturnType().getAsString() == "void") {
+            funcBuf.insert(0, " void ", true, true);
+        } else if (TheRewriter.getRewrittenText(f->getReturnTypeSourceRange()) == "") {
             // So this one has a trailing return type. Just add auto.
             funcBuf.insert(0, " auto ", true, true);
         } else {
