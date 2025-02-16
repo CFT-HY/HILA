@@ -4,7 +4,6 @@
 /// @brief Example usage of the multicanonical tools
 /// @details Simple working method for using multicanonical update on a scalar field where
 /// the system exhibits critical freezing.
-///
 ////////////////////////////////////////////////////////////////////////////////
 #include <stdio.h>
 #include <stdlib.h>

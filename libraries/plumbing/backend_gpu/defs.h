@@ -39,9 +39,6 @@ void free_device_rng();
 #include <cuda_runtime.h>
 #include <cub/cub.cuh>
 
-// THis set in params.h now
-// #define N_threads 256 // Threads per block for CUDA   TODO: make configurable?
-
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
 
@@ -82,7 +79,7 @@ using gpuError = cudaError;
 #define gpuMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
-#define gpuMemset(a,b,c) GPU_CHECK(cudaMemset(a,b,c))
+#define gpuMemset(a, b, c) GPU_CHECK(cudaMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 
 #define GPUTYPESTR "CUDA"
@@ -99,10 +96,7 @@ using gpuError = cudaError;
 #include <hip/hip_runtime.h>
 #include <hiprand/hiprand.h>
 
-//#include <hipcub/hipcub.hpp>*
-
-// Set in params.h now
-// #define N_threads 256 // Threads per block for CUDAs
+// #include <hipcub/hipcub.hpp>*
 
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess
@@ -136,7 +130,7 @@ using gpuError = hipError_t;
 #define gpuMemcpyDeviceToDevice hipMemcpyDeviceToDevice
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
-#define gpuMemset(a,b,c) GPU_CHECK(hipMemset(a,b,c))
+#define gpuMemset(a, b, c) GPU_CHECK(hipMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
     GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
 
@@ -153,15 +147,14 @@ using gpuError = hipError_t;
 ////////////////////////////////////////////////////////////////////////////////////
 
 
-#define GPU_CHECK(cmd)                                                                 \
-    do {                                                                               \
-        auto code = cmd;                                                               \
-        gpu_exit_on_error(code, #cmd, __FILE__, __LINE__);                             \
+#define GPU_CHECK(cmd)                                                                             \
+    do {                                                                                           \
+        auto code = cmd;                                                                           \
+        gpu_exit_on_error(code, #cmd, __FILE__, __LINE__);                                         \
     } while (0)
 
 #define check_device_error(msg) gpu_exit_on_error(msg, __FILE__, __LINE__)
-#define check_device_error_code(code, msg)                                             \
-    gpu_exit_on_error(code, msg, __FILE__, __LINE__)
+#define check_device_error_code(code, msg) gpu_exit_on_error(code, msg, __FILE__, __LINE__)
 void gpu_exit_on_error(const char *msg, const char *file, int line);
 void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int line);
 
@@ -214,7 +207,7 @@ inline void synchronize_threads() {}
 #endif
 ////////////////////////////////////////////////////////////////////////////////////
 
-void initialize_gpu(int rank,int device);
+void initialize_gpu(int rank, int device);
 void gpu_device_info();
 
 // This is not the CUDA compiler
@@ -232,8 +225,7 @@ template <class T, class U>
 struct is_assignable : std::integral_constant<bool, std::is_assignable<T, U>::value> {};
 
 template <class T>
-struct is_floating_point
-    : std::integral_constant<bool, std::is_floating_point<T>::value> {};
+struct is_floating_point : std::integral_constant<bool, std::is_floating_point<T>::value> {};
 
 } // namespace hila
 

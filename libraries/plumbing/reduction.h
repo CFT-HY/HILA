@@ -121,9 +121,7 @@ class Reduction {
 
     /// Destructor cleans up communications if they are in progress
     ~Reduction() {
-        if (comm_is_on) {
-            MPI_Cancel(&request);
-        }
+        wait();
     }
 
     /// allreduce(bool) turns allreduce on or off.  By default on.
@@ -169,8 +167,7 @@ class Reduction {
     /// Assignment is used only outside site loops - drop comms if on, no need to wait
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     T operator=(const S &rhs) {
-        if (comm_is_on)
-            MPI_Cancel(&request);
+        wait();
 
         comm_is_on = false;
         T ret = rhs;

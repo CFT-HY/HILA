@@ -8,20 +8,6 @@
 
 #include "hila.h"
 
-// <filesystem> can be in different locations, check...
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace filesys_ns = std::filesystem;
-
-#elif __has_include(<experimental/filesystem>)
-#include <experimental/filesystem>
-namespace filesys_ns = std::experimental::filesystem;
-
-#else
-static_assert(0, "Neither <filesystem> nor <experimental/filesystem> found!");
-
-#endif
-
 /// Functions checkpoint / restore_checkpoint allow one to save lattice config periodically
 /// Checkpoint keeps file "run_status" which holds the current trajectory.
 /// By modifying "run status" the number of trajectories can be changed

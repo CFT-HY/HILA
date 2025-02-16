@@ -23,6 +23,10 @@
 #include "plumbing/reductionvector.h"
 #include "plumbing/site_select.h"
 
+#if __has_include("hila_signatures.h")
+#include "hila_signatures.h"
+#endif
+
 //#if defined(CUDA) || defined(HIP)
 //#include "plumbing/backend_gpu/gpu_reduction.h"
 //#endif
