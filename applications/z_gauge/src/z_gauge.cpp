@@ -30,13 +30,19 @@ using sw_t = std::array<std::array<Field<T>, NDIM>, NDIM>;
  * @brief Sum the staples of link variables to direction dir taking into account plaquette
  * orientations and shift weights
  *
- * action contribution of all plaquettes containing h_{x,\mu}:
- * (h_{x,\mu} + h_{x+\hat{\mu},\nu} - h_{x+\hat{\nu},\mu} - h_{x,\nu} + s_{x,\mu\nu})^2
+ * action of all plaquettes containing h_{x,\mu}:
+ * \sum_{\nu} {(h_{x,\mu} + h_{x+\hat{\mu},\nu} - h_{x+\hat{\nu},\mu} - h_{x,\nu} + s_{x,\mu\nu})^2
  * + (h_{x-\hat{\nu},\mu} + h_{x-\hat{\nu}+\hat{\mu},\nu} - h_{x,\mu} - h_{x-\hat{\nu},\nu} +
- * s_{x-\hat{\nu},\mu\nu})^2 the staples are defined by expanding in h_{x,\mu}: = h_{x,\mu}^2
- *   + 2 h_{x,\mu} ((h_{x+\hat{\mu},\nu} - h_{x+\hat{\nu},\mu} - h_{x,\nu} + s_{x,\mu\nu})
- *              + (-h_{x-\hat{\nu}+\hat{\mu},\nu} - h_{x-\hat{\nu},mu} + h_{x-\hat{\nu},\nu} -
- * s_{x-\hat{\nu},\mu\nu}))
+ * s_{x-\hat{\nu},\mu\nu})^2}
+ * the staple sum for h_{x,\mu} is defined by the sum of terms in the above expression which are
+ * linear in h_{x,\mu}:
+ * 2 (d-1) h_{x,\mu}^2
+ *   + 2 h_{x,\mu} \sum_{\nu} {
+ *              (h_{x+\hat{\mu},\nu} - h_{x+\hat{\nu},\mu} - h_{x,\nu} 
+ *               + s_{x,\mu\nu})
+ *            + (-h_{x-\hat{\nu}+\hat{\mu},\nu} - h_{x-\hat{\nu},mu} + h_{x-\hat{\nu},\nu}
+ *               - s_{x-\hat{\nu},\mu\nu})
+ *     }
  *   + terms independent of h_{x,\mu}
  *
  * @tparam T Z-gauge group type
@@ -72,13 +78,13 @@ void staplesum(const GaugeField<T> &H, Field<fT> &staples, Direction d1,
         if (first) {
             onsites(par) {
                 staples[X] =
-                    2.0 * ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
+                    ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
             }
             first = false;
         } else {
             onsites(par) {
                 staples[X] +=
-                    2.0 * ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
+                    ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
             }
         }
     }
@@ -120,7 +126,7 @@ void update(GaugeField<T> &H, const parameters &p, const sw_t<fT> &sw) {
  */
 template <typename T, typename fT>
 fT z_metropolis(T &h, fT stap, double beta) {
-    fT nstap = (fT)(NDIM - 1) * 2.0;
+    fT nstap = (fT)(NDIM - 1); 
     fT si = nstap * h * h + (fT)h * stap;
     int he = h + 2 * (int)(hila::random() * 2.0) - 1;
     fT nds = nstap * he * he + (fT)he * stap - si;
@@ -189,7 +195,7 @@ void do_trajectory(GaugeField<T> &H, const sw_t<fT> &sw, const parameters &p) {
 
 template <typename T, typename fT>
 double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
-    // measure the total Wilson plaquette action for the gauge field U
+    // measure the total plaquette action for the gauge field H
     Reduction<double> plaq = 0;
     plaq.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -206,7 +212,7 @@ double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
 
 template <typename T, typename fT>
 void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw) {
-    // perform measurements on current gauge and momentum pair (U, E) and
+    // perform measurements on current gauge field H and
     // print results in formatted form to standard output
     static bool first = true;
     if (first) {
