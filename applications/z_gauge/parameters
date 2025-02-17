@@ -1,0 +1,10 @@
+# This is a parameter file for z_gauge
+
+lattice size           12,12,12,12
+beta                   0.5
+number of trajectories 400
+updates in trajectory  1
+thermalization trajs   5000
+random seed            0
+trajs/saved            0
+config name            config
