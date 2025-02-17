@@ -2934,7 +2934,7 @@ inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT
                   Mt(out_only &pl)[n]) {
     static_assert(n == m, "chexp() only for square matrices");
     // determine scaling factor:
-    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm=norm(mat), sfac=1.0;
+    hila::arithmetic_type<T> sclim = sqrt(2.0), matnorm=norm(mat), sfac=1.0;
     int nb = 0;
     while (matnorm * sfac >= sclim) {
         sfac *= 0.5;
@@ -3122,7 +3122,7 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
                   Mt(out_only &domat)[n][m]) {
     static_assert(n == m, "chexp() only for square matrices");
     // determine scaling factor:
-    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm = norm(mat), sfac = 1.0;
+    hila::arithmetic_type<T> sclim = sqrt(2.0), matnorm = norm(mat), sfac = 1.0;
     int nb = 0;
     while (matnorm * sfac >= sclim) {
         sfac *= 0.5;
@@ -3349,7 +3349,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
                        out_only Matrix_t<n, m, T, MT> &domat) {
     static_assert(n == m, "mult_chexp() only for square matrices");
     // determine scaling factor:
-    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm = norm(mat), sfac = 1.0;
+    hila::arithmetic_type<T> sclim = sqrt(2.0), matnorm = norm(mat), sfac = 1.0;
     int nb = 0;
     while (matnorm * sfac >= sclim) {
         sfac *= 0.5;
@@ -3456,7 +3456,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
         for (i = n-1; i >= 0; --i) {
             cho = kh.e(i, n - 1) * rs;
             for (k = n - 1; k > i; --k) {
-                kh.e(i, k) = kh.e(i,k-1) * rs -cho * crpl[k];
+                kh.e(i, k) = kh.e(i,k-1) * rs - cho * crpl[k];
                 kmats.e(i, k) += wpf * kh.e(i, k);
             }
             if(i>0) {
@@ -3570,7 +3570,7 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
                   out_only Matrix_t<n, m, T, MT> &kmats) {
     static_assert(n == m, "chexpk() only for square matrices");
     // determine scaling factor:
-    hila::arithmetic_type<T> sclim = sqrt(1.0), matnorm = norm(mat), sfac = 1.0;
+    hila::arithmetic_type<T> sclim = sqrt(2.0), matnorm = norm(mat), sfac = 1.0;
     int nb = 0;
     while (matnorm * sfac >= sclim) {
         sfac *= 0.5;
@@ -3582,6 +3582,7 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
     T trpl[n + 1];               // the trace of pl[i][][] is stored in trpl[i]
     trpl[0] = (T)n;
     pl[1] = mat;
+    pl[1] *= sfac;
     trpl[1] = trace(pl[1]);
     int i, j, k, l;
     for (i = 2; i < n; ++i) {
@@ -3765,11 +3766,20 @@ inline void mult_chexpk_fast(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n,
                             out_only Matrix_t<n, m, T, MT> &omat,
                             out_only Matrix_t<n, m, T, MT> &domat) {
     static_assert(n == m, "mult_chexp() only for square matrices");
+    // determine scaling factor:
+    hila::arithmetic_type<T> sclim = sqrt(2.0), matnorm = norm(mat), sfac = 1.0;
+    int nb = 0;
+    while (matnorm * sfac >= sclim) {
+        sfac *= 0.5;
+        ++nb;
+    }
+
     // compute the first n matrix powers of mat and the corresponding traces :
     Matrix_t<n, m, T, MT> pl[n];         // the i-th matrix power of tU[][] is stored in pl[i][][]
     Matrix_t<n, m, T, MT> tomat, kh;     // temp. storage for compuatation of derivative term
 
     pl[1] = mat;
+    pl[1] *= sfac;
     int i, j, k;
     for (i = 2; i < n; ++i) {
         j = i / 2;
