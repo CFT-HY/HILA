@@ -349,8 +349,13 @@ int main(int argc, char **argv) {
                 if(d1==d2) {
                     sw[d1][d2][X] = 0;
                 } else {
-                    sw[d1][d2][X] = 0.5;
-                    sw[d2][d1][X] = -0.5;
+                    if (X.parity() == Parity::even) {
+                        sw[d1][d2][X] = 0.5;
+                        sw[d2][d1][X] = -0.5;
+                    } else {
+                        sw[d1][d2][X] = -0.5;
+                        sw[d2][d1][X] = 0.5;
+                    }
                 }
             }
         }
