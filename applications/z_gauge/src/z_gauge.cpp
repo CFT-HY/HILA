@@ -15,7 +15,8 @@ struct parameters {
     int n_traj;         // number of trajectories to generate
     int n_therm;        // number of thermalization trajectories (counts only accepted traj.)
     int n_update;       // number of heat-bath sweeps per "trajectory"
-    int n_save;         // number of trajectories between config. check point
+    int n_relax;        // number of s_{x,\mu\nu} updates per update
+    int n_save; // number of trajectories between config. check point
     std::string config_file;
     ftype time_offset;
 };
@@ -78,13 +79,13 @@ void staplesum(const GaugeField<T> &H, Field<fT> &staples, Direction d1,
         if (first) {
             onsites(par) {
                 staples[X] =
-                    ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
+                    2.0 * ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
             }
             first = false;
         } else {
             onsites(par) {
                 staples[X] +=
-                    ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
+                    2.0 * ((fT)(H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) + sw[d1][d2][X] + lower[X - d2]);
             }
         }
     }
@@ -92,45 +93,22 @@ void staplesum(const GaugeField<T> &H, Field<fT> &staples, Direction d1,
 
 
 /**
- * @brief Wrapper update function
- * @details Gauge Field update sweep with randomly chosen parities and directions
- *
- * @tparam T Z-gauge group type
- * @tparam fT plaquette shift type
- * @param H GaugeField to update
- * @param p Parameter struct
- * @param relax If true evolves GaugeField with over relaxation if false then with heat bath
- * @param sw plaquette shifts
- */
-template <typename T, typename fT>
-void update(GaugeField<T> &H, const parameters &p, const sw_t<fT> &sw) {
-    for (int i = 0; i < 2 * NDIM; ++i) {
-        int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
-        int tdir = tdp / 2;
-        int tpar = 1 + (tdp % 2);
-        //hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        update_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
-    }
-    //hila::out0 << "\n";
-}
-
-/**
  * @brief Z gauge theory metropolis update
  * @details --
  * @tparam T Group element type such as long or int
  * @tparam fT staple type such as double or float
  * @param h link variable to be updated
- * @param stap staplesum of plaquettes containing h
+ * @param stapsum staplesum of plaquettes containing h
  * @param beta coupling constant
  * @return double change in plaquette action
  */
 template <typename T, typename fT>
-fT z_metropolis(T &h, fT stap, double beta) {
-    fT nstap = (fT)(NDIM - 1); 
-    fT si = nstap * h * h + (fT)h * stap;
+fT z_metropolis(T &h, const fT &stapsum, double beta) {
+    fT nstap = (fT)(NDIM - 1) * 2.0; 
+    fT si = nstap * h * h + (fT)h * stapsum;
     int he = h + 2 * (int)(hila::random() * 2.0) - 1;
-    fT nds = nstap * he * he + (fT)he * stap - si;
-    if (nds < 0 || hila::random() < exp(-beta * nds)) {
+    fT nds = nstap * he * he + (fT)he * stapsum - si;
+    if (nds < 0 || hila::random() < exp(-0.5 * beta * nds)) {
         h = he;
         return -nds;
     } else {
@@ -139,7 +117,59 @@ fT z_metropolis(T &h, fT stap, double beta) {
 }
 
 /**
- * @brief Wrapper function to updated GaugeField per direction
+ * @brief plaquette shift metropolis update
+ * @details --
+ * @tparam fT shift type such as double or float
+ * @tparam T Group element type such as long or int
+ * @param sw plaquette shift variable
+ * @param tplaq plaquette variable
+ * @param beta coupling constant
+ * @return double change in plaquette action
+ */
+template <typename fT, typename T>
+fT sw_metropolis(fT &sw,const T &tplaq, double beta) {
+    fT si = ((fT)tplaq + sw) * ((fT)tplaq + sw);
+    fT nds = ((fT)tplaq - sw) * ((fT)tplaq - sw) - si;
+    if (nds < 0 || hila::random() < exp(-0.5 * beta * nds)) {
+        sw = -sw;
+        return -nds;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * @brief Wrapper function to update plaquette shift variables
+ * @details --
+ *
+ * @tparam fT shift type such as double or float
+ * @tparam T Group element type such as long or int
+ * @param sw plaquette shift variable
+ * @param p paramaters
+ * @param H GaugeField from which to compute the plaquettes
+ * @return double change in plaquette action
+ */
+template <typename fT, typename T>
+void update_relax(sw_t<fT> &sw, const parameters &p, const GaugeField<T> &H) {
+    static hila::timer rl_timer("Relax");
+
+    rl_timer.start();
+
+    foralldir(d1) foralldir(d2) if (d2 > d1) {
+        H[d2].start_gather(d1, ALL);
+        H[d1].start_gather(d2, ALL);
+        onsites(ALL) {
+            T tplaq = H[d1][X] + H[d2][X + d1] - H[d1][X + d2] - H[d2][X];
+            sw_metropolis(sw[d1][d2][X], tplaq, p.beta);
+        }
+    }
+
+    rl_timer.stop();
+
+}
+
+/**
+ * @brief Wrapper function to update GaugeField per direction
  * @details Computes first staplesum, then uses computed result to evolve GaugeField with Metropolis
  * updates
  *
@@ -170,6 +200,35 @@ void update_parity_dir(GaugeField<T> &H, const parameters &p, Parity par, Direct
         z_metropolis(H[d][X], staples[X], p.beta);
     }
     me_timer.stop();
+
+}
+
+/**
+ * @brief Wrapper update function
+ * @details Gauge Field update sweep with randomly chosen parities and directions
+ *
+ * @tparam T Z-gauge group type
+ * @tparam fT plaquette shift type
+ * @param H GaugeField to update
+ * @param p Parameter struct
+ * @param sw plaquette shifts
+ */
+template <typename T, typename fT>
+void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
+
+    for (int i = 0; i < 2 * NDIM; ++i) {
+        bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_relax)) != 0);
+        if(relax) {
+            update_relax(sw, p, H);
+        } else {
+            int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
+            int tdir = tdp / 2;
+            int tpar = 1 + (tdp % 2);
+            // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
+            update_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
+        }
+    }
+    // hila::out0 << "\n";
 }
 
 /**
@@ -183,9 +242,11 @@ void update_parity_dir(GaugeField<T> &H, const parameters &p, Parity par, Direct
  * @param p parameter struct
  */
 template <typename T, typename fT>
-void do_trajectory(GaugeField<T> &H, const sw_t<fT> &sw, const parameters &p) {
+void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
     for (int n = 0; n < p.n_update; n++) {
-        update(H, p, sw);
+        for (int i = 0; i <= p.n_relax; i++) {
+            update(H, sw, p);
+        }
     }
 }
 
@@ -321,6 +382,8 @@ int main(int argc, char **argv) {
     p.n_traj = par.get("number of trajectories");
     // number of Metropolis sweeps per trajectory
     p.n_update = par.get("updates in trajectory");
+    // number of s_{x,\mu\nu} relaxation sweeps per Metropolis sweep
+    p.n_relax = par.get("relax steps");
     // number of thermalization trajectories
     p.n_therm = par.get("thermalization trajs");
     // random seed = 0 -> get seed from time
@@ -346,11 +409,20 @@ int main(int argc, char **argv) {
     foralldir(d1) {
         foralldir(d2) if(d2>=d1) {
             onsites(ALL) {
-                if(d1==d2) {
+                if(d1 == d2) {
                     sw[d1][d2][X] = 0;
                 } else {
                     sw[d1][d2][X] = 0.5;
-                    sw[d2][d1][X] = -0.5;
+                    
+                    if(X.parity() == Parity::odd) {
+                        sw[d1][d2][X] = -sw[d1][d2][X];
+                    }
+                    if(1) {
+                        if (((int)d1+(int)d2) % 2 == 1) {
+                            sw[d1][d2][X] = -sw[d1][d2][X];
+                        }
+                    }
+                    sw[d2][d1][X] = -sw[d1][d2][X];
                 }
             }
         }
