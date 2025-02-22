@@ -41,6 +41,10 @@ struct parameters {
     ftype time_offset;
 };
 
+double acc[2]{0};
+double att[2]{0};
+
+
 ///////////////////////////////////////////////////////////////////////////////////
 // heat-bath functions
 
@@ -58,7 +62,7 @@ struct parameters {
  * @param plaqw plaquette weights
  */
 template <typename group>
-void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Direction d,
+double update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Direction d,
                        bool relax, const plaqw_t<ftype> &plaqw) {
 
     static hila::timer hb_timer("Heatbath");
@@ -75,6 +79,11 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 
     staples_timer.stop();
 
+    Reduction<double> acc = 0;
+    acc.allreduce(false).delayed(true);
+    Reduction<double> att = 0;
+    att.allreduce(false).delayed(true);
+
     if (relax) {
 
         or_timer.start();
@@ -82,10 +91,13 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
         onsites(par) {
             if(plaqw[d][d][X] != 0) {
 #ifdef SUN_OVERRELAX_dFJ
-                suN_overrelax_dFJ(U[d][X], staples[X], p.beta);
+                acc += suN_overrelax_dFJ(U[d][X], staples[X], p.beta);
+                att += 1.0;
 #else
                 //suN_overrelax(U[d][X], staples[X]);
-                suN_overrelax(U[d][X], staples[X], p.beta);
+                acc += suN_overrelax(U[d][X], staples[X], p.beta);
+                att += 1.0;
+                // U[d][X] = suN_max_staple_sum_rot(staples[X]);
 #endif
             }
         }
@@ -96,12 +108,19 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
         hb_timer.start();
         onsites(par) {
             if (plaqw[d][d][X] != 0) {
-                suN_heatbath(U[d][X], staples[X], p.beta);
+                acc += suN_heatbath(U[d][X], staples[X], p.beta);
+                att += 1.0;
             }
         }
         hb_timer.stop();
 
     }
+    accr = att.value();
+    if (accr > 0) {
+        accr = acc.value() / accr;
+    }
+
+    return accr;
 }
 
 /**
@@ -121,7 +140,8 @@ void update(GaugeField<group> &U, const parameters &p, const plaqw_t<ftype> &pla
         int tpar = 1 + (tdp % 2);
         bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_overrelax)) != 0);
         // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax, plaqw);
+        acc[relax]+=update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax, plaqw);
+        att[relax] += 1.0;
     }
     // hila::out0 << "\n";
 }
@@ -271,6 +291,14 @@ void measure_stuff(const GaugeField<group> &U, const plaqw_t<ftype> &plaqw) {
     auto poly = measure_polyakov(U, e_t);
     hila::out0 << string_format("MEAS % 0.6e % 0.6e % 0.6e", plaq, poly.real(), poly.imag())
             << '\n';
+
+    hila::out0 << string_format("MEASEFF HB: % 0.6e , OR: % 0.6e ", acc[0] / att[0],
+                                acc[1] / att[1])
+               << '\n';
+    acc[0] = 0;
+    att[0] = 0;
+    acc[1] = 0;
+    att[1] = 0;
 #endif
 }
 
