@@ -2,10 +2,10 @@
 
 lattice size           12,12,12,12
 beta                   5.5
-number of trajectories 400
+number of trajectories 1000
 updates in trajectory  1
 plaq shift updates     1
 thermalization trajs   5000
 random seed            0
-trajs/saved            0
+trajs/saved            1000
 config name            config
