@@ -1,4 +1,5 @@
 #include "hila.h"
+#include "plaquettefield.h"
 #include "tools/string_format.h"
 #include "tools/floating_point_epsilon.h"
 
@@ -24,8 +25,10 @@ struct parameters {
 ///////////////////////////////////////////////////////////////////////////////////
 // Metropolis update functions
 
+//template <typename T>
+//using sw_t = std::array<std::array<Field<T>, NDIM>, NDIM>;
 template <typename T>
-using sw_t = std::array<std::array<Field<T>, NDIM>, NDIM>;
+using sw_t = PlaquetteField<T>;
 /**
  * @brief Sum the staples of link variables to direction dir taking into account plaquette
  * orientations and shift weights
@@ -38,7 +41,7 @@ using sw_t = std::array<std::array<Field<T>, NDIM>, NDIM>;
  * linear in h_{x,\mu}:
  * 2 (d-1) h_{x,\mu}^2
  *   + 2 h_{x,\mu} \sum_{\nu} {
- *              (h_{x+\hat{\mu},\nu} - h_{x+\hat{\nu},\mu} - h_{x,\nu} 
+ *              (h_{x+\hat{\mu},\nu} - h_{x+\hat{\nu},\mu} - h_{x,\nu}
  *               + s_{x,\mu\nu})
  *            + (-h_{x-\hat{\nu}+\hat{\mu},\nu} - h_{x-\hat{\nu},mu} + h_{x-\hat{\nu},\nu}
  *               - s_{x-\hat{\nu},\mu\nu})
@@ -467,14 +470,15 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw) {
 ///////////////////////////////////////////////////////////////////////////////////
 // load/save config functions
 
-template <typename group>
-void checkpoint(const GaugeField<group> &U, int trajectory, const parameters &p) {
+template <typename T, typename fT>
+void checkpoint(const GaugeField<T> &U, const PlaquetteField<fT> &sw, int trajectory, const parameters &p) {
     double t = hila::gettime();
     // name of config with extra suffix
     std::string config_file =
         p.config_file + "_" + std::to_string(abs((trajectory + 1) / p.n_save) % 2);
     // save config
     U.config_write(config_file);
+    sw.config_write(config_file + "_sw");
     // write run_status file
     if (hila::myrank() == 0) {
         std::ofstream outf;
@@ -491,8 +495,8 @@ void checkpoint(const GaugeField<group> &U, int trajectory, const parameters &p)
     hila::timestamp(msg.str().c_str());
 }
 
-template <typename group>
-bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
+template <typename T, typename fT>
+bool restore_checkpoint(GaugeField<T> &U, PlaquetteField<fT> &sw, int &trajectory, parameters &p) {
     uint64_t seed;
     bool ok = true;
     p.time_offset = 0;
@@ -507,6 +511,7 @@ bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
         status.close();
         hila::seed_random(seed);
         U.config_read(config_file);
+        sw.config_read(config_file + "_sw");
         ok = true;
     } else {
         std::ifstream in;
@@ -515,7 +520,15 @@ bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
             in.close();
             hila::out0 << "READING initial config\n";
             U.config_read(p.config_file);
-            ok = true;
+            std::ifstream in_sw;
+            in_sw.open(p.config_file, std::ios::in | std::ios::binary);
+            if (in_sw.is_open()) {
+                in_sw.close();
+                sw.config_read(p.config_file + "_sw");
+                ok = true;
+            } else {
+                ok = false;
+            }
         } else {
             ok = false;
         }
@@ -612,7 +625,7 @@ int main(int argc, char **argv) {
     // use negative trajectory numbers for thermalisation
     int start_traj = -p.n_therm;
 
-    if (!restore_checkpoint(H, start_traj, p)) {
+    if (!restore_checkpoint(H, sw, start_traj, p)) {
         foralldir(d) {
             onsites(ALL) {
                 H[d][X] = 0;
@@ -648,7 +661,7 @@ int main(int argc, char **argv) {
         measure_timer.stop();
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
-            checkpoint(H, trajectory, p);
+            checkpoint(H, sw, trajectory, p);
         }
     }
 

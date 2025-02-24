@@ -20,4 +20,6 @@ html/
 .vs/slnx.sqlite
 *config*
 *run_status
-applications/z_gauge/test_out.txt
+*out.txt
+*out1.txt
+*out2.txt

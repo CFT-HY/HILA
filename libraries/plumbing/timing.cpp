@@ -110,7 +110,7 @@ void timer::report(bool print_not_timed) {
                 std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f ms %9.6f\n", label.c_str(),
                               t_total, (long)count, 1e3 * t_total / count, t_total / ttime);
             } else {
-                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f μs %9.6f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f us %9.6f\n", label.c_str(),
                               t_total, (long)count, 1e6 * t_total / count, t_total / ttime);
             }
             hila::out << line;
