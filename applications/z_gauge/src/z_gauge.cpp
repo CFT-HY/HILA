@@ -3,7 +3,6 @@
 #include "tools/floating_point_epsilon.h"
 
 
-
 using ftype = double;
 
 using mygroup = long;
@@ -277,7 +276,7 @@ double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
 
 template <typename T>
 double measure_ns_plaq(const GaugeField<T> &H) {
-    // measure the total plaquette action for the gauge field H
+    // measure the total plaquette action (without shift) for the gauge field H
     Reduction<double> plaq = 0;
     plaq.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -293,7 +292,7 @@ double measure_ns_plaq(const GaugeField<T> &H) {
 
 template <typename T>
 double measure_hsq(const GaugeField<T> &H, double(out_only &h_per_par_dir)[2][NDIM]) {
-    // measure the total plaquette action for the gauge field H
+    // measure the average magnitude squared of H and its average value per direction and parity
     Reduction<double> thsq = 0;
     thsq.allreduce(false).delayed(true);
     ReductionVector<double> h_per_p_d(2 * NDIM);
@@ -314,6 +313,70 @@ double measure_hsq(const GaugeField<T> &H, double(out_only &h_per_par_dir)[2][ND
     return thsq.value();
 }
 
+template <typename fT>
+void measure_sw(const sw_t<fT> &sw, double(out_only &sw_per_par_pl)[2][NDIM][NDIM]) {
+    // measure the average plaquette shift value per plane and parity
+    ReductionVector<double> h_per_p_pl(2 * NDIM * NDIM);
+    h_per_p_pl = 0.0;
+    h_per_p_pl.allreduce(false).delayed(true);
+    foralldir(d1) foralldir(d2) if(d1 < d2) {
+        onsites(ALL) {
+            h_per_p_pl[(((int)X.parity() - 1) * NDIM + d1) * NDIM + d2] += sw[d1][d2][X];
+        }
+    }
+    h_per_p_pl.reduce();
+    for (int par = 0; par < 2; ++par) {
+        for (int d1 = 0; d1 < NDIM; ++d1) {
+            sw_per_par_pl[par][d1][d1] = 0;
+            for (int d2 = d1 + 1; d2 < NDIM; ++d2) {
+                sw_per_par_pl[par][d1][d2] = h_per_p_pl[(par * NDIM + d1) * NDIM + d2];
+                sw_per_par_pl[par][d2][d1] = -sw_per_par_pl[par][d1][d2];
+            }
+        }
+    }
+}
+
+template <typename fT>
+void measure_sw_monop_dens(const sw_t<fT> &sw, double(out_only &sw_monop_dens_per_d)[NDIM],
+                           double(out_only &sw_monop_dens_per_p_d)[2][NDIM]) {
+    if(NDIM==4) {
+        int dirl[NDIM];
+        int sign = 1;
+        for (int i = 0; i < NDIM; ++i) {
+            dirl[i] = i;
+        }
+        VectorField<fT> M;
+        ReductionVector<double> mpdens_per_d(NDIM);
+        mpdens_per_d = 0.0;
+        mpdens_per_d.allreduce(false).delayed(true);
+        ReductionVector<double> mpdens_per_p_d(NDIM * 2);
+        mpdens_per_p_d = 0.0;
+        mpdens_per_p_d.allreduce(false).delayed(true);
+        for (int i = 0; i < NDIM; ++i) {
+            Direction d0 = Direction((dirl[0] + i) % NDIM);
+            Direction d1 = Direction((dirl[1] + i) % NDIM);
+            Direction d2 = Direction((dirl[2] + i) % NDIM);
+            Direction d3 = Direction((dirl[3] + i) % NDIM);
+            onsites(ALL) {
+                M[d0][X] = (sw[d1][d2][X + d3] - sw[d1][d2][X]);
+                M[d0][X] += (sw[d2][d3][X + d1] - sw[d2][d3][X]);
+                M[d0][X] += (sw[d3][d1][X + d2] - sw[d3][d1][X]);
+                M[d0][X] *= (double)sign;
+                mpdens_per_d[d0] += abs(M[d0][X]);
+                mpdens_per_p_d[((int)X.parity() - 1) * NDIM + d0] += M[d0][X];
+            }
+            sign *= -1;
+        }
+        mpdens_per_d.reduce();
+        mpdens_per_p_d.reduce();
+        for (int i = 0; i < NDIM; ++i) {
+            sw_monop_dens_per_d[i] = mpdens_per_d[i];
+            sw_monop_dens_per_p_d[0][i] = mpdens_per_p_d[i];
+            sw_monop_dens_per_p_d[1][i] = mpdens_per_p_d[NDIM + i];
+        }
+    }
+}
+
 template <typename T, typename fT>
 void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw) {
     // perform measurements on current gauge field H and
@@ -321,24 +384,80 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw) {
     static bool first = true;
     if (first) {
         // print legend for measurement output
-        hila::out0 << "LMEAS:       splaq        nsplaq           hsq";
+        hila::out0 << "LMEASH:         splaq        nsplaq           hsq";
         for (int par = 0; par < 2; ++par) {
             for (int dir = 0; dir < NDIM; ++dir) {
                 hila::out0 << "          p" << par << "d" << dir;
             }
         }
         hila::out0 << "\n";
+        hila::out0 << "LMEASS:";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                    hila::out0 << "         p" << par << "d" << dir1 << dir2;
+                }
+            }
+        }
+        hila::out0 << "\n";
+        hila::out0 << "LMEAMA:";
+        for (int dir = 0; dir < NDIM; ++dir) {
+            hila::out0 << "            d" << dir;
+        }
+        hila::out0 << "\n";
+
+        hila::out0 << "LMEASM:";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir = 0; dir < NDIM; ++dir) {
+                hila::out0 << "          p" << par << "d" << dir;
+            }
+        }
+        hila::out0 << "\n";
+
+
         first = false;
     }
     auto splaq = measure_s_plaq(H, sw) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
     auto nsplaq = measure_ns_plaq(H) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
     double h_per_par_dir[2][NDIM];
     auto hsq = measure_hsq(H, h_per_par_dir) / (lattice.volume() * NDIM);
-    hila::out0 << string_format("MEAS % 0.6e % 0.6e % 0.6e", splaq, nsplaq, hsq);
+    hila::out0 << string_format("MEASH   % 0.6e % 0.6e % 0.6e", splaq, nsplaq, hsq);
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
             h_per_par_dir[par][dir] /= lattice.volume() / 2;
             hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
+        }
+    }
+    hila::out0 << '\n';
+
+    double sw_per_par_pl[2][NDIM][NDIM];
+    measure_sw(sw, sw_per_par_pl);
+    hila::out0 << "MEASS  ";
+    for (int par = 0; par < 2; ++par) {
+        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+            for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                sw_per_par_pl[par][dir1][dir2] /= lattice.volume() / 2;
+                hila::out0 << string_format(" % 0.6e", sw_per_par_pl[par][dir1][dir2]);
+            }
+        }
+    }
+    hila::out0 << '\n';
+
+    double m_per_dir[NDIM];
+    double m_per_par_dir[2][NDIM];
+    measure_sw_monop_dens(sw, m_per_dir, m_per_par_dir);
+    hila::out0 << "MEAMA  ";
+    for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+        m_per_dir[dir1] /= lattice.volume();
+        hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
+    }
+    hila::out0 << '\n';
+
+    hila::out0 << "MEASM  ";
+    for (int par = 0; par < 2; ++par) {
+        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+            m_per_par_dir[par][dir1] /= lattice.volume() / 2;
+            hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
         }
     }
     hila::out0 << '\n';
@@ -424,7 +543,7 @@ int main(int argc, char **argv) {
     // .get() -method can read many different input types,
     // see file "input.h" for documentation
 
-    hila::out0 << "Z gauge theory heat-bath\n";
+    hila::out0 << "Z gauge theory with plaquette shift field\n";
 
     hila::out0 << "Using floating point epsilon: " << fp<ftype>::epsilon << "\n";
 
@@ -463,6 +582,7 @@ int main(int argc, char **argv) {
     // instantiate the gauge field
     GaugeField<mygroup> H;
 
+ 
     // define the plaquette shifts 
     sw_t<ftype> sw;
     foralldir(d1) {
