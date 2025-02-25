@@ -86,7 +86,7 @@ double gettime();
 void inittime();
 
 bool time_to_exit();
-void setup_timelimit(long seconds);
+void setup_timelimit(const std::string &timestr);
 
 void timestamp(const char *msg);
 void timestamp(const std::string &msg);

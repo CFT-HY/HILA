@@ -186,8 +186,29 @@ void inittime() {
 
 static double timelimit = 0;
 
-void setup_timelimit(long seconds) {
-    timelimit = (double)seconds;
+
+/// setup time limit from the time given in timestr
+/// Format is d-h:m:s, we do not require that these are "normalized" to std ranges
+/// Fields can be unused from the largest fields
+
+void setup_timelimit(const std::string &timestr) {
+    //
+    unsigned d{0}, h{0}, m{0}, s{0};
+
+    // use short circuiting of || here to stop parsing on 1st match
+    if (std::sscanf(timestr.c_str(), "%u-%u:%u:%u", &d, &h, &m, &s) == 4 || (d = 0) ||
+        std::sscanf(timestr.c_str(), "%u:%u:%u", &h, &m, &s) == 3 || (d = h = 0) ||
+        std::sscanf(timestr.c_str(), "%u:%u", &m, &s) == 2 || (d = h = m = 0) ||
+        std::sscanf(timestr.c_str(), "%u", &s) == 1) {
+
+        timelimit = s + 60.0 * (m + 60.0 * (h + 24.0 * d));
+        hila::broadcast(timelimit);
+        hila::out0 << "Time limit is " << timestr << " = " << timelimit << " seconds\n";
+
+    } else {
+        hila::out0 << "INVALID TIMELMIMIT -t ARGUMENT " << timestr << '\n';
+        hila::terminate(0);
+    }
 }
 
 bool time_to_exit() {
