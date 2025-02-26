@@ -49,23 +49,20 @@ SU<N, T> suN_max_staple_sum_rot(const SU<N, T> &staple) {
                 tvnn22 = tl0.e(t2, t2);
 
                 // get inverse of SU(2) projection of the 2x2 matrix tvnnXX:
-
-                // determine k=sqrt(det(tvnnXX)):
+                
+                //   compute vector representation of tu=proj_SU2(tvnnXX): 
                 tu1 = 0.5 * (tvnn11.real() + tvnn22.real());
                 tu2 = 0.5 * (tvnn12.imag() + tvnn21.imag());
                 tu3 = 0.5 * (tvnn12.real() - tvnn21.real());
                 tu4 = 0.5 * (tvnn11.imag() - tvnn22.imag());
-                k = sqrt(tu1 * tu1 + tu2 * tu2 + tu3 * tu3 + tu4 * tu4);
-
-                // determine tui=inverse(tvnnXX/k):
-                //  normalize tu:
-                ki = 1. / k;
+                ki = 1.0 / sqrt(tu1 * tu1 + tu2 * tu2 + tu3 * tu3 + tu4 * tu4);
                 tu1 *= ki;
                 tu2 *= ki;
                 tu3 *= ki;
                 tu4 *= ki;
-                // invert tu:
-                // (re-use variables tvnnXX to hold tui)
+
+                //   compute matrix representation of tui = inverse(tu):
+                //   (re-using variables tvnnXX to hold tui)
                 tvnn11.re = tu1;
                 tvnn11.im = -tu4;
                 tvnn12.re = -tu3;
@@ -74,16 +71,18 @@ SU<N, T> suN_max_staple_sum_rot(const SU<N, T> &staple) {
                 tvnn21.im = -tu2;
                 tvnn22.re = tu1;
                 tvnn22.im = tu4;
-                for (ic1 = 0; ic1 < N; ++ic1) {
-                    // apply SU(2) subgroup rotation "tui" to tl0:
+
+
+                // apply SU(2) subgroup rotation tui to tl0:
+                for (ic1 = 0; ic1 < N; ++ic1) { 
                     ttl01 = tl0.e(t1, ic1);
                     ttl02 = tl0.e(t2, ic1);
                     tl0.e(t1, ic1) = tvnn11 * ttl01 + tvnn12 * ttl02;
                     tl0.e(t2, ic1) = tvnn21 * ttl01 + tvnn22 * ttl02;
                 }
 
+                // apply SU(2) subgroup rotation tui to U:
                 for (ic1 = 0; ic1 < N; ++ic1) {
-                    // apply SU(2) subgroup rotation "tui" to U:
                     ttl01 = U.e(t1, ic1);
                     ttl02 = U.e(t2, ic1);
                     U.e(t1, ic1) = tvnn11 * ttl01 + tvnn12 * ttl02;
@@ -91,7 +90,9 @@ SU<N, T> suN_max_staple_sum_rot(const SU<N, T> &staple) {
                 }
             }
         }
-        // check whether tl0 has reached the form H + c*id:
+        
+        // check whether tl0 has reached the form H + c*id, 
+        // with H hermitian and c purely imaginary scalar:
         ttl01 = tl0.e(N - 1, N - 1);
         lnorm = ttl01.squarenorm();
         dlnorm = 0;
