@@ -188,27 +188,59 @@ static double timelimit = 0;
 
 
 /// setup time limit from the time given in timestr
-/// Format is d-h:m:s, we do not require that these are "normalized" to std ranges
-/// Fields can be unused from the largest fields
+/// Format is d-h:m:s, not required to be "normalized" to std ranges
+/// Fields can be unused from the largest fields onwards
 
 void setup_timelimit(const std::string &timestr) {
     //
-    unsigned d{0}, h{0}, m{0}, s{0};
 
-    // use short circuiting of || here to stop parsing on 1st match
-    if (std::sscanf(timestr.c_str(), "%u-%u:%u:%u", &d, &h, &m, &s) == 4 || (d = 0) ||
-        std::sscanf(timestr.c_str(), "%u:%u:%u", &h, &m, &s) == 3 || (d = h = 0) ||
-        std::sscanf(timestr.c_str(), "%u:%u", &m, &s) == 2 || (d = h = m = 0) ||
-        std::sscanf(timestr.c_str(), "%u", &s) == 1) {
+    int status = 0;
+    if (hila::myrank() == 0) {
+        const char *str = timestr.c_str();
+        char buf[100];
 
-        timelimit = s + 60.0 * (m + 60.0 * (h + 24.0 * d));
-        hila::broadcast(timelimit);
-        hila::out0 << "Time limit is " << timestr << " = " << timelimit << " seconds\n";
+        if (timestr == "slurm") {
 
-    } else {
-        hila::out0 << "INVALID TIMELMIMIT -t ARGUMENT " << timestr << '\n';
-        hila::terminate(0);
+            const char cmd[] = "squeue -h --job ${SLURM_JOB_ID} -O TimeLeft";
+            std::FILE *fp = popen(cmd, "r");
+
+            if (fp && fgets(buf, 99, fp)) {
+                for (int i = 0; i < 100; i++) 
+                    if (buf[i] == '\n')
+                        buf[i] = ' ';
+                str = buf;
+                hila::out0 << "Get time limit with command '" << cmd << '\n';
+            } else {
+                hila::out0 << "COULD NOT GET TIME FROM squeue COMMAND\n";
+                status = -1; // exit the program
+            }
+            pclose(fp);
+        }
+
+        if (status == 0) {
+
+            unsigned d{0}, h{0}, m{0}, s{0};
+            // use short circuiting of || here to stop parsing on 1st match
+            // zeroing the incorrectly read time variables in the same chain
+            if (std::sscanf(str, "%u-%u:%u:%u", &d, &h, &m, &s) == 4 || (d = 0) ||
+                std::sscanf(str, "%u:%u:%u", &h, &m, &s) == 3 || (h = 0) ||
+                std::sscanf(str, "%u:%u", &m, &s) == 2 || (m = 0) ||
+                std::sscanf(str, "%u", &s) == 1) {
+
+                timelimit = s + 60.0 * (m + 60.0 * (h + 24.0 * d));
+                hila::out0 << "Time limit is " << str << " = " << timelimit << " seconds\n";
+
+            } else {
+                hila::out0 << "INVALID TIMELIMIT -t ARGUMENT " << str << '\n';
+                status = -1; // exit the program
+            }
+        }
     }
+    hila::broadcast(status);
+    if (status == -1)
+        hila::terminate(0);
+
+    hila::broadcast(timelimit);
 }
 
 bool time_to_exit() {
