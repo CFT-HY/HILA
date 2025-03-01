@@ -36,16 +36,19 @@ struct timer_value {
 ///
 ///
 /// Other time related functions:
-///       double gettime();                    - returns the time in seconds from program
-///       start void timestamp("message");     - prints msg + current date+time +
-///                                              time from start
+///   double hila::gettime();                   - returns the time in seconds from program
+///   start void hila::timestamp("message");    - prints msg + current date+time +
+///                                               time from start
 ///
-///       void setup_timelimit(long seconds);  - sets the cpu time limit (see
-///                                              time_to_exit()) 
-///       bool time_to_exit();                 - to be called periodically
-///                                              at a suitable spot in
-///                                              the program; returns true if the program
-///                                              should exit now.
+///   void hila::setup_timelimit(long seconds); - sets the cpu time limit (see
+///                                               time_to_finish()) 
+///   bool hila::time_to_finish();              - to be called periodically
+///                                               at a suitable spot in
+///                                               the program; returns true if the program
+///                                               should exit now.
+///
+/// Signal handling functions (for SIGUSR1):
+///   int hila::signal_status();                - returns the signal SIGUSR1 if set 
 ///
 ////////////////////////////////////////////////////////////////
 // clang-format on
@@ -60,10 +63,16 @@ class timer {
 
   public:
     // initialize timer to this timepoint
-    timer() { init(nullptr); }
-    timer(const char *tag) { init(tag); }
+    timer() {
+        init(nullptr);
+    }
+    timer(const char *tag) {
+        init(tag);
+    }
 
-    ~timer() { remove(); }
+    ~timer() {
+        remove();
+    }
 
     void init(const char *tag);
     void remove();
@@ -85,11 +94,16 @@ void report_timers();
 double gettime();
 void inittime();
 
-bool time_to_exit();
+bool time_to_finish();
 void setup_timelimit(const std::string &timestr);
+void setup_timelimit(const double seconds);
 
 void timestamp(const char *msg);
 void timestamp(const std::string &msg);
+
+// signal handling
+void setup_signal_handler();
+int signal_status();
 
 
 } // namespace hila

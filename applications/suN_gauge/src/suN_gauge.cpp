@@ -221,7 +221,8 @@ int main(int argc, char **argv) {
     if (!hila::is_rng_seeded())
         hila::seed_random(seed);
 
-    for (int trajectory = start_traj; trajectory < p.n_trajectories; trajectory++) {
+    bool go = true;
+    for (int trajectory = start_traj; trajectory < p.n_trajectories && go; trajectory++) {
 
         double ttime = hila::gettime();
 
@@ -243,12 +244,13 @@ int main(int argc, char **argv) {
 
             measure_stuff(U, p);
 
-            hila::out0 << "Measure_end " << trajectory << std::endl;
+            hila::out0 << "Measure_end " << trajectory << " time " << hila::gettime() << std::endl;
 
             measure_timer.stop();
         }
 
-        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+        go = !hila::time_to_finish();
+        if (!go || (p.n_save > 0 && (trajectory + 1) % p.n_save == 0)) {
             checkpoint(U, p.config_file, p.n_trajectories, trajectory);
         }
     }

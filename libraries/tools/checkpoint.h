@@ -29,22 +29,22 @@ void checkpoint(const GaugeField<group> &U, const std::string &config_file, int 
     // save config
     U.config_write(config_file);
 
-    // check if n_trajectories has changed
-    hila::input status;
-    status.quiet();
-    if (status.open("run_status", false, false)) {
-        int ntraj = status.get("trajectories");
-        if (ntraj != n_trajectories) {
-            hila::out0 << "* NUMBER OF TRAJECTORIES " << n_trajectories << " -> " << ntraj << '\n';
-        }
-        n_trajectories = ntraj;
-        status.close();
-    }
-
     if (hila::myrank() == 0) {
-        std::fstream statfile;
-        statfile.open("run_status", std::ios::in);
 
+        // check if n_trajectories has changed
+        hila::input status;
+        status.quiet();
+        if (status.open("run_status", false, false)) {
+            int ntraj = status.get("trajectories");
+            if (ntraj != n_trajectories) {
+                hila::out0 << "* NUMBER OF TRAJECTORIES " << n_trajectories << " -> " << ntraj
+                           << '\n';
+            }
+            n_trajectories = ntraj;
+            status.close();
+        }
+
+        // write the status file
         std::ofstream outf;
         outf.open("run_status", std::ios::out | std::ios::trunc);
         outf << "trajectories " << n_trajectories
@@ -53,11 +53,16 @@ void checkpoint(const GaugeField<group> &U, const std::string &config_file, int 
         outf << "seed         " << static_cast<uint64_t>(hila::random() * (1UL << 61)) << '\n';
         outf << "time         " << hila::gettime() << '\n';
         outf.close();
+
+        std::stringstream msg;
+        msg << "Checkpointing, time " << hila::gettime() - t;
+        hila::timestamp(msg.str());
     }
-    std::stringstream msg;
-    msg << "Checkpointing, time " << hila::gettime() - t;
-    hila::timestamp(msg.str());
+
+    // sync trajectory numbers
+    hila::broadcast(n_trajectories);
 }
+
 
 template <typename group>
 bool restore_checkpoint(GaugeField<group> &U, const std::string &config_file, int &n_trajectories,
