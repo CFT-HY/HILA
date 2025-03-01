@@ -778,7 +778,7 @@ int main(int argc, char **argv) {
                 hila::out0 << "ACCP " << acc << '\n';
             }
 
-            hila::out0 << "Measure_end " << trajectory << std::endl;
+            hila::out0 << "Measure_end " << trajectory << " time " << hila::gettime() << std::endl;
 
             measure_timer.stop();
         }

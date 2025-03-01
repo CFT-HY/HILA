@@ -29,20 +29,22 @@ void checkpoint(const GaugeField<group> &U, const std::string &config_file, int 
     // save config
     U.config_write(config_file);
 
-    if (hila::myrank() == 0) {
 
-        // check if n_trajectories has changed
-        hila::input status;
-        status.quiet();
-        if (status.open("run_status", false, false)) {
-            int ntraj = status.get("trajectories");
-            if (ntraj != n_trajectories) {
-                hila::out0 << "* NUMBER OF TRAJECTORIES " << n_trajectories << " -> " << ntraj
-                           << '\n';
-            }
+    // check if n_trajectories has changed
+    // NOTE: all ranks must call hila::input routines!
+
+    hila::input status;
+    status.quiet();
+    if (status.open("run_status", false, false)) {
+        int ntraj = status.get("trajectories");
+        if (ntraj != n_trajectories) {
+            hila::out0 << "* NUMBER OF TRAJECTORIES " << n_trajectories << " -> " << ntraj << '\n';
             n_trajectories = ntraj;
-            status.close();
         }
+        status.close();
+    }
+
+    if (hila::myrank() == 0) {
 
         // write the status file
         std::ofstream outf;
@@ -59,8 +61,6 @@ void checkpoint(const GaugeField<group> &U, const std::string &config_file, int 
         hila::timestamp(msg.str());
     }
 
-    // sync trajectory numbers
-    hila::broadcast(n_trajectories);
 }
 
 
