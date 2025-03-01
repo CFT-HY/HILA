@@ -77,6 +77,9 @@ void hila::initialize(int argc, char **argv) {
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);
 
+    // catch signals
+    setup_signal_handler();
+
     // set the initialized flag
     hila::is_initialized = true;
 
