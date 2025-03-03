@@ -2,7 +2,7 @@
 
 lattice size           12,12,12,12
 beta                   5.5
-number of trajectories 1000
+number of trajectories 100800
 updates in trajectory  1
 plaq shift updates     1
 thermalization trajs   5000

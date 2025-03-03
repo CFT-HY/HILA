@@ -6,7 +6,7 @@
 
 using ftype = double;
 
-using mygroup = long;
+using mygroup = int;
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -252,6 +252,21 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
     for (int n = 0; n < p.n_update; n++) {
         for (int i = 0; i <= p.n_ps_update; i++) {
             update(H, sw, p);
+        }
+    }
+    // value of the action is invariant under direction-dependent global Z-shifts;
+    // to prevent the values from diverging, we shift them back to zero:
+    Reduction<double> totHpd;
+    totHpd.allreduce(true).delayed(true);
+    T dHpd;
+    foralldir(d1) {
+        totHpd = 0.0;
+        onsites(ALL) {
+            totHpd += (double)H[d1][X];
+        }
+        dHpd = -(T)(totHpd.value() / lattice.volume());
+        onsites(ALL) {
+            H[d1][X] += dHpd;
         }
     }
 }
