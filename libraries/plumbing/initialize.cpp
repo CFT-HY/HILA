@@ -77,6 +77,9 @@ void hila::initialize(int argc, char **argv) {
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);
 
+    // catch signals
+    setup_signal_handler();
+
     // set the initialized flag
     hila::is_initialized = true;
 
@@ -93,7 +96,15 @@ void hila::initialize(int argc, char **argv) {
         hila::out0.rdbuf(std::cout.rdbuf());
 
     // Set the inbuilt command-line flags and their corresponding help texts
-    hila::cmdline.add_flag("-t", "cpu time limit", "<seconds>", 1);
+    hila::cmdline.add_flag("-t",
+                           "cpu time limit, in one of the formats:\n"
+                           "s, m:s, h:m:s, d-h:m:s, or 'slurm' "
+                           "where s=seconds, m=minutes, h=hours, d=days.\n"
+                           "Values need not be restricted into natural ranges.\n"
+                           "Format is compatible with the output of\n"
+                           "' squeue -h --job ${SLURM_JOB_ID} --format=\"\%L\" '\n"
+                           "Option '-t slurm' makes program to use slurm to get time limit",
+                           "<time>", 1);
     hila::cmdline.add_flag("-o", "output file (default: stdout)", "<filename>", 1);
     hila::cmdline.add_flag("-i",
                            "input file (overrides the 1st hila::input() name)\n"
@@ -116,8 +127,7 @@ void hila::initialize(int argc, char **argv) {
                            "parameter overriding the input file field <key>.\n"
                            "If fields contain spaces enclose in quotes.\n"
                            "Can be repeated many times, each overrides only one input entry.",
-                           "<key> <value>",
-                           2);
+                           "<key> <value>", 2);
 
     // Init command line - after MPI has been started, so
     // that all nodes do this. First feed argc and argv to the
@@ -202,12 +212,8 @@ void hila::initialize(int argc, char **argv) {
 
     // Check if flag set and parse
     if (hila::cmdline.flag_present("-t")) {
-        // Following quits if '-t' is given without an integer argument
-        long cputime = hila::cmdline.get_int("-t");
-        if (cputime > 0) {
-            hila::out0 << "CPU time limit " << cputime << " seconds\n";
-            hila::setup_timelimit(cputime);
-        }
+        // Following quits if '-t' is given without a valid time argument
+        hila::setup_timelimit(hila::cmdline.get_string("-t"));
     } else {
         hila::out0 << "No runtime limit given\n";
     }

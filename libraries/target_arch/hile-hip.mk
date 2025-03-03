@@ -13,8 +13,8 @@ $(info ########################################################################)
 ### Define compiler and options
 
 # Define compiler - use cray CC wrapper
-CC := hipcc
-LD := hipcc
+CC := CC
+LD := CC
 
 ROCM_PATH := /opt/rocm
 
