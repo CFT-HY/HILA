@@ -1,6 +1,6 @@
 
 # Following line(s) are printed with "make help".  Use columns 8 and 30
-#%     make [z_gauge]        - build z_gauge program
+#%     make [z_link_model]        - build z_link_model program
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
 HILA_DIR := ../..
@@ -10,7 +10,7 @@ ARCH := vanilla
 endif
 
 # Set default goal and arch
-.DEFAULT_GOAL := z_gauge
+.DEFAULT_GOAL := z_link_model
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk
@@ -24,9 +24,9 @@ APP_OPTS += -DNDIM=4
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-z_gauge: build/z_gauge_${ARCH} ; @:
+z_link_model: build/z_link_model_${ARCH} ; @:
 
 # Now the linking step for each target executable
-build/z_gauge_${ARCH}: Makefile build/z_gauge.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/z_gauge.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
+build/z_link_model_${ARCH}: Makefile build/z_link_model.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/z_link_model.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
 
