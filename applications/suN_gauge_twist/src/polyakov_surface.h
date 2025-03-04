@@ -398,14 +398,14 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
             // spectraldensity_surface(surf2, npow, hits);
 
             if (traj == p.n_trajectories - 1) {
-                write_fourier(npow, hits, pow_size, p.out_folder + "fourier_profile_" + std::to_string(smear),
+                write_fourier(npow, hits, pow_size, p.out_folder + "fourier_profile_" + std::to_string(smear) + "_" + std::to_string(z_smear),
                               APPEND_FILE::TRUE, CLOSE_FILE::TRUE);
-                write_surface(surf_interpolated, p.out_folder + "surface_smooth_" + std::to_string(smear),
+                write_surface(surf_interpolated, p.out_folder + "surface_smooth_" + std::to_string(smear) + "_" + std::to_string(z_smear),
                               APPEND_FILE::TRUE, CLOSE_FILE::TRUE);
             } else {
-                write_fourier(npow, hits, pow_size, p.out_folder + "fourier_profile_" + std::to_string(smear),
+                write_fourier(npow, hits, pow_size, p.out_folder + "fourier_profile_" + std::to_string(smear) + "_" + std::to_string(z_smear),
                               APPEND_FILE::TRUE, CLOSE_FILE::FALSE);
-                write_surface(surf_interpolated, p.out_folder + "surface_smooth_" + std::to_string(smear),
+                write_surface(surf_interpolated, p.out_folder + "surface_smooth_" + std::to_string(smear) + "_" + std::to_string(z_smear),
                               APPEND_FILE::TRUE, CLOSE_FILE::FALSE);
             }
         }
