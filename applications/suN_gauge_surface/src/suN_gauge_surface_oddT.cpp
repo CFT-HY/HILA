@@ -846,7 +846,8 @@ int main(int argc, char **argv) {
 
     double p_now = measure_polyakov(U).real();
 
-    for (int trajectory = start_traj; trajectory < p.n_trajectories; trajectory++) {
+    bool finish = false;
+    for (int trajectory = start_traj; !finish && trajectory < p.n_trajectories; trajectory++) {
 
         double ttime = hila::gettime();
 
@@ -895,7 +896,8 @@ int main(int argc, char **argv) {
             measure_timer.stop();
         }
 
-        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+        finish = hila::time_to_finish();
+        if (finish || (p.n_save > 0 && (trajectory + 1) % p.n_save == 0)) {
             checkpoint(U, p.config_file, p.n_trajectories, trajectory);
         }
     }
