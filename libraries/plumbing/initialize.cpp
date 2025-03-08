@@ -102,7 +102,7 @@ void hila::initialize(int argc, char **argv) {
                            "where s=seconds, m=minutes, h=hours, d=days.\n"
                            "Values need not be restricted into natural ranges.\n"
                            "Format is compatible with the output of\n"
-                           "' squeue -h --job ${SLURM_JOB_ID} --format=\"\%L\" '\n"
+                           "' squeue -h --job ${SLURM_JOB_ID} --format=\"%L\" '\n"
                            "Option '-t slurm' makes program to use slurm to get time limit",
                            "<time>", 1);
     hila::cmdline.add_flag("-o", "output file (default: stdout)", "<filename>", 1);
