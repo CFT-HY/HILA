@@ -1,0 +1,107 @@
+/**
+
+\page wsl_installation Installing HILA on WSL
+
+This section covers how to set up HILA on Windows using WSL, with specific instructions for CUDA configuration.
+
+# Table of contents
+
+1. [WSL Setup](#wsl-setup)
+2. [HILA Dependencies](#hila-dependencies)
+3. [CUDA Installation](#cuda-installation)
+4. [Environment Configuration](#environment-config)
+
+# WSL Setup {#wsl-setup}
+
+HILA is fully compatible with Windows Subsystem for Linux (WSL). If you already have WSL installed with Ubuntu, you can skip to [HILA Dependencies](#hila-dependencies). For new WSL installations, follow your preferred WSL setup method.
+
+# HILA Dependencies {#hila-dependencies}
+
+Once you have a working WSL Ubuntu installation, you'll need to install the required dependencies. First, update your system:
+
+~~~bash
+sudo apt update && sudo apt upgrade
+~~~
+
+Install LLVM (e.g. version 15):
+~~~bash
+export LLVM_VERSION=15
+sudo apt-get -y install clang-$LLVM_VERSION libclang-$LLVM_VERSION-dev
+~~~
+
+Install other required dependencies:
+~~~bash
+sudo apt install build-essential libopenmpi-dev libfftw3-dev libomp-dev
+~~~
+
+Clone the HILA repository:
+~~~bash
+git clone https://github.com/CFT-HY/HILA
+~~~
+
+# CUDA Installation {#cuda-installation}
+
+To use HILA with CUDA on WSL, do the following:
+
+1. Have the NVIDIA drivers installed on Windows.
+
+2. Install CUDA Toolkit (without drivers) in WSL:
+~~~bash
+# Add CUDA repository configuration
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-wsl-ubuntu.pin
+sudo mv cuda-wsl-ubuntu.pin /etc/apt/preferences.d/cuda-repository-pin-600
+
+# Download and install CUDA repository package
+wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-wsl-ubuntu-12-8-local_12.8.0-1_amd64.deb
+sudo dpkg -i cuda-repo-wsl-ubuntu-12-8-local_12.8.0-1_amd64.deb
+
+# Copy CUDA GPG key
+sudo cp /var/cuda-repo-wsl-ubuntu-12-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
+
+# Update package list and install CUDA toolkit
+sudo apt-get update
+sudo apt-get -y install cuda-toolkit-12-8
+~~~
+
+__Note:__ If you are missing certain libraries after installation (e.g. cufft), run the following commands:
+~~~bash
+sudo dpkg --configure -a
+sudo apt-get install cuda-libraries-dev-12-8
+~~~
+
+Afterwards, you can remove the downloaded repository package to free up space:
+~~~bash
+rm cuda-repo-wsl-ubuntu-12-8-local_12.8.0-1_amd64.deb
+~~~
+
+# Environment Configuration {#environment-config}
+
+After installing CUDA, you need to configure your environment:
+
+1. Add CUDA to your system PATH:
+~~~bash
+nano ~/.bashrc
+~~~
+
+2. Add the following lines to the end of the file:
+~~~bash
+# CUDA Toolkit paths
+export PATH=/usr/local/cuda-12.8/bin${PATH:+:${PATH}}
+export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+~~~
+
+3. Save the file (Ctrl+O, Enter, Ctrl+X) and reload your bash configuration:
+~~~bash
+source ~/.bashrc
+~~~
+
+4. Verify the installation by running:
+~~~bash
+nvcc --version
+~~~
+
+This should display the CUDA compiler version if everything is set up correctly.
+
+You can now compile HILA applications with CUDA by defining `ARCH := cuda` in the Makefile.
+
+*/
