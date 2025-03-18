@@ -105,7 +105,9 @@ On the other hand, HPC library building system [Spack](https://spack.readthedocs
 
 ### WINDOWS
 
-On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. One can also opt to use WSL, in this case see LINUX installation instructions.
+On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. 
+
+One can also opt to use WSL, which is compatible with CUDA. In this case, see guide \subpage wsl_installation
 
 
 ### HPC{#HPC}
