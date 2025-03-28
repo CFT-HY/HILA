@@ -31,37 +31,35 @@
 using namespace clang::tooling;
 using namespace llvm;
 
-llvm::Error OptionsParser::init(int &argc, const char **argv,
-                                cl::OptionCategory &Category,
+llvm::Error OptionsParser::init(int &argc, const char **argv, cl::OptionCategory &Category,
                                 llvm::cl::NumOccurrencesFlag OccurrencesFlag,
                                 const char *Overview) {
 
-    static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
-                              cl::sub(*cl::AllSubCommands));
+    static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+    // this used to be here but does not compile in clang-19
+    /*, cl::sub(*cl::AllSubCommands) ); */
 
     // static cl::opt<std::string> BuildPath("p", cl::desc("Build path"), cl::Optional,
     //                                       cl::cat(Category),
     //                                       cl::sub(*cl::AllSubCommands));
 
     static cl::list<std::string> SourcePaths(cl::Positional, cl::desc("<source files>"),
-                                             OccurrencesFlag, cl::cat(Category),
-                                             cl::sub(*cl::AllSubCommands));
+                                             OccurrencesFlag, cl::cat(Category));
+    /* cl::sub(*cl::AllSubCommands)  ); */
 
     cl::ResetAllOptionOccurrences();
 
     cl::HideUnrelatedOptions(Category);
 
     std::string ErrorMessage;
-    Compilations =
-        FixedCompilationDatabase::loadFromCommandLine(argc, argv, ErrorMessage);
+    Compilations = FixedCompilationDatabase::loadFromCommandLine(argc, argv, ErrorMessage);
     if (!ErrorMessage.empty())
         ErrorMessage.append("\n");
     llvm::raw_string_ostream OS(ErrorMessage);
     // Stop initializing if command-line option parsing failed.
     if (!cl::ParseCommandLineOptions(argc, argv, Overview, &OS)) {
         OS.flush();
-        return llvm::make_error<llvm::StringError>(ErrorMessage,
-                                                   llvm::inconvertibleErrorCode());
+        return llvm::make_error<llvm::StringError>(ErrorMessage, llvm::inconvertibleErrorCode());
     }
 
     cl::PrintOptionValues();
@@ -78,8 +76,7 @@ llvm::Error OptionsParser::init(int &argc, const char **argv,
 }
 
 OptionsParser::OptionsParser(int &argc, const char **argv, cl::OptionCategory &Category,
-                             llvm::cl::NumOccurrencesFlag OccurrencesFlag,
-                             const char *Overview) {
+                             llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
 
     llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
     if (Err || SourcePathList.empty()) {

@@ -240,10 +240,15 @@ void setup_timelimit(const std::string &timestr) {
             unsigned d{0}, h{0}, m{0}, s{0};
             // use short circuiting of || here to stop parsing on 1st match
             // zeroing the incorrectly read time variables in the same chain
-            if (std::sscanf(str, "%u-%u:%u:%u", &d, &h, &m, &s) == 4 || (d = 0) ||
-                std::sscanf(str, "%u:%u:%u", &h, &m, &s) == 3 || (h = 0) ||
-                std::sscanf(str, "%u:%u", &m, &s) == 2 || (m = 0) ||
-                std::sscanf(str, "%u", &s) == 1) {
+            int nargs = 5;
+            if (std::sscanf(str, "%u-%u:%u:%u", &d, &h, &m, &s) == --nargs ||
+                std::sscanf(str, "%u:%u:%u", &h, &m, &s) == --nargs ||
+                std::sscanf(str, "%u:%u", &m, &s) == --nargs ||
+                std::sscanf(str, "%u", &s) == --nargs) {
+
+                if (nargs < 4) d = 0;
+                if (nargs < 3) h = 0;
+                if (nargs < 2) m = 0;
 
                 timelimit = s + 60.0 * (m + 60.0 * (h + 24.0 * d));
                 hila::out0 << "Time limit is " << str << " = " << timelimit << " seconds\n";
