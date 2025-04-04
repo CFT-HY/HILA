@@ -6,7 +6,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////
 /// @brief Special reduction class: enables delayed and non-blocking reductions, which
-/// are not possible with the standard reduction. See [user guide](@ref reduction_type_guide) 
+/// are not possible with the standard reduction. See [user guide](@ref reduction_type_guide)
 /// for details
 ///
 
@@ -51,32 +51,28 @@ class Reduction {
         reduction_timer.start();
         if (is_allreduce()) {
             if (is_nonblocking()) {
-                MPI_Iallreduce(MPI_IN_PLACE, ptr,
-                               sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
-                               operation, lattice.mpi_comm_lat, &request);
+                MPI_Iallreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
+                               dtype, operation, lattice.mpi_comm_lat, &request);
             } else {
-                MPI_Allreduce(MPI_IN_PLACE, ptr,
-                              sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
-                              operation, lattice.mpi_comm_lat);
+                MPI_Allreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
+                              dtype, operation, lattice.mpi_comm_lat);
             }
         } else {
             if (hila::myrank() == 0) {
                 if (is_nonblocking()) {
-                    MPI_Ireduce(MPI_IN_PLACE, ptr,
-                                sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
-                                operation, 0, lattice.mpi_comm_lat, &request);
+                    MPI_Ireduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
+                                dtype, operation, 0, lattice.mpi_comm_lat, &request);
                 } else {
-                    MPI_Reduce(MPI_IN_PLACE, ptr,
-                               sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
-                               operation, 0, lattice.mpi_comm_lat);
+                    MPI_Reduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
+                               dtype, operation, 0, lattice.mpi_comm_lat);
                 }
             } else {
                 if (is_nonblocking()) {
-                    MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
-                                dtype, operation, 0, lattice.mpi_comm_lat, &request);
+                    MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
+                                operation, 0, lattice.mpi_comm_lat, &request);
                 } else {
-                    MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
-                               dtype, operation, 0, lattice.mpi_comm_lat);
+                    MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
+                               operation, 0, lattice.mpi_comm_lat);
                 }
             }
         }
@@ -104,7 +100,7 @@ class Reduction {
         comm_is_on = false;
     }
     /// Initialize to value only on rank 0 - ensures expected result for delayed reduction
-    /// 
+    ///
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Reduction(const S &v) {
         if (hila::myrank() == 0) {
@@ -174,7 +170,7 @@ class Reduction {
         if (hila::myrank() == 0) {
             val = ret;
         } else {
-            val = 0; 
+            val = 0;
         }
         // all ranks return the same value
         return ret;
@@ -185,8 +181,7 @@ class Reduction {
     /// these are used within site loops but their value is not well-defined.
     /// Thus  a = (r += b); is disallowed
     template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value,
-                               int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     void operator+=(const S &rhs) {
         val += rhs;
     }
@@ -272,7 +267,6 @@ class Reduction {
         start_reduce();
         wait();
     }
-
 };
 
 
@@ -294,8 +288,7 @@ T Field<T>::sum(Parity par, bool allreduce) const {
 
     Reduction<T> result;
     result.allreduce(allreduce);
-    onsites (par)
-        result += (*this)[X];
+    onsites(par) result += (*this)[X];
     return result.value();
 }
 
@@ -306,8 +299,7 @@ T Field<T>::product(Parity par, bool allreduce) const {
     Reduction<T> result;
     result = 1;
     result.allreduce(allreduce);
-    onsites (par)
-        result *= (*this)[X];
+    onsites(par) result *= (*this)[X];
     return result.value();
 }
 
@@ -325,12 +317,11 @@ T Field<T>::product(Parity par, bool allreduce) const {
 template <typename T>
 T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
-    static_assert(
-        std::is_same<T, int>::value || std::is_same<T, long>::value ||
-            std::is_same<T, float>::value || std::is_same<T, double>::value ||
-            std::is_same<T, long double>::value,
-        "In Field .min() and .max() methods the Field element type must be one of "
-        "(int/long/float/double/long double)");
+    static_assert(std::is_same<T, int>::value || std::is_same<T, long>::value ||
+                      std::is_same<T, float>::value || std::is_same<T, double>::value ||
+                      std::is_same<T, long double>::value,
+                  "In Field .min() and .max() methods the Field element type must be one of "
+                  "(int/long/float/double/long double)");
 
 #if defined(CUDA) || defined(HIP)
     T val = gpu_minmax(is_min, par, loc);
@@ -344,13 +335,12 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 #pragma omp parallel shared(val, loc, sgn, is_min)
     {
         CoordinateVector loc_th(0);
-        T val_th =
-            is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
+        T val_th = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
 // Pragma "hila omp_parallel_region" is necessary here, because this is within
 // omp parallel
 #pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
-        onsites (par) {
+        onsites(par) {
             if (sgn * (*this)[X] < sgn * val_th) {
                 val_th = (*this)[X];
                 loc_th = X.coordinates();
@@ -367,6 +357,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     if (hila::number_of_nodes() > 1) {
         size_t size;
+        // this returns MPI+int -type, for example MPI_DOUBLE_INT
         MPI_Datatype dtype = get_MPI_number_type<T>(size, true);
 
         struct {
@@ -374,22 +365,22 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
             int rank;
         } rdata;
 
+        static_assert(sizeof(T) % sizeof(int) == 0,
+                      "min/max reduction: datatype struct not packed!");
+
         rdata.v = val;
         rdata.rank = hila::myrank();
 
         // after allreduce rdata contains the min value and rank where it is
         if (is_min) {
-            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MINLOC,
-                          lattice.mpi_comm_lat);
+            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MINLOC, lattice.mpi_comm_lat);
         } else {
-            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MAXLOC,
-                          lattice.mpi_comm_lat);
+            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MAXLOC, lattice.mpi_comm_lat);
         }
         val = rdata.v;
 
         // send the coordinatevector of the minloc to all nodes
-        MPI_Bcast(&loc, sizeof(CoordinateVector), MPI_BYTE, rdata.rank,
-                  lattice.mpi_comm_lat);
+        MPI_Bcast(&loc, sizeof(CoordinateVector), MPI_BYTE, rdata.rank, lattice.mpi_comm_lat);
     }
 
     return val;
@@ -434,7 +425,6 @@ template <typename T>
 T Field<T>::max(Parity par, CoordinateVector &loc) const {
     return minmax(false, par, loc);
 }
-
 
 
 #endif
