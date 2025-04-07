@@ -311,7 +311,8 @@ T Field<T>::product(Parity par, bool allreduce) const {
 #endif
 
 #if defined(CUDA) || defined(HIP)
-#include "backend_gpu/gpu_reduction.h"
+// #include "backend_gpu/gpu_reduction.h"
+#include "backend_gpu/gpu_minmax.h"
 #endif
 
 template <typename T>
