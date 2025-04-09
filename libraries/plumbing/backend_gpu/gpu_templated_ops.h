@@ -318,11 +318,6 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// NOTE: IF YOU DEFINE ALT_VECTOR_REDUCTION YOU NEED TO DEFINE THE SAME IN
-// codegen_gpu.cpp!
-
-// #define ALT_VECTOR_REDUCTION
-
 template <typename T>
 __global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_size,
                                                    const int threads) {
@@ -330,7 +325,6 @@ __global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_siz
 
     T sum;
 
-#ifndef ALT_VECTOR_REDUCTION
     if (id < reduction_size) {
         // id is now the reduction coordinate
         sum = D[id];
@@ -341,32 +335,8 @@ __global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_siz
         D[id] = sum;
     }
 
-#else
-    if (id < reduction_size) {
-        // id is now the reduction coordinate
-        sum = D[id * threads];
-        for (int i = 1; i < threads; i++) {
-            sum += D[id * threads + i];
-        }
-        D[id * threads] = sum;
-    }
-#endif
 }
 
-#ifdef ALT_VECTOR_REDUCTION
-
-template <typename T>
-__global__ void sum_blocked_vectorreduction_k2(T *D, const int reduction_size, const int threads) {
-
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-    if (id < threads) {
-        for (; id < reduction_size; id += threads) {
-            D[id] = D[id * threads];
-        }
-    }
-}
-
-#endif
 
 template <typename T>
 void sum_blocked_vectorreduction(T *data, const int reduction_size, const int threads) {
@@ -376,11 +346,6 @@ void sum_blocked_vectorreduction(T *data, const int reduction_size, const int th
     int blocks = (reduction_size + N_threads - 1) / N_threads;
 
     sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
-
-#ifdef ALT_VECTOR_REDUCTION
-
-    sum_blocked_vectorreduction_k2<<<1, N_threads>>>(data, reduction_size, threads);
-#endif
 
     check_device_error("sum_blocked_vectorreduction");
 }
