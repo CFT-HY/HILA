@@ -386,41 +386,29 @@ void sum_blocked_vectorreduction_cub(T *data, const int reduction_size, const in
     // straightforward implementation, use as many threads as elements in reduction vector
 
     int blocks = (reduction_size + N_threads - 1) / N_threads;
-    T* host_data = (T*)malloc(reduction_size*threads * sizeof(T));
-    gpuMemcpy(host_data, data, reduction_size*threads * sizeof(T), gpuMemcpyDeviceToHost);
-
-    std::ofstream output_file("reduction_output.txt");
-    for (int i = 0; i < reduction_size * threads; ++i) {
-        output_file << host_data[i] << " ";
-        if ((i + 1) % reduction_size == 0) {
-            output_file << " ; ";
-        }
-        if ((i + 1) % threads == 0) {
-            output_file << std::endl ;
-        }
-    }
-    output_file << std::endl;
-    output_file.close();
-
-    free(host_data);
 
     size_t temp_storage_bytes = 0;
     //sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
     T* temp_storage = nullptr;
-    int stream_count = 16;
+    gpucub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, data, data, threads);
+
+    int stream_count = reduction_size/10;
     std::vector<gpuStream_t> streams(stream_count);
+    std::vector<void*> temp_storages(stream_count);
     for (int i = 0; i < stream_count; i++) {
         gpuStreamCreate(&streams[i]);
+        gpuMalloc(&temp_storages[i], temp_storage_bytes);
     }
     for (int z = 0; z < reduction_size; z++) {
         T* z_index_ptr = data + z * threads;
         int stream_id = z % stream_count;
-        gpucub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, z_index_ptr, z_index_ptr, threads,streams[stream_id]);
+        gpucub::DeviceReduce::Sum(temp_storages[stream_id], temp_storage_bytes, z_index_ptr, z_index_ptr, threads,streams[stream_id]);
     }
     
     for (int i = 0; i < stream_count; i++) {
         gpuStreamSynchronize(streams[i]);
         gpuStreamDestroy(streams[i]);
+        gpuFree(temp_storages[i]);
     }
     for (int z = 0; z < reduction_size; z++) {
         int z_threads_stride = z * threads;

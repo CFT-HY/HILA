@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   hila::input par("parameters");
 
   CoordinateVector lsize = par.get("lattice size"); // reads NDIM numbers
-
+  int iterations = par.get("iterations");
   
   par.close(); // file is closed also when par goes out of scope
 
@@ -32,16 +32,17 @@ int main(int argc, char **argv) {
   onsites(ALL) f[X] = X.z()+1;
 
   reduction_timer.start();
-
   ReductionVector<double> reduction_vec(lattice.size(e_z));
-  reduction_vec = 0;
-  reduction_vec.allreduce(false);
+  for (int i = 0; i <= iterations; i++) {
+    
+    reduction_vec = 0;
+    reduction_vec.allreduce(false);
 
-  onsites(ALL) {
-    double val = f[X];
-    reduction_vec[X.z()] += val;
+    onsites(ALL) {
+      double val = f[X];
+      reduction_vec[X.z()] += val;
+    }
   }
-
   for (int i = 0; i < reduction_vec.size(); ++i) {
     hila::out0 << "reduction_vec[" << i << "] = " << reduction_vec[i] << std::endl;
   }
