@@ -318,9 +318,11 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+
+
 template <typename T>
-__global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_size,
-                                                   const int threads) {
+__global__ void sum_blocked_vectorreduction_kernel_single(T *D, const int reduction_size,
+                                                          const int threads) {
     int id = threadIdx.x + blockIdx.x * blockDim.x;
 
     T sum;
@@ -334,20 +336,57 @@ __global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_siz
         }
         D[id] = sum;
     }
-
 }
 
 
 template <typename T>
-void sum_blocked_vectorreduction(T *data, const int reduction_size, const int threads) {
+__global__ void sum_blocked_vectorreduction_kernel_steps(T *D, const int reduction_size,
+                                                         const int nthreads) {
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
 
-    // straightforward implementation, use as many threads as elements in reduction vector
+    if (id < nthreads) {
+        // id is now the reduction coordinate
+        D[id] += D[id + nthreads];
+    }
+}
 
-    int blocks = (reduction_size + N_threads - 1) / N_threads;
 
-    sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
 
-    check_device_error("sum_blocked_vectorreduction");
+/// sum_blocked_vectorreduction() : finalizes the vectorreduction, call inserted by hilapp.
+/// In input, data contains n_copies of reduction_size partial reductions, and
+/// adds them so that the first reduction_size elements of data will contain the sum
+/// over n_copies arrays.
+/// Two GPU kernels: for large vectorreductions we use "single pass" kernel,
+/// where reduction_size threads simply sums the n_copies.
+/// For smaller reductions use simple kernel which sum the elements 2-by-2, initially
+/// containing more threads than the single pass one.
+/// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is defined in params.h
+
+template <typename T>
+void sum_blocked_vectorreduction(T *data, const int reduction_size, const int n_copies) {
+
+    // reduce n_copies in factors of 2 at each step
+
+    if (reduction_size < GPU_VECTOR_REDUCTION_SIZE_THRESHOLD) {
+
+        for (int nthreads = reduction_size * n_copies / 2; nthreads >= reduction_size;
+             nthreads /= 2) {
+            int blocks = (nthreads + N_threads - 1) / N_threads;
+
+            sum_blocked_vectorreduction_kernel_steps<<<blocks, N_threads>>>(data, reduction_size,
+                                                                            nthreads);
+        }
+        check_device_error("sum_blocked_vectorreduction_steps");
+
+    } else {
+
+        int blocks = (reduction_size + N_threads - 1) / N_threads;
+
+        sum_blocked_vectorreduction_kernel_single<<<blocks, N_threads>>>(data, reduction_size,
+                                                                         n_copies);
+
+        check_device_error("sum_blocked_vectorreduction_single");
+    }
 }
 
 
@@ -363,7 +402,7 @@ __global__ void gpu_set_value_kernel(T *vector, T value, int elems) {
 
 // passing a ptr instead of value directly
 template <typename T>
-__global__ void gpu_set_value_kernel_ptr(T *vector, const T* valptr, int elems) {
+__global__ void gpu_set_value_kernel_ptr(T *vector, const T *valptr, int elems) {
     int Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < elems) {
         vector[Index] = *valptr;
