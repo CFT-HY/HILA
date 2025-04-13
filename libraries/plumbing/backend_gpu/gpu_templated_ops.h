@@ -318,11 +318,11 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-
+#define THREAD_BLOCK_SIZE_FINAL 256
 
 template <typename T>
 __global__ void sum_blocked_vectorreduction_kernel_single(T *D, const int reduction_size,
-                                                          const int threads) {
+                                                          const int n_copies) {
     int id = threadIdx.x + blockIdx.x * blockDim.x;
 
     T sum;
@@ -330,7 +330,7 @@ __global__ void sum_blocked_vectorreduction_kernel_single(T *D, const int reduct
     if (id < reduction_size) {
         // id is now the reduction coordinate
         sum = D[id];
-        for (int i = 1; i < threads; i++) {
+        for (int i = 1; i < n_copies; i++) {
             // add everything to zero
             sum += D[id + i * reduction_size];
         }
@@ -350,7 +350,34 @@ __global__ void sum_blocked_vectorreduction_kernel_steps(T *D, const int reducti
     }
 }
 
+// // this must be called with 1 block only
+// template <typename T>
+// __global__ void sum_blocked_vectorreduction_kernel_final(T *D, const int reduction_size,
+//                                                          const int nthreads_in) {
+//     int id = threadIdx.x;
+//     int nthreads = nthreads_in;
+//     __shared__ T s[THREAD_BLOCK_SIZE_FINAL];
 
+//     // 1st step, fill shared mem
+//     if (id < nthreads) {
+//         s[id] = D[id] + D[id + nthreads];
+//     }
+
+//     nthreads /= 2;
+//     // repeat factor of 2 reduction
+//     while (nthreads >= reduction_size) {
+//         __syncthreads();
+//         if (id < nthreads) {
+//             s[id] += s[id + nthreads];
+//         }
+//         nthreads /= 2;
+//     }
+
+//     // copy from shared memory to D.No need to __syncthreads 
+//     if (id < reduction_size) {
+//         D[id] = s[id];
+//     }
+// }
 
 /// sum_blocked_vectorreduction() : finalizes the vectorreduction, call inserted by hilapp.
 /// In input, data contains n_copies of reduction_size partial reductions, and
@@ -364,19 +391,40 @@ __global__ void sum_blocked_vectorreduction_kernel_steps(T *D, const int reducti
 
 template <typename T>
 void sum_blocked_vectorreduction(T *data, const int reduction_size, const int n_copies) {
+    // check if n_copies is power of 2, usually is
 
-    // reduce n_copies in factors of 2 at each step
+    bool is_pow2 = !(n_copies & (n_copies - 1));
 
-    if (reduction_size < GPU_VECTOR_REDUCTION_SIZE_THRESHOLD) {
+    if (reduction_size < GPU_VECTOR_REDUCTION_SIZE_THRESHOLD && is_pow2) {
 
-        for (int nthreads = reduction_size * n_copies / 2; nthreads >= reduction_size;
-             nthreads /= 2) {
+        int nthreads = reduction_size * n_copies / 2;
+
+        // while (nthreads >= reduction_size && nthreads > 2 * THREAD_BLOCK_SIZE_FINAL) {
+        while (nthreads >= reduction_size) {
+
+            // reduce n_copies in factors of 2 at each step
+
             int blocks = (nthreads + N_threads - 1) / N_threads;
 
             sum_blocked_vectorreduction_kernel_steps<<<blocks, N_threads>>>(data, reduction_size,
                                                                             nthreads);
+
+            check_device_error("sum_blocked_vectorreduction_steps");
+
+            nthreads /= 2;
         }
-        check_device_error("sum_blocked_vectorreduction_steps");
+
+
+        // if (nthreads >= reduction_size) {
+        //     // now do the final reduction, stuff fits in one block
+
+        //     hila::out0 << "nthreads " << nthreads << " reduction size " << reduction_size << '\n';
+
+        //     sum_blocked_vectorreduction_kernel_final<<<1, THREAD_BLOCK_SIZE_FINAL>>>(
+        //         data, reduction_size, nthreads);
+
+        //     check_device_error("sum_blocked_vectorreduction_final");
+        // }
 
     } else {
 
