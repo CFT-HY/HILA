@@ -143,6 +143,12 @@
 #define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
 #endif
 
+
+/// GPU_VECTOR_REDUCTION_THREADS defines max threads per block for block reduction
+#ifndef GPU_BLOCK_REDUCTION_THREADS
+#define GPU_BLOCK_REDUCTION_THREADS 1024
+#endif
+
 /// GPUFFT_BATCH_SIZE
 /// How many complex fft's in parallel - large value can be faster, small uses less memory.
 /// Performance is reduced if the value is too small, but levels to a ~constant

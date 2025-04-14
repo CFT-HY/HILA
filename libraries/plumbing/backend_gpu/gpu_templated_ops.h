@@ -358,30 +358,14 @@ void sum_blocked_vectorreduction(T *data, const int reduction_size, const int th
     // straightforward implementation, use as many threads as elements in reduction vector
 
     int blocks = (reduction_size + N_threads - 1) / N_threads;
-    T* host_data = (T*)malloc(reduction_size*threads * sizeof(T));
-    gpuMemcpy(host_data, data, reduction_size*threads * sizeof(T), gpuMemcpyDeviceToHost);
-
-    std::ofstream output_file("reduction_output.txt");
-    for (int i = 0; i < reduction_size * threads; ++i) {
-        output_file << host_data[i] << " ";
-        if ((i + 1) % reduction_size == 0) {
-            output_file << " ; ";
-        }
-        if ((i + 1) % threads == 0) {
-            output_file << std::endl ;
-        }
-    }
-    output_file << std::endl;
-    output_file.close();
-
-    free(host_data);
+ 
     sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
 
     check_device_error("sum_blocked_vectorreduction");
 }
 
 template <typename T>
-void sum_blocked_vectorreduction_cub(T *data, const int reduction_size, const int threads) {
+void sum_blocked_vectorreduction_cub_device_reduce(T *data, const int reduction_size, const int threads) {
 
     // straightforward implementation, use as many threads as elements in reduction vector
 
@@ -392,7 +376,7 @@ void sum_blocked_vectorreduction_cub(T *data, const int reduction_size, const in
     T* temp_storage = nullptr;
     gpucub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, data, data, threads);
 
-    int stream_count = reduction_size/10;
+    int stream_count = 16;
     std::vector<gpuStream_t> streams(stream_count);
     std::vector<void*> temp_storages(stream_count);
     for (int i = 0; i < stream_count; i++) {
@@ -414,6 +398,62 @@ void sum_blocked_vectorreduction_cub(T *data, const int reduction_size, const in
         int z_threads_stride = z * threads;
         data[z] = data[z_threads_stride];
     }
+    check_device_error("sum_blocked_vectorreduction");
+}
+
+template <typename T>
+__global__ void sum_blocked_vectorreduction_kernel_cub(T* D, int reduction_size,int threads) {
+    using BlockReduce = gpucub::BlockReduce<T, GPU_BLOCK_REDUCTION_THREADS>;
+    __shared__ typename BlockReduce::TempStorage temp_storage;
+
+    int segment_id = blockIdx.x;
+    int thread_id = threadIdx.x;
+
+    const int elements_per_segment = threads;
+    const int elements_per_thread = elements_per_segment / blockDim.x;  // 8 for 1024 threads
+
+    // Starting index for this segment
+    int segment_offset = segment_id * elements_per_segment;
+
+    // Each thread loads and sums 8 elements
+    T local_sum = 0;
+    #pragma unroll
+    for (int i = 0; i < elements_per_thread; ++i) {
+        int idx = segment_offset + thread_id + i * blockDim.x;
+        local_sum += D[idx];
+    }
+
+    // Final block-wide reduction using CUB
+    T total_sum = BlockReduce(temp_storage).Sum(local_sum);
+
+    if (thread_id == 0) {
+        D[segment_id] = total_sum;
+    }
+}
+
+template <typename T>
+void sum_blocked_vectorreduction_cub_block_reduce(T *data, const int reduction_size, const int threads) {
+
+    sum_blocked_vectorreduction_kernel_cub<<<reduction_size, GPU_BLOCK_REDUCTION_THREADS>>>(data, reduction_size, threads);
+
+    T* host_data = (T*)malloc(reduction_size * threads * sizeof(T));
+    gpuMemcpy(host_data, data, reduction_size * threads * sizeof(T), gpuMemcpyDeviceToHost);
+    std::ofstream outfile("output.txt");
+    if (outfile.is_open()) {
+        for (int i = 0; i < reduction_size * threads; i++) {
+            outfile << host_data[i];
+            if ((i + 1) % GPU_BLOCK_REDUCTION_THREADS == 0) {
+                outfile << '\n';
+            } else {
+                outfile << ' ';
+            }
+        }
+        outfile.close();
+    } else {
+        std::cerr << "Unable to open file for writing." << std::endl;
+    }
+    free(host_data);
+    
     check_device_error("sum_blocked_vectorreduction");
 }
 
