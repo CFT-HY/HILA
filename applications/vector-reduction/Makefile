@@ -23,7 +23,7 @@ include $(HILA_DIR)/libraries/main.mk
 #HILAPP_OPTS += -comment-pragmas
 HILAPP_OPTS += -check-init
 
-APP_OPTS += -DNDIM=3 -DNCOLOR=${NCOL}
+APP_OPTS += -DNDIM=3 -DNCOLOR=${NCOL} -DGPU_SYNCHRONIZE_TIMERS
 APP_OBJECTS = build/multicanonical.o
 
 #APP_HEADERS += twist_specific_methods.hpp checkpoint.h parameters.h
