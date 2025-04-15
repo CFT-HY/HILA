@@ -149,6 +149,17 @@
 #define GPU_BLOCK_REDUCTION_THREADS 1024
 #endif
 
+/// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is an optimization parameter. If reduction size
+/// is large than threshold, we use "single pass" kernel; if smaller, hierarchial
+/// kernel launch. Both use the same amount of memory. The algorithms become
+/// correspondingly better at extreme ends, but around 500-1000 there is
+/// a slow changeover, depending on computing hardware. 
+
+#ifndef GPU_VECTOR_REDUCTION_SIZE_THRESHOLD
+#define GPU_VECTOR_REDUCTION_SIZE_THRESHOLD 700
+#endif
+
+
 /// GPUFFT_BATCH_SIZE
 /// How many complex fft's in parallel - large value can be faster, small uses less memory.
 /// Performance is reduced if the value is too small, but levels to a ~constant
