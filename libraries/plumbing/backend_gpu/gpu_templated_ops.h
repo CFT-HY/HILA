@@ -332,161 +332,16 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define THREAD_BLOCK_SIZE_FINAL 256
-
-template <typename T>
-__global__ void sum_blocked_vectorreduction_kernel_single(T *D, const int reduction_size,
-                                                          const int n_copies) {
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    T sum;
-
-    if (id < reduction_size) {
-        // id is now the reduction coordinate
-        sum = D[id];
-        for (int i = 1; i < n_copies; i++) {
-            // add everything to zero
-            sum += D[id + i * reduction_size];
-        }
-        D[id] = sum;
-    }
-}
-
-
-template <typename T>
-__global__ void sum_blocked_vectorreduction_kernel_steps(T *D, const int reduction_size,
-                                                         const int nthreads) {
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    if (id < nthreads) {
-        // id is now the reduction coordinate
-        D[id] += D[id + nthreads];
-    }
-}
-
-// // this must be called with 1 block only
-// template <typename T>
-// __global__ void sum_blocked_vectorreduction_kernel_final(T *D, const int reduction_size,
-//                                                          const int nthreads_in) {
-//     int id = threadIdx.x;
-//     int nthreads = nthreads_in;
-//     __shared__ T s[THREAD_BLOCK_SIZE_FINAL];
-
-//     // 1st step, fill shared mem
-//     if (id < nthreads) {
-//         s[id] = D[id] + D[id + nthreads];
-//     }
-
-//     nthreads /= 2;
-//     // repeat factor of 2 reduction
-//     while (nthreads >= reduction_size) {
-//         __syncthreads();
-//         if (id < nthreads) {
-//             s[id] += s[id + nthreads];
-//         }
-//         nthreads /= 2;
-//     }
-
-//     // copy from shared memory to D.No need to __syncthreads 
-//     if (id < reduction_size) {
-//         D[id] = s[id];
-//     }
-// }
-
-/// sum_blocked_vectorreduction() : finalizes the vectorreduction, call inserted by hilapp.
-/// In input, data contains n_copies of reduction_size partial reductions, and
-/// adds them so that the first reduction_size elements of data will contain the sum
-/// over n_copies arrays.
-/// Two GPU kernels: for large vectorreductions we use "single pass" kernel,
-/// where reduction_size threads simply sums the n_copies.
-/// For smaller reductions use simple kernel which sum the elements 2-by-2, initially
-/// containing more threads than the single pass one.
-/// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is defined in params.h
-
-template <typename T>
-void sum_blocked_vectorreduction(T *data, const int reduction_size, const int n_copies) {
-    // check if n_copies is power of 2, usually is
-
-    bool is_pow2 = !(n_copies & (n_copies - 1));
-
-    if (reduction_size < GPU_VECTOR_REDUCTION_SIZE_THRESHOLD && is_pow2) {
-
-        int nthreads = reduction_size * n_copies / 2;
-
-        // while (nthreads >= reduction_size && nthreads > 2 * THREAD_BLOCK_SIZE_FINAL) {
-        while (nthreads >= reduction_size) {
-
-            // reduce n_copies in factors of 2 at each step
-
-            int blocks = (nthreads + N_threads - 1) / N_threads;
-
-            sum_blocked_vectorreduction_kernel_steps<<<blocks, N_threads>>>(data, reduction_size,
-                                                                            nthreads);
-
-            check_device_error("sum_blocked_vectorreduction_steps");
-
-            nthreads /= 2;
-        }
-
-
-        // if (nthreads >= reduction_size) {
-        //     // now do the final reduction, stuff fits in one block
-
-        //     hila::out0 << "nthreads " << nthreads << " reduction size " << reduction_size << '\n';
-
-        //     sum_blocked_vectorreduction_kernel_final<<<1, THREAD_BLOCK_SIZE_FINAL>>>(
-        //         data, reduction_size, nthreads);
-
-        //     check_device_error("sum_blocked_vectorreduction_final");
-        // }
-
-    } else {
-
-        int blocks = (reduction_size + N_threads - 1) / N_threads;
-
-        sum_blocked_vectorreduction_kernel_single<<<blocks, N_threads>>>(data, reduction_size,
-                                                                         n_copies);
-
-        check_device_error("sum_blocked_vectorreduction_single");
-    }
-}
-
-template <typename T>
-void sum_blocked_vectorreduction_cub_device_reduce(T *data, const int reduction_size, const int threads) {
-
-    // straightforward implementation, use as many threads as elements in reduction vector
-
-    int blocks = (reduction_size + N_threads - 1) / N_threads;
-
-    size_t temp_storage_bytes = 0;
-    //sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
-    T* temp_storage = nullptr;
-    gpucub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, data, data, threads);
-    T* output;
-    gpuMalloc(&output, reduction_size*sizeof(T));
-    int stream_count = 16;
-    std::vector<gpuStream_t> streams(stream_count);
-    std::vector<void*> temp_storages(stream_count);
-    for (int i = 0; i < stream_count; i++) {
-        gpuStreamCreate(&streams[i]);
-        gpuMalloc(&temp_storages[i], temp_storage_bytes);
-    }
-    for (int z = 0; z < reduction_size; z++) {
-        T* z_input_ptr = data + z * threads;
-        T* z_output_ptr = output + z;
-        int stream_id = z % stream_count;
-        gpucub::DeviceReduce::Sum(temp_storages[stream_id], temp_storage_bytes, z_input_ptr, z_output_ptr, threads,streams[stream_id]);
-    }
-    
-    for (int i = 0; i < stream_count; i++) {
-        gpuStreamSynchronize(streams[i]);
-        gpuStreamDestroy(streams[i]);
-        gpuFree(temp_storages[i]);
-    }
-    gpuMemcpy(data, output, reduction_size*sizeof(T), gpuMemcpyDeviceToDevice);
-    check_device_error("sum_blocked_vectorreduction");
-}
-
+/**
+ * @brief Vector reduction kernel using CUB block reduce
+ * @details Reduces 8192 chunk subarrays in input data and outupts them to output array of size reduction vector
+ * 
+ * @tparam T Lattice data type
+ * @param D input data of size 8192*reduction_size
+ * @param output output array of size reduction_size
+ * @param reduction_size reduction vector length
+ * @param threads max number of threads which is 8192
+ */
 template <typename T>
 __global__ void sum_blocked_vectorreduction_kernel_cub(T* D, T* output, int reduction_size, int threads) {
     using BlockReduce = gpucub::BlockReduce<T, GPU_BLOCK_REDUCTION_THREADS>;
@@ -496,8 +351,8 @@ __global__ void sum_blocked_vectorreduction_kernel_cub(T* D, T* output, int redu
     int stride = GPU_BLOCK_REDUCTION_THREADS; // Stride based on block size
     T local_sum = 0;
 
-    // Make sure we are within bounds and correctly accumulating over stride
-    for (int i = 0; i < (threads / stride); i++) {
+    // Max so that if threads < stride then we take only the element respective to the thread
+    for (int i = 0; i < max(1, (threads + stride - 1) / stride); i++) { // Ensure at least 1 iteration
         int index = global_thread_id + i * stride;
         if (index < reduction_size * threads) { // Prevent out-of-bounds access
             local_sum += D[index];
@@ -512,17 +367,25 @@ __global__ void sum_blocked_vectorreduction_kernel_cub(T* D, T* output, int redu
     }
 }
 
+/**
+ * @brief host function that calls device kernel sum_blocked_vectorredcutin_kernel_cub
+ * 
+ * @tparam T Lattice data type
+ * @param D input data of size 8192*reduction_size
+ * @param output output array of size reduction_size
+ * @param reduction_size reduction vector length
+ * @param threads max number of threads which is 8192
+ */
 template <typename T>
-void sum_blocked_vectorreduction_cub_block_reduce(T *data, const int reduction_size, const int threads) {
-
-    T* output;
-    gpuMalloc(&output, reduction_size*sizeof(T));
+void sum_blocked_vectorreduction(T *data, T* output, const int reduction_size, const int threads) {
     
-    sum_blocked_vectorreduction_kernel_cub<<<reduction_size, GPU_BLOCK_REDUCTION_THREADS>>>(data, output, reduction_size, threads);
+    T* output_device;
+    gpuMalloc(&output_device, reduction_size * sizeof(T));
+
+    sum_blocked_vectorreduction_kernel_cub<<<reduction_size, GPU_BLOCK_REDUCTION_THREADS>>>(data, output_device, reduction_size, threads);
 
     hila::synchronize_threads();
-
-    gpuMemcpy(data, output, reduction_size*sizeof(T), gpuMemcpyDeviceToDevice);
+    gpuMemcpy(output, output_device, reduction_size * sizeof(T), gpuMemcpyDeviceToHost);
     check_device_error("sum_blocked_vectorreduction");
 }
 
