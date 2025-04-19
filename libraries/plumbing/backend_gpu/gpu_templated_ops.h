@@ -349,21 +349,25 @@ __global__ void sum_blocked_vectorreduction_kernel_cub(T* D, T* output, int redu
 
     int global_thread_id = blockIdx.x*threads + threadIdx.x; // Global thread index
     int stride = GPU_BLOCK_REDUCTION_THREADS; // Stride based on block size
-    T local_sum = 0;
+    T local_sum;
+    _hila_kernel_set_zero(local_sum);
 
     // Max so that if threads < stride then we take only the element respective to the thread
     for (int i = 0; i < max(1, (threads + stride - 1) / stride); i++) { // Ensure at least 1 iteration
         int index = global_thread_id + i * stride;
         if (index < reduction_size * threads) { // Prevent out-of-bounds access
-            local_sum += D[index];
+            // local_sum += D[index];
+            _hila_kernel_add_var(local_sum,D[index]);
         }
     }
 
     // Perform block-wide reduction using CUB
-    T total_sum = BlockReduce(temp_storage).Sum(local_sum);
+    T total_sum;
+    total_sum = BlockReduce(temp_storage).Sum(local_sum);
     // Only thread 0 writes the result back
     if (threadIdx.x == 0) {
-        output[blockIdx.x] = total_sum;
+        _hila_kernel_copy_var(output[blockIdx.x],total_sum);
+        //output[blockIdx.x] = total_sum;
     }
 }
 
