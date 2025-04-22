@@ -80,7 +80,7 @@ void check_reductions() {
         sum +=
             expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
     }
-    report_pass("Vector reduction, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+    report_pass("Complex ReductionVector, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
 
     // do a combined reduction too
     sum = 0;
@@ -105,6 +105,22 @@ void check_reductions() {
     report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
                     hila::prettyprint(sum2),
                 abs(sum) + abs(sum2), 1e-4);
+
+    Field<SU<3, double>> mf;
+    mf = 1;
+
+    ReductionVector<SU<3, double>> rmf(lattice.size(e_x));
+
+    onsites(ALL) {
+        rmf[X.x()] += (mf[X] + mf[X])*0.5;
+    }
+
+    double diff = 0;
+    for (int i = 0; i < lattice.size(e_x); i++) {
+        diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
+    }
+
+    report_pass("SU(3) ReductionVector", diff, 1e-8);
 }
 
 
@@ -149,7 +165,7 @@ void test_minmax() {
         if (par != ALL)
             n[opp_parity(par)] = 3;
 
-        auto v = n.max(par,loc);
+        auto v = n.max(par, loc);
         report_pass("Maxloc parity " + hila::prettyprint(par) + " is " +
                         hila::prettyprint(loc.transpose()),
                     (c - loc).norm(), 1e-8);
@@ -165,7 +181,7 @@ void test_minmax() {
         if (par != ALL)
             n[opp_parity(par)] = -3;
 
-        v = n.min(par,loc);
+        v = n.min(par, loc);
         report_pass("Minloc parity " + hila::prettyprint(par) + " is " +
                         hila::prettyprint(loc.transpose()),
                     (c - loc).norm(), 1e-8);
