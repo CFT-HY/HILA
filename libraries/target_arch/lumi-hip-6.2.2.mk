@@ -1,18 +1,6 @@
-# Platform specific makefile for LUMI standard (CPU) code
-#
-# this is included from main.mk -file, which is in turn included from 
-# application makefile
-#
-#  1) amd/6.0.3                 8) craype-x86-trento
-#  2) craype/2.7.31.11          9) craype-accel-amd-gfx90a
-#  3) cray-dsmml/0.3.0         10) libfabric/1.15.2.0
-#  4) cray-mpich/8.1.29        11) craype-network-ofi
-#  5) cray-libsci/24.03.0      12) xpmem/2.8.2-1.0_5.1__g84a27a5.shasta
-#  6) PrgEnv-amd/8.5.0         13) partition/G                          (S)
-#  7) LUMI/24.03          (S)  14) rocm/6.2.2
 $(info ########################################################################)
 $(info Target lumi-hip-6.2.2: remember to )
-$(info   module load LUMI/24.03 partition/G  craype-accel-amd-gfx90a PrgEnv-amd rocm/6.2.2 )
+$(info   module load LUMI/24.03 partition/G  craype-accel-amd-gfx90a PrgEnv-amd cray-fftw rocm/6.2.2 )
 $(info ########################################################################)
 
 
@@ -64,9 +52,7 @@ CXXFLAGS += $(foreach dir,$(GCC_CXX_INCLUDES),-isystem $(dir))
 #$(shell mkdir -p build)
 #$(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 #HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
-HIPCC_LINK_FLAGS    := --hip-link -fgpu-rdc \
-                       --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1 \
-                       --rocm-path=${ROCM_PATH}
+
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
@@ -75,7 +61,7 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 HILA_INCLUDES := -I${ROCM_PATH}/hip/include -I${ROCM_PATH}/hip/include/hip
 HILA_INCLUDES += -I${ROCM_PATH}/rocrand/include/ -I${ROCM_PATH}/hiprand/include/ 
 HILA_INCLUDES += -I${ROCM_PATH}/hipfft/include/ -I${ROCM_PATH}/hipcub/include/hipcub
-HILA_INCLUDES += -I${MPICH_DIR}/include
+HILA_INCLUDES += -I${MPICH_DIR}/include -I/opt/cray/pe/fftw/default/x86_64/include
 #HILA_INCLUDES += -I/opt/cray/pe/cce/17.0.1/cce/x86_64/include/craylibs
 # HILA_INCLUDES += -I${MPICH_DIR}/include
 
@@ -85,10 +71,10 @@ HILA_INCLUDES += -I${MPICH_DIR}/include
 # LDLIBS  := -lfftw3 -lfftw3f -lm
 
 LDFLAGS := --hip-link -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1 --rocm-path=${ROCM_PATH}
-LDFLAGS +=  -L${MPICH_DIR}/lib -L${CRAY_MPICH_ROOTDIR}/gtl/lib -L${ROCM_PATH}/hipfft/lib  -L${ROCM_PATH}/lib 
+LDFLAGS += -L/opt/cray/pe/fftw/3.3.10.7/x86_64/lib -L${MPICH_DIR}/lib -L${CRAY_MPICH_ROOTDIR}/gtl/lib -L${ROCM_PATH}/hipfft/lib  -L${ROCM_PATH}/lib 
 
 # libraries flags of amdhip, rocm-fft, mpich
-LDLIBS := -lamdhip64 -lhipfft -lmpi -lmpi_gtl_hsa
+LDLIBS := -lamdhip64 -lhipfft -lmpi -lmpi_gtl_hsa -lfftw3
 
 # These variables must be defined here
 #
