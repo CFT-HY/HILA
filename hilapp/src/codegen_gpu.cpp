@@ -637,7 +637,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
                             .getLocWithOffset(1);
 
-                    loopBuf.insert(l, " ) + _HILA_thread_id * " + array_size_varname);
+                    loopBuf.insert(l, " )*N_threads*gridDim.x + _HILA_thread_id");
                 }
             }
         }
@@ -970,12 +970,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
-
+            // generate this inside {} to avoid name collisions
+            code << "{\n";
+            code << ar.element_type << "* a_v__tmp = new " << ar.element_type << "[" << ar.size_expr
+            << "];\n";
             if (loop_has_reductionvector_blocks) {
                 // there are now N_blocks * loop_blocks -- reduce these
                 // (code in hila_gpu.cpp)
 
-                code << "sum_blocked_vectorreduction(" << ar.new_name << ", " << ar.size_expr
+                code << "   sum_blocked_vectorreduction(" << ar.new_name << ", " << "a_v__tmp" << ", " << ar.size_expr
                      << ", N_blocks * N_threads);\n";
 
                 // after this the data can be collected from the array as in non-blocked reduction!
@@ -983,12 +986,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
             // code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr <<
             // ");\n";
-            // generate this inside {} to avoid name collisions
-            code << "{\n"
-                 << ar.element_type << "* a_v__tmp = new " << ar.element_type << "[" << ar.size_expr
-                 << "];\n";
-            code << "gpuMemcpy(a_v__tmp, " << ar.new_name << ", (" << ar.size_expr << ") * sizeof("
-                 << ar.element_type << "), " << "gpuMemcpyDeviceToHost);\n\n";
 
             code << "for (int _H_tmp_idx=0; _H_tmp_idx < (" << ar.size_expr << "); _H_tmp_idx++) "
                  << ar.name << "[_H_tmp_idx]";
