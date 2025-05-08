@@ -2970,7 +2970,7 @@ inline int chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, MT
     }
 
 
-    int mmax = 15 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
+    int mmax = 25 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
     T al[n], pal[n]; // temp. Cayley-Hamilton coefficents
     hila::arithmetic_type<T>
         wpf = 1.0,
@@ -3158,7 +3158,7 @@ inline void chexp(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, M
         crpl[n - j] /= j;
     }
 
-    const int mmax = 15 * n; // maximum number of iterations if no convergence is reached
+    const int mmax = 25 * n; // maximum number of iterations if no convergence is reached
     T al[n], pal[n];         // temp. Cayley-Hamilton coefficents
     hila::arithmetic_type<T>
         wpf = 1.0,
@@ -3387,7 +3387,7 @@ inline void mult_chexp(const Matrix_t<n, m, T, MT> &mat, const Matrix_t<n, m, T,
         crpl[n - j] /= j;
     }
 
-    const int mmax = 15 * n; // maximum number of iterations if no convergence is reached
+    const int mmax = 25 * n; // maximum number of iterations if no convergence is reached
     T al[n], pal[n];         // temp. Cayley-Hamilton coefficents
     hila::arithmetic_type<T>
         wpf = 1.0,
@@ -3606,7 +3606,7 @@ inline void chexpk(const Matrix_t<n, m, T, MT> &mat, out_only Matrix_t<n, m, T, 
         crpl[n - j] /= j;
     }
 
-    const int mmax = 15 * n; // maximum number of iterations if no convergence is reached
+    const int mmax = 25 * n; // maximum number of iterations if no convergence is reached
     T al[n], pal[n];         // temp. Cayley-Hamilton coefficents
     hila::arithmetic_type<T>
         wpf = 1.0,
@@ -3861,7 +3861,7 @@ inline Matrix_t<n, m, T, MT> chsexp(const Matrix_t<n, m, T, MT> &mat) {
     }
 
 
-    int mmax = 15 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
+    int mmax = 25 * n; // maximum number of Cayley-Hamilton iterations if no convergence is reached
     T al[n], pal[n];   // temp. Cayley-Hamilton coefficents
     hila::arithmetic_type<T> wpf = 1.0, twpf = 1.0, ttwpf; // leading coefficient of power series
     // set initial values for the n entries in al[] and pal[] :
