@@ -28,7 +28,7 @@ bool report_pass(std::string message, double eps, double limit) {
         }
     }
 
-    if (eps < limit) {
+    if (abs(eps) < limit) {
         hila::out0 << ok_string << message << " passed" << std::endl;
         return true;
     } else {
@@ -136,22 +136,42 @@ void test_minmax() {
 
     CoordinateVector c, loc;
     Field<double> n;
-    n[ALL] = hila::random();
-    foralldir(d) c[d] = hila::random() * lattice.size(d);
-    hila::broadcast(c);
-    n[c] = 2;
 
-    auto v = n.max(loc);
-    report_pass("Maxloc is " + hila::prettyprint(loc.transpose()), (c - loc).norm(), 1e-8);
-    report_pass("Max value " + hila::prettyprint(v), v - 2, 1e-9);
+    for (Parity par : {ALL, EVEN, ODD}) {
 
+        n[par] = hila::random();
+        do {
+            foralldir(d) c[d] = hila::random() * lattice.size(d);
+        } while (!(par == ALL || c.parity() == par));
+        hila::broadcast(c);
+        n[c] = 2;
 
-    foralldir(d) c[d] = hila::random() * lattice.size(d);
-    hila::broadcast(c);
-    n[c] = -1;
-    v = n.min(loc);
-    report_pass("Minloc is " + hila::prettyprint(loc.transpose()), (c - loc).norm(), 1e-8);
-    report_pass("Min value " + hila::prettyprint(v), v + 1, 1e-9);
+        if (par != ALL)
+            n[opp_parity(par)] = 3;
+
+        auto v = n.max(par,loc);
+        report_pass("Maxloc parity " + hila::prettyprint(par) + " is " +
+                        hila::prettyprint(loc.transpose()),
+                    (c - loc).norm(), 1e-8);
+        report_pass("Max parity " + hila::prettyprint(par) + " value " + hila::prettyprint(v),
+                    v - 2, 1e-9);
+
+        do {
+            foralldir(d) c[d] = hila::random() * lattice.size(d);
+        } while (!(par == ALL || c.parity() == par));
+        hila::broadcast(c);
+        n[c] = -1;
+
+        if (par != ALL)
+            n[opp_parity(par)] = -3;
+
+        v = n.min(par,loc);
+        report_pass("Minloc parity " + hila::prettyprint(par) + " is " +
+                        hila::prettyprint(loc.transpose()),
+                    (c - loc).norm(), 1e-8);
+        report_pass("Min parity " + hila::prettyprint(par) + " value " + hila::prettyprint(v),
+                    v + 1, 1e-9);
+    }
 }
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -565,16 +585,10 @@ void test_matrix_operations() {
 
     report_pass("matrix multiply and addition", sum, 1e-8);
 
-    auto dm = cm * I - 2*I;
+    auto dm = cm * I - 2 * I;
     dm.asArray() *= I;
     dm = ((dm - 2).asArray() + 4).asMatrix();
     report_pass("Array and imaginary unit operations", dm.squarenorm(), 1e-8);
-
-    
-
-
-
-
 }
 
 
@@ -589,8 +603,8 @@ void test_matrix_algebra() {
 
     M.gaussian_random(2.0);
 
-    // eigenvalue test - show that  M = U D U^*, where D is diagonal eigenvalue matrix and U matrix
-    // of eigenvectors
+    // eigenvalue test - show that  M = U D U^*, where D is diagonal eigenvalue matrix and U
+    // matrix of eigenvectors
 
     onsites(ALL) {
         auto H = M[X] * M[X].dagger(); // make hermitean
