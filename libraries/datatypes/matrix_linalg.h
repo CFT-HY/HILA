@@ -34,7 +34,7 @@ inline double find_largest_offdiag(const SquareMatrix<n, Mtype> &M, int &p, int 
  *  Matrix is  | c    s |
  *             | -s*  c |
  * s complex or real, c real, and c^2 + |s|^2 = 1.
- * 
+ *
  * mult_by_Givens_left/right multiply matrices with Givens matrix left/right.
  * where the "Givens" is taken to be unity except on row/col = p,q
  */
@@ -792,21 +792,23 @@ T det(const Matrix_t<n, m, T, Mtype> &mat) {
 namespace hila {
 /**
  * @brief Inversed diagnal + const. matrix using Sherman-Morrison formula
- */  
+ */
 namespace linalg {
 
-/**  
+/**
  * @details Sherman-Morrison formula (generalized to complex) is
  * \f[
- *     (A + u v^{\dagger})^{-1} = A^{-1} - \frac{A^{-1} u v^{\dagger} A^{-1}}{(1 + v^{\dagger} A^{-1} u)},
-   \f]
- * where \f$A\f$ is invertible matrix and \f$u\f$,\f$v\f$ are vectors with outer product \f$u v^{\dagger}\f$.
+ *     (A + u v^{\dagger})^{-1} = A^{-1} - \frac{A^{-1} u v^{\dagger} A^{-1}}{(1 + v^{\dagger}
+ A^{-1} u)}, \f]
+ * where \f$A\f$ is invertible matrix and \f$u\f$,\f$v\f$ are vectors with outer product
+ * \f$u v^{\dagger}\f$.
  * Let's specialize this here for the case where \f$A\f$ is diagonal and
  * \f[
- *     u = v = \sqrt{c} [1, 1, 1, ...]^{T} 
+ *     u = v = \sqrt{c} [1, 1, 1, ...]^{T}
  * \f]
- * i.e. the inversed matrix \f$M^{-1} = (A + C)^{-1}\f$, where \f$C = c uv^{\dagger}\f$ is constant matrix. The inversed matrix \f$ M^{-1}\f$ exists iff \f$(1 + v^{\dagger} A^{-1} u) \neq 0\f$.
- */  
+ * i.e. the inversed matrix \f$M^{-1} = (A + C)^{-1}\f$, where \f$C = c uv^{\dagger}\f$ is constant
+ matrix. The inversed matrix \f$ M^{-1}\f$ exists iff \f$(1 + v^{\dagger} A^{-1} u) \neq 0\f$.
+ */
 template <int N, typename T, typename C,
           std::enable_if_t<hila::is_complex_or_arithmetic<C>::value, int> = 0>
 auto invert_diagonal_plus_constant_matrix(const DiagonalMatrix<N, T> &D, const C c) {
