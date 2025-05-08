@@ -17,11 +17,6 @@
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
 
-// NOTE: If you define ALT_VECTOR_REDUCTION you need to define
-// it also in gpu_templated_ops.h !
-
-// #define ALT_VECTOR_REDUCTION
-
 extern std::string looping_var;
 extern std::string parity_name;
 
@@ -248,11 +243,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 code << "// copy array/vector '" << ar.name << "' to device\n";
 
                 code << ar.element_type << " * " << ar.new_name << ";\n";
-                code << "gpuMalloc( & " << ar.new_name << ", " << ar.size_expr << " * sizeof("
+                code << "gpuMalloc( & " << ar.new_name << ", (" << ar.size_expr << ") * sizeof("
                      << ar.element_type << ") );\n";
 
-                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr << ", "
-                     << ar.size_expr << " * sizeof(" << ar.element_type << "), "
+                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr << ", ("
+                     << ar.size_expr << ") * sizeof(" << ar.element_type << "), "
                      << "gpuMemcpyHostToDevice);\n\n";
             }
 
@@ -349,11 +344,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             if (loop_has_reductionvector_blocks) {
                 code << "// Create reduction array with (N_blocks * N_threads) parallel "
                         "reductions\n";
-                array_size << ar.size_expr << " * N_threads * N_blocks";
+                array_size << '(' << ar.size_expr << ") * N_threads * N_blocks";
 
             } else {
                 code << "// Create reduction array - using atomicAdd for accumulation\n";
-                array_size << ar.size_expr;
+                array_size << '(' << ar.size_expr << ')';
             }
 
             code << "gpuMalloc( & " << ar.new_name << ", " << array_size.str() << " * sizeof("
@@ -642,16 +637,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
                             .getLocWithOffset(1);
 
-#ifndef ALT_VECTOR_REDUCTION
-                    // Normal simpler way to accumulate vectorreductions
                     loopBuf.insert(l, " ) + _HILA_thread_id * " + array_size_varname);
-
-#else
-                    // ALT of above is below
-                    std::stringstream ss;
-                    ss << " )*(N_threads * " << thread_block_number << ") + _HILA_thread_id";
-                    loopBuf.insert(l, ss.str());
-#endif
                 }
             }
         }
@@ -995,18 +981,23 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 // after this the data can be collected from the array as in non-blocked reduction!
             }
 
-            code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr << ");\n";
-            code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", " << ar.size_expr
-                 << " * sizeof(" << ar.element_type << "), " << "gpuMemcpyDeviceToHost);\n\n";
+            // code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr <<
+            // ");\n";
+            // generate this inside {} to avoid name collisions
+            code << "{\n"
+                 << ar.element_type << "* a_v__tmp = new " << ar.element_type << "[" << ar.size_expr
+                 << "];\n";
+            code << "gpuMemcpy(a_v__tmp, " << ar.new_name << ", (" << ar.size_expr << ") * sizeof("
+                 << ar.element_type << "), " << "gpuMemcpyDeviceToHost);\n\n";
 
-            code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr << "; _H_tmp_idx++) "
+            code << "for (int _H_tmp_idx=0; _H_tmp_idx < (" << ar.size_expr << "); _H_tmp_idx++) "
                  << ar.name << "[_H_tmp_idx]";
             if (ar.reduction_type == reduction::SUM)
                 code << " += a_v__tmp[_H_tmp_idx];\n";
             else
                 code << " *= a_v__tmp[_H_tmp_idx];\n";
 
-            code << " }\n";
+            code << "delete[] a_v__tmp;\n}\n";
         }
 
         if (ar.type != array_ref::REPLACE && (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {

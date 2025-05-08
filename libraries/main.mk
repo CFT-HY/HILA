@@ -213,7 +213,7 @@ build/%.cpt: $(LIBRARIES_DIR)/tools/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 
 # This one triggers only for cuda targets
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/backend_gpu/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
-	@mkdir -p build%.cpp
+	@mkdir -p build
 	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
 
 
