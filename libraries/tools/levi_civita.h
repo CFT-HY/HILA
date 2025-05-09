@@ -39,11 +39,11 @@ public:
         int ind[N]{0}; //initial permutation vector is zero
         for(int j=0; j<Nfac; ++j) {
             // initialize a[j][]=tarr0[] :
-            for(int i=0; i<n+1; ++i) {
+            for(int i=0; i<N+1; ++i) {
                 a[j][i]=tarr0[i];
             }
             // apply permutation given by ind[] to a[j][] :
-            for(int i=0; i<n-1; ++i) {
+            for(int i=0; i<N-1; ++i) {
                 if(ind[i]!=0) {
                     // swap a[j][i] with a[j][i+ind[i]]:
                     int te=a[j][i];
@@ -57,8 +57,8 @@ public:
 
             // next permuation vector: 
             ++ind[N-1];
-            for(int i=n-1; i>=1; --i) {
-                if(ind[i]>n-1-i) {
+            for(int i=N-1; i>=1; --i) {
+                if(ind[i]>N-1-i) {
                     ind[i]=0;
                     ++ind[i-1];
                 }
