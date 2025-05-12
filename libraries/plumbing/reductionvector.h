@@ -4,6 +4,21 @@
 #include "hila.h"
 
 
+template <typename T>
+void init_gpu_operators() {
+#ifdef HILA
+    onsites(ALL) {
+        T a;
+        T v = 0;
+        a = 0;
+        v += v + v;
+        a = v;
+    }
+#endif
+}
+
+
+
 //////////////////////////////////////////////////////////////////////////////////
 /// Special reduction class for arrays: declare a reduction array as
 /// ReductionVector<T> a(size);
@@ -131,9 +146,15 @@ class ReductionVector {
 
     /// Initialize to zero by default (? exception to other variables)
     /// allreduce = true by default
-    explicit ReductionVector() = default;
-    explicit ReductionVector(int size) : val(size, (T)0) {}
-    explicit ReductionVector(int size, const T &v) : val(size, v) {}
+    explicit ReductionVector() {
+        init_gpu_operators<T>();
+    }
+    explicit ReductionVector(int size) : val(size, (T)0) {
+        init_gpu_operators<T>();
+    }
+    explicit ReductionVector(int size, const T &v) : val(size, v) {
+        init_gpu_operators<T>();
+    }
 
     /// Destructor cleans up communications if they are in progress
     ~ReductionVector() {
