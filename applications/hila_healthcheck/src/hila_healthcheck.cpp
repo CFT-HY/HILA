@@ -60,69 +60,92 @@ void check_reductions() {
 
     // test reductions
 
-    Field<Complex<double>> f;
-    f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
+    {
+        Field<Complex<double>> f;
+        f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
 
-    Complex<double> sum = 0;
-    onsites(ALL) sum += f[X];
+        Complex<double> sum = 0;
+        onsites(ALL) sum += f[X];
 
-    sum /= lattice.volume();
-    report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
+        sum /= lattice.volume();
+        report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
 
-    ReductionVector<Complex<double>> rv(lattice.size(e_x));
+        ReductionVector<Complex<double>> rv(lattice.size(e_x));
 
-    onsites(ALL) {
-        rv[X.coordinate(e_x)] += f[X];
+        onsites(ALL) {
+            rv[X.coordinate(e_x)] += f[X];
+        }
+
+        sum = 0;
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            sum += expi(2 * M_PI * i / lattice.size(e_x)) -
+                   rv[i] / (lattice.volume() / lattice.size(e_x));
+        }
+        report_pass("Complex ReductionVector, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+        // do a combined reduction too
+        sum = 0;
+        rv = 0;
+        onsites(ALL) {
+            rv[X.x()] += f[X];
+            rv[0] += 1;
+            rv[1] += -0.01;
+
+            sum += f[X];
+        }
+
+        sum /= lattice.volume();
+        Complex<double> sum2 = 0;
+        rv[0] -= lattice.volume();
+        rv[1] += 0.01 * lattice.volume();
+
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            sum2 += expi(2 * M_PI * i / lattice.size(e_x)) -
+                    rv[i] / (lattice.volume() / lattice.size(e_x));
+        }
+        report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
+                        hila::prettyprint(sum2),
+                    abs(sum) + abs(sum2), 1e-4);
     }
 
-    sum = 0;
-    for (int i = 0; i < lattice.size(e_x); i++) {
-        sum +=
-            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
-    }
-    report_pass("Complex ReductionVector, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+    {
+        // reductionvector with long
+        Field<long> lf;
+        lf[ALL] = X.x();
 
-    // do a combined reduction too
-    sum = 0;
-    rv = 0;
-    onsites(ALL) {
-        rv[X.x()] += f[X];
-        rv[0] += 1;
-        rv[1] += -0.01;
+        ReductionVector<long> rv(lattice.size(e_x));
 
-        sum += f[X];
-    }
+        onsites(ALL) {
+            rv[X.x()] += (lf[X] == X.x());
+        }
 
-    sum /= lattice.volume();
-    Complex<double> sum2 = 0;
-    rv[0] -= lattice.volume();
-    rv[1] += 0.01 * lattice.volume();
+        long s = 0;
+        for (int x = 0; x < rv.size(); x++) {
+            s += abs(rv[x] - (lattice.volume() / lattice.size(e_x)));
+        }
 
-    for (int i = 0; i < lattice.size(e_x); i++) {
-        sum2 +=
-            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
-    }
-    report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
-                    hila::prettyprint(sum2),
-                abs(sum) + abs(sum2), 1e-4);
-
-    Field<SU<2, double>> mf;
-    mf = 1;
-    // onsites(ALL) mf[X] = (mf[X] + mf[X])*0.5;
-
-    ReductionVector<SU<2, double>> rmf(lattice.size(e_x));
-
-    onsites(ALL) {
-        //    rmf[X.x()] += (mf[X] + mf[X])*0.5;
-        rmf[X.x()] += mf[X];
+        report_pass("ReductionVector<long>, sum " + hila::prettyprint(s), s, 1e-15);
     }
 
-    double diff = 0;
-    for (int i = 0; i < lattice.size(e_x); i++) {
-        diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
-    }
+    {
+        Field<SU<3, double>> mf;
+        mf = 1;
+        // onsites(ALL) mf[X] = (mf[X] + mf[X])*0.5;
 
-    report_pass("SU(3) ReductionVector", diff, 1e-8);
+        ReductionVector<SU<3, double>> rmf(lattice.size(e_x));
+
+        onsites(ALL) {
+            //    rmf[X.x()] += (mf[X] + mf[X])*0.5;
+            rmf[X.x()] += mf[X];
+        }
+
+        double diff = 0;
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
+        }
+
+        report_pass("SU(3) ReductionVector", diff, 1e-8);
+    }
 }
 
 
