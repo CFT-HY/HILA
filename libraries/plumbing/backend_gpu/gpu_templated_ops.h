@@ -383,7 +383,9 @@ __global__ void sum_blocked_vectorreduction_kernel_cub(T *D, T *output, int redu
  * @param reduction_size reduction vector length
  * @param threads max number of threads which is 8192
  */
-template <typename T,std::enable_if_t<hila::is_complex_or_arithmetic<T>::value,int> = 0>
+
+ /// ENABLE THIS FOR NOW; HOWEVER DOES NOT WORK FOR "BIG" TYPES - RUNS OUT OF JUICE
+template <typename T,std::enable_if_t<true || std::is_arithmetic<T>::value,int> = 0>
 void sum_blocked_vectorreduction(T *data, T *output, const int reduction_size, const int threads) {
 
     T *output_device;
@@ -394,6 +396,7 @@ void sum_blocked_vectorreduction(T *data, T *output, const int reduction_size, c
 
     hila::synchronize_threads();
     gpuMemcpy(output, output_device, reduction_size * sizeof(T), gpuMemcpyDeviceToHost);
+    gpuFree(output_device);
     check_device_error("sum_blocked_vectorreduction");
 }
 
@@ -440,7 +443,9 @@ __global__ void sum_blocked_vectorreduction_kernel_steps(T *D, const int reducti
 /// containing more threads than the single pass one.
 /// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is defined in params.h
 
-template <typename T,std::enable_if_t<!hila::is_complex_or_arithmetic<T>::value,int> = 0>
+
+/// DISABLE THIS NOW; DOES NOT WORK WITHOUT MODIFICATIONS: DATA IS IN WRONG ORDER AFTER HILAPP
+template <typename T,std::enable_if_t<false && std::is_arithmetic<T>::value,int> = 0>
 void sum_blocked_vectorreduction(T *data, T*output, const int reduction_size, const int n_copies) {
     // check if n_copies is power of 2, usually is
 
@@ -474,8 +479,8 @@ void sum_blocked_vectorreduction(T *data, T*output, const int reduction_size, co
         check_device_error("sum_blocked_vectorreduction_single");
     }
 
-    hila::synchronize_threads();
     gpuMemcpy(output, data, reduction_size * sizeof(T), gpuMemcpyDeviceToHost);
+    hila::synchronize_threads();
 
 }
 
