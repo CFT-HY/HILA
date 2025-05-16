@@ -38,7 +38,7 @@ $(info We are on $(DISTRO) distribution)
 $(info --------------------------------------------------------------)
 
 # keep 14 as default for now
-LLVM_DEFAULT_VERSION := 13
+LLVM_DEFAULT_VERSION := 18
 
 ifdef LLVM_VERSION 
 
@@ -51,20 +51,29 @@ endif
 else   
 # Now LLVM_VERSION not set
 # Try plain llvm-config
+$(info LLVM_VERSION not set, trying llvm-config)
 ifneq (, $(shell which llvm-config))
 LLVM_PATH := $(shell llvm-config --prefix)
 else
 
 # llvm-config not found, next step...
-$(info "llvm-config" not found along PATH, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
+$(info "llvm-config" not found along PATH, trying version from clang.. )
+VERSION_FROM_CLANG := $(shell clang --version | head -1 | awk 'BEGIN{FS="version *"} {print $$2}' | awk 'BEGIN{FS="."} {print $$1}' )
+$(info clang version $(VERSION_FROM_CLANG))
+ifneq (, $(shell which llvm-config-$(VERSION_FROM_CLANG)))
+LLVM_PATH := $(shell llvm-config-$(VERSION_FROM_CLANG) --prefix)
+
+else
+$(info "clang" failed, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
+
 ifeq (, $(shell which llvm-config-$(LLVM_DEFAULT_VERSION)))
 $(info llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH! )
 $(error Use "make [..] LLVM_VERSION=<N>" )
 else
 LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
 endif
-
 endif
+endif    
 
 # get the llvm version number if not set before
 LLVM_VERSION = $(shell $(LLVM_PATH)/bin/llvm-config --version | cut -d. -f1)
