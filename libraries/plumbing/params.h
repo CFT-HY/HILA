@@ -143,6 +143,12 @@
 #define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
 #endif
 
+
+/// GPU_VECTOR_REDUCTION_THREADS defines max threads per block for block reduction
+#ifndef GPU_BLOCK_REDUCTION_THREADS
+#define GPU_BLOCK_REDUCTION_THREADS 128
+#endif
+
 /// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is an optimization parameter. If reduction size
 /// is large than threshold, we use "single pass" kernel; if smaller, hierarchial
 /// kernel launch. Both use the same amount of memory. The algorithms become

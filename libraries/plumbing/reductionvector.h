@@ -4,6 +4,23 @@
 #include "hila.h"
 
 
+#ifdef HILAPP
+
+
+template <typename T>
+inline void init_gpu_operators() {
+    Field<T> dummy;
+    onsites(ALL) {
+        dummy[X] = 0;
+        T v = 0;
+        v += v + dummy[X];
+        dummy[X] = v + v;
+    }
+}
+
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////////////
 /// Special reduction class for arrays: declare a reduction array as
 /// ReductionVector<T> a(size);
@@ -78,33 +95,33 @@ class ReductionVector {
         if (is_allreduce_) {
             if (is_nonblocking_) {
                 MPI_Iallreduce(MPI_IN_PLACE, (void *)val.data(),
-                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>),
-                               dtype, operation, lattice.mpi_comm_lat, &request);
+                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
+                               operation, lattice.mpi_comm_lat, &request);
             } else {
                 MPI_Allreduce(MPI_IN_PLACE, (void *)val.data(),
-                              sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>),
-                              dtype, operation, lattice.mpi_comm_lat);
+                              sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
+                              operation, lattice.mpi_comm_lat);
             }
         } else {
             if (hila::myrank() == 0) {
                 if (is_nonblocking_) {
                     MPI_Ireduce(MPI_IN_PLACE, (void *)val.data(),
-                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>),
-                                dtype, operation, 0, lattice.mpi_comm_lat, &request);
+                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
+                                operation, 0, lattice.mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce(MPI_IN_PLACE, (void *)val.data(),
-                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>),
-                               dtype, operation, 0, lattice.mpi_comm_lat);
+                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
+                               operation, 0, lattice.mpi_comm_lat);
                 }
             } else {
                 if (is_nonblocking_) {
                     MPI_Ireduce((void *)val.data(), (void *)val.data(),
-                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>),
-                                dtype, operation, 0, lattice.mpi_comm_lat, &request);
+                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
+                                operation, 0, lattice.mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce((void *)val.data(), (void *)val.data(),
-                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>),
-                               dtype, operation, 0, lattice.mpi_comm_lat);
+                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
+                               operation, 0, lattice.mpi_comm_lat);
                 }
             }
         }
@@ -131,13 +148,16 @@ class ReductionVector {
 
     /// Initialize to zero by default (? exception to other variables)
     /// allreduce = true by default
-    explicit ReductionVector() = default;
+    explicit ReductionVector() {}
     explicit ReductionVector(int size) : val(size, (T)0) {}
     explicit ReductionVector(int size, const T &v) : val(size, v) {}
 
     /// Destructor cleans up communications if they are in progress
     ~ReductionVector() {
         wait();
+#ifdef HILAPP
+        init_gpu_operators<T>();
+#endif
     }
 
     /// And access operators - these do in practice everything already!
@@ -231,8 +251,7 @@ class ReductionVector {
     void reduce_product() {
 
         static_assert(std::is_same<T, int>::value || std::is_same<T, long>::value ||
-                          std::is_same<T, float>::value ||
-                          std::is_same<T, double>::value ||
+                          std::is_same<T, float>::value || std::is_same<T, double>::value ||
                           std::is_same<T, long double>::value,
                       "Type not implemented for product reduction");
 
