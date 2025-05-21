@@ -12,6 +12,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+using mytype = SU<30,double>;
+//using mytype = double;
 int main(int argc, char **argv) {
 
   hila::initialize(argc, argv);
@@ -28,18 +31,20 @@ int main(int argc, char **argv) {
 
   hila::timer reduction_timer("Reduction timer");
   hila::seed_random(-1);
-  Field<double> f;
+  Field<mytype> f,a;
+  a.random();
   onsites(ALL) f[X] = X.z()+1;
+  onsites(ALL) a[X] = a[X] + a[X];
 
   reduction_timer.start();
-  ReductionVector<double> reduction_vec(lattice.size(e_z));
+  ReductionVector<mytype> reduction_vec(lattice.size(e_z));
   for (int i = 0; i <= iterations; i++) {
     
     reduction_vec = 0;
     reduction_vec.allreduce(false);
 
     onsites(ALL) {
-      double val = f[X];
+      mytype val = f[X];
       reduction_vec[X.z()] += val;
     }
   }

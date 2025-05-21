@@ -83,7 +83,8 @@ using gpuError = cudaError;
 #define gpuStreamDestroy(a) GPU_CHECK(cudaStreamDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(cudaMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
-
+#define gpuFuncAttributes cudaFuncAttributes
+#define gpuFuncGetAttributes cudaFuncGetAttributes
 
 #define GPUTYPESTR "CUDA"
 
@@ -138,6 +139,8 @@ using gpuError = hipError_t;
 #define gpuMemset(a, b, c) GPU_CHECK(hipMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
     GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
+#define gpuFuncAttributes hipFuncAttributes
+#define gpuFuncGetAttributes hipFuncGetAttributes
 
 
 #define GPUTYPESTR "HIP"

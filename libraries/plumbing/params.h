@@ -146,7 +146,7 @@
 
 /// GPU_VECTOR_REDUCTION_THREADS defines max threads per block for block reduction
 #ifndef GPU_BLOCK_REDUCTION_THREADS
-#define GPU_BLOCK_REDUCTION_THREADS 1024
+#define GPU_BLOCK_REDUCTION_THREADS 128
 #endif
 
 /// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is an optimization parameter. If reduction size
