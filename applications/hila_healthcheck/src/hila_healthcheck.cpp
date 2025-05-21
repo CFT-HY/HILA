@@ -110,21 +110,21 @@ void check_reductions() {
 
     {
         // reductionvector with long
-        Field<long> lf;
+        Field<int64_t> lf;
         lf[ALL] = X.x();
 
-        ReductionVector<long> rv(lattice.size(e_x));
+        ReductionVector<int64_t> rv(lattice.size(e_x));
 
         onsites(ALL) {
-            rv[X.x()] += (lf[X] == X.x());
+            rv[X.x()] += lf[X];
         }
 
         long s = 0;
         for (int x = 0; x < rv.size(); x++) {
-            s += abs(rv[x] - (lattice.volume() / lattice.size(e_x)));
+            s += abs(rv[x] - x * (lattice.volume() / lattice.size(e_x)));
         }
 
-        report_pass("ReductionVector<long>, sum " + hila::prettyprint(s), s, 1e-15);
+        report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
     }
 
     {
