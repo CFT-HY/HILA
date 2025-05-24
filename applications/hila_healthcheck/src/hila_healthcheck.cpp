@@ -128,23 +128,27 @@ void check_reductions() {
     }
 
     {
-        Field<SU<3, double>> mf;
+
+        constexpr int N = 3;
+
+        Field<SU<N, double>> mf;
         mf = 1;
         // onsites(ALL) mf[X] = (mf[X] + mf[X])*0.5;
 
-        ReductionVector<SU<3, double>> rmf(lattice.size(e_x));
+        ReductionVector<SU<N, double>> rmf(lattice.size(e_x));
 
         onsites(ALL) {
-            //    rmf[X.x()] += (mf[X] + mf[X])*0.5;
             rmf[X.x()] += mf[X];
         }
+
 
         double diff = 0;
         for (int i = 0; i < lattice.size(e_x); i++) {
             diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
         }
 
-        report_pass("SU(3) ReductionVector", diff, 1e-8);
+
+        report_pass("SU(" + std::to_string(N) + ") ReductionVector", diff, 1e-8);
     }
 }
 
