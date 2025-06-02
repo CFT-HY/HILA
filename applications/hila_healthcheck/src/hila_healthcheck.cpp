@@ -129,7 +129,7 @@ void check_reductions() {
 
     {
 
-        constexpr int N = 3;
+        constexpr int N = 5;
 
         Field<SU<N, double>> mf;
         mf = 1;

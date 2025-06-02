@@ -143,15 +143,26 @@
 #define GPU_VECTOR_REDUCTION_THREAD_BLOCKS 32
 #endif
 
+
+/// GPU_VECTOR_REDUCTION_THREADS defines max threads per block for block reduction
+/// ReductionVector uses cub::blockreduce with this many threads per block. Too large
+/// value can exhaust the resources on GPUs, which will give runtime error. 
+
+#ifndef GPU_BLOCK_REDUCTION_THREADS
+#define GPU_BLOCK_REDUCTION_THREADS 128
+#endif
+
+
 /// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is an optimization parameter. If reduction size
 /// is large than threshold, we use "single pass" kernel; if smaller, hierarchial
 /// kernel launch. Both use the same amount of memory. The algorithms become
 /// correspondingly better at extreme ends, but around 500-1000 there is
 /// a slow changeover, depending on computing hardware. 
+/// NOT USED IN PRESENT ReductionVector implementation
 
-#ifndef GPU_VECTOR_REDUCTION_SIZE_THRESHOLD
-#define GPU_VECTOR_REDUCTION_SIZE_THRESHOLD 700
-#endif
+// #ifndef GPU_VECTOR_REDUCTION_SIZE_THRESHOLD
+// #define GPU_VECTOR_REDUCTION_SIZE_THRESHOLD 700
+// #endif
 
 
 /// GPUFFT_BATCH_SIZE
