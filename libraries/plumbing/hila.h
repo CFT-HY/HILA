@@ -12,6 +12,7 @@
 #include "datatypes/sun_matrix.h"
 #include "datatypes/u1.h"
 #include "datatypes/su2.h"
+#include "datatypes/extended.h"
 
 #include "plumbing/globals.h"
 #include "plumbing/coordinates.h"
