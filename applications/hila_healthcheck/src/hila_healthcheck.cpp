@@ -38,8 +38,11 @@ bool report_pass(std::string message, double eps, double limit) {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Test various functions on fields.
+ * @details Test functions exp (on both real and complex field) and sin. 
+ * 
+ */
 void test_functions() {
 
     Field<double> df = 0;
@@ -55,7 +58,12 @@ void test_functions() {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
-void check_reductions() {
+/**
+ * @brief Test reduction operations on fields
+ * @details Test normal reduction `+=` and ReductionVector on fields with different types such as real, complex, matrix and SU matrix.
+ * 
+ */
+void test_reductions() {
 
 
     // test reductions
@@ -153,9 +161,11 @@ void check_reductions() {
 }
 
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// write something to a location
-
+/**
+ * @brief Test site access
+ * @details Test simple site access by writing and reading to random field site index c.
+ * 
+ */
 void test_site_access() {
 
     Field<Complex<double>> f = 0;
@@ -174,9 +184,11 @@ void test_site_access() {
 }
 
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// test maxloc and minloc operation
-
+/**
+ * @brief Test min and max operations on fields
+ * @details Test min and max operations on fields with different parities.
+ * 
+ */
 void test_minmax() {
 
     CoordinateVector c, loc;
@@ -219,10 +231,11 @@ void test_minmax() {
     }
 }
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// test random number properties
-// rough test, testing spectrum of gaussians
-
+/**
+ * @brief Test Gaussian random field generation
+ * @details Generate a Gaussian random field and check its average and width^2.
+ * 
+ */
 void test_random() {
 
     constexpr int n_loops = 100;
@@ -252,9 +265,11 @@ void test_random() {
 }
 
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// test access to a list of sites
-
+/**
+ * @brief Test setting elements and selecting them
+ * @details Set elements in a field at random coordinates and then select them using SiteSelect
+ * and SiteValueSelect.
+ */
 void test_set_elements_and_select() {
 
     Field<Complex<double>> f = 0;
@@ -346,8 +361,11 @@ void test_set_elements_and_select() {
     onsites(ALL) {}
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Test subvolume operations
+ * 
+ */
 void test_subvolumes() {
 
     bool ok = true;
@@ -358,6 +376,7 @@ void test_subvolumes() {
         if (si.coordinates() != c)
             ok = false;
     }
+
 
     report_pass("SiteIndex", ok == false, 1e-2);
 
@@ -426,10 +445,12 @@ void test_subvolumes() {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-void fft_test() {
+/**
+ * @brief Test FFT
+ * @details Test forward and inverse FFT on fields. 
+ * 
+ */
+void test_fft() {
 
 
     using T = Complex<double>;
@@ -539,9 +560,12 @@ void fft_test() {
     report_pass("Norm of binned FFT = " + hila::prettyprint(s), (s - np) / np, 1e-10);
 }
 
-//---------------------------------------------------------------------------
-
-void spectraldensity_test() {
+/**
+ * @brief Test spectral density
+ * @details Test spectral density extraction from field.
+ * 
+ */
+void test_spectraldensity() {
 
 
     // test spectral density for single waves
@@ -613,8 +637,12 @@ void test_field_slices() {
     }
 }
 
-//--------------------------------------------------------------------------------
 
+/**
+ * @brief Test matrix operations
+ * @details Test matrix multiplication and addition, as well as operations with imaginary operator.
+ * 
+ */
 void test_matrix_operations() {
 
     Field<Matrix<3, 2, Complex<double>>> mf;
@@ -637,8 +665,11 @@ void test_matrix_operations() {
 }
 
 
-//--------------------------------------------------------------------------------
 
+/**
+ * @brief Test matrix decomposition
+ * @details Test matrix decompositions such as eigen decomposition and singular value decomposition (SVD).
+ */
 void test_matrix_algebra() {
 
     using myMatrix = SquareMatrix<4, Complex<double>>;
@@ -693,6 +724,27 @@ void test_matrix_algebra() {
                 max_delta, 1e-10);
 }
 
+/**
+ * @brief Test extended type
+ * @details Test extended type for large fields where error of reduction is significant.
+ * 
+ */
+void test_extended() {
+    Field<double> g;
+    //g = std::numeric_limits<double>::epsilon();
+    g[ALL] = hila::random() * 1e10; // make it large enough to have significant error in reduction
+    Extended<double> ext_type;
+    double normal_type;
+    onsites(ALL) {
+        ext_type += g[X];
+        normal_type += g[X];
+    }
+    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Extended type: " << ext_type.value << " + " << ext_type.compensation
+                << std::endl;
+    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Extended type sum: " << ext_type << std::endl;
+    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Normal type sum: " << normal_type << std::endl;
+    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Difference: " << abs(ext_type - normal_type) << std::endl;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -718,27 +770,17 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////
     // start tests
 
-    check_reductions();
-
-    test_functions();
-
-    test_site_access();
-
-    test_minmax();
-
-    test_random();
-
-    test_set_elements_and_select();
-
-    test_subvolumes();
-
-    test_matrix_operations();
-
-    fft_test();
-
-    spectraldensity_test();
-
-    test_matrix_algebra();
-
+    //test_reductions();
+    //test_functions();
+    //test_site_access();
+    //test_minmax();
+    //test_random();
+    //test_set_elements_and_select();
+    //test_subvolumes();
+    //test_matrix_operations();
+    //test_fft();
+    //test_spectraldensity();
+    //test_matrix_algebra();
+    test_extended();
     hila::finishrun();
 }
