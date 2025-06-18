@@ -39,6 +39,7 @@ typedef void *MPI_Request;
 typedef struct ompi_status_public_t MPI_Status;
 typedef void *MPI_Comm;
 typedef int MPI_Fint;
+typedef int MPI_Aint;
 typedef void *MPI_Errhandler;
 #define MPI_IN_PLACE nullptr
 #define MPI_COMM_WORLD nullptr
@@ -128,5 +129,20 @@ int MPI_Abort(MPI_Comm comm, int errorcode);
 MPI_Fint MPI_Comm_c2f(MPI_Comm comm);
 
 int MPI_Finalize();
+
+int MPI_Get_address(const void *location, MPI_Aint *address);
+
+int MPI_Type_create_struct(int count,
+                           const int array_of_blocklengths[],
+                           const MPI_Aint array_of_displacements[],
+                           const MPI_Datatype array_of_types[],
+                           MPI_Datatype *newtype);
+
+int MPI_Type_commit(MPI_Datatype *datatype);
+
+typedef void MPI_User_function(void *invec, void *inoutvec, int *len, MPI_Datatype *datatype);
+
+int MPI_Op_create(MPI_User_function *user_fn, int commute, MPI_Op *op);
+
 
 #endif

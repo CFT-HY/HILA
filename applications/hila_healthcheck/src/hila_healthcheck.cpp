@@ -726,24 +726,34 @@ void test_matrix_algebra() {
 
 /**
  * @brief Test extended type
- * @details Test extended type for large fields where error of reduction is significant.
+ * @details Test extended type for sums that exibit loss in accuracy with double.
  * 
  */
 void test_extended() {
-    Field<double> g;
-    //g = std::numeric_limits<double>::epsilon();
-    g[ALL] = hila::random() * 1e10; // make it large enough to have significant error in reduction
-    Extended<double> ext_type;
-    double normal_type;
-    onsites(ALL) {
-        ext_type += g[X];
-        normal_type += g[X];
+
+    // Extended type test with T = double
+    {
+        Field<double> g;
+        onsites(EVEN) g[X] = 1e32;
+        onsites(ODD) g[X] = 1; 
+        Extended ext_type = 0;
+        double expected = 1e32* lattice.volume()/2 + 1 *lattice.volume()/2;
+        onsites(ALL) {
+            ext_type += g[X];
+        }
+        auto to_str = [](double x) {
+            std::ostringstream oss;
+            oss.precision(std::numeric_limits<double>::max_digits10);
+            oss << x;
+            return oss.str();
+        };
+
+        report_pass("Extended type - expected: " +
+                            to_str(ext_type.value) + " + " +
+                            to_str(ext_type.compensation) + " - " +
+                            to_str(expected),
+                abs(ext_type - expected), 1e-10);
     }
-    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Extended type: " << ext_type.value << " + " << ext_type.compensation
-                << std::endl;
-    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Extended type sum: " << ext_type << std::endl;
-    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Normal type sum: " << normal_type << std::endl;
-    hila::out0 << std::setprecision(std::numeric_limits<double>::max_digits10) << "Difference: " << abs(ext_type - normal_type) << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

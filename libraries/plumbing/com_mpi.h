@@ -5,6 +5,9 @@
 
 #include "plumbing/lattice.h"
 
+#include "datatypes/extended.h"
+
+
 // let us house the partitions-struct here
 namespace hila {
 class partitions_struct {
@@ -337,7 +340,6 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     std::vector<T> recv_data(send_count);
     MPI_Datatype dtype;
     dtype = get_MPI_number_type<T>();
-
     reduction_timer.start();
     if (allreduce) {
         MPI_Allreduce((void *)value, (void *)recv_data.data(),
@@ -410,13 +412,24 @@ bool get_allreduce();
 void hila_reduce_double_setup(double *d, int n);
 void hila_reduce_float_setup(float *d, int n);
 void hila_reduce_sums();
+void reduce_node_sum_extended(Extended *value, int send_count, bool allreduce = true);
+
+extern MPI_Datatype MPI_Extended_type;
+extern MPI_Op MPI_Extended_sum_op;
+
+void create_extended_MPI_type();
+void create_extended_MPI_operation();
+void extended_sum_op(void *in, void *inout, int *len, MPI_Datatype *datatype);
+
 
 
 template <typename T>
 void hila_reduce_sum_setup(T *value) {
 
     using b_t = hila::arithmetic_type<T>;
-    if (std::is_same<b_t, double>::value) {
+    if constexpr (std::is_same<T, Extended>::value) {
+        reduce_node_sum_extended(value, 1, hila::get_allreduce());
+    } else if (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
     } else if (std::is_same<b_t, float>::value) {
         hila_reduce_float_setup((float *)value, sizeof(T) / sizeof(float));
@@ -424,6 +437,5 @@ void hila_reduce_sum_setup(T *value) {
         hila::reduce_node_sum(value, 1, hila::get_allreduce());
     }
 }
-
 
 #endif // COMM_MPI_H
