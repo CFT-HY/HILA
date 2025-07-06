@@ -13,7 +13,7 @@ on:
 jobs:
   build_release:
     if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
-    name: build_nightly_release
+    name: build_v0.0.2_release
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -30,10 +30,10 @@ jobs:
           cd ..
           ls -l --block-size=M ./singularity/hilapp.sif
       #Publish singularity container
-      - name: Update nightly release
+      - name: Update v0.0.2 release
         uses: pyTooling/Actions/releaser@main
         with:
-          tag: Nightly
+          tag: V0.0.2
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ./singularity/hilapp.sif
