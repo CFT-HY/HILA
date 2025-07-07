@@ -1,9 +1,17 @@
 
 # Following line(s) are printed with "make help".  Use columns 8 and 30
 #%     make [z_link_model]        - build z_link_model program
+#% suN_gauge_gf make options 
+#%     PARITY=<K>              - K=0: use 4D parity for staggering; K=1: use spatial parity for staggering
+#&                             and overraxation updates. (default: -1 (no open boundary))
+
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
 HILA_DIR := ../..
+
+# Number of colors
+PARITY := 0
+
 
 ifndef ARCH
 ARCH := vanilla
@@ -19,7 +27,7 @@ include $(HILA_DIR)/libraries/main.mk
 #HILAPP_OPTS += -comment-pragmas
 HILAPP_OPTS += -check-init
 
-APP_OPTS += -DNDIM=4
+APP_OPTS += -DNDIM=4 -DPARITY=${PARITY}
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
