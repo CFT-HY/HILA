@@ -60,51 +60,96 @@ void check_reductions() {
 
     // test reductions
 
-    Field<Complex<double>> f;
-    f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
+    {
+        Field<Complex<double>> f;
+        f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
 
-    Complex<double> sum = 0;
-    onsites(ALL) sum += f[X];
+        Complex<double> sum = 0;
+        onsites(ALL) sum += f[X];
 
-    sum /= lattice.volume();
-    report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
+        sum /= lattice.volume();
+        report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
 
-    ReductionVector<Complex<double>> rv(lattice.size(e_x));
+        ReductionVector<Complex<double>> rv(lattice.size(e_x));
 
-    onsites(ALL) {
-        rv[X.coordinate(e_x)] += f[X];
+        onsites(ALL) {
+            rv[X.coordinate(e_x)] += f[X];
+        }
+
+        sum = 0;
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            sum += expi(2 * M_PI * i / lattice.size(e_x)) -
+                   rv[i] / (lattice.volume() / lattice.size(e_x));
+        }
+        report_pass("Complex ReductionVector, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+        // do a combined reduction too
+        sum = 0;
+        rv = 0;
+        onsites(ALL) {
+            rv[X.x()] += f[X];
+            rv[0] += 1;
+            rv[1] += -0.01;
+
+            sum += f[X];
+        }
+
+        sum /= lattice.volume();
+        Complex<double> sum2 = 0;
+        rv[0] -= lattice.volume();
+        rv[1] += 0.01 * lattice.volume();
+
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            sum2 += expi(2 * M_PI * i / lattice.size(e_x)) -
+                    rv[i] / (lattice.volume() / lattice.size(e_x));
+        }
+        report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
+                        hila::prettyprint(sum2),
+                    abs(sum) + abs(sum2), 1e-4);
     }
 
-    sum = 0;
-    for (int i = 0; i < lattice.size(e_x); i++) {
-        sum +=
-            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
+    {
+        // reductionvector with long
+        Field<int64_t> lf;
+        lf[ALL] = X.x();
+
+        ReductionVector<int64_t> rv(lattice.size(e_x));
+
+        onsites(ALL) {
+            rv[X.x()] += lf[X];
+        }
+
+        long s = 0;
+        for (int x = 0; x < rv.size(); x++) {
+            s += abs(rv[x] - x * (lattice.volume() / lattice.size(e_x)));
+        }
+
+        report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
     }
-    report_pass("Vector reduction, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
 
-    // do a combined reduction too
-    sum = 0;
-    rv = 0;
-    onsites(ALL) {
-        rv[X.x()] += f[X];
-        rv[0] += 1;
-        rv[1] += -0.01;
+    {
 
-        sum += f[X];
+        constexpr int N = 3;
+
+        Field<SU<N, double>> mf;
+        mf = 1;
+        // onsites(ALL) mf[X] = (mf[X] + mf[X])*0.5;
+
+        ReductionVector<SU<N, double>> rmf(lattice.size(e_x));
+
+        onsites(ALL) {
+            rmf[X.x()] += mf[X];
+        }
+
+
+        double diff = 0;
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
+        }
+
+
+        report_pass("SU(" + std::to_string(N) + ") ReductionVector", diff, 1e-8);
     }
-
-    sum /= lattice.volume();
-    Complex<double> sum2 = 0;
-    rv[0] -= lattice.volume();
-    rv[1] += 0.01 * lattice.volume();
-
-    for (int i = 0; i < lattice.size(e_x); i++) {
-        sum2 +=
-            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
-    }
-    report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
-                    hila::prettyprint(sum2),
-                abs(sum) + abs(sum2), 1e-4);
 }
 
 
@@ -149,7 +194,7 @@ void test_minmax() {
         if (par != ALL)
             n[opp_parity(par)] = 3;
 
-        auto v = n.max(par,loc);
+        auto v = n.max(par, loc);
         report_pass("Maxloc parity " + hila::prettyprint(par) + " is " +
                         hila::prettyprint(loc.transpose()),
                     (c - loc).norm(), 1e-8);
@@ -165,7 +210,7 @@ void test_minmax() {
         if (par != ALL)
             n[opp_parity(par)] = -3;
 
-        v = n.min(par,loc);
+        v = n.min(par, loc);
         report_pass("Minloc parity " + hila::prettyprint(par) + " is " +
                         hila::prettyprint(loc.transpose()),
                     (c - loc).norm(), 1e-8);
