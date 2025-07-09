@@ -12,8 +12,7 @@ class partitions_struct {
     unsigned _number, _mylattice;
     bool _sync;
 
-    public: 
-
+  public:
     unsigned number() const {
         return _number;
     }
@@ -196,25 +195,27 @@ void broadcast(std::vector<T> &list, int rank = 0) {
 
     broadcast_timer.start();
 
-    int size = list.size();
-    MPI_Bcast(&size, sizeof(int), MPI_BYTE, rank, lattice.mpi_comm_lat);
+    size_t size = list.size();
+    MPI_Bcast(&size, sizeof(size_t), MPI_BYTE, rank, lattice.mpi_comm_lat);
     if (hila::myrank() != rank) {
         list.resize(size);
     }
 
-    // move vectors directly to the storage
-    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice.mpi_comm_lat);
+    if (size > 0) {
+        // move vectors directly to the storage
+        MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice.mpi_comm_lat);
+    }
 
     broadcast_timer.stop();
 }
 
 /// And broadcast for std::array
-template <typename T,int n>
-void broadcast(std::array<T,n> &arr, int rank = 0) {
+template <typename T, int n>
+void broadcast(std::array<T, n> &arr, int rank = 0) {
 
     static_assert(std::is_trivial<T>::value, "broadcast(std::array<T>) must have trivial T");
 
-    if (hila::check_input)
+    if (hila::check_input || n <= 0)
         return;
 
     broadcast_timer.start();
@@ -224,8 +225,6 @@ void broadcast(std::array<T,n> &arr, int rank = 0) {
 
     broadcast_timer.stop();
 }
-
-
 
 
 ///
@@ -244,7 +243,7 @@ void broadcast(T *var, int rank = 0) {
 template <typename T>
 void broadcast_array(T *var, int n, int rank = 0) {
 
-    if (hila::check_input)
+    if (hila::check_input || n <= 0)
         return;
 
     broadcast_timer.start();
@@ -304,7 +303,9 @@ void send_to(int to_rank, const std::vector<T> &data) {
     size_t s = data.size();
     MPI_Send(&s, sizeof(size_t), MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
 
-    MPI_Send(data.data(), sizeof(T) * s, MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+    if (s > 0)
+        MPI_Send(data.data(), sizeof(T) * s, MPI_BYTE, to_rank, hila::myrank(),
+                 lattice.mpi_comm_lat);
     send_timer.stop();
 }
 
@@ -319,8 +320,9 @@ void receive_from(int from_rank, std::vector<T> &data) {
              MPI_STATUS_IGNORE);
     data.resize(s);
 
-    MPI_Recv(data.data(), sizeof(T) * s, MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
-             MPI_STATUS_IGNORE);
+    if (s > 0)
+        MPI_Recv(data.data(), sizeof(T) * s, MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
+                 MPI_STATUS_IGNORE);
     send_timer.stop();
 }
 
@@ -331,7 +333,7 @@ void receive_from(int from_rank, std::vector<T> &data) {
 template <typename T>
 void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
 
-    if (hila::check_input)
+    if (hila::check_input || send_count == 0)
         return;
 
     std::vector<T> recv_data(send_count);
