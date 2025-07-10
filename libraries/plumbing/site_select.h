@@ -4,26 +4,15 @@
 // We insert the GPU code in the same file too
 // hilapp should not read in .cuh, because it does not understand it
 
-//#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
-#if !defined(HILAPP)
-#if defined(CUDA)
-#include <cub/cub.cuh>
-namespace gpucub = cub;
-#endif
-
-#if defined(HIP)
-#include <hipcub/hipcub.hpp>
-namespace gpucub = hipcub;
-#endif
-#endif // HILAPP
 
 #include "hila.h"
 
+#include "gpucub.h"
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Site selection: special vector to accumulate chosen sites or sites + variable
 ///
-/// SiteSelect<> s;
+/// SiteSelect s;
 /// SiteValueSelect<T> sv;
 ///
 /// To be used within site loops as
@@ -130,6 +119,10 @@ class SiteSelect {
 
     // Don't even implement assignments
 
+    /// @brief  std::move SiteIndex vector of selected sites, invalidating this variable
+    std::vector<SiteIndex> move_sites() {
+        return std::move(sites);
+    }
 
     void join() {
         if (!joined) {
