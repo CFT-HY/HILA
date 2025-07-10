@@ -1,8 +1,8 @@
 # This is a parameter file for z_gauge
 
 lattice size           12,12,12,12
-beta                   0.85
-number of trajectories 3500
+beta                   0.015
+number of trajectories 1000
 updates in trajectory  100
 plaq shift updates     0
 thermalization trajs   1000
