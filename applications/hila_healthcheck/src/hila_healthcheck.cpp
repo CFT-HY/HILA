@@ -731,6 +731,14 @@ void test_clusters() {
         double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
         report_pass("Cluster test: cluster types ", types, 1e-10);
 
+#if NDIM == 3
+        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) + abs(cl.area(1) - 4*lattice.size(e_y))
+            + abs(cl.area(2) - 2*(1*3 + 1*3 + 3*3));
+
+        report_pass("Cluster test: cluster area ", area, 1e-10);
+
+#endif
+
     }
 
 #endif

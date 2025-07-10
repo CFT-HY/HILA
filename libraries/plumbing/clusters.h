@@ -53,28 +53,28 @@
  *      cluster.find(cltype);
  *
  * Note: initalization is a relatively expensive operation
- * 
+ *
  * size_t hila::clusters::number() - return the total number of clusters.
  * Example:
  *      hila::out0 << "Found " << cluster.number() << " clusters\n";
- * Note: result valid only in MPI rank == 0, other ranks return zero
  *
- * size_t hila::clusters::size(size_t cl_number) - return the size of cluster number cl_number
+ * int64_t hila::clusters::size(size_t cl_number) - return the size of cluster number cl_number
  * Example:
  *      hila::out0 << "Size of cluster 0 is " << cluster.size(0) << '\n';
- * Note: result valid only in MPI rank 0, other ranks return zero
  *
  * uint8_t hila::clusters::type(size_t cl_number) - return the cluster type
  *      hila::out0 << "Type of cluster 0 is " << cluster.size(0) << '\n';
  *
- * std::vector<SiteIndex> hila::clusters::sites(size_t cl_number) - return the sites of cluster cl_number
- * Example: print the coordinates of cluster number 0:
- *      auto clsites = cluster.sites(0);
+ * std::vector<SiteIndex> hila::clusters::sites(size_t cl_number) - return the sites of cluster
+ * cl_number Example: print the coordinates of cluster number 0: auto clsites = cluster.sites(0);
  *      for (auto & r : clsites) {
  *          hila::out0 << r.coordinates() << '\n;
  *      }
  * Note: .sites() must be called by all MPI ranks, otherwise deadlock occurs
- * 
+ *
+ * int64_t hila::clusters::area(size_t cl_number) - return the area of the cluster
+ * Area is defined by the number of links where one end belongs to the cluster, another does not.
+ * Note: .area() must be called by all MPI ranks
  */
 
 
@@ -102,7 +102,8 @@ class clusters {
 
   private:
     struct cl_struct {
-        uint64_t label, size;
+        uint64_t label;
+        int64_t size, area;
     };
 
     // clist vector contains information for all clusters. NOTE: the
@@ -114,6 +115,14 @@ class clusters {
     Field<uint64_t> labels;
 
     inline void make_local_clist();
+
+    void assert_cl_index(size_t i) const {
+        if (i >= clist.size()) {
+            hila::out0 << "Too large cluster index " << i << ", there are only " << clist.size()
+                       << " clusters\n";
+            exit(0);
+        }
+    }
 
 
   public:
@@ -136,39 +145,62 @@ class clusters {
     }
 
     /// @brief number of clusters found
-    /// note: valid output only on rank 0
+
     size_t number() const {
-        if (hila::myrank() > 0)
-            return 0;
         return clist.size();
     }
 
     /// @brief return size of cluster i
     /// @param i cluster number
-    /// note: valid output only on rank 0
-    size_t size(size_t i) const {
-        if (hila::myrank() > 9)
-            return 0;
-        return clist.at(i).size;
+
+    int64_t size(size_t i) const {
+        assert_cl_index(i);
+        return clist[i].size;
     }
 
     /// @brief return type of the cluster
     /// @param i cluster number
-    /// note: valid output only on rank 0
+
     uint8_t type(size_t i) const {
-        if (hila::myrank() > 0)
-            return 0;
-        return get_cl_label_type(clist.at(i).label);
+        assert_cl_index(i);
+        return get_cl_label_type(clist[i].label);
     }
 
     /// @brief return the label of cluster i
     /// @param i cluster number
     /// Each cluster has unique 64-bit label
-    /// note: output is valid only on rank 0
+
     uint64_t label(size_t i) const {
-        if (hila::myrank() > 0)
-            return background;
-        return clist.at(i).label;
+        assert_cl_index(i);
+        return clist[i].label;
+    }
+
+
+    /// @brief returns the area of the cluster number i
+    /// @param i cluster number
+    /// First time call involves reduction, after that value buffered
+    /// Must be called from all MPI ranks
+
+    int64_t area(size_t i) {
+        assert_cl_index(i);
+        // check if this is already computed
+        if (clist[i].area > 0)
+            return clist[i].area;
+
+        uint64_t lbl = label(i);
+        uint64_t cl_area = 0;
+
+        onsites(ALL) {
+            if (labels[X] == lbl) {
+                for (Direction d = e_x; d < NDIRS; ++d) {
+                    if (labels[X + d] != lbl)
+                        cl_area += 1;
+                }
+            }
+        }
+
+        clist[i].area = cl_area;
+        return cl_area;
     }
 
     /// @brief returns std::vector of SiteIndex for cluster number i
@@ -178,7 +210,7 @@ class clusters {
 
     std::vector<SiteIndex> sites(size_t i) const {
         SiteSelect sites;
-        uint64_t la = hila::broadcast(label(i));
+        uint64_t la = label(i);
 
         onsites(ALL) {
             if (labels[X] == la)
@@ -187,6 +219,7 @@ class clusters {
         hila::out << "Node " << hila::myrank() << " got " << sites.size() << " sites\n";
         return sites.move_sites();
     }
+
 
     /// @brief make only the Field representation of cluster labels, without counting the clusters
     /// @param type - input field classifying the sites
@@ -290,6 +323,9 @@ class clusters {
 
         hila::barrier();
 
+        // deliver clist to all ranks after all
+        hila::broadcast(clist);
+
     } // void classify()
 
 
@@ -319,9 +355,10 @@ inline void clusters::make_local_clist() {
 
     d_temp_storage = nullptr;
     temp_storage_bytes = 0;
-    uint64_t *d_labels, *d_sizes, *d_num_clust;
+    uint64_t *d_labels;
+    int64_t *d_sizes, *d_num_clust;
     gpuMalloc(&d_labels, lattice.mynode.volume() * sizeof(uint64_t));
-    gpuMalloc(&d_sizes, (lattice.mynode.volume() + 1) * sizeof(uint64_t));
+    gpuMalloc(&d_sizes, (lattice.mynode.volume() + 1) * sizeof(int64_t));
     d_num_clust = d_sizes + lattice.mynode.volume(); // the last element
 
     GPU_CHECK(gpucub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, buf,
@@ -338,14 +375,14 @@ inline void clusters::make_local_clist() {
 
     gpuFree(d_temp_storage);
 
-    uint64_t nclusters;
-    gpuMemcpy(&nclusters, d_num_clust, sizeof(uint64_t), gpuMemcpyDeviceToHost);
+    int64_t nclusters;
+    gpuMemcpy(&nclusters, d_num_clust, sizeof(int64_t), gpuMemcpyDeviceToHost);
 
     std::vector<uint64_t> labels(nclusters);
-    std::vector<uint64_t> sizes(nclusters);
+    std::vector<int64_t> sizes(nclusters);
     if (nclusters > 0) {
         gpuMemcpy(labels.data(), d_labels, sizeof(uint64_t) * nclusters, gpuMemcpyDeviceToHost);
-        gpuMemcpy(sizes.data(), d_sizes, sizeof(uint64_t) * nclusters, gpuMemcpyDeviceToHost);
+        gpuMemcpy(sizes.data(), d_sizes, sizeof(int64_t) * nclusters, gpuMemcpyDeviceToHost);
     }
 
     gpuFree(d_sizes);
@@ -353,7 +390,7 @@ inline void clusters::make_local_clist() {
 
     clist.resize(nclusters);
     for (int i = 0; i < nclusters; i++) {
-        clist[i] = {labels[i], sizes[i]};
+        clist[i] = {labels[i], sizes[i], 0};
     }
     if (clist.size() > 0 && get_cl_label_type(clist.back().label) == hila::clusters::background)
         clist.pop_back();
@@ -368,13 +405,13 @@ inline void clusters::make_local_clist() {
     auto *buf = lb.field_buffer();
     std::sort(buf, buf + lattice.mynode.volume());
     // background labels are last after sort, stop handling when these are met
-    size_t i = 0;
+    int64_t i = 0;
     while (i < lattice.mynode.volume() && get_cl_label_type(buf[i]) != background) {
-        size_t istart = i;
+        int64_t istart = i;
         auto label = buf[i];
         for (++i; i < lattice.mynode.volume() && buf[i] == label; ++i)
             ;
-        clist.push_back({label, i - istart});
+        clist.push_back({label, i - istart, 0});
     }
 }
 
