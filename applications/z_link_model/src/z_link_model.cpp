@@ -288,23 +288,12 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
             update(H, sw, p);
         }
     }
-    // value of the action is invariant under direction-dependent global Z-shifts;
-    // to prevent the values from diverging, we shift them back to zero:
-    Reduction<double> totHpd;
-    totHpd.allreduce(true).delayed(true);
-    double tdHpd;
-    T dHpd;
+    // value of the action is invariant under direction-dependent global Z-shifts.
+    // to prevent the values from diverging, we shift them so that the link-variables
+    // emerging in positive directions from the site at the origin are zero:
+    CoordinateVector v = {0, 0, 0, 0};
     foralldir(d1) {
-        totHpd = 0.0;
-        onsites(ALL) {
-            totHpd += (double)H[d1][X];
-        }
-        tdHpd = totHpd.value() / lattice.volume();
-        if(tdHpd>0) {
-            dHpd = -(T)tdHpd;
-        } else {
-            dHpd = (T)abs(tdHpd);
-        }
+        auto dHpd = -H[d1][v];
         if(dHpd!=0) {
             onsites(ALL) {
                 H[d1][X] += dHpd;
@@ -696,8 +685,8 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
 
     sw_t<T> plaq;
     plaq_field(H, plaq);
-    double plaq_per_par_pl[2][NDIM][NDIM];
 
+    double plaq_per_par_pl[2][NDIM][NDIM];
     measure_splaq_per_par_and_plane(plaq, sw, plaq_per_par_pl);
     hila::out0 << "SPLAQPPP   ";
     for (int par = 0; par < 2; ++par) {
@@ -719,7 +708,12 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    measure_plaq_per_par_and_plane(plaq, plaq_per_par_pl);
+    sw_t<fT> totplaq;
+    foralldir(d1) foralldir(d2) {
+        onsites(ALL) totplaq[d1][d2][X] = (fT)plaq[d1][d2][X] + sw[d1][d2][X];
+    }
+
+    measure_plaq_per_par_and_plane(totplaq, plaq_per_par_pl);
     hila::out0 << "PLAQPPP    ";
     for (int par = 0; par < 2; ++par) {
         for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -742,14 +736,9 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    sw_t<fT> totplaq;
-    foralldir(d1) foralldir(d2) {
-        onsites(ALL) totplaq[d1][d2][X] = plaq[d1][d2][X] + sw[d1][d2][X];
-    }
-
     double m_per_dir[NDIM];
     double m_per_par_dir[2][NDIM];
-    measure_monop_dens(plaq, m_per_dir, m_per_par_dir);
+    measure_monop_dens(totplaq, m_per_dir, m_per_par_dir);
     hila::out0 << "MONPD      ";
     for (int dir1 = 0; dir1 < NDIM; ++dir1) {
         hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
