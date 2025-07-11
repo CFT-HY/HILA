@@ -288,6 +288,7 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
             update(H, sw, p);
         }
     }
+
     // value of the action is invariant under direction-dependent global Z-shifts.
     // to prevent the values from diverging, we shift them so that the link-variables
     // emerging in positive directions from the site at the origin are zero:
