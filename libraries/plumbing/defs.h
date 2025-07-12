@@ -35,7 +35,7 @@
 
 
 #ifdef HILAPP
-// The compiler is hilapp
+// Define these to nothing in hilapp
 #define __device__
 #define __host__
 #define __global__
@@ -130,7 +130,9 @@ void error(const char *msg);
 int myrank();
 /// how many nodes there are
 int number_of_nodes();
-/// synchronize mpi
+/// sync MPI 
+void barrier();  
+/// synchronize mpi + gpu
 void synchronize();
 void synchronize_partitions();
 
