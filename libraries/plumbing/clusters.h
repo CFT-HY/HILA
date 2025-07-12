@@ -82,7 +82,8 @@ namespace hila {
 
 #define CLUSTER_BACKGROUND_ 0xFF
 
-inline uint64_t set_cl_label(const CoordinateVector &cv, const uint8_t type) {
+template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
+inline uint64_t set_cl_label(const CoordinateVector &cv, const inttype type) {
     uint64_t r;
     // we'll give the same label for all background sites
     if (type == CLUSTER_BACKGROUND_)
@@ -132,14 +133,17 @@ class clusters {
 
     clusters() = default;
     ~clusters() = default;
-    clusters(const Field<uint8_t> &type) {
+
+    template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
+    clusters(const Field<inttype> &type) {
         find(type);
     }
 
     /// @brief find nearest-neighbour -connected clusters which have the same type
     /// @param type field which contains the type of the site, possible values 0-254.
     /// special value hila::clusters::background indicates site does not belong to any cluster
-    void find(const Field<uint8_t> &type) {
+    template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
+    void find(const Field<inttype> &type) {
         make_labels(type);
         classify();
     }
@@ -225,7 +229,8 @@ class clusters {
     /// @param type - input field classifying the sites
     /// @return a const reference to label Field
     /// @details Usually this call is not needed, use hila::clusters::find() or constructor
-    void make_labels(const Field<uint8_t> &type) {
+    template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
+    void make_labels(const Field<inttype> &type) {
 
         // mark every site with site index on 54 low, leaving 8 bits at the top for the type
         labels[ALL] = set_cl_label(X.coordinates(), type[X]);
