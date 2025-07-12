@@ -8,37 +8,33 @@ using ftype = double;
 
 using mygroup = int;
 
-#if PARITY==0
+#ifndef PLAQ_SHIFT
+#define PLAQ_SHIFT 1
+#endif
 
-// parity of x
+#ifndef PARITY
+#define PARITY 1
+#endif
+
 ::Parity uparity(const CoordinateVector &x) {
     int s = 0;
+#if PARITY == 0
+    // parity of x
     for (Direction d = e_x; d < NDIM; ++d) {
         s += x.e(d);
     }
-    if (s % 2 == 0) {
-        return Parity::even;
-    } else {
-        return Parity::odd;
-    }
-}
-
 #else
-
-// parity of spatial part of coordinate of x
-::Parity uparity(const CoordinateVector &x) {
-    int s = 0;
+    // parity of spatial part of x
     for (Direction d = e_x; d < NDIM - 1; ++d) {
         s += x.e(d);
     }
+#endif
     if (s % 2 == 0) {
         return Parity::even;
     } else {
         return Parity::odd;
     }
 }
-
-#endif
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -912,7 +908,7 @@ int main(int argc, char **argv) {
     // .get() -method can read many different input types,
     // see file "input.h" for documentation
 
-    hila::out0 << "Z link theory with plaquette shift field\n";
+    hila::out0 << "Z-link theory with plaquette shift field\n";
 
     hila::out0 << "Using floating point epsilon: " << fp<ftype>::epsilon << "\n";
 
@@ -920,6 +916,14 @@ int main(int argc, char **argv) {
     hila::out0 << "Using full 4D coordiantes for staggering\n";
 #else
     hila::out0 << "Using spatial 3D coordiantes for staggering\n";
+#endif
+
+#if PLAQ_SHIFT == 1
+    hila::out0 << "Using site-parity-dependent plaquette shifts on spatial plaquettes\n";
+#elif PLAQ_SHIFT == 2
+    hila::out0 << "Using site-parity-dependent plaquette shifts on temporal plaquettes\n";
+#else
+    hila::out0 << "All plaquette shifts set to zero\n";
 #endif
 
     parameters p;
@@ -965,6 +969,7 @@ int main(int argc, char **argv) {
     foralldir(d1) foralldir(d2) {
         onsites(ALL) sw[d1][d2][X] = 0;
     }
+#if PLAQ_SHIFT==1
     for (int i = 0; i < NDIM - 1; ++i) {
         Direction d1 = Direction((1 + i) % (NDIM - 1));
         Direction d2 = Direction((2 + i) % (NDIM - 1));
@@ -977,42 +982,20 @@ int main(int argc, char **argv) {
             sw[d2][d1][X] = -sw[d1][d2][X];
         }
     }
-
-    /*
-    foralldir(d1) {
-        foralldir(d2) if(d2>=d1) {
-            onsites(ALL) {
-                if(d1 == d2) {
-                    sw[d1][d2][X] = 0;
-                } else {
-                    if(d2==Direction::e_t) {
-                        sw[d1][d2][X] = 0.5;
-                        if (uparity(X.coordinates()) == Parity::odd) {
-                            sw[d1][d2][X] = -sw[d1][d2][X];
-                        }
-                    } else {
-                        sw[d1][d2][X] = 0;
-                    }
-
-                    
-                    if (0) {
-                        if (X.parity() == Parity::odd) {
-                            sw[d1][d2][X] = -sw[d1][d2][X];
-                        }
-                        if(1) {
-                            if (((int)d1+(int)d2) % 2 == 1) {
-                                sw[d1][d2][X] = -sw[d1][d2][X];
-                            }
-                        }
-                    }
-                    
-
-                    sw[d2][d1][X] = -sw[d1][d2][X];
-                }
+#elif PLAQ_SHIFT==2
+    Direction d4 = Direction::e_t;
+    for (int i = 0; i < NDIM - 1; ++i) {
+        Direction d1 = Direction(i);
+        onsites(ALL) {
+            if (uparity(X.coordinates()) == Parity::even) {
+                sw[d1][d4][X] = 0.5;
+            } else {
+                sw[d1][d4][X] = -0.5;
             }
+            sw[d4][d1][X] = -sw[d1][d4][X];
         }
     }
-    */
+#endif
 
 
     // use negative trajectory numbers for thermalisation
