@@ -810,7 +810,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     hila::out0 << '\n';
 
     measure_os_per_par_dir(H, h_per_par_dir);
-    hila::out0 << "OSPPPD     ";
+    hila::out0 << "OSPPD     ";
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
             hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
