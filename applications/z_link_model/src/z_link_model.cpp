@@ -793,7 +793,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     auto hsq = measure_hsq(H, hsq_per_par_dir, h_per_par_dir);
     hila::out0 << string_format("HSQ         % 0.6e\n", hsq);
 
-    hila::out0 << "HSQPPPD    ";
+    hila::out0 << "HSQPPD     ";
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
             hila::out0 << string_format(" % 0.6e", hsq_per_par_dir[par][dir]);
@@ -801,7 +801,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    hila::out0 << "HPPPD      ";
+    hila::out0 << "HPPD       ";
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
             hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
