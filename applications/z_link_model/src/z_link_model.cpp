@@ -375,7 +375,7 @@ void measure_os_per_par_dir(const GaugeField<T> &H, double(out_only &os_per_par_
     os_per_p_d.reduce();
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
-            os_per_par_dir[par][dir] = os_per_p_d[par * NDIM + dir] * 2.0 / lattice.volume();
+            os_per_par_dir[par][dir] = os_per_p_d[par * NDIM + dir] / NDIM * 2.0 / lattice.volume();
         }
     }
 }
