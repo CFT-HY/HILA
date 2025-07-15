@@ -354,16 +354,22 @@ void measure_os_per_par_dir(const GaugeField<T> &H, double(out_only &os_per_par_
     Field<double> lavH;
 
     foralldir(d1) {
-        onsites(ALL) lavH[X] = 0;
+        onsites(ALL) lavH[X] = H[d1][X];
         foralldir(d2) if (d2 != d1) {
             onsites(ALL) {
-                lavH[X] += (double)(H[d1][X + d2] + H[d1][X - d2]);
+                lavH[X] += (double)H[d1][X + d2];
             }
         }
-
         onsites(ALL) {
+            lavH[X] /= NDIM;
             int tpar = (int)uparity(X.coordinates()) - 1;
-            os_per_p_d[tpar * NDIM + d1] += pow(H[d1][X] - lavH[X]/6, 2.0);
+            os_per_p_d[tpar * NDIM + d1] += pow(H[d1][X] - lavH[X], 2.0);
+        }
+        foralldir(d2) if (d2 != d1) {
+            onsites(ALL) {
+                int tpar = (int)uparity(X.coordinates()) - 1;
+                os_per_p_d[tpar * NDIM + d1] += pow(H[d1][X + d2] - lavH[X], 2.0);
+            }
         }
     }
     os_per_p_d.reduce();
