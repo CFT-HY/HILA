@@ -37,9 +37,9 @@ APP_OPTS += -DNDIM=4 -DPARITY=${PARITY} -DPLAQ_SHIFT=${PLAQ_SHIFT}
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-z_link_model: build/z_link_model_${ARCH} ; @:
+z_link_model: build/z_link_model_par${PARITY}_ps${PLAQ_SHIFT}_${ARCH} ; @:
 
 # Now the linking step for each target executable
-build/z_link_model_${ARCH}: Makefile build/z_link_model.o $(HILA_OBJECTS) $(HEADERS)
+build/z_link_model_par${PARITY}_ps${PLAQ_SHIFT}_${ARCH}: Makefile build/z_link_model.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/z_link_model.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
 
