@@ -345,15 +345,15 @@ double measure_ns_plaq(const GaugeField<T> &H) {
  * @param plaq PlaquetteField
  * @param os_per_par_dir GaugeField[2][NDIM] os observable per site-parity and direction
  */
-template <typename T>
-void measure_os_per_par_dir(const sw_t<T> &plaq, double(out_only &os_per_par_dir)[2][NDIM]) {
+template <typename T, typename fT>
+void measure_os_per_par_dir(const sw_t<T> &plaq, const sw_t<fT> &sw,
+                            double(out_only &os_per_par_dir)[2][NDIM]) {
     if(NDIM==4) {
         ReductionVector<double> os_per_p_d(2 * NDIM);
         os_per_p_d = 0.0;
         os_per_p_d.allreduce(false).delayed(true);
 
         Field<double> lavM;
-
         for (int i = 0; i < NDIM; ++i) {
             Direction d0 = Direction((0 + i) % NDIM);
             Direction d1 = Direction((1 + i) % NDIM);
@@ -367,19 +367,25 @@ void measure_os_per_par_dir(const sw_t<T> &plaq, double(out_only &os_per_par_dir
             }
             onsites(ALL) {
                 int tpar = (int)uparity(X.coordinates()) - 1;
-                os_per_p_d[tpar * NDIM + d0] += pow(plaq[d1][d2][X + d3] - lavM[X], 2.0);
-                os_per_p_d[tpar * NDIM + d0] += pow(plaq[d1][d2][X] - lavM[X], 2.0);
-                os_per_p_d[tpar * NDIM + d0] += pow(plaq[d2][d3][X + d1] - lavM[X], 2.0);
-                os_per_p_d[tpar * NDIM + d0] += pow(plaq[d2][d3][X] - lavM[X], 2.0);
-                os_per_p_d[tpar * NDIM + d0] += pow(plaq[d3][d1][X + d2] - lavM[X], 2.0);
-                os_per_p_d[tpar * NDIM + d0] += pow(plaq[d3][d1][X] - lavM[X], 2.0);
+                os_per_p_d[tpar * NDIM + d0] +=
+                    (double)sw[d1][d2][X + d3] * pow((double)plaq[d1][d2][X + d3] - lavM[X], 2.0);
+                os_per_p_d[tpar * NDIM + d0] +=
+                    (double)sw[d1][d2][X] * pow((double)plaq[d1][d2][X] - lavM[X], 2.0);
+                os_per_p_d[tpar * NDIM + d0] +=
+                    (double)sw[d2][d3][X + d1] * pow((double)plaq[d2][d3][X + d1] - lavM[X], 2.0);
+                os_per_p_d[tpar * NDIM + d0] +=
+                    (double)sw[d2][d3][X] * pow((double)plaq[d2][d3][X] - lavM[X], 2.0);
+                os_per_p_d[tpar * NDIM + d0] +=
+                    (double)sw[d3][d1][X + d2] * pow((double)plaq[d3][d1][X + d2] - lavM[X], 2.0);
+                os_per_p_d[tpar * NDIM + d0] +=
+                    (double)sw[d3][d1][X] * pow((double)plaq[d3][d1][X] - lavM[X], 2.0);
             }
         }
 
         os_per_p_d.reduce();
         for (int par = 0; par < 2; ++par) {
             for (int dir = 0; dir < NDIM; ++dir) {
-                os_per_par_dir[par][dir] = os_per_p_d[par * NDIM + dir] / (3.0 * lattice.volume());
+                os_per_par_dir[par][dir] = os_per_p_d[par * NDIM + dir] * 2.0 / (3.0 * lattice.volume());
             }
         }
     }
@@ -820,7 +826,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    measure_os_per_par_dir(totplaq, h_per_par_dir);
+    measure_os_per_par_dir(totplaq, sw, h_per_par_dir);
     hila::out0 << "OSPPD      ";
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
