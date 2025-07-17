@@ -676,15 +676,15 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << "\n";
 
-
-        hila::out0 << "LOSPPD    :";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "          p" << par << "d" << dir;
+        if(0) {
+            hila::out0 << "LOSPPD    :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
             }
-        }
-        hila::out0 << "\n";
-
+            hila::out0 << "\n";
+        }   
         if (p.n_ps_update > 0) {
             hila::out0 << "LMONPD    :";
             for (int dir = 0; dir < NDIM; ++dir) {
@@ -700,36 +700,37 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             }
             hila::out0 << "\n";
         }
-
-        hila::out0 << "LDMONPD   :";
-        for (int dir = 0; dir < NDIM; ++dir) {
-            hila::out0 << "            d" << dir;
-        }
-        hila::out0 << "\n";
-
-        hila::out0 << "LDMONPPD  :";
-        for (int par = 0; par < 2; ++par) {
+        if(0) {
+            hila::out0 << "LDMONPD   :";
             for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "          p" << par << "d" << dir;
+                hila::out0 << "            d" << dir;
             }
-        }
-        hila::out0 << "\n";
+            hila::out0 << "\n";
 
-        hila::out0 << "LPDPPD    :";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "          p" << par << "d" << dir;
+            hila::out0 << "LDMONPPD  :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
             }
-        }
-        hila::out0 << "\n";
+            hila::out0 << "\n";
 
-        hila::out0 << "LSDIVPPD  :";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "          p" << par << "d" << dir;
+            hila::out0 << "LPDPPD    :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
             }
+            hila::out0 << "\n";
+
+            hila::out0 << "LSDIVPPD  :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
+            }
+            hila::out0 << "\n";
         }
-        hila::out0 << "\n";
 
         if (p.n_ps_update > 0) {
             hila::out0 << "LSWPLAQPPP:";
@@ -825,16 +826,16 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
     }
     hila::out0 << '\n';
-
-    measure_os_per_par_dir(totplaq, sw, h_per_par_dir);
-    hila::out0 << "OSPPD      ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir = 0; dir < NDIM; ++dir) {
-            hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
+    if(0) {
+        measure_os_per_par_dir(plaq, sw, h_per_par_dir);
+        hila::out0 << "OSPPD      ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir = 0; dir < NDIM; ++dir) {
+                hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
+            }
         }
+        hila::out0 << '\n';
     }
-    hila::out0 << '\n';
-
     double m_per_dir[NDIM];
     double m_per_par_dir[2][NDIM];
 
@@ -855,43 +856,44 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         hila::out0 << '\n';
     }
 
-    sw_t<T> dualplaq;
-    dual_plaq(plaq, dualplaq);
+    if(0) {
+        sw_t<T> dualplaq;
+        dual_plaq(plaq, dualplaq);
 
-    measure_monop_dens(dualplaq, m_per_dir, m_per_par_dir);
-    hila::out0 << "DMONPD     ";
-    for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-        hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
-    }
-    hila::out0 << '\n';
-
-    hila::out0 << "DMONPPD    ";
-    for (int par = 0; par < 2; ++par) {
+        measure_monop_dens(dualplaq, m_per_dir, m_per_par_dir);
+        hila::out0 << "DMONPD     ";
         for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
         }
-    }
-    hila::out0 << '\n';
+        hila::out0 << '\n';
 
-    double d_per_par_dir[2][NDIM];
-    double sdiv_per_par_dir[2][NDIM];
-    measure_sdiv_dens(H, d_per_par_dir, sdiv_per_par_dir);
-    hila::out0 << "PDPPD      ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            hila::out0 << string_format(" % 0.6e", d_per_par_dir[par][dir1]);
+        hila::out0 << "DMONPPD    ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            }
         }
-    }
-    hila::out0 << '\n';
+        hila::out0 << '\n';
 
-    hila::out0 << "SDIVPPD    ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            hila::out0 << string_format(" % 0.6e", sdiv_per_par_dir[par][dir1]);
+        double d_per_par_dir[2][NDIM];
+        double sdiv_per_par_dir[2][NDIM];
+        measure_sdiv_dens(H, d_per_par_dir, sdiv_per_par_dir);
+        hila::out0 << "PDPPD      ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", d_per_par_dir[par][dir1]);
+            }
         }
-    }
-    hila::out0 << '\n';
+        hila::out0 << '\n';
 
+        hila::out0 << "SDIVPPD    ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", sdiv_per_par_dir[par][dir1]);
+            }
+        }
+        hila::out0 << '\n';
+    }
 
     if (p.n_ps_update > 0) {
         measure_plaq_per_par_and_plane(sw, plaq_per_par_pl);
@@ -1027,6 +1029,8 @@ int main(int argc, char **argv) {
     hila::out0 << "Using site-parity-dependent plaquette shifts on spatial plaquettes\n";
 #elif PLAQ_SHIFT == 2
     hila::out0 << "Using site-parity-dependent plaquette shifts on temporal plaquettes\n";
+#elif PLAQ_SHIFT == 3
+    hila::out0 << "Using site-parity-dependent plaquette shifts on temporal and spatial plaquettes\n";
 #else
     hila::out0 << "All plaquette shifts set to zero\n";
 #endif
@@ -1074,7 +1078,7 @@ int main(int argc, char **argv) {
     foralldir(d1) foralldir(d2) {
         onsites(ALL) sw[d1][d2][X] = 0;
     }
-#if PLAQ_SHIFT==1
+#if PLAQ_SHIFT == 1 || PLAQ_SHIFT == 3
     for (int i = 0; i < NDIM - 1; ++i) {
         Direction d1 = Direction((1 + i) % (NDIM - 1));
         Direction d2 = Direction((2 + i) % (NDIM - 1));
@@ -1087,7 +1091,8 @@ int main(int argc, char **argv) {
             sw[d2][d1][X] = -sw[d1][d2][X];
         }
     }
-#elif PLAQ_SHIFT==2
+#endif
+#if PLAQ_SHIFT == 2 || PLAQ_SHIFT == 3
     Direction d4 = Direction::e_t;
     for (int i = 0; i < NDIM - 1; ++i) {
         Direction d1 = Direction(i);
