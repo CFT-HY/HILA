@@ -306,7 +306,8 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 
 template <typename T, typename fT>
 double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
-    // measure the total plaquette action (taking into account the shifts) for the link field H
+    // measure the total plaquette action for the link field H (taking into account the plaquette
+    // shifts)
     Reduction<double> plaq = 0;
     plaq.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -323,7 +324,7 @@ double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
 
 template <typename T>
 double measure_ns_plaq(const GaugeField<T> &H) {
-    // measure the total plaquette action (without shifts) for the link field H
+    // measure the total plaquette action for the link field H (without plaquette shifts)
     Reduction<double> plaq = 0;
     plaq.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -360,8 +361,10 @@ void measure_os_per_par_dir(const GaugeField<T> &H, double(out_only &os_per_par_
                 lavH[X] += (double)H[d1][X + d2];
             }
         }
+    }
+    onsites(ALL) lavH[X] /= NDIM * NDIM;
+    foralldir(d1) {
         onsites(ALL) {
-            lavH[X] /= NDIM;
             int tpar = (int)uparity(X.coordinates()) - 1;
             os_per_p_d[tpar * NDIM + d1] += pow(H[d1][X] - lavH[X], 2.0);
         }
@@ -674,21 +677,21 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << "\n";
 
-
-        hila::out0 << "LMONPD    :";
-        for (int dir = 0; dir < NDIM; ++dir) {
-            hila::out0 << "            d" << dir;
-        }
-        hila::out0 << "\n";
-
-        hila::out0 << "LMONPPD   :";
-        for (int par = 0; par < 2; ++par) {
+        if (p.n_ps_update > 0) {
+            hila::out0 << "LMONPD    :";
             for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "          p" << par << "d" << dir;
+                hila::out0 << "            d" << dir;
             }
-        }
-        hila::out0 << "\n";
+            hila::out0 << "\n";
 
+            hila::out0 << "LMONPPD   :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
+            }
+            hila::out0 << "\n";
+        }
 
         hila::out0 << "LDMONPD   :";
         for (int dir = 0; dir < NDIM; ++dir) {
@@ -720,7 +723,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << "\n";
 
-        if (p.n_ps_update > -1) {
+        if (p.n_ps_update > 0) {
             hila::out0 << "LSWPLAQPPP:";
             for (int par = 0; par < 2; ++par) {
                 for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -816,7 +819,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     hila::out0 << '\n';
 
     measure_os_per_par_dir(H, h_per_par_dir);
-    hila::out0 << "OSPPD     ";
+    hila::out0 << "OSPPD      ";
     for (int par = 0; par < 2; ++par) {
         for (int dir = 0; dir < NDIM; ++dir) {
             hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
@@ -826,21 +829,23 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
 
     double m_per_dir[NDIM];
     double m_per_par_dir[2][NDIM];
-    measure_monop_dens(totplaq, m_per_dir, m_per_par_dir);
-    hila::out0 << "MONPD      ";
-    for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-        hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
-    }
-    hila::out0 << '\n';
 
-    hila::out0 << "MONPPD     ";
-    for (int par = 0; par < 2; ++par) {
+    if (p.n_ps_update > 0) {
+        measure_monop_dens(totplaq, m_per_dir, m_per_par_dir);
+        hila::out0 << "MONPD      ";
         for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
         }
-    }
-    hila::out0 << '\n';
+        hila::out0 << '\n';
 
+        hila::out0 << "MONPPD     ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            }
+        }
+        hila::out0 << '\n';
+    }
 
     sw_t<T> dualplaq;
     dual_plaq(plaq, dualplaq);
@@ -880,7 +885,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     hila::out0 << '\n';
 
 
-    if (p.n_ps_update > -1) {
+    if (p.n_ps_update > 0) {
         measure_plaq_per_par_and_plane(sw, plaq_per_par_pl);
         hila::out0 << "SWPLAQPPP  ";
         for (int par = 0; par < 2; ++par) {
