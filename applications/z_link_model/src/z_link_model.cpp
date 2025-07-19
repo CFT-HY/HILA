@@ -43,7 +43,8 @@ struct parameters {
     int n_traj;         // number of trajectories to generate
     int n_therm;        // number of thermalization trajectories (counts only accepted traj.)
     int n_update;       // number of heat-bath sweeps per "trajectory"
-    int n_ps_update;    // number of plaquette shift (s_{x,\mu\nu}-vars) updates per update
+    int n_or_update;    // number of overrelaxation updates per "trajectory"
+    int n_ps_update; // number of plaquette shift (s_{x,\mu\nu}-vars) updates per "trajectory"
     int n_save; // number of trajectories between config. check point
     std::string config_file;
     ftype time_offset;
@@ -136,8 +137,50 @@ template <typename T, typename fT>
 fT z_metropolis(T &h, const fT &stapsum, double beta) {
     fT nstap = (fT)(NDIM - 1) * 2.0; 
     fT si = nstap * h * h + (fT)h * stapsum;
-    int he = h + (2 * (int)(hila::random() * 2.0) - 1);
+    int he = h + (1 - 2 * (int)(hila::random() * 2.0));
     fT nds = nstap * he * he + (fT)he * stapsum - si;
+    if (nds < 0 || hila::random() < exp(-0.5 * beta * nds)) {
+        h = he;
+        return -nds;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * @brief Z-link theory quasi-overrelax update
+ * @details --
+ * @tparam T Group element type such as long or int
+ * @tparam fT staple type such as double or float
+ * @param h link variable to be updated
+ * @param stapsum staplesum of plaquettes containing h
+ * @param beta coupling constant
+ * @return double change in plaquette action
+ */
+template <typename T, typename fT>
+fT z_overrelax(T &h, const fT &stapsum, double beta) {
+    fT nstap = (fT)(NDIM - 1) * 2.0;
+    fT si = nstap * h * h + (fT)h * stapsum;
+    fT se = si;
+    fT tsqrt = sqrt(4.0 * nstap * si + stapsum * stapsum);
+    int he = (int)lround((tsqrt - stapsum) / (2.0 * nstap));
+    if (he != h) {
+        se = nstap * he * he + (fT)he * stapsum;
+        tsqrt = sqrt(4.0 * nstap * se + stapsum * stapsum);
+        if((int)lround((-tsqrt - stapsum) / (2.0 * nstap)) != h) {
+            // perform only invertible overrelaxation updates
+            return 0;
+        }
+    } else {
+        he = (int)lround((-tsqrt - stapsum) / (2.0 * nstap));
+        se = nstap * he * he + (fT)he * stapsum;
+        tsqrt = sqrt(4.0 * nstap * se + stapsum * stapsum);
+        if ((int)lround((tsqrt - stapsum) / (2.0 * nstap)) != h) {
+            // perform only invertible overrelaxation updates
+            return 0;
+        }
+    }
+    fT nds = se - si;
     if (nds < 0 || hila::random() < exp(-0.5 * beta * nds)) {
         h = he;
         return -nds;
@@ -204,6 +247,41 @@ void update_parity_dir(GaugeField<T> &H, const parameters &p, Parity par, Direct
 }
 
 /**
+ * @brief Wrapper function to update GaugeField per direction with overrelaxation
+ * @details Computes first staplesum, then uses computed result to evolve GaugeField with
+ * overrelaxation updates
+ *
+ * @tparam T Z-link group type
+ * @tparam fT plaquette shift type
+ * @param H GaugeField to evolve
+ * @param p parameter struct
+ * @param par Parity
+ * @param d Direction to evolve
+ * @param sw plaquette shifs
+ */
+template <typename T, typename fT>
+void update_or_parity_dir(GaugeField<T> &H, const parameters &p, Parity par, Direction d,
+                       const sw_t<fT> &sw) {
+
+    static hila::timer or_timer("Overrelax (z)");
+    static hila::timer staples_timer("Staplesum");
+
+    Field<fT> staples;
+
+    staples_timer.start();
+
+    staplesum(H, staples, d, sw, par);
+
+    staples_timer.stop();
+
+    or_timer.start();
+    onsites(par) {
+        z_overrelax(H[d][X], staples[X], p.beta);
+    }
+    or_timer.stop();
+}
+
+/**
  * @brief Wrapper function to update plaquette shift variables
  * @details --
  *
@@ -248,20 +326,23 @@ template <typename T, typename fT>
 void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 
     for (int i = 0; i < 2 * NDIM; ++i) {
-        bool do_sw = 0;
-        if(p.n_ps_update>0) {
-            do_sw = hila::broadcast((int)(hila::random() * (1 + p.n_ps_update)) != 0);
-        }
+        int ud_type =
+            hila::broadcast((int)(hila::random() * (p.n_update + p.n_or_update + p.n_ps_update)));
+
         int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
         int tdir = tdp / 2;
         int tpar = 1 + (tdp % 2);
         // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        if (do_sw) {
-            // update plaquette shift variables for plaquettes spanned by (x,\mu\nu) = (x_{tpar},tdir,d2) for all d2!=tdir 
-            update_sw_parity_dir(sw, p, Parity(tpar), Direction(tdir), H);
-        } else {
-            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir)
+        if(ud_type<p.n_update) {
+            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with metropolis
             update_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
+        } else if (ud_type < p.n_update + p.n_or_update) {
+            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with overrelaxation
+            update_or_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
+        } else {
+            // update plaquette shift variables for plaquettes spanned by (x,\mu\nu) =
+            // (x_{tpar},tdir,d2) for all d2!=tdir
+            update_sw_parity_dir(sw, p, Parity(tpar), Direction(tdir), H);
         }
     }
     // hila::out0 << "\n";
@@ -279,10 +360,8 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
  */
 template <typename T, typename fT>
 void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
-    for (int n = 0; n < p.n_update; n++) {
-        for (int i = 0; i <= p.n_ps_update; i++) {
-            update(H, sw, p);
-        }
+    for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update; n++) {
+        update(H, sw, p);
     }
 
     // value of the action is invariant under direction-dependent global Z-shifts.
@@ -338,6 +417,100 @@ double measure_ns_plaq(const GaugeField<T> &H) {
     return plaq.value();
 }
 
+
+/**
+ * @brief measure the OS observable per site-parity and direction
+ * @tparam T Z-link group type
+ * @param H Z-link field
+ * @param os_per_par_dir GaugeField[2][NDIM] os observable per site-parity and direction
+ */
+template <typename T>
+void measure_os_per_par_dir(const GaugeField<T> &H, double(out_only &os_per_par_plaq)[2][NDIM][NDIM]) {
+    if (NDIM == 4) {
+        ReductionVector<double> os_per_p_p(2 * NDIM * NDIM);
+        os_per_p_p = 0.0;
+        os_per_p_p.allreduce(false).delayed(true);
+
+        VectorField<double> lavM, tlavM1, tlavM2, tlavM3, tlavM4, slavM1, slavM2;
+        PlaquetteField<double> tlavM;
+
+        int sign = 1;
+        for (int i = 0; i < NDIM; ++i) {
+            Direction d0 = Direction((0 + i) % NDIM);
+            Direction d1 = Direction((1 + i) % NDIM);
+            Direction d2 = Direction((2 + i) % NDIM);
+            Direction d3 = Direction((3 + i) % NDIM);
+            onsites(ALL) {
+                tlavM[d1][d2][X] = (double)(H[d1][X] + H[d1][X + d2]);
+                tlavM[d2][d3][X] = (double)(H[d2][X] + H[d2][X + d3]);
+                tlavM[d3][d1][X] = (double)(H[d3][X] + H[d3][X + d1]);
+            }
+            onsites(ALL) {
+                lavM[d1][X] = (double)(tlavM[d1][d2][X] + tlavM[d1][d2][X + d3]) * 0.25;
+                lavM[d2][X] = (double)(tlavM[d2][d3][X] + tlavM[d2][d3][X + d1]) * 0.25;
+                lavM[d3][X] = (double)(tlavM[d3][d1][X] + tlavM[d3][d1][X + d2]) * 0.25;
+            }
+            onsites(ALL) {
+                slavM1[d1][X] = lavM[d1][X - d2];
+                slavM2[d1][X] = lavM[d1][X - d3];
+                slavM1[d2][X] = lavM[d2][X - d3];
+                slavM2[d2][X] = lavM[d2][X - d1];
+                slavM1[d3][X] = lavM[d3][X - d1];
+                slavM2[d3][X] = lavM[d3][X - d2];
+            }
+            onsites(ALL) {
+                int tpar = (int)uparity(X.coordinates()) - 1;
+                tlavM1[d1][X] = (double)(1 - 2 * tpar) * pow((double)H[d1][X] - lavM[d1][X], 2.0);
+                tlavM2[d1][X] = (double)(1 - 2 * tpar) * pow((double)H[d1][X] - slavM1[d1][X], 2.0);
+                tlavM3[d1][X] = (double)(1 - 2 * tpar) * pow((double)H[d1][X] - slavM2[d1][X], 2.0);
+                tlavM4[d1][X] =
+                    (double)(1 - 2 * tpar) * pow((double)H[d1][X] - slavM1[d1][X - d3], 2.0);
+
+                tlavM1[d2][X] = (double)(1 - 2 * tpar) * pow((double)H[d2][X] - lavM[d2][X], 2.0);
+                tlavM2[d2][X] = (double)(1 - 2 * tpar) * pow((double)H[d2][X] - slavM1[d2][X], 2.0);
+                tlavM3[d2][X] = (double)(1 - 2 * tpar) * pow((double)H[d2][X] - slavM2[d2][X], 2.0);
+                tlavM4[d2][X] =
+                    (double)(1 - 2 * tpar) * pow((double)H[d2][X] - slavM1[d2][X - d1], 2.0);
+
+                tlavM1[d3][X] = (double)(1 - 2 * tpar) * pow((double)H[d3][X] - lavM[d3][X], 2.0);
+                tlavM2[d3][X] = (double)(1 - 2 * tpar) * pow((double)H[d3][X] - slavM1[d3][X], 2.0);
+                tlavM3[d3][X] = (double)(1 - 2 * tpar) * pow((double)H[d3][X] - slavM2[d3][X], 2.0);
+                tlavM4[d3][X] =
+                    (double)(1 - 2 * tpar) * pow((double)H[d3][X] - slavM1[d3][X - d2], 2.0);
+            }
+            onsites(ALL) {
+                slavM1[d1][X] = tlavM4[d1][X + d3];
+                slavM1[d2][X] = tlavM4[d1][X + d1];
+                slavM1[d3][X] = tlavM4[d1][X + d2];
+            }
+
+
+            onsites(ALL) {
+                int tpar = (int)uparity(X.coordinates()) - 1;
+                os_per_p_p[(tpar * NDIM + d0) * NDIM + d1] +=
+                    (tlavM1[d1][X] + tlavM2[d1][X + d2] + tlavM3[d1][X + d3] + slavM1[d1][X + d2]) *
+                    0.25 * sign;
+                os_per_p_p[(tpar * NDIM + d0) * NDIM + d2] +=
+                    (tlavM1[d2][X] + tlavM2[d2][X + d3] + tlavM3[d2][X + d1] + slavM1[d2][X + d3]) *
+                    0.25 * (-sign);
+                os_per_p_p[(tpar * NDIM + d0) * NDIM + d3] +=
+                    (tlavM1[d3][X] + tlavM2[d3][X + d1] + tlavM3[d3][X + d2] + slavM1[d3][X + d1]) *
+                    0.25 * (-sign);
+            }
+        }
+        sign = -sign;
+
+        os_per_p_p.reduce();
+        for (int par = 0; par < 2; ++par) {
+            for (int d1 = 0; d1 < NDIM; ++d1) {
+                for (int d2 = 0; d2 < NDIM; ++d2) {
+                    os_per_par_plaq[par][d1][d2] =
+                        os_per_p_p[(par * NDIM + d1) * NDIM + d2] * 2.0 / lattice.volume();
+                }
+            }
+        }
+    }
+}
 
 /**
  * @brief measure the OS observable per site-parity and direction
@@ -676,11 +849,22 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << "\n";
 
-        if(0) {
+        if(1) {
             hila::out0 << "LOSPPD    :";
             for (int par = 0; par < 2; ++par) {
                 for (int dir = 0; dir < NDIM; ++dir) {
                     hila::out0 << "          p" << par << "d" << dir;
+                }
+            }
+            hila::out0 << "\n";
+        }
+        if(0) {
+            hila::out0 << "LOSPPP    :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                    for (int dir2 = 0; dir2 < NDIM; ++dir2) {
+                        hila::out0 << "          p" << par << "d" << dir1 << dir2;
+                    }
                 }
             }
             hila::out0 << "\n";
@@ -732,7 +916,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
         }
 
-        if (p.n_ps_update > 0) {
+        if (1) {
             hila::out0 << "LSWPLAQPPP:";
             for (int par = 0; par < 2; ++par) {
                 for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -742,6 +926,9 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
                 }
             }
             hila::out0 << "\n";
+        }
+
+        if (p.n_ps_update > 0) {
             hila::out0 << "LSWMONPD  :";
             for (int dir = 0; dir < NDIM; ++dir) {
                 hila::out0 << "            d" << dir;
@@ -826,12 +1013,24 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
     }
     hila::out0 << '\n';
-    if(0) {
+    if(1) {
         measure_os_per_par_dir(plaq, sw, h_per_par_dir);
         hila::out0 << "OSPPD      ";
         for (int par = 0; par < 2; ++par) {
             for (int dir = 0; dir < NDIM; ++dir) {
                 hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
+            }
+        }
+        hila::out0 << '\n';
+    }
+    if(0) {
+        measure_os_per_par_dir(H, plaq_per_par_pl);
+        hila::out0 << "OSPPP      ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = 0; dir2 < NDIM; ++dir2) {
+                    hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+                }
             }
         }
         hila::out0 << '\n';
@@ -895,7 +1094,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         hila::out0 << '\n';
     }
 
-    if (p.n_ps_update > 0) {
+    if(1) {
         measure_plaq_per_par_and_plane(sw, plaq_per_par_pl);
         hila::out0 << "SWPLAQPPP  ";
         for (int par = 0; par < 2; ++par) {
@@ -906,8 +1105,8 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             }
         }
         hila::out0 << '\n';
-
-
+    }
+    if (p.n_ps_update > 0) {
         measure_monop_dens(sw, m_per_dir, m_per_par_dir);
         hila::out0 << "SWMONPD    ";
         for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -1047,7 +1246,9 @@ int main(int argc, char **argv) {
     // number of trajectories
     p.n_traj = par.get("number of trajectories");
     // number of Metropolis sweeps per trajectory
-    p.n_update = par.get("updates in trajectory");
+    p.n_update = par.get("metropolis updates");
+    // number of overrelaxation sweeps per Metropolis sweep
+    p.n_or_update = par.get("overrelax updates");
     // number of s_{x,\mu\nu} relaxation sweeps per Metropolis sweep
     p.n_ps_update = par.get("plaq shift updates");
     // number of thermalization trajectories

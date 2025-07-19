@@ -3,7 +3,8 @@
 lattice size           12,12,12,12
 beta                   0.015
 number of trajectories 1500
-updates in trajectory  20
+metropolis updates     10
+overrelax updates      10
 plaq shift updates     0
 thermalization trajs   1000
 random seed            0
