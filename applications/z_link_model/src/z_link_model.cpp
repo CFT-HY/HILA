@@ -364,6 +364,43 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 }
 
 /**
+ * @brief apply site shift
+ * @details Gauge Field is moved by one site
+ *
+ * @tparam T Z-gauge group type
+ * @param H GaugeField to update
+ */
+template <typename T>
+void site_shift(GaugeField<T> &H) {
+#if PLAQ_SHIFT==2 && PARITY==1
+    int tdp = hila::broadcast((int)(hila::random() * 2 * (NDIM - 1)));
+    int tdir = tdp / 2;
+    int tsgn = tdp % 2;
+    Direction d = Direction(tdir);
+    if (tsgn == 1) {
+        d = opp_dir(d);
+    }
+    GaugeField<T> tH = H;
+    foralldir(d1) {
+        onsites(ALL) {
+            H[d1][X] = tH[d1][X + d];
+        }
+    }
+    onsites(ALL) {
+        if (tsgn == 0) {
+            if (uparity(X.coordinates()) == EVEN) {
+                H[e_t][X] += 1;
+            }
+        } else {
+            if (uparity(X.coordinates()) == ODD) {
+                H[e_t][X] -= 1;
+            }
+        }
+    }
+#endif
+}
+
+/**
  * @brief Evolve Z-link field (and plaquette shift field, if set to be dynamic)
  * @details Evolution happens by means of metropolis updates.
  *
@@ -378,6 +415,7 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
     for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update; n++) {
         update(H, sw, p);
     }
+    site_shift(H);
 
     // value of the action is invariant under direction-dependent global Z-shifts.
     // to prevent the values from diverging, we shift them so that the link-variables
