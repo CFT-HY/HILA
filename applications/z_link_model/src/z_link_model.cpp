@@ -348,7 +348,7 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
         int tdir = tdp / 2;
         int tpar = 1 + (tdp % 2);
         // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        if(ud_type<p.n_update) {
+        if(ud_type < p.n_update) {
             // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with metropolis
             update_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
         } else if (ud_type < p.n_update + p.n_or_update) {
@@ -583,7 +583,7 @@ void dual_plaq(const sw_t<T> &plaqin, out_only sw_t<T> &plaqout) {
         foralldir(d) {
             onsites(ALL) plaqout[d][d][X] = 0;
         }
-        int sign = 1;
+        int sign = -1;
         for (int i = 0; i < NDIM; ++i) {
             Direction d0 = Direction((0 + i) % NDIM);
             Direction d1 = Direction((1 + i) % NDIM);
@@ -602,38 +602,84 @@ void dual_plaq(const sw_t<T> &plaqin, out_only sw_t<T> &plaqout) {
 /**
  * @brief measure the absolue value of the monopole density per "time-direction" d0,
  *  as well as the monopole density per site-parity and "time-direction" d0.
- * @tparam T Z-link field data type
- * @tparam fT plaquette shift data type
- * @param GaugeField H
- * @param plaquette shift field sw
+ * @tparam T plaquette field data type
+ * @param PlaquetteField plaq
  * @param monop_dens_per_d[NDIM] output absolute value of plaquette staple sum density per direction
  * @param monop_dens_per_p_d[2][NDIM] output plaquette staple sum density per parity and direction
  */
-template <typename T, typename fT>
-void measure_stap_dens(const GaugeField<T> &H, const sw_t<fT>& sw, double(out_only &monop_dens_per_d)[NDIM],
+template <typename T>
+void measure_stap_dens(const sw_t<T>& plaq, double(out_only &monop_dens_per_d)[NDIM],
                              double(out_only &monop_dens_per_p_d)[2][NDIM]) {
     if (NDIM == 4) {
-        Field<fT> stap;
+        Field<double> stap;
         ReductionVector<double> mpdens_per_d(NDIM);
         mpdens_per_d = 0.0;
         mpdens_per_d.allreduce(false).delayed(true);
         ReductionVector<double> mpdens_per_p_d(NDIM * 2);
         mpdens_per_p_d = 0.0;
         mpdens_per_p_d.allreduce(false).delayed(true);
-        foralldir(d) {
-            staplesum(H, stap, d, sw);
+        foralldir(d1) {
+            onsites(ALL) stap[X] = 0;
+            foralldir(d2) if (d2 != d1) {
+                onsites(ALL) {
+                    stap[X] += (double)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]);
+                }
+            }
             onsites(ALL) {
+                mpdens_per_d[d1] += abs(stap[X]);
                 int tpar = (int)uparity(X.coordinates()) - 1;
-                stap[X] *= 0.5;
-                stap[X] += (double)H[d][X];
-                mpdens_per_d[d] += (double)abs(stap[X]);
-                mpdens_per_p_d[tpar * NDIM + d] += (double)stap[X];
+                mpdens_per_p_d[tpar * NDIM + d1] += stap[X];
             }
         }
         mpdens_per_d.reduce();
         mpdens_per_p_d.reduce();
         for (int i = 0; i < NDIM; ++i) {
             monop_dens_per_d[i] = mpdens_per_d[i] / lattice.volume();
+            monop_dens_per_p_d[0][i] = mpdens_per_p_d[i] * 2.0 / lattice.volume();
+            monop_dens_per_p_d[1][i] = mpdens_per_p_d[NDIM + i] * 2.0 / lattice.volume();
+        }
+    }
+}
+
+/**
+ * @brief measure the absolue value of the monopole density per "time-direction" d0,
+ *  as well as the monopole density per site-parity and "time-direction" d0.
+ * @tparam T plaquette field data type
+ * @param PlaquetteField plaq
+ * @param monop_dens_per_d[NDIM] output absolute value of plaquette staple sum density per direction
+ * @param monop_dens_per_p_d[2][NDIM] output plaquette staple sum density per parity and direction
+ */
+template <typename T>
+void measure_staps_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_p_d)[2][NDIM]) {
+    if (NDIM == 4) {
+        Field<double> avplaq;
+        Field<double> stap;
+        ReductionVector<double> mpdens_per_p_d(NDIM * 2);
+        mpdens_per_p_d = 0.0;
+        mpdens_per_p_d.allreduce(false).delayed(true);
+        foralldir(d1) {
+            onsites(ALL) {
+                avplaq[X] = 0;
+                stap[X] = 0;
+            }
+            foralldir(d2) if (d2 != d1) {
+                onsites(ALL) {
+                    avplaq[X] += (double)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]) / 6.0;
+                }
+            }
+            foralldir(d2) if (d2 != d1) {
+                onsites(ALL) {
+                    stap[X] += (double)pow(plaq[d1][d2][X] - avplaq[X], 2.0) +
+                               (double)pow(-plaq[d1][d2][X - d2] - avplaq[X], 2.0);
+                }
+            }
+            onsites(ALL) {
+                int tpar = (int)uparity(X.coordinates()) - 1;
+                mpdens_per_p_d[tpar * NDIM + d1] += stap[X] / 6.0;
+            }
+        }
+        mpdens_per_p_d.reduce();
+        for (int i = 0; i < NDIM; ++i) {
             monop_dens_per_p_d[0][i] = mpdens_per_p_d[i] * 2.0 / lattice.volume();
             monop_dens_per_p_d[1][i] = mpdens_per_p_d[NDIM + i] * 2.0 / lattice.volume();
         }
@@ -694,9 +740,95 @@ void measure_monop_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_d)[
  * @param hls_dens_per_p_d[2][NDIM] output H-loop sign density per parity and direction
  */
 template <typename T>
-void measure_hloop_sign_dens(const GaugeField<T> &H,
-                             double(out_only &hls_dens_per_p_d)[2][NDIM]) {
+void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_per_p_d)[2]) {
+    
+    ReductionVector<double> npldens_per_p_d(2);
+    npldens_per_p_d = 0.0;
+    npldens_per_p_d.allreduce(false).delayed(true);
+    Field<T> Ff, Fb;
+    PlaquetteField<T> Rf, Rb;
+    foralldir(d1) foralldir(d2) if(d1 < d2) {
+        onsites(ALL) {
+            Rf[d1][d2][X] = H[d1][X] + H[d2][X + d1];
+            Rf[d2][d1][X] = H[d2][X] + H[d1][X + d2];
+            Rb[d1][d2][X] = H[d1][X - d1] + H[d2][X];
+            Rb[d2][d1][X] = H[d2][X - d2] + H[d1][X];
+        }
+    }
+    Direction d1 = e_x;
+    Direction d2 = e_y;
+    Direction d3 = e_z;
+    Direction d4 = e_t;
 
+    onsites(ALL) {
+        Ff[X] = Rb[d1][d2][X] + Rf[d3][d4][X + d2]; //  {(x-d1),(x),(x+d2),(x+d2+d3),(x+d2+d3+d4)}
+        Fb[X] = Rb[d4][d3][X] + Rf[d2][d1][X + d3]; //  {(x-d4),(x),(x+d3),(x+d2+d3),(x+d2+d3+d1)}
+    }
+
+    onsites(ALL) {
+        int tpar = (int)uparity(X.coordinates()) - 1;
+        npldens_per_p_d[tpar] += Ff[X + d1] - Fb[X + d4];
+    }
+
+    npldens_per_p_d.reduce();
+    npl_dens_per_p_d[0] = npldens_per_p_d[0] * 2.0 / lattice.volume();
+    npl_dens_per_p_d[1] = npldens_per_p_d[1] * 2.0 / lattice.volume();
+}
+
+/**
+ * @brief measure the average sign or sign density of H-loops winding around each of
+ *  the NDIM periodic lattice directions.
+ * @tparam T Z-link fied data type
+ * @param hls_dens_per_p_d[2][NDIM] output H-loop sign density per parity and direction
+ */
+template <typename T>
+void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_per_p_d)[2][NDIM]) {
+
+    ReductionVector<double> npldens_per_p_d(2 * NDIM);
+    npldens_per_p_d = 0.0;
+    npldens_per_p_d.allreduce(false).delayed(true);
+    Field<T> Ff, Fb;
+    PlaquetteField<T> Rf, Rb;
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+        onsites(ALL) {
+            Rf[d1][d2][X] = H[d1][X] + H[d2][X + d1];
+            Rf[d2][d1][X] = H[d2][X] + H[d1][X + d2];
+            Rb[d1][d2][X] = H[d1][X - d1] + H[d2][X];
+            Rb[d2][d1][X] = H[d2][X - d2] + H[d1][X];
+        }
+    }
+    for (int i = 0; i < NDIM; ++i) {
+        Direction d1 = Direction((i + 0) % NDIM);
+        Direction d2 = Direction((i + 1) % NDIM);
+        Direction d3 = Direction((i + 2) % NDIM);
+        Direction d4 = Direction((i + 3) % NDIM);
+
+        onsites(ALL) {
+            Ff[X] = Rb[d1][d2][X] + H[d3][X + d2]; //  {(x-d1),(x),(x+d2),(x+d2+d3)}
+            Fb[X] = H[d3][X - d3] + Rf[d2][d1][X]; //  {(x-d3),(x),(x+d2),(x+d2+d1)}
+        }
+
+        onsites(ALL) {
+            int tpar = (int)uparity(X.coordinates()) - 1;
+            npldens_per_p_d[tpar * NDIM + d4] += pow(Ff[X + d1] - Fb[X + d3], 2.0); // {(x),(x+d1),(x+d1+d2),(x+d1+d2+d3),(x+d2+d3),(x+d3),(x)}
+        }
+    }
+
+    npldens_per_p_d.reduce();
+    for (int i = 0; i < NDIM; ++i) {
+        npl_dens_per_p_d[0][i] = npldens_per_p_d[0 * NDIM + i] * 2.0 / lattice.volume();
+        npl_dens_per_p_d[1][i] = npldens_per_p_d[1 * NDIM + i] * 2.0 / lattice.volume();
+    }
+}
+
+/**
+ * @brief measure the average sign or sign density of H-loops winding around each of
+ *  the NDIM periodic lattice directions.
+ * @tparam T Z-link fied data type
+ * @param hls_dens_per_p_d[2][NDIM] output H-loop sign density per parity and direction
+ */
+template <typename T>
+void measure_hloop_sign_dens(const GaugeField<T> &H, double(out_only &hls_dens_per_p_d)[2][NDIM]) {
     Field<long> hloop;
     ReductionVector<double> hlsdens_per_p_d(NDIM * 2);
     hlsdens_per_p_d = 0.0;
@@ -825,6 +957,15 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
         }
         if (1) {
+            hila::out0 << "LNPLCPPD  :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
+            }
+            hila::out0 << "\n";
+        }
+        if (1) {
             hila::out0 << "LSTAPPD   :";
             for (int dir = 0; dir < NDIM; ++dir) {
                 hila::out0 << "            d" << dir;
@@ -832,6 +973,14 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
 
             hila::out0 << "LSTAPPPD  :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir = 0; dir < NDIM; ++dir) {
+                    hila::out0 << "          p" << par << "d" << dir;
+                }
+            }
+            hila::out0 << "\n";
+
+            hila::out0 << "LSTAPSPPD :";
             for (int par = 0; par < 2; ++par) {
                 for (int dir = 0; dir < NDIM; ++dir) {
                     hila::out0 << "          p" << par << "d" << dir;
@@ -967,7 +1116,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    if(0) {
+    if (0) {
         double h_per_par_dir[2][NDIM];
         double hsq_per_par_dir[2][NDIM];
         auto hsq = measure_hsq(H, hsq_per_par_dir, h_per_par_dir);
@@ -990,7 +1139,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         hila::out0 << '\n';
     }
 
-    if(0) {
+    if (0) {
         double hl_per_par_dir[2][NDIM];
         measure_hloop_sign_dens(H, hl_per_par_dir);
         hila::out0 << "HLOOPSPPD  ";
@@ -1003,9 +1152,21 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if (1) {
+        double nplc_per_par[2][NDIM];
+        measure_nonplanar_curve(H, nplc_per_par);
+        hila::out0 << "NONPLCPPD  ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir = 0; dir < NDIM; ++dir) {
+                hila::out0 << string_format(" % 0.6e", nplc_per_par[par][dir]);
+            }
+        }
+        hila::out0 << '\n';
+    }
+
+    if (1) {
         double m_per_dir[NDIM];
         double m_per_par_dir[2][NDIM];
-        measure_stap_dens(H, sw, m_per_dir, m_per_par_dir);
+        measure_stap_dens(totplaq, m_per_dir, m_per_par_dir);
 
         hila::out0 << "STAPPD     ";
         for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -1014,6 +1175,15 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         hila::out0 << '\n';
 
         hila::out0 << "STAPPPD    ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            }
+        }
+        hila::out0 << '\n';
+
+        measure_staps_dens(totplaq, m_per_par_dir);
+        hila::out0 << "STAPSPPD   ";
         for (int par = 0; par < 2; ++par) {
             for (int dir1 = 0; dir1 < NDIM; ++dir1) {
                 hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
@@ -1265,7 +1435,7 @@ int main(int argc, char **argv) {
         }
     }
 #endif
-#if PLAQ_SHIFT == 2
+#if PLAQ_SHIFT == 2 || PLAQ_SHIFT == 3
     Direction d4 = Direction::e_t;
     for (int i = 0; i < NDIM - 1; ++i) {
         Direction d1 = Direction(i);
@@ -1274,20 +1444,6 @@ int main(int argc, char **argv) {
                 sw[d1][d4][X] = 0.5;
             } else {
                 sw[d1][d4][X] = -0.5;
-            }
-            sw[d4][d1][X] = -sw[d1][d4][X];
-        }
-    }
-#endif
-#if PLAQ_SHIFT == 3
-    Direction d4 = Direction::e_t;
-    for (int i = 0; i < NDIM - 1; ++i) {
-        Direction d1 = Direction(i);
-        onsites(ALL) {
-            if (uparity(X.coordinates()) == Parity::even) {
-                sw[d1][d4][X] = -0.5;
-            } else {
-                sw[d1][d4][X] = 0.5;
             }
             sw[d4][d1][X] = -sw[d1][d4][X];
         }
