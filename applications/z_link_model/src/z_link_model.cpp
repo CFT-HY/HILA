@@ -767,7 +767,7 @@ void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_p
 
     onsites(ALL) {
         int tpar = (int)uparity(X.coordinates()) - 1;
-        npldens_per_p_d[tpar] += Ff[X + d1] - Fb[X + d4];
+        npldens_per_p_d[tpar] += pow(Ff[X + d1] - Fb[X + d4], 2.0);
     }
 
     npldens_per_p_d.reduce();
