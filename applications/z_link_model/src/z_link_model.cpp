@@ -415,6 +415,7 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
     for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update; n++) {
         update(H, sw, p);
     }
+    
     site_shift(H);
 
     // value of the action is invariant under direction-dependent global Z-shifts.
@@ -423,7 +424,7 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
     CoordinateVector v = {0, 0, 0, 0};
     foralldir(d1) {
         auto dHpd = -H[d1][v];
-        if(dHpd!=0) {
+        if (dHpd != 0) {
             onsites(ALL) {
                 H[d1][X] += dHpd;
             }
@@ -925,15 +926,17 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << "\n";
 
-        hila::out0 << "LNSPLAQPPP:";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                    hila::out0 << "         p" << par << "d" << dir1 << dir2;
+        if(0) {
+            hila::out0 << "LNSPLAQPPP:";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                    for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                        hila::out0 << "         p" << par << "d" << dir1 << dir2;
+                    }
                 }
             }
+            hila::out0 << "\n";
         }
-        hila::out0 << "\n";
 
         hila::out0 << "LPLAQPPP  :";
         for (int par = 0; par < 2; ++par) {
@@ -945,25 +948,29 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << "\n";
 
-        hila::out0 << "LPLAQSPPP :";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                    hila::out0 << "         p" << par << "d" << dir1 << dir2;
+        if(0) {
+            hila::out0 << "LPLAQSPPP :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                    for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                        hila::out0 << "         p" << par << "d" << dir1 << dir2;
+                    }
                 }
             }
+            hila::out0 << "\n";
         }
-        hila::out0 << "\n";
 
-        hila::out0 << "LNPLAQSPPP:";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                    hila::out0 << "         p" << par << "d" << dir1 << dir2;
+        if(0) {
+            hila::out0 << "LNPLAQSPPP:";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                    for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                        hila::out0 << "         p" << par << "d" << dir1 << dir2;
+                    }
                 }
             }
+            hila::out0 << "\n";
         }
-        hila::out0 << "\n";
 
         if(0) {
             hila::out0 << "LHSQ      :           hsq\n";
@@ -994,7 +1001,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             }
             hila::out0 << "\n";
         }
-        if (1) {
+        if (0) {
             hila::out0 << "LNONPLCPPD:";
             for (int par = 0; par < 2; ++par) {
                 for (int dir = 0; dir < NDIM; ++dir) {
@@ -1106,15 +1113,17 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    hila::out0 << "NSPLAQPPP  ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir2][dir1]);
+    if(0) {
+        hila::out0 << "NSPLAQPPP  ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                    hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir2][dir1]);
+                }
             }
         }
+        hila::out0 << '\n';
     }
-    hila::out0 << '\n';
 
     sw_t<fT> totplaq;
     foralldir(d1) foralldir(d2) {
@@ -1132,27 +1141,31 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
     hila::out0 << '\n';
 
-    measure_plaq_sign_per_par_and_plane(totplaq, plaq_per_par_pl);
-    hila::out0 << "PLAQSPPP   ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+    if(0) {
+        measure_plaq_sign_per_par_and_plane(totplaq, plaq_per_par_pl);
+        hila::out0 << "PLAQSPPP   ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                    hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+                }
             }
         }
+        hila::out0 << '\n';
     }
-    hila::out0 << '\n';
 
-    measure_plaq_sign_per_par_and_plane(plaq, plaq_per_par_pl);
-    hila::out0 << "NPLAQSPPP  ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+    if(0) {
+        measure_plaq_sign_per_par_and_plane(plaq, plaq_per_par_pl);
+        hila::out0 << "NPLAQSPPP  ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                    hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+                }
             }
         }
+        hila::out0 << '\n';
     }
-    hila::out0 << '\n';
 
     if (0) {
         double h_per_par_dir[2][NDIM];
@@ -1189,7 +1202,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         hila::out0 << '\n';
     }
 
-    if (1) {
+    if (0) {
         double nplc_per_par[2][NDIM];
         measure_nonplanar_curve(H, nplc_per_par);
         hila::out0 << "NONPLCPPD  ";
