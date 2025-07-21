@@ -415,7 +415,7 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
  */
 template <typename T, typename fT>
 void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
-    for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update; n++) {
+    for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update + 2; n++) {
         update(H, sw, p);
     }
     
