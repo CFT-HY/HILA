@@ -957,7 +957,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
         }
         if (1) {
-            hila::out0 << "LNPLCPPD  :";
+            hila::out0 << "LNONPLCPPD:";
             for (int par = 0; par < 2; ++par) {
                 for (int dir = 0; dir < NDIM; ++dir) {
                     hila::out0 << "          p" << par << "d" << dir;
