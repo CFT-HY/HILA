@@ -1,8 +1,8 @@
 # This is a parameter file for z_gauge
 
 lattice size           12,12,12,12
-beta                   0.015
-number of trajectories 1500
+beta                   2.25
+number of trajectories 500
 metropolis updates     10
 overrelax updates      10
 plaq shift updates     0
