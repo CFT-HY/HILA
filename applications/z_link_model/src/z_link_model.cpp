@@ -328,42 +328,6 @@ void update_sw_parity_dir(sw_t<fT> &sw, const parameters &p, Parity par, Directi
 }
 
 /**
- * @brief Wrapper update function
- * @details Gauge Field update sweep with randomly chosen parities and directions
- *
- * @tparam T Z-gauge group type
- * @tparam fT plaquette shift type
- * @param H GaugeField to update
- * @param p Parameter struct
- * @param sw plaquette shifts
- */
-template <typename T, typename fT>
-void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
-
-    for (int i = 0; i < 2 * NDIM; ++i) {
-        int ud_type =
-            hila::broadcast((int)(hila::random() * (p.n_update + p.n_or_update + p.n_ps_update)));
-
-        int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
-        int tdir = tdp / 2;
-        int tpar = 1 + (tdp % 2);
-        // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        if(ud_type < p.n_update) {
-            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with metropolis
-            update_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
-        } else if (ud_type < p.n_update + p.n_or_update) {
-            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with overrelaxation
-            update_or_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
-        } else {
-            // update plaquette shift variables for plaquettes spanned by (x,\mu\nu) =
-            // (x_{tpar},tdir,d2) for all d2!=tdir
-            update_sw_parity_dir(sw, p, Parity(tpar), Direction(tdir), H);
-        }
-    }
-    // hila::out0 << "\n";
-}
-
-/**
  * @brief apply site shift
  * @details Gauge Field is moved by one site
  *
@@ -372,7 +336,7 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
  */
 template <typename T>
 void site_shift(GaugeField<T> &H) {
-#if PLAQ_SHIFT==2 && PARITY==1
+#if PLAQ_SHIFT == 2 && PARITY == 1
     int tdp = hila::broadcast((int)(hila::random() * 2 * (NDIM - 1)));
     int tdir = tdp / 2;
     int tsgn = tdp % 2;
@@ -401,6 +365,45 @@ void site_shift(GaugeField<T> &H) {
 }
 
 /**
+ * @brief Wrapper update function
+ * @details Gauge Field update sweep with randomly chosen parities and directions
+ *
+ * @tparam T Z-gauge group type
+ * @tparam fT plaquette shift type
+ * @param H GaugeField to update
+ * @param p Parameter struct
+ * @param sw plaquette shifts
+ */
+template <typename T, typename fT>
+void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
+
+    for (int i = 0; i < 2 * NDIM; ++i) {
+        int ud_type =
+            hila::broadcast((int)(hila::random() * (p.n_update + p.n_or_update + p.n_ps_update + 2)));
+
+        int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
+        int tdir = tdp / 2;
+        int tpar = 1 + (tdp % 2);
+        // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
+        if(ud_type < p.n_update) {
+            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with metropolis
+            update_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
+        } else if (ud_type < p.n_update + p.n_or_update) {
+            // update Z-link variable on links (x,\mu) = (x_{tpar},tdir) with overrelaxation
+            update_or_parity_dir(H, p, Parity(tpar), Direction(tdir), sw);
+        } else if (ud_type < p.n_update + p.n_or_update + p.n_ps_update) {
+            // update plaquette shift variables for plaquettes spanned by (x,\mu\nu) =
+            // (x_{tpar},tdir,d2) for all d2!=tdir
+            update_sw_parity_dir(sw, p, Parity(tpar), Direction(tdir), H);
+        } else {
+            site_shift(H);
+        }
+    }
+    // hila::out0 << "\n";
+}
+
+
+/**
  * @brief Evolve Z-link field (and plaquette shift field, if set to be dynamic)
  * @details Evolution happens by means of metropolis updates.
  *
@@ -416,8 +419,6 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
         update(H, sw, p);
     }
     
-    site_shift(H);
-
     // value of the action is invariant under direction-dependent global Z-shifts.
     // to prevent the values from diverging, we shift them so that the link-variables
     // emerging in positive directions from the site at the origin are zero:
