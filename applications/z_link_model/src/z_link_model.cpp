@@ -1003,7 +1003,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             }
             hila::out0 << "\n";
         }
-        if(1) {
+        if(0) {
             hila::out0 << "LDMONPD   :";
             for (int dir = 0; dir < NDIM; ++dir) {
                 hila::out0 << "            d" << dir;
@@ -1212,7 +1212,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         hila::out0 << '\n';
     }
 
-    if(1) {
+    if(0) {
         sw_t<fT> dualplaq;
         dual_plaq(totplaq, dualplaq);
         double m_per_dir[NDIM];
