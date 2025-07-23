@@ -16,7 +16,19 @@ using mygroup = int;
 #define PARITY 1
 #endif
 
-::Parity uparity(const CoordinateVector &x) {
+#ifndef OBS_DIR
+#define OBS_DIR 3   //options: {-1=ALL, 0, 1, 2, 3}
+#endif
+
+#if OBS_DIR == -1
+#define forobsdir(d) for (Direction d = e_x; d < NDIM; ++d)
+#define NOBSDIR NDIM
+#else
+#define forobsdir(d) for (Direction d = Direction(OBS_DIR); d < OBS_DIR + 1; ++d)
+#define NOBSDIR 1
+#endif
+
+    ::Parity uparity(const CoordinateVector &x) {
     int s = 0;
 #if PARITY == 0
     // parity of x
@@ -439,7 +451,7 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 
 
 template <typename T, typename fT>
-double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
+double measure_s_plaq_dens(const GaugeField<T> &H, const sw_t<fT> &sw) {
     // measure the total plaquette action for the link field H (taking into account the plaquette
     // shifts)
     Reduction<double> plaq = 0;
@@ -453,11 +465,11 @@ double measure_s_plaq(const GaugeField<T> &H, const sw_t<fT> &sw) {
                              2.0);
         }
     }
-    return plaq.value();
+    return plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) * 0.5);
 }
 
 template <typename T>
-double measure_ns_plaq(const GaugeField<T> &H) {
+double measure_ns_plaq_dens(const GaugeField<T> &H) {
     // measure the total plaquette action for the link field H (without plaquette shifts)
     Reduction<double> plaq = 0;
     plaq.allreduce(false).delayed(true);
@@ -469,43 +481,60 @@ double measure_ns_plaq(const GaugeField<T> &H) {
                         2.0);
         }
     }
-    return plaq.value();
+    return plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) * 0.5);
+}
+
+template <typename T>
+double measure_energy_dens(const GaugeField<T> &H) {
+    // measure the total plaquette action for the link field H (without plaquette shifts)
+    Reduction<double> nrg = 0;
+    nrg.allreduce(false).delayed(true);
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+        H[d2].start_gather(d1, ALL);
+        H[d1].start_gather(d2, ALL);
+        int sign = 1;
+        if(d2 == e_t) {
+            sign = -1;
+        }
+        onsites(ALL) {
+            nrg += (double)sign*pow((double)(H[d1][X] + H[d2][X + d1] - H[d1][X + d2] - H[d2][X]), 2.0);
+        }
+    }
+    return nrg.value() / lattice.volume();
 }
 
 
-
-
 template <typename T>
-double measure_hsq(const GaugeField<T> &H, double(out_only &hsq_per_par_dir)[2][NDIM],
-                   double(out_only &h_per_par_dir)[2][NDIM]) {
+double measure_hsq(const GaugeField<T> &H, double(out_only &hsq_per_par_dir)[2][NOBSDIR],
+                   double(out_only &h_per_par_dir)[2][NOBSDIR]) {
     // measure the average magnitude squared of H and its average value per direction and parity
     Reduction<double> thsq = 0;
     thsq.allreduce(false).delayed(true);
-    ReductionVector<double> h_per_p_d(2 * NDIM);
+    ReductionVector<double> h_per_p_d(2 * NOBSDIR);
     h_per_p_d = 0.0;
     h_per_p_d.allreduce(false).delayed(true);
-    ReductionVector<double> hsq_per_p_d(2 * NDIM);
+    ReductionVector<double> hsq_per_p_d(2 * NOBSDIR);
     hsq_per_p_d = 0.0;
     hsq_per_p_d.allreduce(false).delayed(true);
     foralldir(d1) {
         onsites(ALL) {
-            double tthsq = pow(H[d1][X], 2.0);
+            double tth = H[d1][X];
+            double tthsq = pow(tth, 2.0);
             thsq += tthsq;
             int tpar = (int)uparity(X.coordinates()) - 1;
-            h_per_p_d[tpar * NDIM + d1] += H[d1][X];
-            hsq_per_p_d[tpar * NDIM + d1] += tthsq;
+            if(d1 == Direction(OBS_DIR)) {
+                int i = (int)d1 % NOBSDIR;
+                h_per_p_d[tpar * NOBSDIR + i] += tth;
+                hsq_per_p_d[tpar * NOBSDIR + i] += tthsq;
+            }
         }
     }
     h_per_p_d.reduce();
-    for (int par = 0; par < 2; ++par) {
-        for (int dir = 0; dir < NDIM; ++dir) {
-            h_per_par_dir[par][dir] = h_per_p_d[par * NDIM + dir] * 2.0 / lattice.volume();
-        }
-    }
     hsq_per_p_d.reduce();
     for (int par = 0; par < 2; ++par) {
-        for (int dir = 0; dir < NDIM; ++dir) {
-            hsq_per_par_dir[par][dir] = hsq_per_p_d[par * NDIM + dir] * 2.0 / lattice.volume();
+        for (int i = 0; i < NOBSDIR; ++i) {
+            h_per_par_dir[par][i] = h_per_p_d[par * NOBSDIR + i] * 2.0 / lattice.volume();
+            hsq_per_par_dir[par][i] = hsq_per_p_d[par * NOBSDIR + i] * 2.0 / lattice.volume();
         }
     }
     return thsq.value() / (lattice.volume() * NDIM);
@@ -640,89 +669,45 @@ void dual_plaq(const sw_t<T> &plaqin, out_only sw_t<T> &plaqout) {
 }
 
 /**
- * @brief measure the absolue value of the monopole density per "time-direction" d0,
- *  as well as the monopole density per site-parity and "time-direction" d0.
+ * @brief measure the sum of plaquettes around temporal links for all possible choices of
+ * "time-directions"; measures also the square of quantity.
  * @tparam T plaquette field data type
  * @param PlaquetteField plaq
- * @param monop_dens_per_d[NDIM] output absolute value of plaquette staple sum density per direction
- * @param monop_dens_per_p_d[2][NDIM] output plaquette staple sum density per parity and direction
+ * @param stap_dens_per_p_d[2][NDIM] staple plaquette sums per parity and direction
+ * @param stapssq_dens_per_p_d[2][NDIM] squre of staple plaquette sums per parity and direction
  */
 template <typename T>
-void measure_stap_dens(const sw_t<T>& plaq, double(out_only &monop_dens_per_d)[NDIM],
-                             double(out_only &monop_dens_per_p_d)[2][NDIM]) {
-    if (NDIM == 4) {
-        Field<double> stap;
-        ReductionVector<double> mpdens_per_d(NDIM);
-        mpdens_per_d = 0.0;
-        mpdens_per_d.allreduce(false).delayed(true);
-        ReductionVector<double> mpdens_per_p_d(NDIM * 2);
-        mpdens_per_p_d = 0.0;
-        mpdens_per_p_d.allreduce(false).delayed(true);
-        foralldir(d1) {
-            onsites(ALL) stap[X] = 0;
-            foralldir(d2) if (d2 != d1) {
-                onsites(ALL) {
-                    stap[X] += (double)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]);
-                }
-            }
+void measure_stap_plaq_dens(const sw_t<T> &plaq, double(out_only &stap_dens_per_p_d)[2][NOBSDIR],
+                       double(out_only &stapsq_dens_per_p_d)[2][NOBSDIR]) {
+
+    Field<double> stap;
+    ReductionVector<double> stapdens_per_p_d(NOBSDIR * 2);
+    stapdens_per_p_d = 0.0;
+    stapdens_per_p_d.allreduce(false).delayed(true);
+    ReductionVector<double> stapsqdens_per_p_d(NOBSDIR * 2);
+    stapsqdens_per_p_d = 0.0;
+    stapsqdens_per_p_d.allreduce(false).delayed(true);
+    forobsdir(d1) {
+        int i = (int)d1 % NOBSDIR;
+        onsites(ALL) stap[X] = 0;
+        foralldir(d2) if (d2 != d1) {
             onsites(ALL) {
-                mpdens_per_d[d1] += abs(stap[X]);
-                int tpar = (int)uparity(X.coordinates()) - 1;
-                mpdens_per_p_d[tpar * NDIM + d1] += stap[X];
+                stap[X] += (double)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]) / 6.0;
             }
         }
-        mpdens_per_d.reduce();
-        mpdens_per_p_d.reduce();
-        for (int i = 0; i < NDIM; ++i) {
-            monop_dens_per_d[i] = mpdens_per_d[i] / lattice.volume();
-            monop_dens_per_p_d[0][i] = mpdens_per_p_d[i] * 2.0 / lattice.volume();
-            monop_dens_per_p_d[1][i] = mpdens_per_p_d[NDIM + i] * 2.0 / lattice.volume();
+        onsites(ALL) {
+            int tpar = (int)uparity(X.coordinates()) - 1;
+            stapdens_per_p_d[tpar * NOBSDIR + i] += stap[X];
+            stapsqdens_per_p_d[tpar * NOBSDIR + i] += pow(stap[X], 2.0);
         }
     }
-}
-
-/**
- * @brief measure the absolue value of the monopole density per "time-direction" d0,
- *  as well as the monopole density per site-parity and "time-direction" d0.
- * @tparam T plaquette field data type
- * @param PlaquetteField plaq
- * @param monop_dens_per_d[NDIM] output absolute value of plaquette staple sum density per direction
- * @param monop_dens_per_p_d[2][NDIM] output plaquette staple sum density per parity and direction
- */
-template <typename T>
-void measure_staps_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_p_d)[2][NDIM]) {
-    if (NDIM == 4) {
-        Field<double> avplaq;
-        Field<double> stap;
-        ReductionVector<double> mpdens_per_p_d(NDIM * 2);
-        mpdens_per_p_d = 0.0;
-        mpdens_per_p_d.allreduce(false).delayed(true);
-        foralldir(d1) {
-            onsites(ALL) {
-                avplaq[X] = 0;
-                stap[X] = 0;
-            }
-            foralldir(d2) if (d2 != d1) {
-                onsites(ALL) {
-                    avplaq[X] += (double)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]) / 6.0;
-                }
-            }
-            foralldir(d2) if (d2 != d1) {
-                onsites(ALL) {
-                    stap[X] += (double)pow(plaq[d1][d2][X] - avplaq[X], 2.0) +
-                               (double)pow(-plaq[d1][d2][X - d2] - avplaq[X], 2.0);
-                }
-            }
-            onsites(ALL) {
-                int tpar = (int)uparity(X.coordinates()) - 1;
-                mpdens_per_p_d[tpar * NDIM + d1] += stap[X] / 6.0;
-            }
-        }
-        mpdens_per_p_d.reduce();
-        for (int i = 0; i < NDIM; ++i) {
-            monop_dens_per_p_d[0][i] = mpdens_per_p_d[i] * 2.0 / lattice.volume();
-            monop_dens_per_p_d[1][i] = mpdens_per_p_d[NDIM + i] * 2.0 / lattice.volume();
-        }
+    stapdens_per_p_d.reduce();
+    stapsqdens_per_p_d.reduce();
+    for (int i = 0; i < NOBSDIR; ++i) {
+        stap_dens_per_p_d[0][i] = stapdens_per_p_d[i] * 2.0 / lattice.volume();
+        stap_dens_per_p_d[1][i] = stapdens_per_p_d[NOBSDIR + i] * 2.0 / lattice.volume();
+        stapsq_dens_per_p_d[0][i] = stapsqdens_per_p_d[i] * 2.0 / lattice.volume();
+        stapsq_dens_per_p_d[1][i] = stapsqdens_per_p_d[NOBSDIR + i] * 2.0 / lattice.volume();
     }
 }
 
@@ -736,19 +721,19 @@ void measure_staps_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_p_d
  * @param monop_dens_per_p_d[2][NDIM] output monopole density per parity and direction
  */
 template <typename T>
-void measure_monop_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_d)[NDIM],
-                           double(out_only &monop_dens_per_p_d)[2][NDIM]) {
+void measure_monop_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_d)[NOBSDIR],
+                           double(out_only &monop_dens_per_p_d)[2][NOBSDIR]) {
     if(NDIM==4) {
         VectorField<double> M;
-        ReductionVector<double> mpdens_per_d(NDIM);
+        ReductionVector<double> mpdens_per_d(NOBSDIR);
         mpdens_per_d = 0.0;
         mpdens_per_d.allreduce(false).delayed(true);
-        ReductionVector<double> mpdens_per_p_d(NDIM * 2);
+        ReductionVector<double> mpdens_per_p_d(NOBSDIR * 2);
         mpdens_per_p_d = 0.0;
         mpdens_per_p_d.allreduce(false).delayed(true);
         int sign = 1;
-        for (int i = 0; i < NDIM; ++i) {
-            Direction d0 = Direction((0 + i) % NDIM);
+        forobsdir(d0) {
+            int i = (int)d0;
             Direction d1 = Direction((1 + i) % NDIM);
             Direction d2 = Direction((2 + i) % NDIM);
             Direction d3 = Direction((3 + i) % NDIM);
@@ -759,16 +744,16 @@ void measure_monop_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_d)[
                 M[d0][X] *= (double)sign;
                 mpdens_per_d[d0] += abs(M[d0][X]);
                 int tpar = (int)uparity(X.coordinates()) - 1;
-                mpdens_per_p_d[tpar * NDIM + d0] += M[d0][X];
+                mpdens_per_p_d[tpar * NOBSDIR + (i % NOBSDIR)] += M[d0][X];
             }
             sign = -sign;
         }
         mpdens_per_d.reduce();
         mpdens_per_p_d.reduce();
-        for (int i = 0; i < NDIM; ++i) {
+        for(int i = 0; i < NOBSDIR; ++i) {
             monop_dens_per_d[i] = mpdens_per_d[i] / lattice.volume();
             monop_dens_per_p_d[0][i] = mpdens_per_p_d[i] * 2.0 / lattice.volume();
-            monop_dens_per_p_d[1][i] = mpdens_per_p_d[NDIM + i] * 2.0 / lattice.volume();
+            monop_dens_per_p_d[1][i] = mpdens_per_p_d[NOBSDIR + i] * 2.0 / lattice.volume();
         }
     }
 }
@@ -780,7 +765,7 @@ void measure_monop_dens(const sw_t<T> &plaq, double(out_only &monop_dens_per_d)[
  * @param hls_dens_per_p_d[2][NDIM] output H-loop sign density per parity and direction
  */
 template <typename T>
-void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_per_p_d)[2]) {
+void measure_nonplanar_loop_4d(const GaugeField<T> &H, double(out_only &npl_dens_per_p_d)[2]) {
     
     ReductionVector<double> npldens_per_p_d(2);
     npldens_per_p_d = 0.0;
@@ -822,9 +807,9 @@ void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_p
  * @param hls_dens_per_p_d[2][NDIM] output H-loop sign density per parity and direction
  */
 template <typename T>
-void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_per_p_d)[2][NDIM]) {
+void measure_nonplanar_loop_3d(const GaugeField<T> &H, double(out_only &npl_dens_per_p_d)[2][NOBSDIR]) {
 
-    ReductionVector<double> npldens_per_p_d(2 * NDIM);
+    ReductionVector<double> npldens_per_p_d(2 * NOBSDIR);
     npldens_per_p_d = 0.0;
     npldens_per_p_d.allreduce(false).delayed(true);
     Field<T> Ff, Fb;
@@ -837,11 +822,11 @@ void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_p
             Rb[d2][d1][X] = H[d2][X - d2] + H[d1][X];
         }
     }
-    for (int i = 0; i < NDIM; ++i) {
-        Direction d1 = Direction((i + 0) % NDIM);
-        Direction d2 = Direction((i + 1) % NDIM);
-        Direction d3 = Direction((i + 2) % NDIM);
-        Direction d4 = Direction((i + 3) % NDIM);
+    forobsdir(d4) {
+        int i = (int)d4;
+        Direction d1 = Direction((i + 1) % NDIM);
+        Direction d2 = Direction((i + 2) % NDIM);
+        Direction d3 = Direction((i + 3) % NDIM);
 
         onsites(ALL) {
             Ff[X] = Rb[d1][d2][X] + H[d3][X + d2]; //  {(x-d1),(x),(x+d2),(x+d2+d3)}
@@ -850,14 +835,15 @@ void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_p
 
         onsites(ALL) {
             int tpar = (int)uparity(X.coordinates()) - 1;
-            npldens_per_p_d[tpar * NDIM + d4] += pow(Ff[X + d1] - Fb[X + d3], 2.0); // {(x),(x+d1),(x+d1+d2),(x+d1+d2+d3),(x+d2+d3),(x+d3),(x)}
+            npldens_per_p_d[tpar * NOBSDIR + (i % NOBSDIR)] += pow(Ff[X + d1] - Fb[X + d3], 2.0); // {(x),(x+d1),(x+d1+d2),(x+d1+d2+d3),(x+d2+d3),(x+d3),(x)}
         }
     }
 
     npldens_per_p_d.reduce();
-    for (int i = 0; i < NDIM; ++i) {
-        npl_dens_per_p_d[0][i] = npldens_per_p_d[0 * NDIM + i] * 2.0 / lattice.volume();
-        npl_dens_per_p_d[1][i] = npldens_per_p_d[1 * NDIM + i] * 2.0 / lattice.volume();
+    for (int i = 0; i < NOBSDIR; ++i) {
+        npl_dens_per_p_d[0][i] =
+            npldens_per_p_d[i] * 2.0 / lattice.volume();
+        npl_dens_per_p_d[1][i] = npldens_per_p_d[NOBSDIR + i] * 2.0 / lattice.volume();
     }
 }
 
@@ -868,16 +854,17 @@ void measure_nonplanar_curve(const GaugeField<T> &H, double(out_only &npl_dens_p
  * @param hls_dens_per_p_d[2][NDIM] output H-loop sign density per parity and direction
  */
 template <typename T>
-void measure_hloop_sign_dens(const GaugeField<T> &H, double(out_only &hls_dens_per_p_d)[2][NDIM]) {
+void measure_hloop_sign_dens(const GaugeField<T> &H, double(out_only &hls_dens_per_p_d)[2][NOBSDIR]) {
     Field<long> hloop;
-    ReductionVector<double> hlsdens_per_p_d(NDIM * 2);
+    ReductionVector<double> hlsdens_per_p_d(NOBSDIR * 2);
     hlsdens_per_p_d = 0.0;
     hlsdens_per_p_d.allreduce(false).delayed(true);
 
-    foralldir(d) {
+    forobsdir(d) {
+        int i = (int)d % NOBSDIR;
         onsites(ALL) hloop[X] = 0;
         // mult links so that hloop[X.dir == 0] contains the polyakov loop
-        for (int i = lattice.size(d) - 2; i >= 0; --i) {
+        for (int slice = lattice.size(d) - 2; slice >= 0; --slice) {
 
             // safe_access(polyakov) pragma allows the expression below, otherwise
             // hilapp would reject it because X and X+dir can refer to the same
@@ -886,7 +873,7 @@ void measure_hloop_sign_dens(const GaugeField<T> &H, double(out_only &hls_dens_p
 
     #pragma hila safe_access(hloop)
             onsites(ALL) {
-                if (X.coordinate(d) == i) {
+                if (X.coordinate(d) == slice) {
                     hloop[X] = H[d][X] + hloop[X + d];
                 }
             }
@@ -894,16 +881,16 @@ void measure_hloop_sign_dens(const GaugeField<T> &H, double(out_only &hls_dens_p
 
         onsites(ALL) if (X.coordinate(d) == 0) {
             int tpar = (int)uparity(X.coordinates()) - 1;
-            hlsdens_per_p_d[tpar * NDIM + d] += (double)sgn(hloop[X]);
+            hlsdens_per_p_d[tpar * NOBSDIR + i] += (double)sgn(hloop[X]);
         }
     }
 
     hlsdens_per_p_d.reduce();
-    for (int i = 0; i < NDIM; ++i) {
-        hls_dens_per_p_d[0][i] = 
-            hlsdens_per_p_d[i] * 2.0 * lattice.size(i) / lattice.volume();
+    forobsdir(d) {
+        int i = (int)d % NOBSDIR;
+        hls_dens_per_p_d[0][i] = hlsdens_per_p_d[i] * 2.0 * lattice.size(d) / lattice.volume();
         hls_dens_per_p_d[1][i] =
-            hlsdens_per_p_d[NDIM + i] * 2.0 * lattice.size(i) / lattice.volume();
+            hlsdens_per_p_d[NOBSDIR + i] * 2.0 * lattice.size(d) / lattice.volume();
     }
 }
 
@@ -915,19 +902,19 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     static bool first = true;
     if (first) {
         // print legend for measurement output
-        hila::out0 << "LSPLAQ    :         splaq        nsplaq\n";
-
-        hila::out0 << "LSPLAQPPP :";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                    hila::out0 << "         p" << par << "d" << dir1 << dir2;
-                }
-            }
-        }
-        hila::out0 << "\n";
+        hila::out0 << "LSPLAQ    :         splaq        nsplaq        energy\n";
 
         if(0) {
+            hila::out0 << "LSPLAQPPP :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                    for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                        hila::out0 << "         p" << par << "d" << dir1 << dir2;
+                    }
+                }
+            }
+            hila::out0 << "\n";
+
             hila::out0 << "LNSPLAQPPP:";
             for (int par = 0; par < 2; ++par) {
                 for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -939,15 +926,17 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
         }
 
-        hila::out0 << "LPLAQPPP  :";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                    hila::out0 << "         p" << par << "d" << dir1 << dir2;
+        if(0) {
+            hila::out0 << "LPLAQPPP  :";
+            for (int par = 0; par < 2; ++par) {
+                for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                    for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                        hila::out0 << "         p" << par << "d" << dir1 << dir2;
+                    }
                 }
             }
+            hila::out0 << "\n";
         }
-        hila::out0 << "\n";
 
         if(0) {
             hila::out0 << "LPLAQSPPP :";
@@ -978,16 +967,16 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
 
             hila::out0 << "LHSQPPD   :";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
 
             hila::out0 << "LHPPD     :";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
@@ -996,8 +985,8 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         if (0) {
             hila::out0 << "LHLOOPSPPD:";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
@@ -1005,67 +994,64 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         if (0) {
             hila::out0 << "LNONPLCPPD:";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
         }
-        if (1) {
-            hila::out0 << "LSTAPPD   :";
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "            d" << dir;
-            }
-            hila::out0 << "\n";
 
+        if (1) {
             hila::out0 << "LSTAPPPD  :";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
 
-            hila::out0 << "LSTAPSPPD :";
+            hila::out0 << "LSTAPSQPPD:";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
         }
+
         if (0) {
             hila::out0 << "LMONPD    :";
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "            d" << dir;
+            forobsdir(dir) {
+                hila::out0 << "            d" << (int)dir;
             }
             hila::out0 << "\n";
 
             hila::out0 << "LMONPPD   :";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
         }
+
         if(0) {
             hila::out0 << "LDMONPD   :";
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "            d" << dir;
+            forobsdir(dir) {
+                hila::out0 << "            d" << (int)dir;
             }
             hila::out0 << "\n";
 
             hila::out0 << "LDMONPPD  :";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
         }
 
-        if (p.n_ps_update > 0) {
+        if (0 && p.n_ps_update > 0) {
             hila::out0 << "LSWPLAQPPP:";
             for (int par = 0; par < 2; ++par) {
                 for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -1077,15 +1063,15 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
 
             hila::out0 << "LSWMONPD  :";
-            for (int dir = 0; dir < NDIM; ++dir) {
-                hila::out0 << "            d" << dir;
+            forobsdir(dir) {
+                hila::out0 << "            d" << (int)dir;
             }
             hila::out0 << "\n";
 
             hila::out0 << "LSWMONPPD :";
             for (int par = 0; par < 2; ++par) {
-                for (int dir = 0; dir < NDIM; ++dir) {
-                    hila::out0 << "          p" << par << "d" << dir;
+                forobsdir(dir) {
+                    hila::out0 << "          p" << par << "d" << (int)dir;
                 }
             }
             hila::out0 << "\n";
@@ -1094,27 +1080,28 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
 
         first = false;
     }
-    auto splaq = measure_s_plaq(H, sw) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
-    auto nsplaq = measure_ns_plaq(H) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+    auto splaq = measure_s_plaq_dens(H, sw);
+    auto nsplaq = measure_ns_plaq_dens(H);
+    auto energydens = measure_energy_dens(H) * 0.5 * p.beta;
 
-    hila::out0 << string_format("SPLAQ       % 0.6e % 0.6e\n", splaq, nsplaq);
+    hila::out0 << string_format("SPLAQ       % 0.6e % 0.6e % 0.6e\n", splaq, nsplaq, energydens);
 
     sw_t<T> plaq;
     plaq_field(H, plaq);
 
-    double plaq_per_par_pl[2][NDIM][NDIM];
-    measure_splaq_per_par_and_plane(plaq, sw, plaq_per_par_pl);
-    hila::out0 << "SPLAQPPP   ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+    if(0) {
+        double plaq_per_par_pl[2][NDIM][NDIM];
+        measure_splaq_per_par_and_plane(plaq, sw, plaq_per_par_pl);
+        hila::out0 << "SPLAQPPP   ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                    hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+                }
             }
         }
-    }
-    hila::out0 << '\n';
+        hila::out0 << '\n';
 
-    if(0) {
         hila::out0 << "NSPLAQPPP  ";
         for (int par = 0; par < 2; ++par) {
             for (int dir1 = 0; dir1 < NDIM; ++dir1) {
@@ -1131,18 +1118,22 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         onsites(ALL) totplaq[d1][d2][X] = (fT)plaq[d1][d2][X] + sw[d1][d2][X];
     }
 
-    measure_plaq_per_par_and_plane(totplaq, plaq_per_par_pl);
-    hila::out0 << "PLAQPPP    ";
-    for (int par = 0; par < 2; ++par) {
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
-                hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+    if(0) {
+        double plaq_per_par_pl[2][NDIM][NDIM];
+        measure_plaq_per_par_and_plane(totplaq, plaq_per_par_pl);
+        hila::out0 << "PLAQPPP    ";
+        for (int par = 0; par < 2; ++par) {
+            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+                for (int dir2 = dir1 + 1; dir2 < NDIM; ++dir2) {
+                    hila::out0 << string_format(" % 0.6e", plaq_per_par_pl[par][dir1][dir2]);
+                }
             }
         }
+        hila::out0 << '\n';
     }
-    hila::out0 << '\n';
 
     if(0) {
+        double plaq_per_par_pl[2][NDIM][NDIM];
         measure_plaq_sign_per_par_and_plane(totplaq, plaq_per_par_pl);
         hila::out0 << "PLAQSPPP   ";
         for (int par = 0; par < 2; ++par) {
@@ -1156,6 +1147,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if(0) {
+        double plaq_per_par_pl[2][NDIM][NDIM];
         measure_plaq_sign_per_par_and_plane(plaq, plaq_per_par_pl);
         hila::out0 << "NPLAQSPPP  ";
         for (int par = 0; par < 2; ++par) {
@@ -1169,14 +1161,14 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if (0) {
-        double h_per_par_dir[2][NDIM];
-        double hsq_per_par_dir[2][NDIM];
+        double h_per_par_dir[2][NOBSDIR];
+        double hsq_per_par_dir[2][NOBSDIR];
         auto hsq = measure_hsq(H, hsq_per_par_dir, h_per_par_dir);
         hila::out0 << string_format("HSQ         % 0.6e\n", hsq);
 
         hila::out0 << "HSQPPD     ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
+            for (int dir = 0; dir < NOBSDIR; ++dir) {
                 hila::out0 << string_format(" % 0.6e", hsq_per_par_dir[par][dir]);
             }
         }
@@ -1184,7 +1176,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
 
         hila::out0 << "HPPD       ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
+            for (int dir = 0; dir < NOBSDIR; ++dir) {
                 hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
             }
         }
@@ -1192,11 +1184,11 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if (0) {
-        double hl_per_par_dir[2][NDIM];
+        double hl_per_par_dir[2][NOBSDIR];
         measure_hloop_sign_dens(H, hl_per_par_dir);
         hila::out0 << "HLOOPSPPD  ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
+            for (int dir = 0; dir < NOBSDIR; ++dir) {
                 hila::out0 << string_format(" % 0.6e", hl_per_par_dir[par][dir]);
             }
         }
@@ -1204,11 +1196,11 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if (0) {
-        double nplc_per_par[2][NDIM];
-        measure_nonplanar_curve(H, nplc_per_par);
+        double nplc_per_par[2][NOBSDIR];
+        measure_nonplanar_loop_3d(H, nplc_per_par);
         hila::out0 << "NONPLCPPD  ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NDIM; ++dir) {
+            for (int dir = 0; dir < NOBSDIR; ++dir) {
                 hila::out0 << string_format(" % 0.6e", nplc_per_par[par][dir]);
             }
         }
@@ -1216,48 +1208,41 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if (1) {
-        double m_per_dir[NDIM];
-        double m_per_par_dir[2][NDIM];
-        measure_stap_dens(totplaq, m_per_dir, m_per_par_dir);
-
-        hila::out0 << "STAPPD     ";
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-            hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
-        }
-        hila::out0 << '\n';
+        double stap_per_par_dir[2][NOBSDIR];
+        double stapsq_per_par_dir[2][NOBSDIR];
+        measure_stap_plaq_dens(totplaq, stap_per_par_dir, stapsq_per_par_dir);
 
         hila::out0 << "STAPPPD    ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", stap_per_par_dir[par][dir1]);
             }
         }
         hila::out0 << '\n';
 
-        measure_staps_dens(totplaq, m_per_par_dir);
-        hila::out0 << "STAPSPPD   ";
+        hila::out0 << "STAPSQPPD  ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
-                hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
+            for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
+                hila::out0 << string_format(" % 0.6e", stapsq_per_par_dir[par][dir1]);
             }
         }
         hila::out0 << '\n';
     }
 
     if (0) {
-        double m_per_dir[NDIM];
-        double m_per_par_dir[2][NDIM];
+        double m_per_dir[NOBSDIR];
+        double m_per_par_dir[2][NOBSDIR];
         measure_monop_dens(totplaq, m_per_dir, m_per_par_dir);
 
         hila::out0 << "MONPD      ";
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+        for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
             hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
         }
         hila::out0 << '\n';
 
         hila::out0 << "MONPPD     ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+            for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
                 hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
             }
         }
@@ -1267,27 +1252,27 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     if(0) {
         sw_t<fT> dualplaq;
         dual_plaq(totplaq, dualplaq);
-        double m_per_dir[NDIM];
-        double m_per_par_dir[2][NDIM];
+        double m_per_dir[NOBSDIR];
+        double m_per_par_dir[2][NOBSDIR];
         measure_monop_dens(dualplaq, m_per_dir, m_per_par_dir);
 
         hila::out0 << "DMONPD     ";
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+        for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
             hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
         }
         hila::out0 << '\n';
 
         hila::out0 << "DMONPPD    ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+            for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
                 hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
             }
         }
         hila::out0 << '\n';
-
     }
 
-    if (p.n_ps_update > 0) {
+    if (0 && p.n_ps_update > 0) {
+        double plaq_per_par_pl[2][NDIM][NDIM];
         measure_plaq_per_par_and_plane(sw, plaq_per_par_pl);
         hila::out0 << "SWPLAQPPP  ";
         for (int par = 0; par < 2; ++par) {
@@ -1299,18 +1284,18 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
         }
         hila::out0 << '\n';
 
-        double m_per_dir[NDIM];
-        double m_per_par_dir[2][NDIM];
+        double m_per_dir[NOBSDIR];
+        double m_per_par_dir[2][NOBSDIR];
         measure_monop_dens(sw, m_per_dir, m_per_par_dir);
         hila::out0 << "SWMONPD    ";
-        for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+        for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
             hila::out0 << string_format(" % 0.6e", m_per_dir[dir1]);
         }
         hila::out0 << '\n';
 
         hila::out0 << "SWMONPPD   ";
         for (int par = 0; par < 2; ++par) {
-            for (int dir1 = 0; dir1 < NDIM; ++dir1) {
+            for (int dir1 = 0; dir1 < NOBSDIR; ++dir1) {
                 hila::out0 << string_format(" % 0.6e", m_per_par_dir[par][dir1]);
             }
         }
