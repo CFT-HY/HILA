@@ -450,54 +450,32 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 // measurement functions
 
 
-template <typename T, typename fT>
-double measure_s_plaq_dens(const GaugeField<T> &H, const sw_t<fT> &sw) {
+template <typename T>
+double measure_s_plaq_dens(const PlaquetteField<T> &plaq) {
     // measure the total plaquette action for the link field H (taking into account the plaquette
     // shifts)
-    Reduction<double> plaq = 0;
-    plaq.allreduce(false).delayed(true);
+    Reduction<double> splaq = 0;
+    splaq.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
-        H[d2].start_gather(d1, ALL);
-        H[d1].start_gather(d2, ALL);
         onsites(ALL) {
-            plaq += pow(((double)(H[d1][X] + H[d2][X + d1] - H[d1][X + d2] - H[d2][X]) +
-                              (double)sw[d1][d2][X]),
-                             2.0);
+            splaq += pow(plaq[d1][d2][X], 2.0);
         }
     }
-    return plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) * 0.5);
+    return splaq.value() / (lattice.volume() * NDIM * (NDIM - 1) * 0.5);
 }
 
 template <typename T>
-double measure_ns_plaq_dens(const GaugeField<T> &H) {
-    // measure the total plaquette action for the link field H (without plaquette shifts)
-    Reduction<double> plaq = 0;
-    plaq.allreduce(false).delayed(true);
-    foralldir(d1) foralldir(d2) if (d1 < d2) {
-        H[d2].start_gather(d1, ALL);
-        H[d1].start_gather(d2, ALL);
-        onsites(ALL) {
-            plaq += pow((double)(H[d1][X] + H[d2][X + d1] - H[d1][X + d2] - H[d2][X]),
-                        2.0);
-        }
-    }
-    return plaq.value() / (lattice.volume() * NDIM * (NDIM - 1) * 0.5);
-}
-
-template <typename T>
-double measure_energy_dens(const GaugeField<T> &H) {
+double measure_energy_dens(const PlaquetteField<T> &plaq) {
     // measure the total plaquette action for the link field H (without plaquette shifts)
     Reduction<double> nrg = 0;
     nrg.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
-        H[d2].start_gather(d1, ALL);
-        H[d1].start_gather(d2, ALL);
         int sign = 1;
         if(d2 == e_t) {
             sign = -1;
         }
         onsites(ALL) {
-            nrg += (double)sign*pow((double)(H[d1][X] + H[d2][X + d1] - H[d1][X + d2] - H[d2][X]), 2.0);
+            nrg += (double)sign * pow(plaq[d1][d2][X], 2.0);
         }
     }
     return nrg.value() / lattice.volume();
@@ -1080,14 +1058,22 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
 
         first = false;
     }
-    auto splaq = measure_s_plaq_dens(H, sw);
-    auto nsplaq = measure_ns_plaq_dens(H);
-    auto energydens = measure_energy_dens(H) * 0.5 * p.beta;
-
-    hila::out0 << string_format("SPLAQ       % 0.6e % 0.6e % 0.6e\n", splaq, nsplaq, energydens);
 
     sw_t<T> plaq;
     plaq_field(H, plaq);
+
+    sw_t<fT> totplaq;
+    foralldir(d1) foralldir(d2) {
+        onsites(ALL) totplaq[d1][d2][X] = (fT)plaq[d1][d2][X] + sw[d1][d2][X];
+    }
+
+    auto splaq = measure_s_plaq_dens(totplaq);
+    auto nsplaq = measure_s_plaq_dens(plaq);
+    auto energydens = measure_energy_dens(totplaq) * 0.5 * p.beta;
+
+    hila::out0 << string_format("SPLAQ       % 0.6e % 0.6e % 0.6e\n", splaq, nsplaq, energydens);
+
+
 
     if(0) {
         double plaq_per_par_pl[2][NDIM][NDIM];
@@ -1111,11 +1097,6 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             }
         }
         hila::out0 << '\n';
-    }
-
-    sw_t<fT> totplaq;
-    foralldir(d1) foralldir(d2) {
-        onsites(ALL) totplaq[d1][d2][X] = (fT)plaq[d1][d2][X] + sw[d1][d2][X];
     }
 
     if(0) {
