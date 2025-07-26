@@ -261,6 +261,12 @@ void hila::synchronize() {
     synchronize_timer.stop();
 }
 
+void hila::barrier() {
+    synchronize_timer.start();
+    MPI_Barrier(lattice.mpi_comm_lat);
+    synchronize_timer.stop();
+}
+
 
 ///  Get message tags cyclically -- defined outside classes, so that it is global and
 ///  unique

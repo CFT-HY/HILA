@@ -6,6 +6,8 @@
  */
 #include "hila.h"
 
+#include "clusters.h"
+
 // unistd.h needed for isatty()
 #include <unistd.h>
 
@@ -780,6 +782,55 @@ void test_extended() {
 }
 
 
+//--------------------------------------------------------------------------------
+
+void test_clusters() {
+
+#ifdef VECTORIZED
+    hila::out0 << "Cluster tests cannot be done (yet) on vectorized (AVX) targets\n";
+
+#else
+    Field<uint8_t> m;
+
+    m = hila::clusters::background;
+
+    onsites(ALL) {
+        auto c = X.coordinates();
+        if (c[e_x] == 0 && c[e_y] == 0)
+            m[X] = 1;
+        else if (c[e_x] == 2 && c[e_z] == 2)
+            m[X] = 2;
+        else if (c[e_x] == 4 && c[e_y] < 3 && c[e_z] > 1 && c[e_z] <= 4)
+            m[X] = 3;
+    }
+
+    hila::clusters cl(m);
+
+    report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
+    if (cl.number() == 3) {
+        double sumsize =
+            fabs(cl.size(0) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
+            fabs(cl.size(1) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
+            fabs(cl.size(2) - 1 * 3 * 3);
+        report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
+
+        double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
+        report_pass("Cluster test: cluster types ", types, 1e-10);
+
+#if NDIM == 3
+        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) + abs(cl.area(1) - 4*lattice.size(e_y))
+            + abs(cl.area(2) - 2*(1*3 + 1*3 + 3*3));
+
+        report_pass("Cluster test: cluster area ", area, 1e-10);
+
+#endif
+
+    }
+
+#endif
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv) {
@@ -816,5 +867,7 @@ int main(int argc, char **argv) {
     test_spectraldensity();
     test_matrix_algebra();
     test_extended();
+    test_clusters();
+
     hila::finishrun();
 }
