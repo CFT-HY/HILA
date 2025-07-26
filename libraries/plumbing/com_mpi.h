@@ -412,10 +412,10 @@ bool get_allreduce();
 void hila_reduce_double_setup(double *d, int n);
 void hila_reduce_float_setup(float *d, int n);
 void hila_reduce_sums();
-void reduce_node_sum_extended(Extended *value, int send_count, bool allreduce = true);
+void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool allreduce = true);
 
-extern MPI_Datatype MPI_Extended_type;
-extern MPI_Op MPI_Extended_sum_op;
+extern MPI_Datatype MPI_ExtendedPrecision_type;
+extern MPI_Op MPI_ExtendedPrecision_sum_op;
 
 void create_extended_MPI_type();
 void create_extended_MPI_operation();
@@ -427,7 +427,7 @@ template <typename T>
 void hila_reduce_sum_setup(T *value) {
 
     using b_t = hila::arithmetic_type<T>;
-    if constexpr (std::is_same<T, Extended>::value) {
+    if constexpr (std::is_same<T, ExtendedPrecision>::value) {
         reduce_node_sum_extended(value, 1, hila::get_allreduce());
     } else if (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));

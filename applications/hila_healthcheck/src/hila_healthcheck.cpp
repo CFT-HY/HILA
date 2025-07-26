@@ -40,8 +40,8 @@ bool report_pass(std::string message, double eps, double limit) {
 
 /**
  * @brief Test various functions on fields.
- * @details Test functions exp (on both real and complex field) and sin. 
- * 
+ * @details Test functions exp (on both real and complex field) and sin.
+ *
  */
 void test_functions() {
 
@@ -60,8 +60,9 @@ void test_functions() {
 
 /**
  * @brief Test reduction operations on fields
- * @details Test normal reduction `+=` and ReductionVector on fields with different types such as real, complex, matrix and SU matrix.
- * 
+ * @details Test normal reduction `+=` and ReductionVector on fields with different types such as
+ * real, complex, matrix and SU matrix.
+ *
  */
 void test_reductions() {
 
@@ -164,7 +165,7 @@ void test_reductions() {
 /**
  * @brief Test site access
  * @details Test simple site access by writing and reading to random field site index c.
- * 
+ *
  */
 void test_site_access() {
 
@@ -187,7 +188,7 @@ void test_site_access() {
 /**
  * @brief Test min and max operations on fields
  * @details Test min and max operations on fields with different parities.
- * 
+ *
  */
 void test_minmax() {
 
@@ -234,7 +235,7 @@ void test_minmax() {
 /**
  * @brief Test Gaussian random field generation
  * @details Generate a Gaussian random field and check its average and width^2.
- * 
+ *
  */
 void test_random() {
 
@@ -364,7 +365,7 @@ void test_set_elements_and_select() {
 
 /**
  * @brief Test subvolume operations
- * 
+ *
  */
 void test_subvolumes() {
 
@@ -447,8 +448,8 @@ void test_subvolumes() {
 
 /**
  * @brief Test FFT
- * @details Test forward and inverse FFT on fields. 
- * 
+ * @details Test forward and inverse FFT on fields.
+ *
  */
 void test_fft() {
 
@@ -563,7 +564,7 @@ void test_fft() {
 /**
  * @brief Test spectral density
  * @details Test spectral density extraction from field.
- * 
+ *
  */
 void test_spectraldensity() {
 
@@ -641,7 +642,7 @@ void test_field_slices() {
 /**
  * @brief Test matrix operations
  * @details Test matrix multiplication and addition, as well as operations with imaginary operator.
- * 
+ *
  */
 void test_matrix_operations() {
 
@@ -665,10 +666,10 @@ void test_matrix_operations() {
 }
 
 
-
 /**
  * @brief Test matrix decomposition
- * @details Test matrix decompositions such as eigen decomposition and singular value decomposition (SVD).
+ * @details Test matrix decompositions such as eigen decomposition and singular value decomposition
+ * (SVD).
  */
 void test_matrix_algebra() {
 
@@ -727,34 +728,57 @@ void test_matrix_algebra() {
 /**
  * @brief Test extended type
  * @details Test extended type for sums that exibit loss in accuracy with double.
- * 
+ *
  */
 void test_extended() {
 
-    // Extended type test with T = double
-    {
-        Field<double> g;
-        onsites(EVEN) g[X] = 1e32;
-        onsites(ODD) g[X] = 1; 
-        Extended ext_type = 0;
-        double expected = 1e32* lattice.volume()/2 + 1 *lattice.volume()/2;
-        onsites(ALL) {
-            ext_type += g[X];
-        }
-        auto to_str = [](double x) {
-            std::ostringstream oss;
-            oss.precision(std::numeric_limits<double>::max_digits10);
-            oss << x;
-            return oss.str();
-        };
+    // ExtendedPrecision type test with T = double
+    Field<double> g;
 
-        report_pass("Extended type - expected: " +
-                            to_str(ext_type.value) + " + " +
-                            to_str(ext_type.compensation) + " - " +
-                            to_str(expected),
-                abs(ext_type - expected), 1e-10);
+    ExtendedPrecision e = 2;
+    e = 2 * e + e / 0.5 - 16.0 / e;
+    report_pass("ExtendedPrecision basic arithmetics: " + hila::prettyprint(e), fabs(e.get_value()),
+                1e-20);
+
+    e = 1;
+    e += 1e-25;
+    bool ok = (e > 1) && (e == e);
+
+    report_pass("ExtendedPrecision comparison ops", ok ? 0 : 1, 1e-20);
+
+    for (double mag = 1e8; mag <= 1e+26; mag *= 1e4) {
+
+        onsites(ALL) {
+            if (X.x() % 2 == 0)
+                g[X] = mag;
+            else
+                g[X] = 1;
+        }
+        ExtendedPrecision ev = 0;
+        double s = 0;
+        onsites(ALL) {
+            ev += g[X];
+            s += g[X];
+        }
+
+        ExtendedPrecision result;
+        result = mag * lattice.volume() / 2;
+        result += lattice.volume() / 2;
+
+        ev -= mag * lattice.volume() / 2;
+        ev -= lattice.volume() / 2;
+
+        s -= mag * lattice.volume() / 2;
+        s -= lattice.volume() / 2;
+
+        std::stringstream res;
+        res << "Extended reduction residual w. delta " << mag << " : " << ev / result << " (double "
+            << s / result << ")";
+
+        report_pass(res.str(), (ev/result).get_value(), 1e-20);
     }
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -780,17 +804,17 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////
     // start tests
 
-    //test_reductions();
-    //test_functions();
-    //test_site_access();
-    //test_minmax();
-    //test_random();
-    //test_set_elements_and_select();
-    //test_subvolumes();
-    //test_matrix_operations();
-    //test_fft();
-    //test_spectraldensity();
-    //test_matrix_algebra();
+    test_reductions();
+    test_functions();
+    test_site_access();
+    test_minmax();
+    test_random();
+    test_set_elements_and_select();
+    test_subvolumes();
+    test_matrix_operations();
+    test_fft();
+    test_spectraldensity();
+    test_matrix_algebra();
     test_extended();
     hila::finishrun();
 }
