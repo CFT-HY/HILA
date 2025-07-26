@@ -301,11 +301,11 @@ void hila::synchronize_partitions() {
         MPI_Barrier(MPI_COMM_WORLD);
 }
 
-MPI_Datatype MPI_Extended_type;
-MPI_Op MPI_Extended_sum_op;
+MPI_Datatype MPI_ExtendedPrecision_type;
+MPI_Op MPI_ExtendedPrecision_sum_op;
 
 void create_extended_MPI_type() {
-    Extended dummy;
+    ExtendedPrecision dummy;
     int block_lengths[2] = {1, 1};
     MPI_Aint displacements[2];
     MPI_Datatype types[2] = {MPI_DOUBLE, MPI_DOUBLE};
@@ -317,13 +317,13 @@ void create_extended_MPI_type() {
     displacements[0] -= base;
     displacements[1] -= base;
 
-    MPI_Type_create_struct(2, block_lengths, displacements, types, &MPI_Extended_type);
-    MPI_Type_commit(&MPI_Extended_type);
+    MPI_Type_create_struct(2, block_lengths, displacements, types, &MPI_ExtendedPrecision_type);
+    MPI_Type_commit(&MPI_ExtendedPrecision_type);
 }
 
 void extended_sum_op(void *in, void *inout, int *len, MPI_Datatype *datatype) {
-    Extended *in_data = (Extended *)in;
-    Extended *inout_data = (Extended *)inout;
+    ExtendedPrecision *in_data = (ExtendedPrecision *)in;
+    ExtendedPrecision *inout_data = (ExtendedPrecision *)inout;
 
     for (int i = 0; i < *len; i++) {
         inout_data[i] += in_data[i];
@@ -331,7 +331,7 @@ void extended_sum_op(void *in, void *inout, int *len, MPI_Datatype *datatype) {
 }
 
 void create_extended_MPI_operation() {
-    MPI_Op_create(&extended_sum_op, true, &MPI_Extended_sum_op);
+    MPI_Op_create(&extended_sum_op, true, &MPI_ExtendedPrecision_sum_op);
 }
 
 
@@ -342,7 +342,7 @@ void create_extended_MPI_operation() {
  * @param send_count Number of extended variables to reduce (default 1)
  * @param allreduce If true, performs MPI_Allreduce, otherwise MPI_Reduce
  */
-void reduce_node_sum_extended(Extended *value, int send_count, bool allreduce) {
+void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool allreduce) {
 
     if (hila::check_input)
         return;
@@ -354,15 +354,15 @@ void reduce_node_sum_extended(Extended *value, int send_count, bool allreduce) {
         init_extended_type_and_operation = false;
     }
 
-    std::vector<Extended> recv_data(send_count);
+    std::vector<ExtendedPrecision> recv_data(send_count);
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)value, (void *)recv_data.data(), 1, MPI_Extended_type, MPI_Extended_sum_op,
+        MPI_Allreduce((void *)value, (void *)recv_data.data(), 1, MPI_ExtendedPrecision_type, MPI_ExtendedPrecision_sum_op,
                       lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
-        MPI_Reduce((void *)value, (void *)recv_data.data(), 1, MPI_Extended_type, MPI_Extended_sum_op, 0,
+        MPI_Reduce((void *)value, (void *)recv_data.data(), 1, MPI_ExtendedPrecision_type, MPI_ExtendedPrecision_sum_op, 0,
                    lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
