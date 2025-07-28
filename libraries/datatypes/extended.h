@@ -1,11 +1,44 @@
 /**
  * @file extended.h
  * @brief This files containts definitions for the extended precision class that allows for high
- * precision reductions.
+ * precision reductions using Neumeier summation.
+ * 
+ * @details
+ * Uses internally two double precision variables to store the value and compensation. Precision
+ * can be 10 orders of magnitude better than plain doble.
+ * 
+ * Use:
+ * @code {.cpp}
+ * 
+ * ExtendedPrecision s1 = 0, s2 = 0;
+ * onsites(ALL) {
+ *     s1 += <double/float/int -valued expression>;
+ *     s2 += <some other expression>
+ * }
+ * 
+ * // below subtraction and comparison is done in extended precision
+ * if (s1 == s2) 
+ *     hila::out0 << "s1 equals s2\n";
+ * else 
+ *     hila::out0 << "s1 is " << (s1 > s2) ? "greater" : "less" 
+ *                << " than s2, with difference " << s1 - s2 << '\n';
+ * @endcode 
+ * 
+ * Class implements basic arithmetics ( + - * / ), assignments (= += *=) and 
+ * comparison ops for ExtendedPrecision types. ExtendedPrecision is not
+ * automatically downgraded to double in order to avoid accidental loss of accuracy.
+ * 
+ * To get a double approximation of the value use
+ * @code {.cpp}
+ *    s1.get_value()
+ *    // or equvalently explicit casting
+ *    static_cast<double>(s1)
+ * @endcode 
+ * 
  */
 
-#ifndef _HILA_EXTENDED_H
-#define _HILA_EXTENDED_H
+#ifndef HILA_EXTENDED_H
+#define HILA_EXTENDED_H
 
 #include "plumbing/defs.h"
 
@@ -76,7 +109,7 @@ class ExtendedPrecision {
     inline const ExtendedPrecision &operator+=(const ExtendedPrecision &rhs) {
         ExtendedPrecision temp = fast_two_sum(this->value, rhs.value);
         ExtendedPrecision temp2 = fast_two_sum(this->compensation, rhs.compensation);
-        this->compensation = temp.compensation + temp2.value;
+        this->compensation = temp.compensation + temp2.value + temp2.compensation;
         this->value = temp.value;
         return *this;
     }
