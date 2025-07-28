@@ -748,12 +748,15 @@ void test_extended() {
 
     report_pass("ExtendedPrecision comparison ops", ok ? 0 : 1, 1e-20);
 
-    for (double mag = 1e8; mag <= 1e+26; mag *= 1e4) {
+    for (double mag = 1e8; mag <= 1e+32; mag *= 1e4) {
 
         onsites(ALL) {
-            if (X.x() % 2 == 0)
-                g[X] = mag;
-            else
+            if (X.x() % 2 == 0) {
+                if (X.y() % 2 == 0)
+                    g[X] = sqr(mag);
+                else
+                    g[X] = mag;
+            } else
                 g[X] = 1;
         }
         ExtendedPrecision ev = 0;
@@ -764,20 +767,27 @@ void test_extended() {
         }
 
         ExtendedPrecision result;
-        result = mag * lattice.volume() / 2;
-        result += lattice.volume() / 2;
+        result = lattice.volume() / 2;
+        result += mag * lattice.volume() / 4;
+        result += sqr(mag) * lattice.volume() / 4;
 
-        ev -= mag * lattice.volume() / 2;
+        ev -= sqr(mag) * lattice.volume() / 4;
+        ev -= mag * lattice.volume() / 4;
         ev -= lattice.volume() / 2;
 
-        s -= mag * lattice.volume() / 2;
+        s -= sqr(mag) * lattice.volume() / 4;
+        s -= mag * lattice.volume() / 4;
         s -= lattice.volume() / 2;
+
+        // hila::out0 << "RES " << ev.value << " + " << ev.compensation << " + " << ev.compensation2
+        //           << '\n';
+
 
         std::stringstream res;
         res << "Extended reduction residual w. delta " << mag << " : " << ev / result << " (double "
             << s / result << ")";
 
-        report_pass(res.str(), (ev/result).get_value(), 1e-20);
+        report_pass(res.str(), (ev / result).get_value(), 1e-20);
     }
 }
 
@@ -818,13 +828,13 @@ void test_clusters() {
         report_pass("Cluster test: cluster types ", types, 1e-10);
 
 #if NDIM == 3
-        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) + abs(cl.area(1) - 4*lattice.size(e_y))
-            + abs(cl.area(2) - 2*(1*3 + 1*3 + 3*3));
+        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) +
+                      abs(cl.area(1) - 4 * lattice.size(e_y)) +
+                      abs(cl.area(2) - 2 * (1 * 3 + 1 * 3 + 3 * 3));
 
         report_pass("Cluster test: cluster area ", area, 1e-10);
 
 #endif
-
     }
 
 #endif
