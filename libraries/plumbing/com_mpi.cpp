@@ -312,18 +312,20 @@ MPI_Op MPI_ExtendedPrecision_sum_op;
 
 void create_extended_MPI_type() {
     ExtendedPrecision dummy;
-    int block_lengths[2] = {1, 1};
-    MPI_Aint displacements[2];
-    MPI_Datatype types[2] = {MPI_DOUBLE, MPI_DOUBLE};
+    int block_lengths[3] = {1, 1, 1};
+    MPI_Aint displacements[3];
+    MPI_Datatype types[3] = {MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE};
 
     MPI_Aint base;
     MPI_Get_address(&dummy, &base);
     MPI_Get_address(&dummy.value, &displacements[0]);
     MPI_Get_address(&dummy.compensation, &displacements[1]);
+    MPI_Get_address(&dummy.compensation2, &displacements[2]);
     displacements[0] -= base;
     displacements[1] -= base;
+    displacements[2] -= base;
 
-    MPI_Type_create_struct(2, block_lengths, displacements, types, &MPI_ExtendedPrecision_type);
+    MPI_Type_create_struct(3, block_lengths, displacements, types, &MPI_ExtendedPrecision_type);
     MPI_Type_commit(&MPI_ExtendedPrecision_type);
 }
 
