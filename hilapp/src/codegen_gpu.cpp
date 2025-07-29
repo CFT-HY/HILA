@@ -136,9 +136,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                          << loop_info.parity_str << ");\n";
                 }
         } else {
-            code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                    "++_HILAdir_) {\n"
-                 << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str << ");\n}\n";
+            code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                    "++HILA_dir_) {\n"
+                 << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
         }
     }
 
@@ -633,11 +633,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     loopBuf.replace(idx, idx, replstr);
 
-                    // _HILA_thread_id is defined in kernel start below
+                    // HILA_thread_id is defined in kernel start below
                     l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
                             .getLocWithOffset(1);
 
-                    loopBuf.insert(l, " )*N_threads*gridDim.x + _HILA_thread_id");
+                    loopBuf.insert(l, " )*N_threads*gridDim.x + HILA_thread_id");
                 }
             }
         }
@@ -698,8 +698,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     /////////////////////////////////////////////////////////////////////////////
     // Standard boilerplate in CUDA kernels: calculate site index
 
-    kernel << "int _HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
-    kernel << "unsigned " << looping_var << " = _HILA_thread_id + d_lattice.loop_begin;\n";
+    kernel << "int HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
+    kernel << "unsigned " << looping_var << " = HILA_thread_id + d_lattice.loop_begin;\n";
 
     if (!use_thread_blocks) {
 
@@ -710,10 +710,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // In this case let all threads to iterate over sites
         // use long long type (64 bits) just in case to avoid wrapping
         // the iteration will stop on the
-        kernel << "for (long long _HILA_idx_l_ = " << looping_var
-               << "; _HILA_idx_l_ < d_lattice.loop_end; _HILA_idx_l_ += N_threads * "
+        kernel << "for (long long HILA_idx_l_ = " << looping_var
+               << "; HILA_idx_l_ < d_lattice.loop_end; HILA_idx_l_ += N_threads * "
                << thread_block_number << ") {\n"
-               << looping_var << " = _HILA_idx_l_;\n";
+               << looping_var << " = HILA_idx_l_;\n";
     }
 
     // Create temporary field element variables
@@ -760,10 +760,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                 std::string loop_array_name = l.new_name + "_dirs";
                 kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
-                kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
-                          "++_HILAdir_) {\n"
-                       << loop_array_name << "[_HILAdir_] = " << l.new_name << ".get(" << l.new_name
-                       << ".neighbours[_HILAdir_][" << looping_var
+                kernel << "for (int HILA_dir_ = 0; HILA_dir_ < NDIRS; "
+                          "++HILA_dir_) {\n"
+                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get(" << l.new_name
+                       << ".neighbours[HILA_dir_][" << looping_var
                        << "], d_lattice.field_alloc_size);\n}\n";
 
                 // and replace references in loop body
@@ -918,22 +918,22 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // } else if (vi.reduction_type == reduction::PRODUCT) {
         //     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
         // }
-        kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
+        kernel << "for( int HILA__i=N_threads/2; HILA__i>0; HILA__i/=2 ){\n";
         if (r.reduction_type == reduction::SUM) {
-            kernel << "if(threadIdx.x < _H_i) {\n";
+            kernel << "if(threadIdx.x < HILA__i) {\n";
 
             // STD
             // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
-            //        << "sh[threadIdx.x+_H_i];\n";
+            //        << "sh[threadIdx.x + HILA__i];\n";
             kernel << "_hila_kernel_add_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
-                   << "sh[threadIdx.x + _H_i]);\n";
+                   << "sh[threadIdx.x + HILA__i]);\n";
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
-            kernel << "if(threadIdx.x < _H_i) {\n";
+            kernel << "if(threadIdx.x < HILA__i) {\n";
 
             kernel << r.loop_name << "sh[threadIdx.x] *= " << r.loop_name
-                   << "sh[threadIdx.x+_H_i];\n";
+                   << "sh[threadIdx.x + HILA__i];\n";
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         }
@@ -987,12 +987,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr <<
             // ");\n";
 
-            code << "for (int _H_tmp_idx=0; _H_tmp_idx < (" << ar.size_expr << "); _H_tmp_idx++) "
-                 << ar.name << "[_H_tmp_idx]";
+            code << "for (int HILA__tmp_idx=0; HILA__tmp_idx < (" << ar.size_expr << "); HILA__tmp_idx++) "
+                 << ar.name << "[HILA__tmp_idx]";
             if (ar.reduction_type == reduction::SUM)
-                code << " += a_v__tmp[_H_tmp_idx];\n";
+                code << " += a_v__tmp[HILA__tmp_idx];\n";
             else
-                code << " *= a_v__tmp[_H_tmp_idx];\n";
+                code << " *= a_v__tmp[HILA__tmp_idx];\n";
 
             code << "delete[] a_v__tmp;\n}\n";
         }

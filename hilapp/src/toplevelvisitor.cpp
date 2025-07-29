@@ -808,7 +808,7 @@ bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
         }
 
         sel.ref = E;
-        sel.new_name = "_HILA_" + clean_name(get_stmt_str(E));
+        sel.new_name = "HILA_" + clean_name(get_stmt_str(E));
 
         sel.previous_selection = nullptr;
         for (auto &s : selection_info_list) {

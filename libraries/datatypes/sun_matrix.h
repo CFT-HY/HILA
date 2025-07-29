@@ -1,12 +1,12 @@
+#ifndef HILA_SUN_MATRIX_H_
+#define HILA_SUN_MATRIX_H_
+
 /**
  * @file sun_matrix.h
  * @brief SU(N) Matrix definitions
  * @details This file contains definitions for SU(N) matrix class and specialized Algebra
  * class for SU(N) matrix.
  */
-
-#ifndef SUN_MATRIX_H_
-#define SUN_MATRIX_H_
 
 #include "matrix.h"
 #include "su2.h"

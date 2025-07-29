@@ -1,5 +1,5 @@
-#ifndef COM_MPI_H
-#define COM_MPI_H
+#ifndef HILA_COM_MPI_H_
+#define HILA_COM_MPI_H_
 
 #include "plumbing/defs.h"
 

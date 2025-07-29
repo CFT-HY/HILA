@@ -1,5 +1,5 @@
-#ifndef PARAMS_H_
-#define PARAMS_H_
+#ifndef HILA_PARAMS_H_
+#define HILA_PARAMS_H_
 /**
  * @file params.h
  * @brief This file contains #defined constants

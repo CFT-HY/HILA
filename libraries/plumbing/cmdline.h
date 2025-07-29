@@ -1,5 +1,5 @@
-#ifndef CMDLINE_H
-#define CMDLINE_H
+#ifndef HILA_CMDLINE_H_
+#define HILA_CMDLINE_H_
 
 #include <map>
 #include <vector>

@@ -1,5 +1,5 @@
-#ifndef SPECTRALDENSITY_H
-#define SPECTRALDENSITY_H
+#ifndef HILA_SPECTRALDENSITY_H
+#define HILA_SPECTRALDENSITY_H
 
 #include "hila.h"
 

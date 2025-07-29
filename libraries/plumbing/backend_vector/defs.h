@@ -1,5 +1,5 @@
-#ifndef VECTOR_DEFS_H
-#define VECTOR_DEFS_H
+#ifndef HILA_VECTOR_DEFS_H
+#define HILA_VECTOR_DEFS_H
 
 #include "plumbing/defs.h"
 

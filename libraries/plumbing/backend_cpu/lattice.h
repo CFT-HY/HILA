@@ -1,5 +1,5 @@
-#ifndef _BACKEND_LATTICE_H_
-#define _BACKEND_LATTICE_H_
+#ifndef HILA_BACKEND_LATTICE_H_
+#define HILA_BACKEND_LATTICE_H_
 
 /// Some backends need specialized lattice data
 /// in loops. These are implemented here.

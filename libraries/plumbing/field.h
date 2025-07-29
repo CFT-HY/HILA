@@ -1,10 +1,11 @@
+#ifndef HILA_FIELD_H
+#define HILA_FIELD_H
+
 /**
  * @file field.h
  * @brief This files containts definitions for the Field class and the classes required to define
  * it such as field_struct.
  */
-#ifndef FIELD_H
-#define FIELD_H
 
 #include <sstream>
 #include <iostream>

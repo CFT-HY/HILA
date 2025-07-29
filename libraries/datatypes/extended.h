@@ -1,3 +1,6 @@
+#ifndef HILA_EXTENDED_H
+#define HILA_EXTENDED_H
+
 /**
  * @file extended.h
  * @brief This files containts definitions for the extended precision class that allows for high
@@ -37,8 +40,6 @@
  *
  */
 
-#ifndef HILA_EXTENDED_H
-#define HILA_EXTENDED_H
 
 #include "plumbing/defs.h"
 

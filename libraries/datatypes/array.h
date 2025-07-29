@@ -1,11 +1,11 @@
+#ifndef HILA_ARRAY_H_
+#define HILA_ARRAY_H_
+
 /**
  * @file array.h
  * @brief Definition of Array class
  * @details This file contains the definitions of Array class and utility functions related to it.
  */
-
-#ifndef ARRAY_H_
-#define ARRAY_H_
 
 #include "datatypes/matrix.h"
 

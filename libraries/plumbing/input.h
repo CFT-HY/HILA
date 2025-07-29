@@ -1,6 +1,7 @@
+#ifndef HILA_PARAM_INPUT_H
+#define HILA_PARAM_INPUT_H
+
 /** @file input.h */
-#ifndef PARAM_INPUT_H
-#define PARAM_INPUT_H
 
 #include <string>
 #include "defs.h"

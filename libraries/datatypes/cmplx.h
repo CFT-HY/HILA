@@ -1,3 +1,6 @@
+#ifndef HILA_CMPLX_H_
+#define HILA_CMPLX_H_
+
 /**
  * @file cmplx.h
  * @brief Definition of Complex types
@@ -9,8 +12,6 @@
  *
  */
 
-#ifndef CMPLX_H_
-#define CMPLX_H_
 
 // let's not include the std::complex
 // #include <complex>

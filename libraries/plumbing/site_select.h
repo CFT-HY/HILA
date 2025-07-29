@@ -1,5 +1,5 @@
-#ifndef SITE_SELECT_H_
-#define SITE_SELECT_H_
+#ifndef HILA_SITE_SELECT_H_
+#define HILA_SITE_SELECT_H_
 
 // We insert the GPU code in the same file too
 // hilapp should not read in .cuh, because it does not understand it

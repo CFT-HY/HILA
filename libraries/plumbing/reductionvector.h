@@ -1,5 +1,5 @@
-#ifndef ReductionVector_H_
-#define ReductionVector_H_
+#ifndef HILA_REDUCTIONVECTOR_H_
+#define HILA_REDUCTIONVECTOR_H_
 
 #include "hila.h"
 

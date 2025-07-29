@@ -1,5 +1,5 @@
-#ifndef _BACKEND_LATTICE_H_
-#define _BACKEND_LATTICE_H_
+#ifndef HILA_BACKEND_LATTICE_VECTOR_H_
+#define HILA_BACKEND_LATTICE_VECTOR_H_
 
 #include "../lattice.h"
 #include "vector_types.h"

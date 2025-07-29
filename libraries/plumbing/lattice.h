@@ -1,5 +1,5 @@
-#ifndef LATTICE_H
-#define LATTICE_H
+#ifndef HILA_LATTICE_H
+#define HILA_LATTICE_H
 
 #include <sstream>
 #include <iostream>

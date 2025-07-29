@@ -1,10 +1,11 @@
+#ifndef HILA_GAUGEFIELD_H_
+#define HILA_GAUGEFIELD_H_
+
 /**
  * @file gaugefield.h
  * @brief Definition of Gauge Field
  * @details This file contains the definition for the GaugeField class
  */
-#ifndef GAUGEFIELD_H_
-#define GAUGEFIELD_H_
 
 #include "hila.h"
 

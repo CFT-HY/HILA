@@ -1,5 +1,5 @@
-#ifndef GPU_TEMPLATED_OPS_H
-#define GPU_TEMPLATED_OPS_H
+#ifndef HILA_GPU_TEMPLATED_OPS_H
+#define HILA_GPU_TEMPLATED_OPS_H
 
 #include "plumbing/defs.h"
 #include "plumbing/backend_gpu/defs.h"
