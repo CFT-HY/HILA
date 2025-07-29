@@ -1,5 +1,5 @@
-#ifndef DEFS_H_
-#define DEFS_H_
+#ifndef HILA_DEFS_H_
+#define HILA_DEFS_H_
 /**
  * @file defs.h
  * @brief This file defines all includes for HILA

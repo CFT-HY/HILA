@@ -1,5 +1,5 @@
-#ifndef RANDOM_H_
-#define RANDOM_H_
+#ifndef HILA_RANDOM_H_
+#define HILA_RANDOM_H_
 
 namespace hila {
 

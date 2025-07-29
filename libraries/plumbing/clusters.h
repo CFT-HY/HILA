@@ -1,5 +1,5 @@
-#ifndef CLUSTERS_H_
-#define CLUSTERS_H_
+#ifndef HILA_CLUSTERS_H_
+#define HILA_CLUSTERS_H_
 
 #include "hila.h"
 

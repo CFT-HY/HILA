@@ -1,6 +1,7 @@
-/** @file fft.h */
 #ifndef HILA_FFT_H
 #define HILA_FFT_H
+
+/** @file fft.h */
 
 #if !defined(CUDA) && !defined(HIP)
 #define USE_FFTW

@@ -1,3 +1,6 @@
+#ifndef HILA_COORDINATES_H_
+#define HILA_COORDINATES_H_
+
 /**
  * @file coordinates.h
  * @brief This header file defines:
@@ -8,9 +11,6 @@
  * These are used to traverse the lattice coordinate systems
  *
  */
-
-#ifndef COORDINATES_H_
-#define COORDINATES_H_
 
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"

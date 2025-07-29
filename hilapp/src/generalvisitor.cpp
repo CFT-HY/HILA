@@ -785,7 +785,7 @@ bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
 std::string GeneralVisitor::generate_constant_var_name(const std::string &varname, bool isnamespace,
                                                        const std::string &nspace) {
 
-    std::string name("_HILA_device_constant_");
+    std::string name("HILA_device_constant_");
 
     if (isnamespace) {
         name.append(nspace);

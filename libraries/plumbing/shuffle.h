@@ -1,6 +1,6 @@
 
-#ifndef SHUFFLE_H_
-#define SHUFFLE_H_
+#ifndef HILA_SHUFFLE_H_
+#define HILA_SHUFFLE_H_
 
 #include "hila.h"
 

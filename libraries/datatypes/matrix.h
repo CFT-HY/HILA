@@ -1,3 +1,6 @@
+#ifndef HILA_MATRIX_H_
+#define HILA_MATRIX_H_
+
 /**
  * @file matrix.h
  * @brief Definition of Matrix types
@@ -6,9 +9,6 @@
  * as a class and the rest are special cases of the Matrix class.
  *
  */
-
-#ifndef MATRIX_H_
-#define MATRIX_H_
 
 #include <type_traits>
 #include <sstream>

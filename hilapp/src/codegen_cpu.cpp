@@ -250,9 +250,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                              << loop_info.parity_str << ");\n";
                     }
             } else {
-                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                        "++_HILAdir_) {\n"
-                     << "  " << l.new_name << ".wait_gather(_HILAdir_, " << loop_info.parity_str
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << "  " << l.new_name << ".wait_gather(HILA_dir_, " << loop_info.parity_str
                      << ");\n}\n";
             }
         }

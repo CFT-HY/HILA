@@ -1,5 +1,5 @@
-#ifndef HILAPP_MPI_H_
-#define HILAPP_MPI_H_
+#ifndef HILA_HILAPP_MPI_H_
+#define HILA_HILAPP_MPI_H_
 
 
 ////////////////////////////////////////////////////////////////////////////

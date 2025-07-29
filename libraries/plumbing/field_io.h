@@ -1,5 +1,5 @@
-#ifndef FIELD_IO_H_
-#define FIELD_IO_H_
+#ifndef HILA_FIELD_IO_H_
+#define HILA_FIELD_IO_H_
 
 //////////////////////////////////////////////////////////////////////
 // This file collects Field<> I/O routines

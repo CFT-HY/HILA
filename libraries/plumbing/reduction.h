@@ -1,5 +1,5 @@
-#ifndef REDUCTION_H_
-#define REDUCTION_H_
+#ifndef HILA_REDUCTION_H_
+#define HILA_REDUCTION_H_
 
 #include "hila.h"
 
