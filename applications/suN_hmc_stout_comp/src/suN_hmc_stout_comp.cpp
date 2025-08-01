@@ -34,7 +34,7 @@ hila::timer smf_timer("Smearing (force)");
 #if defined STOUTMODE && STOUTMODE>0
 #if STOUTMODE==1
 #include "gauge/stout_smear_nch.h"
-#elif STOUTMODE==2
+#elif STOUTMODE == 2 || STOUTMODE == 3
 #include "gauge/stout_smear_nchm.h"
 #else
 #include "gauge/stout_smear.h"
@@ -52,7 +52,7 @@ hila::timer smf_timer("Smearing (force)");
 using ftype = double;
 using mygroup = SU<NCOLOR, ftype>;
 
-ftype stoutc = 0.5;
+ftype stoutc = 0.15;
 int stout_nsteps = STOUTSTEPS;
 
 
@@ -106,6 +106,35 @@ double measure_s(const GaugeField<group> &U) {
         }
         hila::out0 << "stout step "<<i<<" exp niter: " << maxiter << "\n";
     }
+#elif STOUTMODE == 3
+    std::vector<std::array<Field<int>, NDIM>> niterl(stout_nsteps);
+    std::vector<std::array<Field<ftype>, NDIM>> imnorml(stout_nsteps);
+    nchm_stout_smear(U, tU, niterl, imnorml, stoutc);
+    int maxiter = 0;
+    double maxnorm = 0;
+    for (int i = 0; i < niterl.size(); ++i) {
+        maxiter = 0;
+        maxnorm = 0;
+        Field<double> titerl;
+        foralldir(d) {
+            onsites(ALL) {
+                titerl[X] = (double)niterl[i][d][X];
+            }
+            int tmaxiter = titerl.max();
+            if (tmaxiter > maxiter) {
+                maxiter = tmaxiter;
+            }
+
+            onsites(ALL) {
+                titerl[X] = (double)imnorml[i][d][X];
+            }
+            double tmaxnorm = titerl.max();
+            if (tmaxnorm > maxnorm) {
+                maxnorm = tmaxnorm;
+            }
+        }
+        hila::out0 << "stout step " << i << " exp niter: " << maxiter << " max imnorm: " << maxnorm << "\n";
+    }
 #else
     stout_smear(U, tU, stoutc, stout_nsteps);
 #endif
@@ -153,7 +182,7 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
     stout_smear(U, tUl, tstapl, stoutc);
 #elif STOUTMODE == 1
     nch_stout_smear(U, tUl, tstapl, stoutc);
-#elif STOUTMODE == 2
+#elif STOUTMODE == 2 || STOUTMODE == 3
     std::vector<std::array<Field<int>, NDIM>> niterl(stout_nsteps);
     nchm_stout_smear(U, tUl, tstapl, niterl, stoutc);
 #else
@@ -203,7 +232,7 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype 
     stout_smear_force(tUl, tstapl, tE, KS, stoutc);
 #elif STOUTMODE == 1
     nch_stout_smear_force(tUl, tstapl, tE, KS, stoutc);
-#elif STOUTMODE == 2
+#elif STOUTMODE == 2 || STOUTMODE == 3
     nchm_stout_smear_force(tUl, tstapl, tE, KS, niterl, stoutc);
 #else
     stout_smeark_force(tUl, tstapl, tUKl, tE, KS, stoutc);
@@ -436,7 +465,7 @@ int main(int argc, char **argv) {
     hila::out0 << "mode=CH\n";
 #elif STOUTMODE == 1
     hila::out0 << "mode=NCH\n";
-#elif STOUTMODE == 2
+#elif STOUTMODE == 2 || STOUTMODE == 3
     hila::out0 << "mode=NCHM\n";
 #else
     hila::out0 << "mode=CHK\n";

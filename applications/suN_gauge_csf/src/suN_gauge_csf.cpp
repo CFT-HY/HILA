@@ -43,27 +43,6 @@ struct parameters {
 // heat-bath functions
 
 /**
- * @brief Wrapper update function
- * @details Gauge Field update sweep with randomly chosen parities and directions
- *
- * @tparam group
- * @param U GaugeField to update
- * @param p Parameter struct
- * @param relax If true evolves GaugeField with over relaxation if false then with heat bath
- */
-template <typename group>
-void update(GaugeField<group> &U, const parameters &p, bool relax) {
-    for (int i = 0; i < 2 * NDIM; ++i) {
-        int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
-        int tdir = tdp / 2;
-        int tpar = 1 + (tdp % 2);
-        // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
-        update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax);
-    }
-    // hila::out0 << "\n";
-}
-
-/**
  * @brief Wrapper function to updated GaugeField per direction
  * @details Computes first staplesum, then uses computed result to evolve GaugeField either with
  * over relaxation or heat bath
@@ -74,6 +53,7 @@ void update(GaugeField<group> &U, const parameters &p, bool relax) {
  * @param par Parity
  * @param d Direction to evolve
  * @param relax If true evolves GaugeField with over relaxation if false then with heat bath
+ * @param plaqw plaquette weights
  */
 template <typename group>
 void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Direction d,
@@ -88,6 +68,7 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
     staples_timer.start();
 
     staplesum(U, staples, d, par);
+
     staples_timer.stop();
 
     if (relax) {
@@ -114,9 +95,31 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
 }
 
 /**
+ * @brief Wrapper update function
+ * @details Gauge Field update sweep with randomly chosen parities and directions
+ *
+ * @tparam group
+ * @param U GaugeField to update
+ * @param p Parameter struct
+ * @param plaqw plaquette weights
+ */
+template <typename group>
+void update(GaugeField<group> &U, const parameters &p) {
+    for (int i = 0; i < 2 * NDIM; ++i) {
+        int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
+        int tdir = tdp / 2;
+        int tpar = 1 + (tdp % 2);
+        bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_overrelax)) != 0);
+        // hila::out0 << "   " << Parity(tpar) << " -- " << Direction(tdir);
+        update_parity_dir(U, p, Parity(tpar), Direction(tdir), relax);
+    }
+    // hila::out0 << "\n";
+}
+
+/**
  * @brief Evolve gauge field
- * @details Evolution happens by means of heat bath and over relaxation. For each heatbath update
- * (p.n_update) we update on average also p.n_overrelax times with over relaxation.
+ * @details Evolution happens by means of heat bath and overrelaxation. For each heatbath update
+ * (p.n_update) we do on average also p.n_overrelax overrelaxation updates.
  *
  * @tparam group
  * @param U
@@ -124,11 +127,9 @@ void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Di
  */
 template <typename group>
 void do_trajectory(GaugeField<group> &U, const parameters &p) {
-
     for (int n = 0; n < p.n_update; n++) {
         for (int i = 0; i <= p.n_overrelax; i++) {
-            bool relax = hila::broadcast((int)(hila::random() * (1 + p.n_overrelax)) != 0);
-            update(U, p, relax);
+            update(U, p);
             // hila::out0 << relax << "\n";
         }
     }
