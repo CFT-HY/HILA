@@ -71,8 +71,10 @@ struct parameters {
     int n_therm;        // number of thermalization trajectories (counts only accepted traj.)
     int n_update;       // number of heat-bath sweeps per "trajectory"
     int n_or_update;    // number of overrelaxation updates per "trajectory"
-    int n_ps_update; // number of plaquette shift (s_{x,\mu\nu}-vars) updates per "trajectory"
-    int n_save; // number of trajectories between config. check point
+    int n_ps_update;    // number of plaquette shift (s_{x,\mu\nu}-vars) updates per "trajectory"
+    int n_ss_update;    // number of global site shift updates per "trajectory"
+    int n_save;         // number of trajectories between config. check point
+    int n_dump;         // number of trajectories between obs. field dumps
     std::string config_file;
     ftype time_offset;
 };
@@ -391,7 +393,7 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 
     for (int i = 0; i < 2 * NDIM; ++i) {
         int ud_type =
-            hila::broadcast((int)(hila::random() * (p.n_update + p.n_or_update + p.n_ps_update + 2)));
+            hila::broadcast((int)(hila::random() * (p.n_update + p.n_or_update + p.n_ps_update + p.n_ss_update)));
 
         int tdp = hila::broadcast((int)(hila::random() * 2 * NDIM));
         int tdir = tdp / 2;
@@ -427,7 +429,7 @@ void update(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
  */
 template <typename T, typename fT>
 void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
-    for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update + 2; n++) {
+    for (int n = 0; n < p.n_update + p.n_or_update + p.n_ps_update + p.n_ss_update; n++) {
         update(H, sw, p);
     }
     
@@ -452,7 +454,7 @@ void do_trajectory(GaugeField<T> &H, sw_t<fT> &sw, const parameters &p) {
 
 template <typename T>
 double measure_s_plaq_dens(const PlaquetteField<T> &plaq) {
-    // measure the total plaquette action for the link field H (taking into account the plaquette
+    // measure the plaquette action density for the link field H (taking into account the plaquette
     // shifts)
     Reduction<double> splaq = 0;
     splaq.allreduce(false).delayed(true);
@@ -466,7 +468,7 @@ double measure_s_plaq_dens(const PlaquetteField<T> &plaq) {
 
 template <typename T>
 double measure_energy_dens(const PlaquetteField<T> &plaq) {
-    // measure the total plaquette action for the link field H (without plaquette shifts)
+    // measure the Hamiltonian/energy density for the link field H
     Reduction<double> nrg = 0;
     nrg.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -481,41 +483,19 @@ double measure_energy_dens(const PlaquetteField<T> &plaq) {
     return nrg.value() / lattice.volume();
 }
 
-
-template <typename T>
-double measure_hsq(const GaugeField<T> &H, double(out_only &hsq_per_par_dir)[2][NOBSDIR],
-                   double(out_only &h_per_par_dir)[2][NOBSDIR]) {
-    // measure the average magnitude squared of H and its average value per direction and parity
-    Reduction<double> thsq = 0;
-    thsq.allreduce(false).delayed(true);
-    ReductionVector<double> h_per_p_d(2 * NOBSDIR);
-    h_per_p_d = 0.0;
-    h_per_p_d.allreduce(false).delayed(true);
-    ReductionVector<double> hsq_per_p_d(2 * NOBSDIR);
-    hsq_per_p_d = 0.0;
-    hsq_per_p_d.allreduce(false).delayed(true);
-    foralldir(d1) {
+template <typename T, typename fT>
+void measure_energy_dens_field(const PlaquetteField<T> &plaq, out_only Field<fT> &energy_dens) {
+    // measure the Hamiltonian/energy density for the link field H as local observable field
+    onsites(ALL) energy_dens[X] = 0;
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+        int sign = 1;
+        if (d2 == e_t) {
+            sign = -1;
+        }
         onsites(ALL) {
-            double tth = H[d1][X];
-            double tthsq = pow(tth, 2.0);
-            thsq += tthsq;
-            int tpar = (int)uparity(X.coordinates()) - 1;
-            if(d1 == Direction(OBS_DIR)) {
-                int i = (int)d1 % NOBSDIR;
-                h_per_p_d[tpar * NOBSDIR + i] += tth;
-                hsq_per_p_d[tpar * NOBSDIR + i] += tthsq;
-            }
+            energy_dens[X] += (double)sign * pow(plaq[d1][d2][X], 2.0);
         }
     }
-    h_per_p_d.reduce();
-    hsq_per_p_d.reduce();
-    for (int par = 0; par < 2; ++par) {
-        for (int i = 0; i < NOBSDIR; ++i) {
-            h_per_par_dir[par][i] = h_per_p_d[par * NOBSDIR + i] * 2.0 / lattice.volume();
-            hsq_per_par_dir[par][i] = hsq_per_p_d[par * NOBSDIR + i] * 2.0 / lattice.volume();
-        }
-    }
-    return thsq.value() / (lattice.volume() * NDIM);
 }
 
 template <typename T>
@@ -619,6 +599,30 @@ void plaq_field(const GaugeField<T> &H, out_only sw_t<T> &plaq) {
 }
 
 /**
+ * @brief compute the H-plaquette field from the H-field
+ * @tparam T Z-link group type
+ * @tparam fT plaquette shift variable and plaquette type
+ * @param H Z-link field
+ * @param H sw PlaquetteField plaquette shift field
+ * @param plaq PlaquetteField output plaquette field
+ */
+template <typename T, typename fT>
+void plaq_field(const GaugeField<T> &H, const sw_t<fT> &sw, out_only sw_t<fT> &plaq) {
+    foralldir(d1) {
+        onsites(ALL) plaq[d1][d1][X] = 0;
+        foralldir(d2) if (d1 < d2) {
+            H[d2].start_gather(d1, ALL);
+            H[d1].start_gather(d2, ALL);
+            onsites(ALL) {
+                plaq[d1][d2][X] =
+                    (H[d1][X] + H[d2][X + d1] - H[d1][X + d2] - H[d2][X] + sw[d1][d2][X]);
+                plaq[d2][d1][X] = -plaq[d1][d2][X];
+            }
+        }
+    }
+}
+
+/**
  * @brief compute the hodge-dual of a plaquette field
  * @tparam T Z-link group type
  * @param plaqin GaugeField[NDIM][NDIM] input plaquette field
@@ -686,6 +690,89 @@ void measure_stap_plaq_dens(const sw_t<T> &plaq, double(out_only &stap_dens_per_
         stap_dens_per_p_d[1][i] = stapdens_per_p_d[NOBSDIR + i] * 2.0 / lattice.volume();
         stapsq_dens_per_p_d[0][i] = stapsqdens_per_p_d[i] * 2.0 / lattice.volume();
         stapsq_dens_per_p_d[1][i] = stapsqdens_per_p_d[NOBSDIR + i] * 2.0 / lattice.volume();
+    }
+}
+
+
+/**
+ * @brief compute ocs and os as field of local observables, defined on cube
+ * @tparam T plaquette field data type
+ * @tparam fT output field data type
+ * @param PlaquetteField plaq
+ * @param ocs_field[NDIM] output ocs field w.r.t. to different "time direction"
+ * @param os_field[NDIM] output os field w.r.t. to different "time direction"
+ */
+template <typename T, typename fT>
+void get_ocs_and_os_dens_field(const sw_t<T> &plaq, Field<fT>(out_only &ocs_field)[NOBSDIR],
+                               Field<fT>(out_only &os_field)[NOBSDIR]) {
+    if(NDIM==4) {
+        Field<fT> stap, tos, tocs;
+        forobsdir(d1) {
+            int i = (int)d1;
+            onsites(ALL) stap[X] = 0;
+            foralldir(d2) if (d2 != d1) {
+                onsites(ALL) {
+                    stap[X] += (fT)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]) / 6.0;
+                }
+            }
+
+            Direction d2 = Direction((1 + i) % NDIM);
+            Direction d3 = Direction((2 + i) % NDIM);
+            Direction d4 = Direction((3 + i) % NDIM);
+            i %= NOBSDIR;
+            onsites(ALL) {
+                int tpar = (int)uparity(X.coordinates()) - 1;
+                int sign = 1 - 2 * tpar;
+                tocs[X] = sign*stap[X];
+                tos[X] = sign*pow(stap[X], 2.0);
+            }
+            onsites(ALL) {
+                ocs_field[i][X] = tocs[X] + tocs[X + d2];
+                os_field[i][X] = tos[X] + tos[X + d2];
+            }
+            onsites(ALL) {
+                tocs[X] = (ocs_field[i][X] + ocs_field[i][X + d3]) * 0.5;
+                tos[X] = (os_field[i][X] + os_field[i][X + d3]) * 0.5;
+            }
+            onsites(ALL) {
+                ocs_field[i][X] = (tocs[X] + tocs[X + d4]) * 0.5;
+                os_field[i][X] = (tos[X] + tos[X + d4]) * 0.5;
+            }
+        }
+    }
+}
+
+/**
+ * @brief compute os for different spatial shifts as field of local observable, defined on cube
+ * @tparam T plaquette field data type
+ * @tparam fT output field data type
+ * @param PlaquetteField plaq
+ * @param os_field_p_d[NDIM - 1] output os field w.r.t. to different shift directions
+ */
+template <typename T, typename fT>
+void get_os_dir_dens_field(const sw_t<T> &plaq, out_only VectorField<fT> &os_field_p_d) {
+    if (NDIM == 4) {
+        Field<fT> stap, tos;
+        {
+            Direction d1 = e_t;
+            onsites(ALL) stap[X] = 0;
+            foralldir(d2) if (d2 != d1) {
+                onsites(ALL) {
+                    stap[X] += (fT)(plaq[d1][d2][X] - plaq[d1][d2][X - d2]) / 6.0;
+                }
+            }
+
+            onsites(ALL) {
+                int tpar = (int)uparity(X.coordinates()) - 1;
+                int sign = 1 - 2 * tpar;
+                tos[X] = sign * pow(stap[X], 2.0);
+            }
+            foralldir(d2) {
+                onsites(ALL) {
+                    os_field_p_d[d2][X] = tos[X] + 0.5 * (tos[X + d2] + tos[X - d2]);
+                }
+            }
+        }
     }
 }
 
@@ -940,26 +1027,6 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             hila::out0 << "\n";
         }
 
-        if(0) {
-            hila::out0 << "LHSQ      :           hsq\n";
-
-            hila::out0 << "LHSQPPD   :";
-            for (int par = 0; par < 2; ++par) {
-                forobsdir(dir) {
-                    hila::out0 << "          p" << par << "d" << (int)dir;
-                }
-            }
-            hila::out0 << "\n";
-
-            hila::out0 << "LHPPD     :";
-            for (int par = 0; par < 2; ++par) {
-                forobsdir(dir) {
-                    hila::out0 << "          p" << par << "d" << (int)dir;
-                }
-            }
-            hila::out0 << "\n";
-        }
-
         if (0) {
             hila::out0 << "LHLOOPSPPD:";
             for (int par = 0; par < 2; ++par) {
@@ -969,6 +1036,7 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
             }
             hila::out0 << "\n";
         }
+
         if (0) {
             hila::out0 << "LNONPLCPPD:";
             for (int par = 0; par < 2; ++par) {
@@ -1142,29 +1210,6 @@ void measure_stuff(const GaugeField<T> &H, const sw_t<fT> &sw, parameters& p) {
     }
 
     if (0) {
-        double h_per_par_dir[2][NOBSDIR];
-        double hsq_per_par_dir[2][NOBSDIR];
-        auto hsq = measure_hsq(H, hsq_per_par_dir, h_per_par_dir);
-        hila::out0 << string_format("HSQ         % 0.6e\n", hsq);
-
-        hila::out0 << "HSQPPD     ";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NOBSDIR; ++dir) {
-                hila::out0 << string_format(" % 0.6e", hsq_per_par_dir[par][dir]);
-            }
-        }
-        hila::out0 << '\n';
-
-        hila::out0 << "HPPD       ";
-        for (int par = 0; par < 2; ++par) {
-            for (int dir = 0; dir < NOBSDIR; ++dir) {
-                hila::out0 << string_format(" % 0.6e", h_per_par_dir[par][dir]);
-            }
-        }
-        hila::out0 << '\n';
-    }
-
-    if (0) {
         double hl_per_par_dir[2][NOBSDIR];
         measure_hloop_sign_dens(H, hl_per_par_dir);
         hila::out0 << "HLOOPSPPD  ";
@@ -1296,7 +1341,9 @@ void checkpoint(const GaugeField<T> &U, const PlaquetteField<fT> &sw, int trajec
         p.config_file + "_" + std::to_string(abs((trajectory + 1) / p.n_save) % 2);
     // save config
     U.config_write(config_file);
-    sw.config_write(config_file + "_sw");
+    if(p.n_ps_update>0) {
+        sw.config_write(config_file + "_sw");
+    }
     // write run_status file
     if (hila::myrank() == 0) {
         std::ofstream outf;
@@ -1329,7 +1376,9 @@ bool restore_checkpoint(GaugeField<T> &U, PlaquetteField<fT> &sw, int &trajector
         status.close();
         hila::seed_random(seed);
         U.config_read(config_file);
-        sw.config_read(config_file + "_sw");
+        if(p.n_ps_update>0) {
+            sw.config_read(config_file + "_sw");
+        }
         ok = true;
     } else {
         std::ifstream in;
@@ -1338,14 +1387,18 @@ bool restore_checkpoint(GaugeField<T> &U, PlaquetteField<fT> &sw, int &trajector
             in.close();
             hila::out0 << "READING initial config\n";
             U.config_read(p.config_file);
-            std::ifstream in_sw;
-            in_sw.open(p.config_file, std::ios::in | std::ios::binary);
-            if (in_sw.is_open()) {
-                in_sw.close();
-                sw.config_read(p.config_file + "_sw");
-                ok = true;
+            if(p.n_ps_update>0) {
+                std::ifstream in_sw;
+                in_sw.open(p.config_file + "_sw", std::ios::in | std::ios::binary);
+                if (in_sw.is_open()) {
+                    in_sw.close();
+                    sw.config_read(p.config_file + "_sw");
+                    ok = true;
+                } else {
+                    ok = false;
+                }
             } else {
-                ok = false;
+                ok = true;
             }
         } else {
             ok = false;
@@ -1374,7 +1427,7 @@ int main(int argc, char **argv) {
     // .get() -method can read many different input types,
     // see file "input.h" for documentation
 
-    hila::out0 << "Z-link theory with plaquette shift field\n";
+    hila::out0 << "Z-link gauge theory with plaquette shift field\n";
 
     hila::out0 << "Using floating point epsilon: " << fp<ftype>::epsilon << "\n";
 
@@ -1394,31 +1447,39 @@ int main(int argc, char **argv) {
     hila::out0 << "All plaquette shifts set to zero\n";
 #endif
 
+
     parameters p;
 
     hila::input par("parameters");
 
     CoordinateVector lsize;
-    // reads NDIM numbers
+    // reads NDIM numbers:
     lsize = par.get("lattice size");
-    // gauge coupling
+    // gauge coupling:
     p.beta = par.get("beta");
-    // number of trajectories
+    // number of trajectories:
     p.n_traj = par.get("number of trajectories");
-    // number of Metropolis sweeps per trajectory
+    // number of Metropolis sweeps per trajectory:
     p.n_update = par.get("metropolis updates");
-    // number of overrelaxation sweeps per Metropolis sweep
+    // number of overrelaxation sweeps per trajectory:
     p.n_or_update = par.get("overrelax updates");
-    // number of s_{x,\mu\nu} relaxation sweeps per Metropolis sweep
+    // number of s_{x,\mu\nu} relaxation sweeps per trajectory:
     p.n_ps_update = par.get("plaq shift updates");
-    // number of thermalization trajectories
+    // number of global site shift updates per trajectory:
+    p.n_ss_update = par.get("site shift updates");
+    // number of thermalization trajectories:
     p.n_therm = par.get("thermalization trajs");
-    // random seed = 0 -> get seed from time
+    // random seed = 0 -> get seed from time:
     long seed = par.get("random seed");
-    // save config and checkpoint
+    // save config and checkpoint after n_save traj.:
     p.n_save = par.get("trajs/saved");
-    // measure surface properties and print "profile"
+    // dump filed observables after n_dump traj.:
+    p.n_dump = par.get("trajs/obs field dump");
+    // config file name:
     p.config_file = par.get("config name");
+
+    Vector<6, int> stat_pair;
+    stat_pair = par.get("static pair");
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -1468,6 +1529,29 @@ int main(int argc, char **argv) {
     }
 #endif
 
+    if(stat_pair[4] > 0) {
+        Direction d1 = Direction((1 + stat_pair[3]) % (NDIM - 1));
+        Direction d2 = Direction((2 + stat_pair[3]) % (NDIM - 1));
+        onsites(ALL) {
+            auto cpos = X.coordinates();
+            bool ok = true;
+            for (int i = 0; i < NDIM - 1; ++i) {
+                int dist = 0;
+                if (i == stat_pair[3]) {
+                    dist = stat_pair[4];
+                }
+                int tdist = cpos[i] - stat_pair[i];
+                if (tdist > dist || tdist < 0) {
+                    ok = false;
+                }
+            }
+            if(ok) {
+                sw[d1][d2][X] += (ftype)stat_pair[5];
+                sw[d2][d1][X] = -sw[d1][d2][X];
+            }
+        }
+    }
+
 
     // use negative trajectory numbers for thermalisation
     int start_traj = -p.n_therm;
@@ -1480,6 +1564,13 @@ int main(int argc, char **argv) {
         }
     }
 
+    Field<ftype> osdens[NOBSDIR];
+    Field<ftype> ocsdens[NOBSDIR];
+    int ndens = 0;
+    for (int i = 0; i < NOBSDIR; ++i) {
+        osdens[i] = 0;
+        ocsdens[i] = 0;
+    }
 
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
@@ -1502,6 +1593,62 @@ int main(int argc, char **argv) {
         hila::out0 << "Measure_start " << trajectory << '\n';
 
         measure_stuff(H, sw, p);
+        if (p.n_dump > 0) {
+            PlaquetteField<ftype> plaq;
+            plaq_field(H, sw, plaq);
+            Field<ftype> tosdens[NOBSDIR];
+            Field<ftype> tocsdens[NOBSDIR];
+            get_ocs_and_os_dens_field(plaq, tocsdens, tosdens);
+            for (int i = 0; i < NOBSDIR; ++i) {
+                osdens[i] += tosdens[i];
+                ocsdens[i] += tocsdens[i];
+            }
+            ++ndens;
+            if ((trajectory + 1) % p.n_dump == 0) {
+                int idump = (trajectory + 1) / p.n_dump;
+
+                std::ofstream osffile, ocsffile;
+
+                forobsdir(d1) {
+                    int i = (int)d1 % NOBSDIR;
+                    onsites(ALL) {
+                        osdens[i][X] /= (ftype)ndens;
+                        ocsdens[i][X] /= (ftype)ndens;
+                    }
+                    std::vector<ftype> fdump = osdens[i].get_slice({-1, -1, -1, -1});
+                    if (hila::myrank() == 0) {
+                        osffile.open(string_format("osfield_%d_%d", (int)d1, idump),
+                                     std::ios::out | std::ios::binary);
+                        osffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
+                                                 lattice.size(1), lattice.size(2), lattice.size(3),
+                                                 sizeof(ftype))
+                                << '\n';
+
+                        osffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
+
+                        osffile.close();
+                    }
+
+                    fdump = ocsdens[i].get_slice({-1, -1, -1, -1});
+                    if (hila::myrank() == 0) {
+                        ocsffile.open(string_format("ocsfield_%d_%d", (int)d1, idump),
+                                      std::ios::out | std::ios::binary);
+                        ocsffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
+                                                  lattice.size(1), lattice.size(2), lattice.size(3),
+                                                  sizeof(ftype))
+                                 << '\n';
+
+                        ocsffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
+
+                        ocsffile.close();
+                    }
+
+                    osdens[i] = 0;
+                    ocsdens[i] = 0;
+                    ndens = 0;
+                }
+            }
+        }
 
         hila::out0 << "Measure_end " << trajectory << '\n';
 
