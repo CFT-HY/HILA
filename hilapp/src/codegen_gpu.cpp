@@ -922,7 +922,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (r.reduction_type == reduction::SUM) {
             kernel << "if(threadIdx.x < HILA__i) {\n";
 
-            // STD
+            // STD: using += may fail in reductions, if the operator is
+            // not kernelized.  
             // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
             //        << "sh[threadIdx.x + HILA__i];\n";
             kernel << "_hila_kernel_add_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name

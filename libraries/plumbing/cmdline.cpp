@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <regex>
+#include <charconv>
 #include "hila.h"
 
 using strvec = std::vector<std::string>;
@@ -339,13 +340,21 @@ double cmdlinearguments::get_double(const char *flag, int i) {
 
         double val;
         // We're not going to manually check the format for this
-        try {
-            val = std::stod(opt);
-        } catch (std::exception &e) {
+        auto [p, ec] = std::from_chars(opt.data(), opt.data() + opt.size(), val);
+        if (p == opt.data()) {
             hila::out0 << "Expected a number (double) after command line parameter '" << flag
                        << "'\n";
             quit_with_help();
         }
+
+        // try {
+        //     val = std::stod(opt);
+        // } catch (std::exception &e) {
+        //     hila::out0 << "Expected a number (double) after command line parameter '" << flag
+        //                << "'\n";
+        //     quit_with_help();
+        // }
+
         return val;
     }
     // if not found

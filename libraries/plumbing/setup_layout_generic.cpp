@@ -53,8 +53,6 @@ void lattice_struct::setup_layout() {
         hila::finishrun();
     }
 
-    int64_t remainder = l_volume % nn; // remainder = 0 even division
-
     // strategy: try to increase the box size to one of the directions until rem = 0
     // find the optimal direction to do it
     // Use simple heuristic: take the dim with the least amount of added "ghost sites"
