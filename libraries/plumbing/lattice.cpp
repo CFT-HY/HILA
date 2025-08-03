@@ -98,12 +98,12 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 ///////////////////////////////////////////////////////////////////////
 
 int lattice_struct::node_rank(const CoordinateVector &loc) const {
-    int i;
+    int64_t i;
     int dir;
 
-    i = (loc[NDIM - 1] * nodes.n_divisions[NDIM - 1]) / l_size[NDIM - 1];
+    i = ((int64_t)loc[NDIM - 1] * (int64_t)nodes.n_divisions[NDIM - 1]) / l_size[NDIM - 1];
     for (dir = NDIM - 2; dir >= 0; dir--) {
-        i = i * nodes.n_divisions[dir] + ((loc[dir] * nodes.n_divisions[dir]) / l_size[dir]);
+        i = i * (int64_t)nodes.n_divisions[dir] + (((int64_t)loc[dir] * (int64_t)nodes.n_divisions[dir]) / l_size[dir]);
     }
     /* do we want to remap this?  YES PLEASE */
     i = nodes.remap(i);
@@ -112,7 +112,7 @@ int lattice_struct::node_rank(const CoordinateVector &loc) const {
 }
 
 ///////////////////////////////////////////////////////////////////////
-/// Is the coordinate on THIS node
+/// Is the coordinate on THIS node ?
 ///////////////////////////////////////////////////////////////////////
 
 bool lattice_struct::is_on_mynode(const CoordinateVector &loc) const {

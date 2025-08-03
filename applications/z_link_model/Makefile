@@ -32,7 +32,7 @@ include $(HILA_DIR)/libraries/main.mk
 #HILAPP_OPTS += -comment-pragmas
 HILAPP_OPTS += -check-init
 
-APP_OPTS += -DNDIM=4 -DPARITY=${PARITY} -DPLAQ_SHIFT=${PLAQ_SHIFT}
+APP_OPTS += -DNDIM=4 -DPARITY=${PARITY} -DPLAQ_SHIFT=${PLAQ_SHIFT} -DNODE_LAYOUT_TRIVIAL
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir

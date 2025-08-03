@@ -1593,7 +1593,7 @@ int main(int argc, char **argv) {
         hila::out0 << "Measure_start " << trajectory << '\n';
 
         measure_stuff(H, sw, p);
-        if (p.n_dump > 0) {
+        if (p.n_dump > 0 && trajectory >= 0) {
             PlaquetteField<ftype> plaq;
             plaq_field(H, sw, plaq);
             Field<ftype> tosdens[NOBSDIR];
