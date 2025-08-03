@@ -162,7 +162,7 @@ class Complex {
      * @return T Real part
      */
 
-    #pragma hila loop_function
+//    #pragma hila loop_function
     inline T real() const {
         return re;
     }
@@ -174,7 +174,7 @@ class Complex {
      * @return T Imaginary part
      */
 
-    #pragma hila loop_function
+//    #pragma hila loop_function
     inline T imag() const {
         return im;
     }
@@ -218,6 +218,7 @@ class Complex {
      * @param s
      * @return Complex<T>&
      */
+    //inline Complex<T> &operator=(Complex<T> & rhs) = default;
     inline Complex<T> &operator=(const Complex<T> &s) & = default;
 
     // Assignment from Complex<A>
