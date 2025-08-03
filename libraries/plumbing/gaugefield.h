@@ -143,6 +143,12 @@ class GaugeField {
         }
     }
 
+    void read(std::ifstream &inputfile, CoordinateVector &insize) {
+        foralldir(d) {
+            fdir[d].read(inputfile, insize);
+        }
+    }
+
     void read(const std::string &filename) {
         std::ifstream inputfile;
         hila::open_input_file(filename, inputfile);
@@ -207,22 +213,25 @@ class GaugeField {
                            << " is " << f << '\n';
         }
 
+        CoordinateVector insize = lattice.size();
         if (ok && hila::myrank() == 0) {
-
             foralldir(d) {
                 inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-                ok = ok && (f == lattice.size(d));
+                insize[d] = f;
+                ok = ok && (lattice.size(d) % insize[d] == 0);
                 if (!ok)
                     hila::out0 << conferr << "incorrect lattice dimension " << hila::prettyprint(d)
-                               << " is " << f << " should be " << lattice.size(d) << '\n';
+                               << " is " << f << " should be (or divide)" << lattice.size(d) << '\n';
             }
         }
 
         if (!hila::broadcast(ok)) {
             hila::terminate(1);
+        } else {
+            hila::broadcast_array(insize.c, NDIM);
         }
 
-        read(inputfile);
+        read(inputfile, insize);
         hila::close_file(filename, inputfile);
     }
 };
