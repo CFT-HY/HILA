@@ -424,13 +424,13 @@ void create_extended_MPI_operation();
 void extended_sum_op(void *in, void *inout, int *len, MPI_Datatype *datatype);
 
 
-
 template <typename T>
 void hila_reduce_sum_setup(T *value) {
 
     using b_t = hila::arithmetic_type<T>;
-    if constexpr (std::is_same<T, ExtendedPrecision>::value) {
-        reduce_node_sum_extended(value, 1, hila::get_allreduce());
+    if constexpr (std::is_same<b_t, ExtendedPrecision>::value) {
+        reduce_node_sum_extended((ExtendedPrecision *)value, sizeof(T) / sizeof(ExtendedPrecision),
+                                 hila::get_allreduce());
     } else if (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
     } else if (std::is_same<b_t, float>::value) {

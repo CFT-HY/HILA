@@ -18,20 +18,21 @@
 // #include <cmath>
 
 #include "plumbing/defs.h"
+#include "extended.h"
 
 // TEMPORARY location for vector intrinsic analogues -- result obvious
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 inline T mul_add(T a, T b, T c) {
     return a * b + c;
 }
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 inline T mul_sub(T a, T b, T c) {
     return a * b - c;
 }
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 inline T nmul_add(T a, T b, T c) {
     return c - a * b;
 }
@@ -56,7 +57,7 @@ class Imaginary_t;
 template <typename T>
 class Complex {
 
-    static_assert((hila::is_arithmetic<T>::value && !std::is_integral<T>::value),
+    static_assert((hila::is_arithmetic_or_extended<T>::value && !std::is_integral<T>::value),
                   "Complex can be used only with floating point type");
     // This incantation is needed to make Field<Complex<>> vectorized
 
@@ -130,24 +131,24 @@ class Complex {
     Complex<T>(const Complex<T> &a) = default;
 
     // constructor from single complex --IS THIS NEEDED?
-    // template <typename A,
-    //           std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0 >
-    // constexpr Complex<T>(const Complex<A> a) : re(static_cast<T>(a.re)),
-    // im(static_cast<T>(a.im)) {}
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
+    constexpr Complex<T>(const Complex<A> a) : re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
 
     // constructor from single scalar value
     // Remember to mark this explicit, we do not want this to be invoked
     // in automatic conversions (there should be methods) WHY NOT?
 
-    template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     explicit constexpr Complex<T>(const S val) : re(val), im(0) {}
 
     // allow construction from 0 (nullptr)
     constexpr Complex<T>(const std::nullptr_t n) : re(0), im(0) {}
 
     // constructor c(a,b)
-    template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
-              std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
+    template <
+        typename A, typename B,
+        std::enable_if_t<hila::is_assignable<T &, A>::value && hila::is_assignable<T &, B>::value,
+                         int> = 0>
     explicit constexpr Complex<T>(const A &a, const B &b) : re(a), im(b) {}
 
     // make also std accessors real() and imag() - don't return reference, because
@@ -162,7 +163,6 @@ class Complex {
      * @return T Real part
      */
 
-//    #pragma hila loop_function
     inline T real() const {
         return re;
     }
@@ -174,7 +174,6 @@ class Complex {
      * @return T Imaginary part
      */
 
-//    #pragma hila loop_function
     inline T imag() const {
         return im;
     }
@@ -188,10 +187,10 @@ class Complex {
     }
     // automatic casting from Complex<T> -> Complex<A>
     // TODO: ensure this works if A is vector type!
-    template <typename A>
-    operator Complex<A>() const {
-        return Complex<A>(re, im);
-    }
+    // template <typename A>
+    // operator Complex<A>() const {
+    //     return Complex<A>(re, im);
+    // }
 
     /**
      * @brief Assignment operator
@@ -218,18 +217,18 @@ class Complex {
      * @param s
      * @return Complex<T>&
      */
-    //inline Complex<T> &operator=(Complex<T> & rhs) = default;
+    // inline Complex<T> &operator=(Complex<T> & rhs) = default;
     inline Complex<T> &operator=(const Complex<T> &s) & = default;
 
     // Assignment from Complex<A>
-    template <typename A>
+    template <typename A, std::enable_if_t<hila::is_assignable<T&,A>::value, int> = 0>
     inline Complex<T> &operator=(const Complex<A> &s) & {
         re = s.re;
         im = s.im;
         return *this;
     }
 
-    template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T&,S>::value, int> = 0>
     inline Complex<T> &operator=(S s) & {
         re = s;
         im = 0;
@@ -396,7 +395,7 @@ class Complex {
         return *this;
     }
 
-    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
     inline Complex<T> &operator+=(const A &a) & {
         re += a;
         return *this;
@@ -427,13 +426,17 @@ class Complex {
      */
     template <typename A>
     inline Complex<T> &operator-=(const Complex<A> &lhs) & {
+        static_assert(!(hila::is_arithmetic<T>::value && hila::is_extended<A>::value),
+                      "Cannot assign ExtendedPrecision value to non-EP variable without casting");
         re -= lhs.re;
         im -= lhs.im;
         return *this;
     }
 
-    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_arithmetic_or_extended<A>::value, int> = 0>
     inline Complex<T> &operator-=(const A &a) & {
+        static_assert(!(hila::is_arithmetic<T>::value && hila::is_extended<A>::value),
+                      "Cannot assign ExtendedPrecision value to non-EP variable without casting");
         re -= a;
         return *this;
     }
@@ -630,14 +633,14 @@ class Complex {
         return Complex<T>(re * b.re + im * b.im, im * b.re - re * b.im);
     }
 
-    // cast to another number type (IS THIS NEEDED FOR COMPLEX?)
-    template <typename Ntype>
-    Complex<Ntype> cast_to() const {
-        Complex<Ntype> res;
-        res.re = re;
-        res.im = im;
-        return res;
-    }
+    // // cast to another number type (IS THIS NEEDED FOR COMPLEX?)
+    // template <typename Ntype>
+    // Complex<Ntype> cast_to() const {
+    //     Complex<Ntype> res;
+    //     res.re = static_cast<Ntype>(re);
+    //     res.im = static_cast<Ntype>(im);
+    //     return res;
+    // }
 };
 
 
@@ -1165,13 +1168,12 @@ inline bool operator!=(const A a, const Complex<B> &b) {
 // Cast operators to different number or Complex type
 // cast_to<double>(a);
 // cast_to<float>(b);
-// Cast from number->number, number->Complex, Complex->Complex OK,
-//     Complex->number not.
 
-template <typename Ntype, typename T, std::enable_if_t<hila::is_arithmetic<Ntype>::value, int> = 0>
-Complex<Ntype> cast_to(const Complex<T> &m) {
+template <typename Ntype, typename T>
+inline Complex<Ntype> cast_to(const Complex<T> &m) {
     Complex<Ntype> res;
-    res = m;
+    res.re = static_cast<Ntype>(m.re);
+    res.im = static_cast<Ntype>(m.im);
     return res;
 }
 

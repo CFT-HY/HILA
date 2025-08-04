@@ -309,6 +309,14 @@ inline std::ostream &operator<<(std::ostream &strm, const ExtendedPrecision &var
     return strm << var.get_value();
 }
 
+template <typename Ntype>
+Ntype cast_to(const ExtendedPrecision &ep) {
+    if constexpr (std::is_same<Ntype, ExtendedPrecision>::value)
+        return ep;
+    else
+        return static_cast<Ntype>(ep.get_value());
+}
+
 namespace hila {
 inline std::string prettyprint(const ExtendedPrecision &val, int prec = 8) {
     return prettyprint(val.get_value(), prec);
