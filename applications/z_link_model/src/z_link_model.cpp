@@ -468,7 +468,7 @@ double measure_s_plaq_dens(const PlaquetteField<T> &plaq) {
 
 template <typename T>
 double measure_energy_dens(const PlaquetteField<T> &plaq) {
-    // measure the Hamiltonian/energy density for the link field H
+    // measure the Hamiltonian/energy density for the plaquette field plaq
     Reduction<double> nrg = 0;
     nrg.allreduce(false).delayed(true);
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -485,7 +485,7 @@ double measure_energy_dens(const PlaquetteField<T> &plaq) {
 
 template <typename T, typename fT>
 void measure_energy_dens_field(const PlaquetteField<T> &plaq, out_only Field<fT> &energy_dens) {
-    // measure the Hamiltonian/energy density for the link field H as local observable field
+    // measure the Hamiltonian/energy density for the plaquette field plaq as local observable fiel
     onsites(ALL) energy_dens[X] = 0;
     foralldir(d1) foralldir(d2) if (d1 < d2) {
         int sign = 1;
@@ -1557,11 +1557,7 @@ int main(int argc, char **argv) {
     int start_traj = -p.n_therm;
 
     if (!restore_checkpoint(H, sw, start_traj, p)) {
-        foralldir(d) {
-            onsites(ALL) {
-                H[d][X] = 0;
-            }
-        }
+        H = 0;
     }
 
     Field<ftype> osdens[NOBSDIR];
@@ -1571,6 +1567,8 @@ int main(int argc, char **argv) {
         osdens[i] = 0;
         ocsdens[i] = 0;
     }
+    PlaquetteField<ftype> fieldstrength = 0;
+    Field<ftype> energydens = 0;
 
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
@@ -1603,50 +1601,100 @@ int main(int argc, char **argv) {
                 osdens[i] += tosdens[i];
                 ocsdens[i] += tocsdens[i];
             }
+            Field<ftype> tenergydens;
+            measure_energy_dens_field(plaq, tenergydens);
+            energydens += tenergydens;
+            foralldir(d1) foralldir(d2) if(d1 != d2) {
+                fieldstrength[d1][d2] += plaq[d1][d2];
+            }
             ++ndens;
             if ((trajectory + 1) % p.n_dump == 0) {
                 int idump = (trajectory + 1) / p.n_dump;
 
-                std::ofstream osffile, ocsffile;
-
-                forobsdir(d1) {
-                    int i = (int)d1 % NOBSDIR;
-                    onsites(ALL) {
-                        osdens[i][X] /= (ftype)ndens;
-                        ocsdens[i][X] /= (ftype)ndens;
-                    }
-                    std::vector<ftype> fdump = osdens[i].get_slice({-1, -1, -1, -1});
+                {
+                    std::ofstream edffile;
+                    energydens /= (ftype)ndens;
+                    std::vector<ftype> fdump = energydens.get_slice({-1, -1, -1, -1});
                     if (hila::myrank() == 0) {
-                        osffile.open(string_format("osfield_%d_%d", (int)d1, idump),
+                        edffile.open(string_format("edfield_%d", idump),
                                      std::ios::out | std::ios::binary);
-                        osffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
+                        edffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
                                                  lattice.size(1), lattice.size(2), lattice.size(3),
                                                  sizeof(ftype))
                                 << '\n';
 
-                        osffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
+                        edffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
 
-                        osffile.close();
+                        edffile.close();
                     }
-
-                    fdump = ocsdens[i].get_slice({-1, -1, -1, -1});
-                    if (hila::myrank() == 0) {
-                        ocsffile.open(string_format("ocsfield_%d_%d", (int)d1, idump),
-                                      std::ios::out | std::ios::binary);
-                        ocsffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
-                                                  lattice.size(1), lattice.size(2), lattice.size(3),
-                                                  sizeof(ftype))
-                                 << '\n';
-
-                        ocsffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
-
-                        ocsffile.close();
-                    }
-
-                    osdens[i] = 0;
-                    ocsdens[i] = 0;
-                    ndens = 0;
+                    energydens = 0;
                 }
+
+
+                {
+                    std::ofstream fsfile;
+                    foralldir(d1) foralldir(d2) if(d1 < d2) {
+                        fieldstrength[d1][d2] /= (ftype)ndens;
+
+                        std::vector<ftype> fdump = fieldstrength[d1][d2].get_slice({-1, -1, -1, -1});
+                        if (hila::myrank() == 0) {
+                            fsfile.open(string_format("fsfield_%d_%d_%d", d1, d2, idump),
+                                        std::ios::out | std::ios::binary);
+                            fsfile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
+                                                    lattice.size(1), lattice.size(2), lattice.size(3),
+                                                    sizeof(ftype))
+                                    << '\n';
+
+                            fsfile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
+
+                            fsfile.close();
+                        }
+                        fieldstrength[d1][d2] = 0;
+                        
+                    }
+                }
+
+
+                {
+                    std::ofstream osffile, ocsffile;
+                    forobsdir(d1) {
+                        int i = (int)d1 % NOBSDIR;
+                        osdens[i] /= (ftype)ndens;
+                        ocsdens[i] /= (ftype)ndens;
+
+                        std::vector<ftype> fdump = osdens[i].get_slice({-1, -1, -1, -1});
+                        if (hila::myrank() == 0) {
+                            osffile.open(string_format("osfield_%d_%d", (int)d1, idump),
+                                        std::ios::out | std::ios::binary);
+                            osffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
+                                                    lattice.size(1), lattice.size(2), lattice.size(3),
+                                                    sizeof(ftype))
+                                    << '\n';
+
+                            osffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
+
+                            osffile.close();
+                        }
+
+                        fdump = ocsdens[i].get_slice({-1, -1, -1, -1});
+                        if (hila::myrank() == 0) {
+                            ocsffile.open(string_format("ocsfield_%d_%d", (int)d1, idump),
+                                        std::ios::out | std::ios::binary);
+                            ocsffile << string_format("% 0.10f %d %d %d %d %d", p.beta, lattice.size(0),
+                                                    lattice.size(1), lattice.size(2), lattice.size(3),
+                                                    sizeof(ftype))
+                                    << '\n';
+
+                            ocsffile.write((char *)fdump.data(), fdump.size() * sizeof(ftype));
+
+                            ocsffile.close();
+                        }
+
+                        osdens[i] = 0;
+                        ocsdens[i] = 0;
+                    }
+                }
+                ndens = 0;
             }
         }
 
