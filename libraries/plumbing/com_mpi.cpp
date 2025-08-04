@@ -93,8 +93,8 @@ void hila_reduce_sums() {
                 *(double_reduction_ptrs[i]) = work[i];
 
         } else {
-            MPI_Reduce((void *)double_reduction_buffer.data(), work.data(), n_double,
-                       MPI_DOUBLE, MPI_SUM, 0, lattice.mpi_comm_lat);
+            MPI_Reduce((void *)double_reduction_buffer.data(), work.data(), n_double, MPI_DOUBLE,
+                       MPI_SUM, 0, lattice.mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_double; i++)
                     *(double_reduction_ptrs[i]) = work[i];
@@ -111,8 +111,8 @@ void hila_reduce_sums() {
         reduction_timer.start();
 
         if (allreduce_on) {
-            MPI_Allreduce((void *)float_reduction_buffer.data(), work.data(), n_float,
-                          MPI_FLOAT, MPI_SUM, lattice.mpi_comm_lat);
+            MPI_Allreduce((void *)float_reduction_buffer.data(), work.data(), n_float, MPI_FLOAT,
+                          MPI_SUM, lattice.mpi_comm_lat);
             for (int i = 0; i < n_float; i++)
                 *(float_reduction_ptrs[i]) = work[i];
 
@@ -156,7 +156,7 @@ void hila::initialize_communications(int &argc, char ***argv) {
         int provided;
         MPI_Init_thread(&argc, argv, MPI_THREAD_FUNNELED, &provided);
         if (provided < MPI_THREAD_FUNNELED) {
-            if (hila::myrank() == 0) 
+            if (hila::myrank() == 0)
                 hila::out << "MPI could not provide MPI_THREAD_FUNNELED, exiting\n";
             MPI_Finalize();
             exit(1);
@@ -203,7 +203,7 @@ void hila::broadcast(std::string &var, int rank) {
         return;
 
     int size = var.size();
-    hila::broadcast(size,rank);
+    hila::broadcast(size, rank);
 
     if (hila::myrank() != rank) {
         var.resize(size, ' ');
@@ -220,11 +220,11 @@ void hila::broadcast(std::vector<std::string> &list, int rank) {
         return;
 
     int size = list.size();
-    hila::broadcast(size,rank);
+    hila::broadcast(size, rank);
     list.resize(size);
 
     for (auto &s : list) {
-        hila::broadcast(s,rank);
+        hila::broadcast(s, rank);
     }
 }
 
@@ -292,8 +292,7 @@ void hila::split_into_partitions(int this_lattice) {
     if (hila::check_input)
         return;
 
-    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.mpi_comm_lat)) !=
-        MPI_SUCCESS) {
+    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.mpi_comm_lat)) != MPI_SUCCESS) {
         hila::out0 << "MPI_Comm_split() call failed!\n";
         hila::finishrun();
     }
@@ -345,7 +344,7 @@ void create_extended_MPI_operation() {
 
 /**
  * @brief Custom MPI reduction for extended type that performs Kahan summation
- * 
+ *
  * @param value Input extended dataa
  * @param send_count Number of extended variables to reduce (default 1)
  * @param allreduce If true, performs MPI_Allreduce, otherwise MPI_Reduce
@@ -365,17 +364,17 @@ void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool all
     std::vector<ExtendedPrecision> recv_data(send_count);
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)value, (void *)recv_data.data(), 1, MPI_ExtendedPrecision_type, MPI_ExtendedPrecision_sum_op,
+        MPI_Allreduce((void *)value, (void *)recv_data.data(), send_count,
+                      MPI_ExtendedPrecision_type, MPI_ExtendedPrecision_sum_op,
                       lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
-        MPI_Reduce((void *)value, (void *)recv_data.data(), 1, MPI_ExtendedPrecision_type, MPI_ExtendedPrecision_sum_op, 0,
-                   lattice.mpi_comm_lat);
+        MPI_Reduce((void *)value, (void *)recv_data.data(), send_count, MPI_ExtendedPrecision_type,
+                   MPI_ExtendedPrecision_sum_op, 0, lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];
     }
     reduction_timer.stop();
 }
-

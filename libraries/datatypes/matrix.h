@@ -110,7 +110,7 @@ class Matrix_t {
     T c[n * m];
 
   public:
-    static_assert(hila::is_complex_or_arithmetic<T>::value,
+    static_assert(hila::is_complex_or_arithmetic<T>::value || hila::is_extended<T>::value,
                   "Matrix requires Complex or arithmetic type");
 
     // std incantation for field types
@@ -282,7 +282,6 @@ class Matrix_t {
      * @return T matrix element type
      */
 
-#pragma hila loop_function
     inline T e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
@@ -295,7 +294,6 @@ class Matrix_t {
     // declare single e here too in case we have a vector
     // (n || m == 1)
 
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
@@ -322,7 +320,6 @@ class Matrix_t {
      * @return T
      */
 
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T operator[](const int i) const {
         return c[i];
@@ -2749,11 +2746,11 @@ inline auto norm(const Mt &rhs) {
 // cast_to<double>(a);
 
 template <typename Ntype, typename T, int n, int m,
-          std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 Matrix<n, m, Ntype> cast_to(const Matrix<n, m, T> &mat) {
     Matrix<n, m, Ntype> res;
     for (int i = 0; i < n * m; i++)
-        res.c[i] = mat.c[i];
+        res.c[i] = cast_to<Ntype>(mat.c[i]);
     return res;
 }
 

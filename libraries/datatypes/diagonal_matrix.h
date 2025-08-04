@@ -958,23 +958,20 @@ inline auto pow(const DiagonalMatrix<n, T> &a, const Complex<S> &p) {
     return res;
 }
 
-// Cast operators to different number or Complex type
-// cast_to<double>(a);
-// Cast from number->number, number->Complex, Complex->Complex OK,
-//     Complex->number not.
+// Cast operators to different number type - preserves complex nature
 
 template <typename Ntype, typename T, int n,
-          std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 DiagonalMatrix<n, Ntype> cast_to(const DiagonalMatrix<n, T> &mat) {
     DiagonalMatrix<n, Ntype> res;
     for (int i = 0; i < n; i++)
-        res.c[i] = mat.c[i];
+        res.c[i] = cast_to<Ntype>(mat.c[i]);
     return res;
 }
 
 template <typename Ntype, typename T, int n, std::enable_if_t<hila::is_complex<T>::value, int> = 0>
-DiagonalMatrix<n, Ntype> cast_to(const DiagonalMatrix<n, T> &mat) {
-    DiagonalMatrix<n, Ntype> res;
+DiagonalMatrix<n, Complex<Ntype>> cast_to(const DiagonalMatrix<n, T> &mat) {
+    DiagonalMatrix<n, Complex<Ntype>> res;
     for (int i = 0; i < n; i++)
         res.c[i] = cast_to<Ntype>(mat.c[i]);
     return res;

@@ -76,6 +76,11 @@ std::string prettyprint(const T v, int prec = 8) {
     return to_string(v, prec);
 }
 
+template <typename T,typename Ntype,std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+inline Ntype cast_to(T val) {
+    return static_cast<Ntype>(val);
+}
+
 
 } // namespace hila
 

@@ -42,7 +42,7 @@
 template <const int n, const int m, typename T>
 class Array {
   public:
-    static_assert(hila::is_complex_or_arithmetic<T>::value,
+    static_assert(hila::is_complex_or_arithmetic<T>::value || hila::is_extended<T>::value,
                   "Array requires Complex or arithmetic type");
 
     // Store Array contents in one dimensional C style array
@@ -192,7 +192,6 @@ class Array {
      * @param j column index
      * @return T matrix element type
      */
-#pragma hila loop_function
     inline T e(const int i, const int j) const {
         return c[i * m + j];
     }
@@ -203,7 +202,6 @@ class Array {
 
     // declare single e here too in case we have a vector
     // (one size == 1)
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
@@ -223,7 +221,7 @@ class Array {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
 
-#pragma hila loop_function
+//#pragma hila loop_function
     const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -239,7 +237,7 @@ class Array {
         return *reinterpret_cast<Vector<n, T> *>(this);
     }
 
-#pragma hila loop_function
+//#pragma hila loop_function
     const Vector<n, T> &asVector() const {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<const Vector<n, T> *>(this);
@@ -250,7 +248,7 @@ class Array {
         return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
     }
 
-#pragma hila loop_function
+//#pragma hila loop_function
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
@@ -1285,7 +1283,7 @@ inline Array<n, m, T> trunc(Array<n, m, T> a) {
  * @return Array<n, m, Ntype>
  */
 template <typename Ntype, typename T, int n, int m,
-          std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
     Array<n, m, Ntype> res;
     for (int i = 0; i < n * m; i++)
@@ -1295,8 +1293,8 @@ Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
 
 template <typename Ntype, typename T, int n, int m,
           std::enable_if_t<hila::is_complex<T>::value, int> = 0>
-Array<n, m, Ntype> cast_to(const Array<n, m, T> &mat) {
-    Array<n, m, Ntype> res;
+auto cast_to(const Array<n, m, T> &mat) {
+    Array<n, m, Complex<Ntype>> res;
     for (int i = 0; i < n * m; i++)
         res.c[i] = cast_to<Ntype>(mat.c[i]);
     return res;
