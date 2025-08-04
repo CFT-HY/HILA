@@ -1165,17 +1165,6 @@ inline bool operator!=(const A a, const Complex<B> &b) {
 }
 
 
-// Cast operators to different number or Complex type
-// cast_to<double>(a);
-// cast_to<float>(b);
-
-template <typename Ntype, typename T>
-inline Complex<Ntype> cast_to(const Complex<T> &m) {
-    Complex<Ntype> res;
-    res.re = static_cast<Ntype>(m.re);
-    res.im = static_cast<Ntype>(m.im);
-    return res;
-}
 
 //////////////////////////////////////////////////////////////////////////////////
 // Some operations in function form.  Useful in templates when the arg type is not known
@@ -1262,6 +1251,21 @@ std::ostream &operator<<(std::ostream &strm, const Complex<T> &A) {
 // Function hila::to_string
 
 namespace hila {
+
+/**
+ * @brief Cast to different basic number type
+ * 
+ * hila::cast_to<double>(a);   - cast complex a to Complex<double>
+ */
+
+template <typename Ntype, typename T>
+inline Complex<Ntype> cast_to(const Complex<T> &m) {
+    Complex<Ntype> res;
+    res.re = static_cast<Ntype>(m.re);
+    res.im = static_cast<Ntype>(m.im);
+    return res;
+}
+
 /**
  * @brief Return Complex number as std::string
  *
@@ -1292,6 +1296,9 @@ std::string prettyprint(const Complex<T> &A, int prec = 8) {
     ss << "( " << A.real() << ", " << A.imag() << " )";
     return ss.str();
 }
+
+
+
 
 } // namespace hila
 

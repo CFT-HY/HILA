@@ -1268,6 +1268,7 @@ inline Array<n, m, T> trunc(Array<n, m, T> a) {
 }
 /** @} */
 
+namespace hila {
 /**
  * @brief Array casting operation
  * @details Cast array to different number type or Complex type
@@ -1300,6 +1301,7 @@ auto cast_to(const Array<n, m, T> &mat) {
     return res;
 }
 
+} // namespace hila
 
 /// Array1d and Array2d are just aliased to Array
 template <int n, typename T = double>

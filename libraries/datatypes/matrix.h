@@ -2615,6 +2615,32 @@ std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
 namespace hila {
 
 /**
+ * @brief Change basic number type of Matrix/Vector
+ * 
+ * hila::cast_to<double>(a);
+ */
+
+template <typename Ntype, typename T, int n, int m,
+          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
+Matrix<n, m, Ntype> cast_to(const Matrix<n, m, T> &mat) {
+    Matrix<n, m, Ntype> res;
+    for (int i = 0; i < n * m; i++)
+        res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
+
+template <typename Ntype, typename T, int n, int m,
+          std::enable_if_t<hila::is_complex<T>::value, int> = 0>
+Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
+    Matrix<n, m, Complex<Ntype>> res;
+    for (int i = 0; i < n * m; i++)
+        res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
+
+
+
+/**
  * @brief Converts Matrix_t object to string
  *
  * @tparam n Number of rows
@@ -2739,28 +2765,6 @@ inline auto squarenorm(const Mt &rhs) {
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
 inline auto norm(const Mt &rhs) {
     return rhs.norm();
-}
-
-
-// Cast operators to different number type
-// cast_to<double>(a);
-
-template <typename Ntype, typename T, int n, int m,
-          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
-Matrix<n, m, Ntype> cast_to(const Matrix<n, m, T> &mat) {
-    Matrix<n, m, Ntype> res;
-    for (int i = 0; i < n * m; i++)
-        res.c[i] = cast_to<Ntype>(mat.c[i]);
-    return res;
-}
-
-template <typename Ntype, typename T, int n, int m,
-          std::enable_if_t<hila::is_complex<T>::value, int> = 0>
-Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
-    Matrix<n, m, Complex<Ntype>> res;
-    for (int i = 0; i < n * m; i++)
-        res.c[i] = cast_to<Ntype>(mat.c[i]);
-    return res;
 }
 
 /**

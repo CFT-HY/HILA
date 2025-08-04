@@ -958,7 +958,24 @@ inline auto pow(const DiagonalMatrix<n, T> &a, const Complex<S> &p) {
     return res;
 }
 
-// Cast operators to different number type - preserves complex nature
+/// Stream operator
+template <int n, typename T>
+std::ostream &operator<<(std::ostream &strm, const DiagonalMatrix<n, T> &A) {
+    return operator<<(strm, A.asArray());
+}
+
+namespace hila {
+
+/**
+ * @brief Cast to different basic number:
+ * 
+ * @details
+ * hila::cast_to<Ntype>(a);
+ * 
+ * where a is DiagonalMatrix<n,T> does 
+ * DiagonalMatrix<n,T> -> DiagonalMatrix<n,Ntype>
+ * 
+ */
 
 template <typename Ntype, typename T, int n,
           std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
@@ -976,14 +993,6 @@ DiagonalMatrix<n, Complex<Ntype>> cast_to(const DiagonalMatrix<n, T> &mat) {
         res.c[i] = cast_to<Ntype>(mat.c[i]);
     return res;
 }
-
-/// Stream operator
-template <int n, typename T>
-std::ostream &operator<<(std::ostream &strm, const DiagonalMatrix<n, T> &A) {
-    return operator<<(strm, A.asArray());
-}
-
-namespace hila {
 
 template <int n, typename T>
 std::string to_string(const DiagonalMatrix<n, T> &A, int prec = 8, char separator = ' ') {
