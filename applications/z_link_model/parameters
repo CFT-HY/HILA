@@ -12,4 +12,5 @@ random seed            0
 trajs/saved            1000
 trajs/obs field dump   1000
 config name            config
-static pair            12,23,23,0,24,1
+static pair            12,23,23,0,24
+static pair charge     0.5
