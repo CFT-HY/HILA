@@ -35,11 +35,13 @@ using mygroup = int;
     for (Direction d = e_x; d < NDIM; ++d) {
         s += x.e(d);
     }
-#else
+#elif PARITY == 1
     // parity of spatial part of x
     for (Direction d = e_x; d < NDIM - 1; ++d) {
         s += x.e(d);
     }
+#else
+    s = x.e(e_t);
 #endif
     if (s % 2 == 0) {
         return Parity::even;
@@ -1477,9 +1479,14 @@ int main(int argc, char **argv) {
     p.n_dump = par.get("trajs/obs field dump");
     // config file name:
     p.config_file = par.get("config name");
-
+    // specify external fields:
     Vector<5, int> stat_pair;
-    stat_pair = par.get("static pair");
+    stat_pair =
+        par.get("static pair"); // 5 intergers:  x,y,z,dir,dist   where (x,y,z) is location of first
+                                // external charge (having charge stat_pair_c), and "dir" and "dist"
+                                // specifiy that the second charge (having charge -stat_pair_c) is
+                                // located at distance "dist" in spatial direction "dir" from (x,y,z).
+                                // If "dist" is set to zero, then no static charges will be inserted.
     ftype stat_pair_c = par.get("static pair charge");
 
     par.close(); // file is closed also when par goes out of scope
