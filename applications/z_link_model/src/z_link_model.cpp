@@ -1478,8 +1478,9 @@ int main(int argc, char **argv) {
     // config file name:
     p.config_file = par.get("config name");
 
-    Vector<6, int> stat_pair;
+    Vector<5, int> stat_pair;
     stat_pair = par.get("static pair");
+    ftype stat_pair_c = par.get("static pair charge");
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -1546,7 +1547,7 @@ int main(int argc, char **argv) {
                 }
             }
             if(ok) {
-                sw[d1][d2][X] += (ftype)stat_pair[5];
+                sw[d1][d2][X] += stat_pair_c;
                 sw[d2][d1][X] = -sw[d1][d2][X];
             }
         }
@@ -1650,7 +1651,7 @@ int main(int argc, char **argv) {
                             fsfile.close();
                         }
                         fieldstrength[d1][d2] = 0;
-                        
+
                     }
                 }
 
