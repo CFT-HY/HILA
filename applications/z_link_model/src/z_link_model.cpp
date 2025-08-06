@@ -1479,15 +1479,25 @@ int main(int argc, char **argv) {
     p.n_dump = par.get("trajs/obs field dump");
     // config file name:
     p.config_file = par.get("config name");
-    // specify external fields:
-    Vector<5, int> stat_pair;
-    stat_pair =
-        par.get("static pair"); // 5 intergers:  x,y,z,dir,dist   where (x,y,z) is location of first
-                                // external charge (having charge stat_pair_c), and "dir" and "dist"
-                                // specifiy that the second charge (having charge -stat_pair_c) is
-                                // located at distance "dist" in spatial direction "dir" from (x,y,z).
-                                // If "dist" is set to zero, then no static charges will be inserted.
-    ftype stat_pair_c = par.get("static pair charge");
+    // specify static particles:
+    // number of static particle pairs: (set to zero if no static particles should be inserted) 
+    int nstat_pairs = par.get("n static pairs");
+    Vector<5, int> *stat_pair;
+    ftype *stat_pair_c;
+    if(nstat_pairs>0) {
+        // read in static particle locations and their charges:
+        stat_pair = new Vector<5, int>[nstat_pairs]();
+        stat_pair_c = new ftype[nstat_pairs]();
+        for (int isp = 0; isp < nstat_pairs; ++isp) {
+            stat_pair[isp] =
+                par.get("static pair"); // 5 intergers:  x,y,z,dir,dist   where (x,y,z) is location
+                                        // of first external charge (having charge stat_pair_c), and
+                                        // "dir" and "dist" specifiy that the second charge (having
+                                        // charge -stat_pair_c) is located at distance "dist" in
+                                        // spatial direction "dir" from (x,y,z). 
+            stat_pair_c[isp] = par.get("static pair charge");
+        }
+    }
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -1537,25 +1547,27 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    if(stat_pair[4] > 0) {
-        Direction d1 = Direction((1 + stat_pair[3]) % (NDIM - 1));
-        Direction d2 = Direction((2 + stat_pair[3]) % (NDIM - 1));
-        onsites(ALL) {
-            auto cpos = X.coordinates();
-            bool ok = true;
-            for (int i = 0; i < NDIM - 1; ++i) {
-                int dist = 0;
-                if (i == stat_pair[3]) {
-                    dist = stat_pair[4];
+    if(nstat_pairs > 0) {
+        for (int isp = 0; isp < nstat_pairs; ++isp) {
+            Direction d1 = Direction((1 + stat_pair[isp][3]) % (NDIM - 1));
+            Direction d2 = Direction((2 + stat_pair[isp][3]) % (NDIM - 1));
+            onsites(ALL) {
+                auto cpos = X.coordinates();
+                bool ok = true;
+                for (int i = 0; i < NDIM - 1; ++i) {
+                    int dist = 0;
+                    if (i == stat_pair[isp][3]) {
+                        dist = stat_pair[isp][4];
+                    }
+                    int tdist = cpos[i] - stat_pair[isp][i];
+                    if (tdist > dist || tdist < 0) {
+                        ok = false;
+                    }
                 }
-                int tdist = cpos[i] - stat_pair[i];
-                if (tdist > dist || tdist < 0) {
-                    ok = false;
+                if(ok) {
+                    sw[d1][d2][X] += stat_pair_c[isp];
+                    sw[d2][d1][X] = -sw[d1][d2][X];
                 }
-            }
-            if(ok) {
-                sw[d1][d2][X] += stat_pair_c;
-                sw[d2][d1][X] = -sw[d1][d2][X];
             }
         }
     }
@@ -1713,6 +1725,11 @@ int main(int argc, char **argv) {
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
             checkpoint(H, sw, trajectory, p);
         }
+    }
+
+    if(nstat_pairs>0) {
+        delete[] stat_pair;
+        delete[] stat_pair_c;
     }
 
     hila::finishrun();

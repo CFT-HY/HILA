@@ -2,7 +2,7 @@
 
 lattice size           16,16,16,16
 beta                   2.2
-number of trajectories 5000
+number of trajectories 10000
 metropolis updates     10
 overrelax updates      10
 plaq shift updates     0
@@ -12,5 +12,8 @@ random seed            0
 trajs/saved            1000
 trajs/obs field dump   1000
 config name            config
-static pair            4,7,7,0,8
+n static pairs         2
+static pair            4,3,8,0,8
+static pair charge     1.0
+static pair            4,11,8,0,8
 static pair charge     1.0
