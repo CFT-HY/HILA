@@ -1,132 +1,105 @@
 /**
- * @file gaugefield.h
+ * @file PlaquetteField.h
  * @brief Definition of Gauge Field
- * @details This file contains the definition for the GaugeField class
+ * @details This file contains the definition for the PlaquetteField class
  */
-#ifndef GAUGEFIELD_H_
-#define GAUGEFIELD_H_
+#ifndef PlaquetteField_H_
+#define PlaquetteField_H_
 
 #include "hila.h"
 
 /**
- * @brief Gauge field class
- * @details Stores and defines links between Lattice Field elements. Number of links is
- * `lattice.size()*NDIM`, since for each point there is a link in all directions.
+ * @brief Plaquette field class
+ * @details Stores and defines plaquette Lattice Field elements. Number of plaquettes is
+ * `lattice.size()*NDIM*NDIM` since at each point any pair of directions (dir1,dir2) can span a
+ * plaquette. Degenerate plaquettes (dir1=dir2) are included for simplicity to be able to define
+ * PlaquetteField in terms of VectorField.
  *
- * @param fdir std::array<Field<T>,NDIM> type element which stores GaugeField links in back to back
- * direction wise ordering.
+ * @param fdir std::array<VectorField<T>,NDIM> type element which stores PlaquetteField.
  *
- * @tparam T Group that GaugeField consists of
+ * @tparam T Group that PlaquetteField consists of
  */
 template <typename T>
-class GaugeField {
+class PlaquetteField {
   private:
-    std::array<Field<T>, NDIM> fdir;
+    std::array<VectorField<T>, NDIM> fdir;
 
     // somewhat arbitrary fingerprint flag for configuration files
     static constexpr int64_t config_flag = 394824242;
 
   public:
     // Default constructor
-    GaugeField() = default;
+    PlaquetteField() = default;
 
     // Straightforward copy constructor seems to be necessary
-    GaugeField(const GaugeField &other) = default;
+    PlaquetteField(const PlaquetteField &other) = default;
 
     // copy constructor - from fields which can be assigned
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
-    GaugeField(const GaugeField<A> &other) {
-        foralldir(d) fdir[d] = other[d];
+    PlaquetteField(const PlaquetteField<A> &other) {
+        foralldir(d1) fdir[d1] = other[d1];
+    }
+
+    // constructor with compatible Vector field
+    template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
+    PlaquetteField(const VectorField<A> &other) {
+        foralldir(d1) fdir[d1] = other;
     }
 
     // constructor with compatible scalar
     template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
-    GaugeField(const A &val) {
-        foralldir(d) fdir[d] = val;
+    PlaquetteField(const A &val) {
+        foralldir(d1) fdir[d1] = val;
     }
 
     // constructor from 0 - nullptr trick in use
-    GaugeField(const std::nullptr_t z) {
-        foralldir(d) fdir[d] = 0;
+    PlaquetteField(const std::nullptr_t z) {
+        foralldir(d1) fdir[d1] = 0;
     }
 
 
     /////////////////////////////////////////////////
     /// Destructor
 
-    ~GaugeField() = default;
+    ~PlaquetteField() = default;
 
     /////////////////////////////////////////////////
     /// Access components with []
 
-    inline Field<T> &operator[](Direction d) {
-        return fdir[d];
+    inline VectorField<T> &operator[](Direction d1) {
+        return fdir[d1];
     }
 
-    inline const Field<T> &operator[](Direction d) const {
-        return fdir[d];
+    inline const VectorField<T> &operator[](Direction d1) const {
+        return fdir[d1];
     }
 
     //////////////////////////////////////////////////
     /// Assign from anything the field allows
     template <typename A>
-    GaugeField &operator=(const A &val) {
-        foralldir(d) fdir[d] = val;
+    PlaquetteField &operator=(const A &val) {
+        foralldir(d1) fdir[d1] = val;
         return *this;
     }
 
     /// Separate 0 assignment
-    GaugeField &operator=(std::nullptr_t np) {
-        foralldir(d) fdir[d] = 0;
+    PlaquetteField &operator=(std::nullptr_t np) {
+        foralldir(d1) fdir[d1] = 0;
         return *this;
     }
 
     template <typename A>
-    GaugeField &operator=(const GaugeField<A> &rhs) {
-        foralldir(d) fdir[d] = rhs[d];
+    PlaquetteField &operator=(const PlaquetteField<A> &rhs) {
+        foralldir(d1) fdir[d1] = rhs[d1];
         return *this;
     }
 
-    /**
-     * @brief Reunitarize Gauge Field consisting of \f$ SU(N)\f$ matrices
-     * @details Only defined for \f$ SU(N) \f$ matrices and Fields
-     */
-    void reunitarize_gauge() {
-        foralldir(d) {
-            onsites(ALL)(*this)[d][X].reunitarize();
-        }
-    }
-
-    /**
-     * @brief Computes Wilson action
-     * @details \f{align}{ S &=  \beta\sum_{\textbf{dir}_1 < \textbf{dir}_2}\sum_{X} \frac{1}{N}
-     * \Re\mathrm{Tr}\left[ 1- U_{\textbf{dir}_1 \textbf{dir}_2}(X) \right] \f} Where \f$\beta =
-     * 2N/g^2\f$
-     *
-     * @return double
-     */
-    double measure_plaq() const {
-        Reduction<double> plaq;
-        plaq.allreduce(false);
-
-        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-
-            onsites(ALL) {
-                plaq += 1.0 -
-                        real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
-                                   (*this)[dir1][X + dir2].dagger() * (*this)[dir2][X].dagger())) /
-                            T::size();
-            }
-        }
-
-        return plaq.value();
-    }
     ////////////////////////////////////////////////////////
-    // I/O operations for gauge fields (here only binary)
+    // I/O operations for plaquette fields (here only binary)
 
     void write(std::ofstream &outputfile) const {
-        foralldir(d) {
-            fdir[d].write(outputfile);
+        foralldir(d1) {
+            fdir[d1].write(outputfile);
         }
     }
 
@@ -138,14 +111,14 @@ class GaugeField {
     }
 
     void read(std::ifstream &inputfile) {
-        foralldir(d) {
-            fdir[d].read(inputfile);
+        foralldir(d1) {
+            fdir[d1].read(inputfile);
         }
     }
 
     void read(std::ifstream &inputfile, CoordinateVector &insize) {
-        foralldir(d) {
-            fdir[d].read(inputfile, insize);
+        foralldir(d1) {
+            fdir[d1].read(inputfile, insize);
         }
     }
 
@@ -215,13 +188,14 @@ class GaugeField {
 
         CoordinateVector insize = lattice.size();
         if (ok && hila::myrank() == 0) {
+
             foralldir(d) {
                 inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
                 insize[d] = f;
                 ok = ok && (lattice.size(d) % insize[d] == 0);
                 if (!ok)
                     hila::out0 << conferr << "incorrect lattice dimension " << hila::prettyprint(d)
-                               << " is " << f << " should be (or divide)" << lattice.size(d) << '\n';
+                               << " is " << f << " should be (or divide) " << lattice.size(d) << '\n';
             }
         }
 
@@ -240,16 +214,11 @@ class GaugeField {
 /// Implement hila::swap for gauge fields
 namespace hila {
 template <typename T>
-void swap(GaugeField<T> &A, GaugeField<T> &B) {
-    foralldir(d) hila::swap(A[d], B[d]);
+void swap(PlaquetteField<T> &A, PlaquetteField<T> &B) {
+    foralldir(d1) hila::swap(A[d1], B[d1]);
 }
 } // namespace std
 
-
-///////////////////////////////////////////////////////
-/// Alias VectorField to GaugeField
-template <typename T>
-using VectorField = GaugeField<T>;
 
 
 #endif
