@@ -320,9 +320,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     T *receive_buffer;
     T *send_buffer;
 
-    size_t size_type;
-    MPI_Datatype mpi_type = get_MPI_number_type<T>(size_type);
-
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
 
         // HANDLE RECEIVES: get node which will send here
@@ -330,7 +327,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         // buffer can be separate or in Field buffer
         receive_buffer = fs->get_receive_buffer(d, par, from_node);
 
-        // size_t n = from_node.n_sites(par) * size / size_type;
         size_t n = from_node.n_sites(par) * size;
 
         if (n >= (1ULL << 31)) {
@@ -341,7 +337,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         post_receive_timer.start();
 
         // c++ version does not return errors
-        // was mpi_type
         MPI_Irecv(receive_buffer, (int)n, MPI_BYTE, from_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
 
@@ -362,7 +357,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         fs->gather_comm_elements(d, par, send_buffer, to_node);
 #endif
 
-        // size_t n = sites * size / size_type;
         size_t n = sites * size;
 
 #ifdef GPU_AWARE_MPI
@@ -372,7 +366,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
         start_send_timer.start();
 
-        // was mpi_type
         MPI_Isend(send_buffer, (int)n, MPI_BYTE, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
 
