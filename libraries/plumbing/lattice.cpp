@@ -18,21 +18,16 @@ void report_too_large_node() {
     hila::finishrun();
 }
 
-// HACK: force disable vectorization in a loop using
-// if(disable_avx[X]==0){};
-// Field<double> disable_avx;
 
 // Define the global lattice var
 lattice_struct lattice;
 /// A list of all defined lattices (for the future expansion)
 std::vector<lattice_struct *> lattices;
 
-static int lattice_count = 0;
-
 /// General lattice setup
 void lattice_struct::setup(const CoordinateVector &siz) {
 
-    l_label = lattice_count++;
+    l_label = lattices.size();
 
     // Add this lattice to the list
     lattices.push_back(this);
@@ -75,7 +70,6 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 
     test_std_gathers();
 
-    // disable_avx = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////
