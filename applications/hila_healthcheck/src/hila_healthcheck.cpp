@@ -136,7 +136,36 @@ void test_reductions() {
         }
 
         report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
+
+        int64_t psum = 0;
+        onsites(ALL) {
+            if (X.parity() == EVEN) psum += 1;
+        }
+        psum -= lattice.volume() / 2;
+
+        report_pass("Reduction with parity", psum, 1e-15);
+
     }
+
+    {
+        // reductionvector with long
+        Field<int64_t> lf;
+        lf[ALL] = X.x();
+
+        ReductionVector<int64_t> rv(lattice.size(e_x));
+
+        onsites(ALL) {
+            rv[X.x()] += lf[X];
+        }
+
+        long s = 0;
+        for (int x = 0; x < rv.size(); x++) {
+            s += abs(rv[x] - x * (lattice.volume() / lattice.size(e_x)));
+        }
+
+        report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
+    }
+
 
     {
 

@@ -668,7 +668,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             std::string l_lattice;
 
             if (target.kernelize)
-                l_lattice = "d_lattice.";
+                l_lattice = "get_dev_";
             else
                 l_lattice = "loop_lattice.";
 

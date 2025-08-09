@@ -26,19 +26,20 @@ namespace hila {
  *
  * ## Variable assingment:
  * \code{.cpp}
- * globalvar = <value>;
+ * globalvar.set(<value>);
  * \endcode
  *
  * Assignment is not possible inside loops
- * Only "full" assignment is possible, not e.g. by field records
+ * Only "full" assignment is possible, not e.g. by struct records.  Value must be convertible
+ * to the type of the global
  *
  * ## Variable access
  *
- * The value of the variable is obtained with function-like "()" call
+ * The value of the variable is obtained with .get() -method
  * \code{.cpp}
- * globalvar();
+ * globalvar.get();
  * \endcode
- *
+ * .get() returns a const reference to the variable, it does no copying
  * Variable can be used everywhere in the source file.
  *
  * \code{.cpp}
@@ -46,10 +47,11 @@ namespace hila {
  * struct param_t { double a,b[2]; };
  *
  * hila::global<param_t> params;
+ * params.set( {1,2,3} );
  *
  * // define some function
  * double myfunc(double dv) {
- *     return cos( dv / params().a );
+ *     return cos( dv / params.get().a );
  * }
  *
  * ...
@@ -58,12 +60,12 @@ namespace hila {
  * tmp.a = 3*M_PI;
  * tmp.b[0] = ....
  * tmp.b[1] = ...
- * params = tmp;  // do the full struct assignment to global
+ * params.set(tmp);  // do the full struct assignment to global
  *
  * ...
  * Field<double> df;
  * onsites(ALL) {
- *     df[X] = myfunc(X.x()) + params().b[0]/params().b[1];
+ *     df[X] = myfunc(X.x()) + params.get().b[0]/params.get().b[1];
  * }
  * hila::out0 << "Parameter a is " << params().a << '\n';
  * \endcode
@@ -85,8 +87,8 @@ namespace hila {
  * }
  * ...
  *
- * myglobals::a = 3;
- * hila::out0 << "a has value " << myglobals::a() << '\n';
+ * myglobals::a.set(3);
+ * hila::out0 << "a has value " << myglobals::a.get() << '\n';
  * \endcode
  *
  * Variables cannot be initialized in declaration, because (possible) GPUs are not initialized.
@@ -106,18 +108,29 @@ class global {
 
   public:
     // Get the value of the variable with operator()
+
+    const T &get() const {
+        return val;
+    }
+
     const T &operator()() const {
         return val;
     }
 
-    // assignment is possible from compatible rhs values
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    void operator=(const S &rhs) {
+    void set(const S &rhs) {
         assert(hila::is_initialized && "Assign to global possible only after hila::initialize()");
 
         val = rhs;
 
         copy_to_device();
+    }
+
+
+    // assignment is possible from compatible rhs values
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    void operator=(const S &rhs) {
+        this->set(rhs);
     }
 };
 } // namespace hila

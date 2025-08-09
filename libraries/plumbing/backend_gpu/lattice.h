@@ -4,6 +4,15 @@
 #include "coordinates.h"
 #include "globals.h"
 
+/// Define some global variables
+
+#ifdef IN_HILA_GPU
+#define HILA_GPU_EXTERN /* nothing */
+#else
+#define HILA_GPU_EXTERN extern
+#endif
+
+
 /// Lattice related data that needs to be communicated
 /// to kernels
 struct backend_lattice_struct {
@@ -26,19 +35,15 @@ struct backend_lattice_struct {
     /// Finally a pointer to the list of coordinates, stored on device
     CoordinateVector *d_coordinates;
 
-#if defined(CUDA) || defined(HIP)
+    // /// get the coordinates at a given site
+    // __host__ __device__ const CoordinateVector &coordinates(unsigned idx) const {
+    //     return _dev_coordinates[idx];
+    // }
+    // __host__ __device__ int coordinate(unsigned idx, Direction dir) const {
+    //     return _dev_coordinates[idx][dir];
+    // }
 
-    /// get the coordinates at a given site
-    __host__ __device__ const CoordinateVector &coordinates(unsigned idx) const {
-        return d_coordinates[idx];
-    }
-    __host__ __device__ int coordinate(unsigned idx, Direction dir) const {
-        return d_coordinates[idx][dir];
-    }
-
-#endif
-
-#else  
+#else
     // Now not EVEN_SITES_FIRST
 
     // these defined in hila_gpu.cpp
@@ -50,17 +55,36 @@ struct backend_lattice_struct {
     /// setup the backend lattice data
     void setup(lattice_struct &lattice);
 
-    void set_lattice_globals( lattice_struct &lattice);
-
+    void set_lattice_globals(lattice_struct &lattice);
 };
 
 ////////////////////////////////////////////////////////////////////////////
 // Define here some globals and inline functions
 
-#ifdef IN_HILA_GPU
-#define HILA_GPU_EXTERN /* nothing */
-#else 
-#define HILA_GPU_EXTERN extern
+HILA_GPU_EXTERN __constant__ unsigned _dev_field_alloc_size;
+#ifdef EVEN_SITES_FIRST
+HILA_GPU_EXTERN __constant__ CoordinateVector *_dev_coordinates;
+#endif
+
+inline __device__ const CoordinateVector &get_dev_coordinates(unsigned idx) {
+    return _dev_coordinates[idx];
+}
+
+
+inline __device__ int get_dev_coordinate(unsigned idx, Direction dir) {
+    return _dev_coordinates[idx][dir];
+}
+
+#ifdef EVEN_SITES_FIRST
+inline __device__ Parity get_dev_site_parity(unsigned idx) {
+    auto cv = get_dev_coordinates(idx);
+    int s = 0;
+    foralldir(d) s += cv.e(d);
+    if (s % 2 == 0)
+        return Parity::even;
+    else
+        return Parity::odd;
+}
 #endif
 
 // Save "constants" lattice size and volume here
@@ -113,7 +137,7 @@ inline int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const
     return (idx / _d_nodefactor()[dir]) % _d_nodesize()[dir] + _d_nodemin()[dir];
 }
 
-#endif   // not EVEN_SITES_FIRST
+#endif // not EVEN_SITES_FIRST
 
 
 #endif
