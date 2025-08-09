@@ -169,13 +169,20 @@ void backend_lattice_struct::setup(lattice_struct &lattice) {
     gpuMemcpy(d_coordinates, tmp, lattice.mynode.volume() * sizeof(CoordinateVector),
               gpuMemcpyHostToDevice);
     free(tmp);
+
+    gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
+                      gpuMemcpyHostToDevice);
+
+
 #endif
 
     // Other backend_lattice parameters
     field_alloc_size = lattice.field_alloc_size();
 
-    set_lattice_globals(lattice);
+    gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
+                      gpuMemcpyHostToDevice);
 
+    set_lattice_globals(lattice);
 }
 
 #endif // not HILAPP
@@ -382,7 +389,4 @@ void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int lin
     }
 }
 
-#endif  // not HILAPP
-
-
-
+#endif // not HILAPP

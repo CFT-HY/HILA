@@ -303,12 +303,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Switch to static here for now
     // Add __launch_bounds__ directive here
     kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
-           << "( backend_lattice_struct d_lattice";
-    code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
-    code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
+//           << "( backend_lattice_struct d_lattice";
+        << "(int _hila_loop_begin, int _hila_loop_end";
+//    code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
+    // code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    // code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
+    code << "int _hila_loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "int _hila_loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
 
-    code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
+    code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
             "N_threads - 1)/N_threads;\n";
 
     if (use_thread_blocks) {
@@ -392,10 +395,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     if (target.cuda) {
-        code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
+        code << kernel_name << "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
     } else if (target.hip) {
         code << "hipLaunchKernelGGL(" << kernel_name
-             << ", dim3(N_blocks), dim3(N_threads), 0, 0, lattice_info";
+             << ", dim3(N_blocks), dim3(N_threads), 0, 0, _hila_loop_begin, _hila_loop_end";
     } else {
         llvm::errs() << "Internal bug - unknown kernelized target\n";
         exit(1);
@@ -480,7 +483,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         std::string repl_string;
         repl_string = "{\n " + s.maskname + looping + " = 1;\n";
         repl_string +=
-            s.sitename + looping + " = SiteIndex(d_lattice.coordinates(" + looping_var + "));\n";
+            s.sitename + looping + " = SiteIndex(_dev_coordinates[" + looping_var + "]);\n";
 
         if (s.assign_expr == nullptr) {
 
@@ -699,19 +702,19 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Standard boilerplate in CUDA kernels: calculate site index
 
     kernel << "int HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
-    kernel << "unsigned " << looping_var << " = HILA_thread_id + d_lattice.loop_begin;\n";
+    kernel << "unsigned " << looping_var << " = HILA_thread_id + _hila_loop_begin;\n";
 
     if (!use_thread_blocks) {
 
         // The last block may exceed the lattice size. Do nothing in that case.
-        kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+        kernel << "if(" << looping_var << " < _hila_loop_end) { \n";
 
     } else {
         // In this case let all threads to iterate over sites
         // use long long type (64 bits) just in case to avoid wrapping
         // the iteration will stop on the
         kernel << "for (long long HILA_idx_l_ = " << looping_var
-               << "; HILA_idx_l_ < d_lattice.loop_end; HILA_idx_l_ += N_threads * "
+               << "; HILA_idx_l_ < _hila_loop_end; HILA_idx_l_ += N_threads * "
                << thread_block_number << ") {\n"
                << looping_var << " = HILA_idx_l_;\n";
     }
@@ -740,7 +743,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     // Create the temp variable and call the getter
                     kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
                            << l.new_name << ".get(" << l.new_name << ".neighbours[" << dirname
-                           << "][" << looping_var << "], d_lattice.field_alloc_size);\n";
+                           << "][" << looping_var << "], _dev_field_alloc_size);\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -764,7 +767,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                           "++HILA_dir_) {\n"
                        << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get(" << l.new_name
                        << ".neighbours[HILA_dir_][" << looping_var
-                       << "], d_lattice.field_alloc_size);\n}\n";
+                       << "], _dev_field_alloc_size);\n}\n";
 
                 // and replace references in loop body
                 for (dir_ptr &d : l.dir_list) {
@@ -795,7 +798,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                         loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + l.new_name +
                                                            ".neighbours[" + dirname + "][" +
                                                            looping_var +
-                                                           "], d_lattice.field_alloc_size)");
+                                                           "], _dev_field_alloc_size)");
                     }
                 }
 #endif
@@ -810,7 +813,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // if (!l.is_written)
             //     kernel << "const ";
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name << ".get("
-                   << looping_var << ", d_lattice.field_alloc_size);\n           ";
+                   << looping_var << ", _dev_field_alloc_size);\n           ";
             // if (l.is_written)
             //    kernel << "// TODO: READ MAY BE UNNECESSARY!  Do more careful
             //    assignment analysis!\n";
@@ -882,7 +885,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             std::string type_name = l.type_template;
             type_name.erase(0, 1).erase(type_name.end() - 1, type_name.end());
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
-                   << ", d_lattice.field_alloc_size );\n";
+                   << ", _dev_field_alloc_size );\n";
         }
 
     // end the if ( looping_var < d_lattice.loop_end) or for() {

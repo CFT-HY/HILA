@@ -39,6 +39,7 @@
 #define __device__
 #define __host__
 #define __global__
+#define __constant__
 #endif
 
 // #include "plumbing/mersenne.h"
