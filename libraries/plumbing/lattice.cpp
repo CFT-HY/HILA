@@ -69,7 +69,6 @@ void lattice_struct::setup(const CoordinateVector &siz) {
     }
 
     test_std_gathers();
-
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -411,6 +410,13 @@ void lattice_struct::node_struct::subnode_struct::setup(const node_struct &tn) {
 
 #endif
 
+bool lattice_struct::is_this_odd_boundary(Direction d) const {
+    // return false unless lattice size is odd to direction d
+    // and mynode is on the boundary of the lattice
+
+    return (lattice.size(d) % 2 > 0 && lattice.mynode.is_on_edge(d));
+}
+
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays
 /// This is for the index array neighbours
@@ -491,8 +497,13 @@ void lattice_struct::create_std_gathers() {
         to_node.rank = from_node.rank;
         to_node.sites = from_node.sites;
         // note!  Parity is flipped, because parity is normalized to receieving node
-        to_node.evensites = from_node.oddsites;
-        to_node.oddsites = from_node.evensites;
+        if (!is_this_odd_boundary(d)) {
+            to_node.evensites = from_node.oddsites;
+            to_node.oddsites = from_node.evensites;
+        } else {
+            to_node.evensites = from_node.evensites;
+            to_node.oddsites = from_node.oddsites;
+        }
 
         if (num > 0) {
             // sitelist tells us which sites to send

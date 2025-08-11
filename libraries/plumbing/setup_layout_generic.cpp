@@ -30,10 +30,10 @@ void lattice_struct::setup_layout() {
     hila::out0 << "  =  " << l_volume << " sites\n";
     hila::out0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
 
-    foralldir(d) if (size(d) % 2 != 0) {
-        hila::out0 << "Lattice must be even to all directions (odd size:TODO)\n";
-        hila::finishrun();
-    }
+    // foralldir(d) if (size(d) % 2 != 0) {
+    //     hila::out0 << "Lattice must be even to all directions (odd size:TODO)\n";
+    //     hila::finishrun();
+    // }
 
     // Factorize the node number in primes
     // These factors must be used in slicing the lattice!
