@@ -397,6 +397,9 @@ class lattice_struct {
     int id() const {
         return l_label;
     }
+
+    bool is_this_odd_boundary(Direction d) const;
+
 };
 
 /// global handle to lattice
