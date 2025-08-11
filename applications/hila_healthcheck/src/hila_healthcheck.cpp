@@ -777,7 +777,7 @@ void test_extended() {
 
     report_pass("ExtendedPrecision comparison ops", ok ? 0 : 1, 1e-20);
 
-    for (double mag = 1e8; mag <= 1e+32; mag *= 1e4) {
+    for (double mag = 1e8; mag <= 1e+32; mag *= 1e8) {
 
         onsites(ALL) {
             if (X.x() % 2 == 0) {
@@ -796,17 +796,32 @@ void test_extended() {
         }
 
         ExtendedPrecision result;
-        result = lattice.volume() / 2;
-        result += mag * lattice.volume() / 4;
-        result += sqr(mag) * lattice.volume() / 4;
+        result = 2;
+        result += mag;
+        result += sqr(mag);
+        result = result * (lattice.volume() / 4);
 
-        ev -= sqr(mag) * lattice.volume() / 4;
-        ev -= mag * lattice.volume() / 4;
-        ev -= lattice.volume() / 2;
+        // ev -= lattice.volume() / 2;
+        // ev -= mag * (lattice.volume() / 4);
+        // ev -= sqr(mag) * (lattice.volume() / 4);
 
-        s -= sqr(mag) * lattice.volume() / 4;
-        s -= mag * lattice.volume() / 4;
-        s -= lattice.volume() / 2;
+        // above multiplication loses precision!  Subtracting
+        // here step-by-step
+        
+        for (int i=0; i<lattice.volume()/2; i++) {
+            ev -= 1;
+            s -= 1;
+        }
+        for (int i=0; i<lattice.volume()/4; i++) {
+            ev -= mag;
+            ev -= sqr(mag);
+            s -= mag;
+            s -= sqr(mag);
+        }
+
+        // s -= sqr(mag) * lattice.volume() / 4;
+        // s -= mag * lattice.volume() / 4;
+        // s -= lattice.volume() / 2;
 
         // hila::out0 << "RES " << ev.value << " + " << ev.compensation << " + " << ev.compensation2
         //           << '\n';
