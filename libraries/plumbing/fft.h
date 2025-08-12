@@ -26,7 +26,7 @@
 
 
 #pragma hila novector
-template<typename T>
+template <typename T>
 inline Vector<NDIM, double> CoordinateVector_t<T>::convert_to_k() const {
     Vector<NDIM, double> k;
     foralldir(d) {
@@ -521,6 +521,11 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
 
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
+
+    foralldir(d) {
+        assert(lattice.size(d) % 2 == 0 &&
+               "FFT_complex_to_real works only with even lattice size to all directions");
+    }
 
     // first, do a full reflection of the field, giving rf(x) = f(L-x) = "f(-x)"
     auto rf = this->reflect();
