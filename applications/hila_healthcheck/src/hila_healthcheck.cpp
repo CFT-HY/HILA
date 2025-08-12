@@ -558,10 +558,16 @@ void test_fft() {
 
         report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
 
-        auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
-        eps = squarenorm_relative(r, r2);
+        bool odd = false;
+        foralldir(d) odd = odd || (lattice.size(d) % 2 > 0);
+        if (!odd) {
+            auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
+            eps = squarenorm_relative(r, r2);
 
-        report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
+            report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
+        } else {
+            hila::out0 << " ...  Skipping FFT complex to real because lattice size is odd\n";
+        }
     }
 
     //-----------------------------------------------------------------

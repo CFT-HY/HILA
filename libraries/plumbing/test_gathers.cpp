@@ -35,15 +35,33 @@ void gather_test() {
 
         if (dif1.squarenorm() != 0) {
             hila::out0 << " Std up-gather test error! Node " << hila::myrank()
-                    << " direction " << (unsigned)d << " dif1 " << dif1 << '\n';
+                    << " direction " << hila::prettyprint(d) << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
 
         if (dif2.squarenorm() != 0) {
             hila::out0 << " Std down-gather test error! Node " << hila::myrank()
-                    << " direction " << (unsigned)d << " dif2 " << dif2 << '\n';
+                    << " direction " << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
             hila::terminate(1);
         }
+        
+        onsites(EVEN) {
+            dif1 += abs(f1[X + d] - f2[X]);
+            dif2 += abs(f1[X] - f2[X - d]);
+        }
+
+        if (dif1.squarenorm() != 0) {
+            hila::out0 << " EVEN parity up-gather test error! Node " << hila::myrank()
+                    << " direction " << hila::prettyprint(d) << " dif1 " << dif1 << '\n';
+            hila::terminate(1);
+        }
+
+        if (dif2.squarenorm() != 0) {
+            hila::out0 << " EVEN parity down-gather test error! Node " << hila::myrank()
+                    << " direction " << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
+            hila::terminate(1);
+        }
+
 
 #if 0 && defined(SPECIAL_BOUNDARY_CONDITIONS)
         // test antiperiodic b.c. to one direction
