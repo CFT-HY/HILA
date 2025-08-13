@@ -1392,6 +1392,7 @@ class Field {
     void write(const std::string &filename, bool binary = true, int precision = 8) const;
 
     void read(std::ifstream &inputfile);
+    void read(std::ifstream &inputfile, const CoordinateVector &insize);
     void read(const std::string &filename);
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,

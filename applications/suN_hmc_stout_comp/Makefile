@@ -18,9 +18,10 @@
 #%     STOUTMODE=<S>             - method used to perform sout smearing:
 #%                                                   S=0: "Cayley-Hamilton for both, gauge field and force smearing"
 #%                                                   S=1: "Power series of fixed length for both, gauge field and force smearing"
-#%                                                   S=2: "Cayley-Hamilton for gauge field smearing, power series of variable length (determined by number of CH steps) for fore smearing"
-#%                                                   S>2: "Cayley-Hamilton for both, gauge field and force smearing, using stored k-matrix"
-
+#%                                                   S=2: "Power series of variable length for gauge field smearing; same  power series length is then used for fore smearing"
+#%                                                   S=3: "Same as S=2 but keeping also track of the Frobenius norms of the matrices that are exponentiatet during the smearing steps"
+#%                                                   S>3: "Cayley-Hamilton for both, gauge field and force smearing, using stored k-matrix"
+#
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
 
