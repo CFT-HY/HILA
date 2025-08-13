@@ -20,3 +20,6 @@ html/
 .vs/slnx.sqlite
 *config*
 *run_status
+*out.txt
+*out*.txt
+applications/*/test*/*

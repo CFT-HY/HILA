@@ -2,8 +2,8 @@
 
 lattice size           12,12,12,12
 beta                   5.8
-dt                     0.001
-trajectory length      100
+dt                     0.005
+trajectory length      200
 number of trajectories 60
 thermalization trajs   20
 gflow freq             0

@@ -38,7 +38,7 @@ void get_cs_force(const GaugeField<group> &U, VectorField<Algebra<group>> &K) {
                      // is computed from action term with \beta-factor stripped off)
                      // however; it seems that in practice factor 1.0 is used.
                      // note: when switching to factor 2.0, remember to change also the stability
-                     // limit in the do_gradient_flow_adapt() below
+                     // limit in the do_cs_flow_adapt() below
 
     VectorField<Algebra<group>> E;
 
