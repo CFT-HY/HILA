@@ -179,6 +179,13 @@ class lattice_struct {
                 return buffer;
             }
         }
+
+        void reset() {
+            sites = evensites = oddsites = 0;
+            buffer = 0;
+            sitelist = nullptr;
+            rank = hila::myrank();
+        }
     };
 
     /// nn-communication has only 1 node to talk to
