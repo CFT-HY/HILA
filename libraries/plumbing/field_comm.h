@@ -122,7 +122,7 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 
     unsigned offs = 0;
     if (par == ODD)
-        offs = from_node.sites / 2;
+        offs = from_node.evensites;
     if (receive_buffer[d] == nullptr) {
         receive_buffer[d] = payload.allocate_mpi_buffer(from_node.sites);
     }
@@ -136,7 +136,7 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
     } else {
         unsigned offs = 0;
         if (par == ODD)
-            offs = from_node.sites / 2;
+            offs = from_node.evensites;
 
         if (vector_lattice->is_boundary_permutation[abs(d)]) {
             // extra copy operation needed

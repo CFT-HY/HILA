@@ -423,6 +423,24 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
 
+// unsigned lattice_struct::count_off_node_sites(const CoordinateVector &offset) {
+
+//     CoordinateVector ln, l;
+//     unsigned count;
+
+//     for (int i = 0; i < mynode.sites; i++) {
+//         l = coordinates(i);
+//         // set ln to be the neighbour of the site
+//         // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
+//         ln = (l + offset).mod(size());
+
+//         if (!is_on_mynode(ln))
+//             count++;
+//     }
+//     return count;
+// }
+
+
 void lattice_struct::create_std_gathers() {
 
     // allocate neighbour arrays - TODO: these should
@@ -447,122 +465,101 @@ void lattice_struct::create_std_gathers() {
         // NOTE: this is not the send to Direction d, but to -d!
         comm_node_struct &to_node = nn_comminfo[-d].to_node;
 
-        from_node.rank = to_node.rank = mynode.rank; // invalidate from_node, for time being
+        from_node.reset();
+        to_node.reset();
+
         // if there are no communications the rank is left as is
 
-        // counters to zero
-        from_node.sites = from_node.evensites = from_node.oddsites = 0;
+        // first pass through the sites 
+        // - set the neighb array, anything to communicate?
 
-        // pass over sites
-        size_t num = 0; // number of sites off node
-        for (int i = 0; i < mynode.sites; i++) {
+        for (size_t i = 0; i < mynode.sites; i++) {
             CoordinateVector ln, l;
             l = coordinates(i);
             // set ln to be the neighbour of the site
-            // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
             ln = (l + d).mod(size());
-            // ln = l;
-            // if (is_up_dir(d)) ln[d] = (l[d] + 1) % size(d);
-            // else ln[d] = (l[d] + size(-d) - 1) % size(-d);
 
             if (is_on_mynode(ln)) {
                 neighb[d][i] = site_index(ln);
             } else {
-                // reset neighb array temporarily, as a flag
+                // short-circuit neighbour array, for later handling
                 neighb[d][i] = mynode.sites;
 
                 // Now site is off-node, this leads to gathering
-                // check that there's really only 1 node to talk with
-                unsigned rank = node_rank(ln);
                 if (from_node.rank == mynode.rank) {
-                    from_node.rank = rank;
-                } else if (from_node.rank != rank) {
-                    hila::out << "Internal error in nn-communication setup\n";
-                    exit(1);
-                }
+                    from_node.rank = to_node.rank = node_rank(ln);
+                } 
 
-                from_node.sites++;
                 if (l.parity() == EVEN)
                     from_node.evensites++;
                 else
                     from_node.oddsites++;
 
-                num++;
+                // evensites / oddsites classified by the parity of receiving site
+                if (ln.parity() == EVEN)
+                    to_node.evensites++;
+                else 
+                    to_node.oddsites++;
+
             }
         }
 
-        // and set buffer indices
+        // store here the buffer index
         from_node.buffer = c_offset;
 
-        to_node.rank = from_node.rank;
-        to_node.sites = from_node.sites;
-        // note!  Parity is flipped, because parity is normalized to receieving node
-        if (!is_this_odd_boundary(d)) {
-            to_node.evensites = from_node.oddsites;
-            to_node.oddsites = from_node.evensites;
-        } else {
-            to_node.evensites = from_node.evensites;
-            to_node.oddsites = from_node.oddsites;
-        }
+        from_node.sites = from_node.evensites + from_node.oddsites;
+        to_node.sites = to_node.evensites + to_node.oddsites;
 
-        if (num > 0) {
+        assert(from_node.sites == to_node.sites);
+
+        if (from_node.sites > 0) {
+
             // sitelist tells us which sites to send
             to_node.sitelist = (unsigned *)memalloc(to_node.sites * sizeof(unsigned));
+
 #ifndef VANILLA
             // non-vanilla code MAY want to have receive buffers, so we need mapping to
             // field
             from_node.sitelist = (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
 #endif
-        } else {
-            to_node.sitelist = nullptr;
-        }
 
-        if (num > 0) {
             // set the remaining neighbour array indices and sitelists in another go
             // over sites. temp counters NOTE: ordering is automatically right: with a
             // given parity, neighbour node indices come in ascending order of host node
             // index - no sorting needed
-            size_t c_even, c_odd;
-            c_even = c_odd = 0;
+            size_t to_even = 0, to_odd = 0,  from_even = 0, from_odd = 0;
 
             for (size_t i = 0; i < mynode.sites; i++) {
                 if (neighb[d][i] == mynode.sites) {
-                    CoordinateVector l;
+                    CoordinateVector l,ln;
                     l = coordinates(i);
 
                     if (l.parity() == EVEN) {
-                        // THIS site is even
-                        neighb[d][i] = c_offset + c_even;
-                        if (c_offset + c_even >= (1ULL << 32))
-                            too_large_node = 1;
-
+                        neighb[d][i] = c_offset + from_even;
 #ifndef VANILLA
-                        from_node.sitelist[c_even] = i;
+                        from_node.sitelist[from_even] = i;
 #endif
-
-                        // flipped parity: this is for odd sends
-                        to_node.sitelist[c_even + to_node.evensites] = i;
-
-                        c_even++;
+                        ++from_even;
 
                     } else {
-                        neighb[d][i] = c_offset + from_node.evensites + c_odd;
-                        if (c_offset + from_node.evensites + c_odd >= (1ULL << 32))
-                            too_large_node = 1;
-
+                        neighb[d][i] = c_offset + from_node.evensites + from_odd;
 #ifndef VANILLA
-                        from_node.sitelist[c_odd + from_node.evensites] = i;
+                        from_node.sitelist[from_odd + from_node.evensites] = i;
 #endif
+                        ++from_odd;
+                    }
 
-                        // again flipped parity for setup
-                        to_node.sitelist[c_odd] = i;
-
-                        c_odd++;
+                    ln = (l + d).mod(size());
+                    if (ln.parity() == EVEN) {
+                        to_node.sitelist[to_even++] = i;
+                    } else {
+                        to_node.sitelist[(to_odd++) + to_node.evensites] = i;
                     }
                 }
             }
         }
 
+        // and advance offset for next direction
         c_offset += from_node.sites;
 
         if (c_offset >= (1ULL << 32))
