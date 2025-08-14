@@ -870,11 +870,7 @@ void test_extended() {
 
 void test_clusters() {
 
-#ifdef VECTORIZED
-    hila::out0 << "Cluster tests cannot be done (yet) on vectorized (AVX) targets\n";
-
-#else
-    Field<uint8_t> m;
+    Field<int> m;
 
     m = hila::clusters::background;
 
@@ -910,8 +906,6 @@ void test_clusters() {
 
 #endif
     }
-
-#endif
 }
 
 
