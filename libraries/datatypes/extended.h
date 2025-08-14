@@ -33,7 +33,7 @@
  *
  * To get a double approximation of the value use
  * @code {.cpp}
- *    s1.get_value()
+ *    s1.to_double()
  *    // or equvalently explicit casting
  *    static_cast<double>(s1)
  * @endcode
@@ -52,6 +52,7 @@ class ExtendedPrecision {
 
     ExtendedPrecision() = default;
     ~ExtendedPrecision() = default;
+#pragma hila loop_function
     ExtendedPrecision(const ExtendedPrecision &rhs)
         : value(rhs.value), compensation(rhs.compensation), compensation2(rhs.compensation2) {}
     ExtendedPrecision(double v) : value(v), compensation(0), compensation2(0) {}
@@ -131,7 +132,8 @@ class ExtendedPrecision {
      */
 
 #pragma hila loop_function
-    inline const ExtendedPrecision &operator+=(const ExtendedPrecision &rhs) {
+    // need to take a copy to avoid problems with a += a
+    inline const ExtendedPrecision &operator+=(ExtendedPrecision rhs) {
         *this += rhs.compensation2;
         *this += rhs.compensation;
         *this += rhs.value;
@@ -148,29 +150,56 @@ class ExtendedPrecision {
     }
 
     template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-    inline const ExtendedPrecision &operator*=(const T &rhs) {
-        this->value *= rhs;
-        this->compensation *= rhs;
-        this->compensation2 *= rhs;
+    inline const ExtendedPrecision &operator*=(T rhs) {
+        static_assert(std::is_integral<T>::value,
+                      "ExtendedPrecision can be multiplied only by integral value without losing "
+                      "precision! Convert to double for more general operations");
+
+        if (rhs == 0) {
+            *this = 0;
+        } else {
+            bool negative = (!std::is_unsigned<T>::value && (rhs < 0));
+            if (negative)
+                rhs = -rhs;
+
+            T mult = 1;
+            while (rhs % 2 == 0) {
+                rhs /= 2;
+                mult *= 2;
+            }
+
+            // it's safe to multiply by power of 2
+            this->value *= mult;
+            this->compensation *= mult;
+            this->compensation2 *= mult;
+
+            auto a = *this;
+            // the rest is done by addition
+            // we add a rhs-1 times to *this, multiplying it by rhs
+            // in any case, factorize rhs as 2^n + 2^m + .. + 1  (rhs is odd)
+            while (rhs > 1) {
+                mult = 1;
+                while (2 * mult < rhs) {
+                    mult *= 2;
+                }
+                ExtendedPrecision b;
+                // again power of 2
+                b.value = a.value * mult;
+                b.compensation = a.compensation * mult;
+                b.compensation2 = a.compensation2 * mult;
+
+                *this += b;
+                rhs -= mult;
+            }
+            if (negative) {
+                this->value = -this->value;
+                this->compensation = -this->compensation;
+                this->compensation2 = -this->compensation2;
+            }
+        }
         return *this;
     }
 
-    inline const ExtendedPrecision &operator*=(const ExtendedPrecision &rhs) {
-        ExtendedPrecision a(*this);
-        ExtendedPrecision b(*this);
-        *this *= rhs.value;
-        a *= rhs.compensation;
-        *this += a;
-        b *= rhs.compensation2;
-        *this += b;
-        return *this;
-    }
-
-    template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-    inline const ExtendedPrecision &operator/=(const T &rhs) {
-        *this *= 1.0 / rhs;
-        return *this;
-    }
 
     // double double sum
     // ExtendedPrecision &operator+=(const ExtendedPrecision &rhs) {
@@ -184,8 +213,8 @@ class ExtendedPrecision {
 
     /**
      * @brief Conversion back to double from ExtendedPrecision
-     * @details Converts the ExtendedPrecision object back to double by summing the compensation and
-     * returning. Marked explicit in order to avoid mistakenly losing precision
+     * @details Converts the ExtendedPrecision object back to double by summing the compensation
+     * and returning. Marked explicit in order to avoid mistakenly losing precision
      * @return double
      */
     explicit operator double() const {
@@ -195,12 +224,13 @@ class ExtendedPrecision {
     /**
      * @brief Returns the compensated value as double
      */
-    double get_value() const {
+    double to_double() const {
         return value + (compensation + compensation2);
     }
 };
 
-/// template utilities: hila::is_extended<T>::value and hila::is_arithmetic_or_extended<T>::value
+/// template utilities: hila::is_extended<T>::value and
+/// hila::is_arithmetic_or_extended<T>::value
 
 namespace hila {
 template <typename T>
@@ -208,7 +238,7 @@ struct is_extended : std::integral_constant<bool, std::is_same<T, ExtendedPrecis
 
 template <typename T>
 struct is_arithmetic_or_extended
-    : std::integral_constant<bool, std::is_arithmetic<T>::value || hila::is_extended<T>::value> {};
+    : std::integral_constant<bool, hila::is_arithmetic<T>::value || hila::is_extended<T>::value> {};
 
 template <typename A, typename B>
 struct AorB_extended
@@ -244,29 +274,19 @@ inline ExtendedPrecision operator-(const A &a, const B &b) {
 // *
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 inline ExtendedPrecision operator*(ExtendedPrecision a, T v) {
+    static_assert(std::is_integral<T>::value,
+                  "ExtendedPrecision can be multiplied only by integral value without losing "
+                  "precision! Convert to double for more general operations");
     return a *= v;
 }
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 inline ExtendedPrecision operator*(T v, ExtendedPrecision a) {
+    static_assert(std::is_integral<T>::value,
+                  "ExtendedPrecision can be multiplied only by integral value without losing "
+                  "precision! Convert to double for more general operations");
     return a *= v;
 }
-inline ExtendedPrecision operator*(ExtendedPrecision a, const ExtendedPrecision &b) {
-    return a *= b;
-}
 
-// /
-template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-inline ExtendedPrecision operator/(ExtendedPrecision a, T v) {
-    return a /= v;
-}
-// division by EP may lose some accuracy
-template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
-inline ExtendedPrecision operator/(const T &a, const ExtendedPrecision &b) {
-    auto divb = (b.compensation + b.compensation2) / b.value;
-    auto s = 1.0 - sqr(divb);
-    return a / (b.value * s) *
-           ExtendedPrecision(1.0, -b.compensation / b.value, -b.compensation2 / b.value);
-}
 
 /// comparison operators
 
@@ -276,37 +296,37 @@ inline ExtendedPrecision operator/(const T &a, const ExtendedPrecision &b) {
 template <typename A, typename B, std::enable_if_t<hila::AorB_extended<A, B>::value, int> = 0>
 inline bool operator==(const A &a, const B &b) {
     ExtendedPrecision tmp = a - b;
-    return (tmp.get_value() == 0.0);
+    return (tmp.to_double() == 0.0);
 }
 template <typename A, typename B, std::enable_if_t<hila::AorB_extended<A, B>::value, int> = 0>
 inline bool operator!=(const A &a, const B &b) {
     ExtendedPrecision tmp = a - b;
-    return (tmp.get_value() != 0.0);
+    return (tmp.to_double() != 0.0);
 }
 template <typename A, typename B, std::enable_if_t<hila::AorB_extended<A, B>::value, int> = 0>
 inline bool operator>(const A &a, const B &b) {
     ExtendedPrecision tmp = a - b;
-    return (tmp.get_value() > 0.0);
+    return (tmp.to_double() > 0.0);
 }
 template <typename A, typename B, std::enable_if_t<hila::AorB_extended<A, B>::value, int> = 0>
 inline bool operator<(const A &a, const B &b) {
     ExtendedPrecision tmp = a - b;
-    return (tmp.get_value() < 0.0);
+    return (tmp.to_double() < 0.0);
 }
 template <typename A, typename B, std::enable_if_t<hila::AorB_extended<A, B>::value, int> = 0>
 inline bool operator>=(const A &a, const B &b) {
     ExtendedPrecision tmp = a - b;
-    return (tmp.get_value() >= 0.0);
+    return (tmp.to_double() >= 0.0);
 }
 template <typename A, typename B, std::enable_if_t<hila::AorB_extended<A, B>::value, int> = 0>
 inline bool operator<=(const A &a, const B &b) {
     ExtendedPrecision tmp = a - b;
-    return (tmp.get_value() <= 0.0);
+    return (tmp.to_double() <= 0.0);
 }
 
 
 inline std::ostream &operator<<(std::ostream &strm, const ExtendedPrecision &var) {
-    return strm << var.get_value();
+    return strm << var.to_double();
 }
 
 namespace hila {
@@ -316,11 +336,11 @@ Ntype cast_to(const ExtendedPrecision &ep) {
     if constexpr (std::is_same<Ntype, ExtendedPrecision>::value)
         return ep;
     else
-        return static_cast<Ntype>(ep.get_value());
+        return static_cast<Ntype>(ep.to_double());
 }
 
 inline std::string prettyprint(const ExtendedPrecision &val, int prec = 8) {
-    return prettyprint(val.get_value(), prec);
+    return prettyprint(val.to_double(), prec);
 }
 
 } // namespace hila

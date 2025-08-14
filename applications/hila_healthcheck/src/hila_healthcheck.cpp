@@ -139,12 +139,13 @@ void test_reductions() {
 
         int64_t psum = 0;
         onsites(ALL) {
-            if (X.parity() == EVEN) psum += 1;
+            if (X.parity() == EVEN)
+                psum += 1;
         }
-        psum -= lattice.volume() / 2;
+        // If volume is odd there is 1 extra even site
+        psum -= lattice.volume() / 2 + lattice.volume() % 2;
 
         report_pass("Reduction with parity", psum, 1e-15);
-
     }
 
     {
@@ -772,9 +773,9 @@ void test_extended() {
     // ExtendedPrecision type test with T = double
     Field<double> g;
 
-    ExtendedPrecision e = 2;
-    e = 2 * e + e / 0.5 - 16.0 / e;
-    report_pass("ExtendedPrecision basic arithmetics: " + hila::prettyprint(e), fabs(e.get_value()),
+    ExtendedPrecision e = 2.4;
+    e = 5 * e - e - e - 3*e;
+    report_pass("ExtendedPrecision basic arithmetics: " + hila::prettyprint(e), fabs(e.to_double()),
                 1e-20);
 
     e = 1;
@@ -785,14 +786,21 @@ void test_extended() {
 
     for (double mag = 1e8; mag <= 1e+32; mag *= 1e8) {
 
+        size_t nsqr = 0, nmag = 0, n1 = 0;
+
         onsites(ALL) {
             if (X.x() % 2 == 0) {
-                if (X.y() % 2 == 0)
+                if (X.y() % 2 == 0) {
                     g[X] = sqr(mag);
-                else
+                    nsqr += 1;
+                } else {
                     g[X] = mag;
-            } else
+                    nmag += 1;
+                }
+            } else {
                 g[X] = 1;
+                n1 += 1;
+            }
         }
         ExtendedPrecision ev = 0;
         double s = 0;
@@ -801,11 +809,7 @@ void test_extended() {
             s += g[X];
         }
 
-        ExtendedPrecision result;
-        result = 2;
-        result += mag;
-        result += sqr(mag);
-        result = result * (lattice.volume() / 4);
+        double result = n1 + nmag * mag + nsqr * sqr(mag);
 
         // ev -= lattice.volume() / 2;
         // ev -= mag * (lattice.volume() / 4);
@@ -813,31 +817,51 @@ void test_extended() {
 
         // above multiplication loses precision!  Subtracting
         // here step-by-step
-        
-        for (int i=0; i<lattice.volume()/2; i++) {
-            ev -= 1;
-            s -= 1;
-        }
-        for (int i=0; i<lattice.volume()/4; i++) {
-            ev -= mag;
-            ev -= sqr(mag);
-            s -= mag;
-            s -= sqr(mag);
-        }
+
+        ExtendedPrecision res = 0, r;
+        r = sqr(mag);
+        r *= nsqr;
+        res = r;
+
+        r = mag;
+        r *= nmag;
+        res += r;
+
+        r = 1;
+        r *= n1;
+        res += r;
+
+        ev -= res;
+        s -= res.to_double();
+
+
+        // for (int i = 0; i < n1; i++) {
+        //     ev -= 1;
+        //     s -= 1;
+        // }
+
+
+        // for (int i = 0; i < lattice.volume() / 4; i++) {
+        //     ev -= mag;
+        //     ev -= sqr(mag);
+        //     s -= mag;
+        //     s -= sqr(mag);
+        // }
 
         // s -= sqr(mag) * lattice.volume() / 4;
         // s -= mag * lattice.volume() / 4;
         // s -= lattice.volume() / 2;
 
-        // hila::out0 << "RES " << ev.value << " + " << ev.compensation << " + " << ev.compensation2
+        // hila::out0 << "RES " << ev.value << " + " << ev.compensation << " + " <<
+        // ev.compensation2
         //           << '\n';
 
 
-        std::stringstream res;
-        res << "Extended reduction residual w. delta " << mag << " : " << ev / result << " (double "
-            << s / result << ")";
+        std::stringstream ssres;
+        ssres << "Extended reduction residual w. delta " << mag << " : " << ev.to_double() / result
+              << " (double " << s / result << ")";
 
-        report_pass(res.str(), (ev / result).get_value(), 1e-20);
+        report_pass(ssres.str(), ev.to_double() / result, 1e-20);
     }
 }
 
