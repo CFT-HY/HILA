@@ -50,6 +50,13 @@ struct node_info {
     unsigned evensites, oddsites;
 };
 
+// forward declare lattice_struct
+struct lattice_struct;
+
+/// global handle to lattice
+extern lattice_struct lattice;
+
+
 /// Some backends need specialized lattice data
 /// in loops. Forward declaration here and
 /// implementations in backend headers.
@@ -66,11 +73,15 @@ class lattice_struct {
 
     int l_label; // running number, identification of the lattice (TODO)
 
+
   public:
+    // Guarantee 64 bits for these - 32 can overflow!
+    int64_t n_gather_done = 0, n_gather_avoided = 0;
+    MPI_Comm mpi_comm_lat;
+
     /// Information about the node stored on this process
     struct node_struct {
-        lattice_struct *parent = nullptr; // parent lattice, in order to access methods
-        int rank;                         // rank of this node
+        int rank; // rank of this node
         size_t sites, evensites, oddsites;
         size_t field_alloc_size;    // how many sites/node in allocations
         CoordinateVector min, size; // node local coordinate ranges
@@ -104,7 +115,7 @@ class lattice_struct {
 
         /// true if this node is on the edge of the lattice to dir d
         bool is_on_edge(Direction d) const {
-            return (is_up_dir(d) && min[d] + size[d] == parent->size(d)) ||
+            return (is_up_dir(d) && min[d] + size[d] == lattice.size(d)) ||
                    (!is_up_dir(d) && min[-d] == 0);
         }
 
@@ -114,19 +125,18 @@ class lattice_struct {
     struct allnodes {
         int number;                   // number of nodes
         CoordinateVector n_divisions; // number of node divisions to dir
-        // lattice division: div[d] will have num_dir[d]+1 elements, last size
-        // TODO: is this needed at all?
+        // lattice division: divisors[d] will have n_divisions[d]+1 elements, last size to d
         std::vector<unsigned> divisors[NDIM];
         CoordinateVector max_size; // size of largest node
 
-        std::vector<node_info> nodelist;
+        // std::vector<node_info> nodelist;
+        node_info nodeinfo(int i) const;
 
-        unsigned *RESTRICT map_array;   // mapping (optional)
-        unsigned *RESTRICT map_inverse; // inv of it
-
-        void create_remap();                      // create remap_node
-        unsigned remap(unsigned i) const;         // use remap
-        unsigned inverse_remap(unsigned i) const; // inverse remap
+        int *RESTRICT map_array;        // mapping (optional)
+        int *RESTRICT map_inverse;      // inv of it
+        void create_remap();            // create remap_node
+        int remap(int i) const;         // use remap
+        int inverse_remap(int i) const; // inverse remap
 
     } nodes;
 
@@ -381,12 +391,6 @@ class lattice_struct {
     void initialize_wait_arrays();
 
 
-    MPI_Comm mpi_comm_lat;
-
-    // Guarantee 64 bits for these - 32 can overflow!
-    int64_t n_gather_done = 0, n_gather_avoided = 0;
-
-
     /// Return the coordinates of a site, where 1st dim (x) runs fastest etc.
     /// Useful in
     ///   for (int64_t i=0; i<lattice.volume(); i++) {
@@ -407,14 +411,10 @@ class lattice_struct {
 
     bool is_this_odd_boundary(Direction d) const;
 
+    bool block(const CoordinateVector &blocking_factor, bool test = false);
+
+    bool can_block(const CoordinateVector &blocking_factor) const;
 };
-
-/// global handle to lattice
-extern lattice_struct lattice;
-
-// Keep track of defined lattices
-extern std::vector<lattice_struct *> lattices;
-
 
 
 #ifdef VANILLA

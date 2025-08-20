@@ -22,15 +22,14 @@ void report_too_large_node() {
 // Define the global lattice var
 lattice_struct lattice;
 /// A list of all defined lattices (for the future expansion)
-std::vector<lattice_struct *> lattices;
+
+// Keep track of defined lattices
+static std::vector<lattice_struct> lattices;
 
 /// General lattice setup
 void lattice_struct::setup(const CoordinateVector &siz) {
 
     l_label = lattices.size();
-
-    // Add this lattice to the list
-    lattices.push_back(this);
 
     l_volume = 1;
     foralldir(i) {
@@ -38,9 +37,13 @@ void lattice_struct::setup(const CoordinateVector &siz) {
         l_volume *= siz[i];
     }
 
+    // initialize gather counters
+    n_gather_avoided = n_gather_done = 0;
+
     setup_layout();
 
     setup_nodes();
+
 
     // set up the comm arrays
     create_std_gathers();
@@ -69,6 +72,9 @@ void lattice_struct::setup(const CoordinateVector &siz) {
     }
 
     test_std_gathers();
+
+    // Add this lattice to the list
+    lattices.push_back(*this);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -91,13 +97,13 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 ///////////////////////////////////////////////////////////////////////
 
 int lattice_struct::node_rank(const CoordinateVector &loc) const {
-    int i;
-    int dir;
 
-    i = (loc[NDIM - 1] * nodes.n_divisions[NDIM - 1]) / l_size[NDIM - 1];
-    for (dir = NDIM - 2; dir >= 0; dir--) {
+    int i = (loc[NDIM - 1] * nodes.n_divisions[NDIM - 1]) / l_size[NDIM - 1];
+
+    for (int dir = NDIM - 2; dir >= 0; dir--) {
         i = i * nodes.n_divisions[dir] + ((loc[dir] * nodes.n_divisions[dir]) / l_size[dir]);
     }
+
     /* do we want to remap this?  YES PLEASE */
     i = nodes.remap(i);
 
@@ -153,7 +159,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 ///////////////////////////////////////////////////////////////////////
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned nodeid) const {
-    const node_info &ni = nodes.nodelist[nodeid];
+    const node_info ni = nodes.nodeinfo(nodeid);
 
     unsigned i = loc[NDIM - 1] - ni.min[NDIM - 1];
     int s = loc[NDIM - 1];
@@ -224,7 +230,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned 
     unsigned i;
 
     assert(nodeid < nodes.number);
-    const node_info &ni = nodes.nodelist[nodeid];
+    const node_info ni = nodes.nodeinfo(nodeid);
 
     // let's mod the coordinate to partition
     // get subnode size - divisons are the same in all nodes
@@ -265,23 +271,59 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned 
 
 #endif // SUBNODE_LAYOUT
 
-///////////////////////////////////////////////////////////////////////
-/// invert the mynode index -> location (only on this node)
-///////////////////////////////////////////////////////////////////////
-
-// this is defined in lattice.h
 
 /////////////////////////////////////////////////////////////////////
-/// Set up the basic list about all nodes
-/// NOTE: in case of very large number of nodes this may be
-/// inconveniently large.  Alternatives?
+/// Define nodeinfo(nodeid)
+/// Gives the coordinate range managed by the node number nodeid
+/////////////////////////////////////////////////////////////////////
+
+node_info lattice_struct::allnodes::nodeinfo(int nodeid) const {
+    // get the logical node id
+    assert(nodeid < number);
+    nodeid = inverse_remap(nodeid);
+
+    int64_t nodevol = 1;
+    node_info ninfo;
+
+    foralldir(d) {
+        int nodecoord = nodeid % n_divisions[d];
+        nodeid = nodeid / n_divisions[d];
+
+        ninfo.min[d] = divisors[d].at(nodecoord);
+        ninfo.size[d] = divisors[d].at(nodecoord + 1) - ninfo.min[d];
+        nodevol *= ninfo.size[d];
+    }
+
+    if (nodevol >= (1ULL << 32)) {
+        // node size is larger than 2^32-1 - does not fit to largest unsigned int!
+        report_too_large_node();
+    }
+
+    if (nodevol % 2 == 0) {
+        ninfo.evensites = ninfo.oddsites = nodevol / 2;
+    } else {
+        if (ninfo.min.parity() == EVEN) {
+            ninfo.evensites = nodevol / 2 + 1;
+            ninfo.oddsites = nodevol / 2;
+        } else {
+            ninfo.evensites = nodevol / 2;
+            ninfo.oddsites = nodevol / 2 + 1;
+        }
+    }
+
+    return ninfo;
+}
+
+
+/////////////////////////////////////////////////////////////////////
+/// only thing setup_nodes now does is to call mynode.setup and
+/// set the max size field of nodes-struct
 /////////////////////////////////////////////////////////////////////
 
 void lattice_struct::setup_nodes() {
 
     nodes.number = hila::number_of_nodes();
     // Loop over all node "origins"
-    nodes.nodelist.resize(nodes.number);
 
     // n keeps track of the node "root coordinates"
     CoordinateVector n(0);
@@ -290,49 +332,14 @@ void lattice_struct::setup_nodes() {
 
     // use nodes.divisors - vectors to fill in stuff
     for (int i = 0; i < nodes.number; i++) {
-        CoordinateVector l;
-        foralldir(d) l[d] = nodes.divisors[d][n[d]];
-
-        int nn = node_rank(l);
-        node_info &ni = nodes.nodelist[nn];
-        int64_t v = 1;
+        auto ni = nodes.nodeinfo(i);
         foralldir(d) {
-            ni.min[d] = nodes.divisors[d][n[d]];
-            ni.size[d] = nodes.divisors[d][n[d] + 1] - nodes.divisors[d][n[d]];
-            v *= ni.size[d];
-
             if (ni.size[d] > nodes.max_size[d])
                 nodes.max_size[d] = ni.size[d];
         }
 
-        if (v >= (1ULL << 32)) {
-            // node size is larger than 2^32-1 - does not fit to largest unsigned int!
-            report_too_large_node();
-        }
-
-        if (v % 2 == 0)
-            ni.evensites = ni.oddsites = v / 2;
-        else {
-            // now node ni has odd number of sites
-            if (l.parity() == EVEN) {
-                ni.evensites = v / 2 + 1;
-                ni.oddsites = v / 2;
-            } else {
-                ni.evensites = v / 2;
-                ni.oddsites = v / 2 + 1;
-            }
-        }
-
-        // now to the next divisor - add to the lowest dir until all done
-        foralldir(d) {
-            n[d]++;
-            if (n[d] < nodes.n_divisions[d])
-                break;
-            n[d] = 0;
-        }
-
         // use the opportunity to set up mynode when it is met
-        if (nn == hila::myrank())
+        if (i == hila::myrank())
             mynode.setup(ni, lattice);
     }
 }
@@ -341,8 +348,6 @@ void lattice_struct::setup_nodes() {
 /// Fill in mynode fields -- node_rank() must be set up OK
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) {
-
-    parent = &lattice;
 
     rank = hila::myrank();
 
@@ -470,7 +475,7 @@ void lattice_struct::create_std_gathers() {
 
         // if there are no communications the rank is left as is
 
-        // first pass through the sites 
+        // first pass through the sites
         // - set the neighb array, anything to communicate?
 
         for (size_t i = 0; i < mynode.sites; i++) {
@@ -488,7 +493,7 @@ void lattice_struct::create_std_gathers() {
                 // Now site is off-node, this leads to gathering
                 if (from_node.rank == mynode.rank) {
                     from_node.rank = to_node.rank = node_rank(ln);
-                } 
+                }
 
                 if (l.parity() == EVEN)
                     from_node.evensites++;
@@ -498,9 +503,8 @@ void lattice_struct::create_std_gathers() {
                 // evensites / oddsites classified by the parity of receiving site
                 if (ln.parity() == EVEN)
                     to_node.evensites++;
-                else 
+                else
                     to_node.oddsites++;
-
             }
         }
 
@@ -527,11 +531,11 @@ void lattice_struct::create_std_gathers() {
             // over sites. temp counters NOTE: ordering is automatically right: with a
             // given parity, neighbour node indices come in ascending order of host node
             // index - no sorting needed
-            size_t to_even = 0, to_odd = 0,  from_even = 0, from_odd = 0;
+            size_t to_even = 0, to_odd = 0, from_even = 0, from_odd = 0;
 
             for (size_t i = 0; i < mynode.sites; i++) {
                 if (neighb[d][i] == mynode.sites) {
-                    CoordinateVector l,ln;
+                    CoordinateVector l, ln;
                     l = coordinates(i);
 
                     if (l.parity() == EVEN) {
@@ -728,7 +732,42 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
     assert(k == special_boundaries[d].n_total);
 }
 
+#endif // SPECIAL_BOUNDARY_CONDITIONS
+
+
+bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
+
+#ifdef SUBNODE_LAYOUT
+    return false; // blocking not implemented for vector layout!
+#else
+
+    bool ok = true;
+    foralldir(d) {
+        if (blocking_factor[d] <= 0) {
+            hila::out0 << "ERROR: invalid blocking factor " << blocking_factor[d] << '\n';
+            hila::terminate(0);
+        }
+        ok = ok && (lattice.size(d) % blocking_factor[d] == 0);
+    }
+    return ok;
+
 #endif
+}
+
+
+bool lattice_struct::block(const CoordinateVector &blocking_factor, bool test) {
+    if (!can_block(blocking_factor)) {
+        if (test) {
+            return false;
+        } else {
+            hila::out0 << "Cannot block lattice with factor " << blocking_factor << '\n';
+            hila::terminate(0);
+        }
+    }
+
+    return true;
+}
+
 
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays

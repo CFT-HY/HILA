@@ -183,7 +183,7 @@ bool hila::is_comm_initialized(void) {
 void hila::abort_communications(int status) {
     if (mpi_initialized) {
         mpi_initialized = false;
-        MPI_Abort(lattices[0]->mpi_comm_lat, 0);
+        MPI_Abort(lattice.mpi_comm_lat, 0);
     }
 }
 

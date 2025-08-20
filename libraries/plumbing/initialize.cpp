@@ -298,18 +298,15 @@ void hila::error(const std::string &msg) {
 void hila::finishrun() {
     report_timers();
 
-    for (const lattice_struct *latp : lattices) {
 
+    int64_t gathers = lattice.n_gather_done;
+    int64_t avoided = lattice.n_gather_avoided;
 
-        int64_t gathers = latp->n_gather_done;
-        int64_t avoided = latp->n_gather_avoided;
-
-        if (gathers + avoided > 0) {
-            hila::out0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
-                       << 100.0 * avoided / (avoided + gathers) << "%) optimized away\n";
-        } else {
-            hila::out0 << " No communications done from node 0\n";
-        }
+    if (gathers + avoided > 0) {
+        hila::out0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
+                   << 100.0 * avoided / (avoided + gathers) << "%) optimized away\n";
+    } else {
+        hila::out0 << " No communications done from node 0\n";
     }
 
 
