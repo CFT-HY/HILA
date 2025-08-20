@@ -66,7 +66,10 @@ void init_pencil_direction(Direction dir) {
         hila_pencil_comms[dir].resize(lattice.nodes.n_divisions[dir]);
 
         int nodenumber = 0;
-        for (const node_info &n : lattice.nodes.nodelist) {
+        for (int nodenumber = 0; nodenumber < lattice.nodes.number; ++nodenumber) {
+
+            const node_info n = lattice.nodes.nodeinfo(nodenumber);
+
             bool is_in_column = true;
             foralldir(d) if (d != dir && n.min[d] != lattice.mynode.min[d]) {
                 is_in_column = false;
@@ -85,7 +88,6 @@ void init_pencil_direction(Direction dir) {
                     }
                 }
             }
-            ++nodenumber;
         }
 
         size_t total_columns = lattice.mynode.sites / lattice.mynode.size[dir];
