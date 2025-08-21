@@ -104,7 +104,7 @@ class hila_fft {
         fftdir = _fftdir;
         only_reflect = _reflect;
 
-        local_volume = lattice.mynode.volume();
+        local_volume = lattice->mynode.volume;
 
         // init dirs here at one go
         foralldir(d) init_pencil_direction(d);
@@ -295,8 +295,6 @@ class hila_fft {
     template <typename T>
     void full_transform(const Field<T> &input, Field<T> &result,
                         const CoordinateVector &directions) {
-
-        assert(lattice.id() == input.fs->lattice_id && "Default lattice mismatch in fft");
 
         // Make sure the result is allocated and mark it changed
         result.check_alloc();

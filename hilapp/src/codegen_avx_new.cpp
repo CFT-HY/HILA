@@ -464,7 +464,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
     // if no field in loop
 
     code << "const auto & loop_lattice = "
-            "* lattice.backend_lattice->get_vectorized_lattice<"
+            "* lattice->backend_lattice->get_vectorized_lattice<"
          << vector_size << ">();\n";
 
     // Set the start and end points

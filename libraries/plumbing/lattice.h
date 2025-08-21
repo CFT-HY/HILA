@@ -50,12 +50,9 @@ struct node_info {
     unsigned evensites, oddsites;
 };
 
-// forward declare lattice_struct
-struct lattice_struct;
-
-/// global handle to lattice
-extern lattice_struct lattice;
-
+namespace hila {
+extern int64_t n_gather_done, n_gather_avoided;
+}
 
 /// Some backends need specialized lattice data
 /// in loops. Forward declaration here and
@@ -67,25 +64,24 @@ struct backend_lattice_struct;
 /// The lattice struct defines the lattice geometry ans sets up MPI communication
 /// patterns
 class lattice_struct {
-  private:
+  public:
     CoordinateVector l_size;
     size_t l_volume = 0; // use this to flag initialization
 
     int l_label; // running number, identification of the lattice (TODO)
 
 
-  public:
     // Guarantee 64 bits for these - 32 can overflow!
-    int64_t n_gather_done = 0, n_gather_avoided = 0;
     MPI_Comm mpi_comm_lat;
 
     /// Information about the node stored on this process
     struct node_struct {
-        int rank; // rank of this node
-        size_t sites, evensites, oddsites;
+        lattice_struct *parent; // parent lattice, for methods
+        size_t volume, evensites, oddsites;
         size_t field_alloc_size;    // how many sites/node in allocations
         CoordinateVector min, size; // node local coordinate ranges
         unsigned nn[NDIRS];         // nn-node of node down/up to dirs
+        int rank;                   // rank of this node
         bool first_site_even;       // is location min even or odd?
 
 #ifdef EVEN_SITES_FIRST
@@ -109,13 +105,9 @@ class lattice_struct {
         } subnodes;
 #endif
 
-        unsigned volume() const {
-            return sites;
-        }
-
         /// true if this node is on the edge of the lattice to dir d
         bool is_on_edge(Direction d) const {
-            return (is_up_dir(d) && min[d] + size[d] == lattice.size(d)) ||
+            return (is_up_dir(d) && min[d] + size[d] == parent->l_size[d]) ||
                    (!is_up_dir(d) && min[-d] == 0);
         }
 
@@ -240,40 +232,12 @@ class lattice_struct {
     backend_lattice_struct *backend_lattice;
 #endif
 
-    void setup(const CoordinateVector &siz);
+    void setup_base_lattice(const CoordinateVector &siz);
+
     void setup_layout();
     void setup_nodes();
+    void setup_node_divisors();
 
-    /// is the lattice initialized
-    bool is_initialized() const {
-        // using l_volume as the flag
-        return l_volume != 0;
-    }
-
-
-    // Std accessors:
-    // volume
-    int64_t volume() const {
-        return l_volume;
-    }
-
-    // size routines
-    int size(Direction d) const {
-        return l_size[d];
-    }
-    int size(int d) const {
-        return l_size[d];
-    }
-    CoordinateVector size() const {
-        return l_size;
-    }
-
-    int node_rank() const {
-        return mynode.rank;
-    }
-    int n_nodes() const {
-        return nodes.number;
-    }
     // std::vector<node_info> nodelist() { return nodes.nodelist; }
     // CoordinateVector min_coordinate() const { return mynode.min; }
     // int min_coordinate(Direction d) const { return mynode.min[d]; }
@@ -282,9 +246,6 @@ class lattice_struct {
     int node_rank(const CoordinateVector &c) const;
     unsigned site_index(const CoordinateVector &c) const;
     unsigned site_index(const CoordinateVector &c, const unsigned node) const;
-    unsigned field_alloc_size() const {
-        return mynode.field_alloc_size;
-    }
 
     void create_std_gathers();
     gen_comminfo_struct create_general_gather(const CoordinateVector &r);
@@ -306,7 +267,6 @@ class lattice_struct {
     }
 #endif
 
-    unsigned remap_node(const unsigned i);
 
 #ifdef EVEN_SITES_FIRST
     unsigned loop_begin(Parity P) const {
@@ -320,7 +280,7 @@ class lattice_struct {
         if (P == EVEN) {
             return mynode.evensites;
         } else {
-            return mynode.sites;
+            return mynode.volume;
         }
     }
 
@@ -346,7 +306,7 @@ class lattice_struct {
         return 0;
     }
     unsigned loop_end(Parity P) const {
-        return mynode.sites;
+        return mynode.volume;
     }
 
     // Use computation to get coordinates: from fastest
@@ -383,10 +343,6 @@ class lattice_struct {
         return coordinates(idx) - mynode.min;
     }
 
-    lattice_struct::nn_comminfo_struct get_comminfo(int d) {
-        return nn_comminfo[d];
-    }
-
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();
 
@@ -399,8 +355,8 @@ class lattice_struct {
     CoordinateVector global_coordinates(size_t index) const {
         CoordinateVector site;
         foralldir(dir) {
-            site[dir] = index % size(dir);
-            index /= size(dir);
+            site[dir] = index % l_size[dir];
+            index /= l_size[dir];
         }
         return site;
     }
@@ -409,12 +365,74 @@ class lattice_struct {
         return l_label;
     }
 
+
     bool is_this_odd_boundary(Direction d) const;
 
-    bool block(const CoordinateVector &blocking_factor, bool test = false);
+    int block(const CoordinateVector &blocking_factor);
 
     bool can_block(const CoordinateVector &blocking_factor) const;
+
+    void setup_blocked_lattice(const CoordinateVector &vol, int label,
+                               const lattice_struct &orig_lattice);
 };
+
+
+class lattice_struct_ptr {
+
+  private:
+    // ptr to main lattice
+    lattice_struct *lat_ptr = nullptr;
+
+  public:
+    void set(lattice_struct * lat) {
+        lat_ptr = lat;
+    }
+
+    bool is_initialized() const {
+        return lat_ptr != nullptr;
+    }
+
+    inline const lattice_struct *operator->() const noexcept {
+        return lat_ptr;
+    }
+
+    // volume
+    inline int64_t volume() const {
+        return lat_ptr->l_volume;
+    }
+
+    // size routines
+    inline int size(Direction d) const {
+        return lat_ptr->l_size[d];
+    }
+    inline int size(int d) const {
+        return lat_ptr->l_size[d];
+    }
+    const CoordinateVector &size() const {
+        return lat_ptr->l_size;
+    }
+
+    void setup(const CoordinateVector &siz) {
+        assert(lat_ptr != nullptr);
+        lat_ptr->setup_base_lattice(siz);
+    }
+
+    // get the ptr as non-const with this function
+    inline lattice_struct *ptr() const {
+        return lat_ptr;
+    }
+
+    inline const lattice_struct & ref() const {
+        return *lat_ptr;
+    }
+};
+
+
+/// global handle to lattice
+extern lattice_struct_ptr lattice;
+
+/// and the listing of lattices
+extern std::vector<lattice_struct *> defined_lattices;
 
 
 #ifdef VANILLA

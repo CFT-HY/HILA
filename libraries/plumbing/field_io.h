@@ -85,12 +85,13 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
 
     std::vector<CoordinateVector> coord_list(sites_per_write);
     T *buffer = (T *)memalloc(write_size);
-    CoordinateVector size = lattice.size();
+    auto mylat = fs->mylattice;
+    CoordinateVector size = mylat.size();
 
-    for (size_t i = 0; i < lattice.volume(); i += sites_per_write) {
-        size_t sites = std::min(sites_per_write, lattice.volume() - i);
+    for (size_t i = 0; i < mylat.volume(); i += sites_per_write) {
+        size_t sites = std::min(sites_per_write, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
-            coord_list[j] = lattice.global_coordinates(i + j);
+            coord_list[j] = mylat->global_coordinates(i + j);
 
         if (sites < sites_per_write)
             coord_list.resize(sites);
@@ -155,12 +156,13 @@ void Field<T>::read(std::ifstream &inputfile) {
 
     std::vector<CoordinateVector> coord_list(sites_per_read);
     T *buffer = (T *)memalloc(read_size);
-    CoordinateVector size = lattice.size();
+    auto mylat = fs->mylattice;
+    CoordinateVector size = mylat.size();
 
-    for (size_t i = 0; i < lattice.volume(); i += sites_per_read) {
-        size_t sites = std::min(sites_per_read, lattice.volume() - i);
+    for (size_t i = 0; i < mylat.volume(); i += sites_per_read) {
+        size_t sites = std::min(sites_per_read, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
-            coord_list[j] = lattice.global_coordinates(i + j);
+            coord_list[j] = mylat->global_coordinates(i + j);
 
         if (sites < sites_per_read)
             coord_list.resize(sites);
@@ -220,7 +222,7 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
     size_t sites = 1;
     int line_len = 1; // number of elements on 1st non-trivial dimension
     foralldir(d) {
-        assert(cmin[d] >= 0 && cmax[d] >= cmin[d] && cmax[d] < lattice.size(d) &&
+        assert(cmin[d] >= 0 && cmax[d] >= cmin[d] && cmax[d] < fs->mylattice.size(d) &&
                "subvolume size mismatch");
         sites *= cmax[d] - cmin[d] + 1;
 
@@ -292,7 +294,7 @@ void Field<T>::write_slice(outf_type &outf, const CoordinateVector &slice, int p
     foralldir(d) {
         if (slice[d] < 0) {
             cmin[d] = 0;
-            cmax[d] = lattice.size(d) - 1;
+            cmax[d] = fs->mylattice.size(d) - 1;
         } else {
             cmin[d] = cmax[d] = slice[d];
         }

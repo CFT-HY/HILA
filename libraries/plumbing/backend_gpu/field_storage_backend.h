@@ -6,9 +6,9 @@
 
 /* CUDA / HIP implementations */
 template <typename T>
-void field_storage<T>::allocate_field(const lattice_struct &lattice) {
+void field_storage<T>::allocate_field(const lattice_struct_ptr lattice) {
     // Allocate space for the field of the device
-    gpuMalloc(&fieldbuf, sizeof(T) * lattice.field_alloc_size());
+    gpuMalloc(&fieldbuf, sizeof(T) * lattice->mynode.field_alloc_size);
     if (fieldbuf == nullptr) {
         std::cout << "Failure in field memory allocation\n";
     }
@@ -78,13 +78,13 @@ __global__ void get_element_kernel(field_storage<T> field, char *buffer, unsigne
 }
 
 template <typename T>
-auto field_storage<T>::get_element(const unsigned i, const lattice_struct &lattice) const {
+auto field_storage<T>::get_element(const unsigned i, const lattice_struct_ptr lattice) const {
     char *d_buffer;
     T value;
 
     // Call the kernel to collect the element
     gpuMalloc(&(d_buffer), sizeof(T));
-    get_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice.field_alloc_size());
+    get_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->mynode.field_alloc_size);
 
     // Copy the result to the host
     gpuMemcpy((char *)(&value), d_buffer, sizeof(T), gpuMemcpyDeviceToHost);
@@ -108,12 +108,12 @@ __global__ void set_element_kernel_ptr(field_storage<T> field, const T *buf, uns
 
 template <typename T>
 template <typename A>
-void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct &lattice) {
+void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct_ptr lattice) {
     T t_value = value;
 
     if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE) {
         // pass element directly as arg
-        set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice.field_alloc_size());
+        set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice->mynode.field_alloc_size);
     } else {
         // This branch is used for large variables:
         // allocate space and copy the buffer to the device
@@ -122,7 +122,7 @@ void field_storage<T>::set_element(A &value, const unsigned i, const lattice_str
         gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
         // call the kernel to set correct indexes
-        set_element_kernel_ptr<<<1, 1>>>(*this, d_buffer, i, lattice.field_alloc_size());
+        set_element_kernel_ptr<<<1, 1>>>(*this, d_buffer, i, lattice->mynode.field_alloc_size);
         gpuFree(d_buffer);
     }
 }
@@ -140,7 +140,7 @@ __global__ void gather_elements_kernel(field_storage<T> field, T *buffer, unsign
 /// CUDA implementation of gather_elements without CUDA aware MPI
 template <typename T>
 void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                       int n, const lattice_struct &lattice) const {
+                                       int n, const lattice_struct_ptr lattice) const {
     unsigned *d_site_index;
     T *d_buffer;
 
@@ -152,7 +152,7 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     gpuMalloc(&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
     gather_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                    lattice.field_alloc_size());
+                                                    lattice->mynode.field_alloc_size);
 
     // Copy the result to the host
     gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
@@ -180,7 +180,7 @@ __global__ void gather_elements_negated_kernel(field_storage<T> field, T *buffer
 template <typename T>
 void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
                                                const unsigned *RESTRICT index_list, int n,
-                                               const lattice_struct &lattice) const {
+                                               const lattice_struct_ptr lattice) const {
     unsigned *d_site_index;
     T *d_buffer;
 
@@ -197,7 +197,7 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
         gpuMalloc(&(d_buffer), n * sizeof(T));
         int N_blocks = n / N_threads + 1;
         gather_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                                lattice.field_alloc_size());
+                                                                lattice->mynode.field_alloc_size);
 
         // Copy the result to the host
         gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
@@ -274,7 +274,7 @@ inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
 template <typename T>
 void field_storage<T>::gather_comm_elements(T *buffer,
                                             const lattice_struct::comm_node_struct &to_node,
-                                            Parity par, const lattice_struct &lattice,
+                                            Parity par, const lattice_struct_ptr lattice,
                                             bool antiperiodic) const {
     int n;
     unsigned *d_site_index = get_site_index(to_node, par, n);
@@ -295,16 +295,16 @@ void field_storage<T>::gather_comm_elements(T *buffer,
 
         if constexpr (hila::has_unary_minus<T>::value) {
             gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(
-                *this, d_buffer, d_site_index, n, lattice.field_alloc_size());
+                *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
         }
 
     } else {
         gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                             lattice.field_alloc_size());
+                                                             lattice->mynode.field_alloc_size);
     }
 #else
     gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                         lattice.field_alloc_size());
+                                                         lattice->mynode.field_alloc_size);
 #endif    
 
 #ifndef GPU_AWARE_MPI
@@ -327,7 +327,7 @@ __global__ void place_elements_kernel(field_storage<T> field, T *buffer, unsigne
 /// CUDA implementation of place_elements without CUDA aware MPI
 template <typename T>
 void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                      int n, const lattice_struct &lattice) {
+                                      int n, const lattice_struct_ptr lattice) {
     unsigned *d_site_index;
     T *d_buffer;
 
@@ -342,7 +342,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
     // Call the kernel to place the elements
     int N_blocks = n / N_threads + 1;
     place_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                   lattice.field_alloc_size());
+                                                   lattice->mynode.field_alloc_size);
 
     gpuFree(d_buffer);
     gpuFree(d_site_index);
@@ -362,7 +362,7 @@ __global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsig
 
 template <typename T>
 void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const lattice_struct &lattice,
+                                                   const lattice_struct_ptr lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -370,25 +370,25 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         if constexpr (hila::has_unary_minus<T>::value) {
             unsigned n, start = 0;
             if (par == ODD) {
-                n = lattice.special_boundaries[dir].n_odd;
-                start = lattice.special_boundaries[dir].n_even;
+                n = lattice->special_boundaries[dir].n_odd;
+                start = lattice->special_boundaries[dir].n_even;
             } else {
                 if (par == EVEN)
-                    n = lattice.special_boundaries[dir].n_even;
+                    n = lattice->special_boundaries[dir].n_even;
                 else
-                    n = lattice.special_boundaries[dir].n_total;
+                    n = lattice->special_boundaries[dir].n_total;
             }
-            unsigned offset = lattice.special_boundaries[dir].offset + start;
+            unsigned offset = lattice->special_boundaries[dir].offset + start;
 
             unsigned *d_site_index;
             check_device_error("earlier");
             gpuMalloc(&d_site_index, n * sizeof(unsigned));
-            gpuMemcpy(d_site_index, lattice.special_boundaries[dir].move_index + start,
+            gpuMemcpy(d_site_index, lattice->special_boundaries[dir].move_index + start,
                       n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
             unsigned N_blocks = n / N_threads + 1;
             set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
-                *this, offset, d_site_index, n, lattice.field_alloc_size());
+                *this, offset, d_site_index, n, lattice->mynode.field_alloc_size);
 
             gpuFree(d_site_index);
         } else {
@@ -423,7 +423,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer, un
 template <typename T>
 void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
                                            const lattice_struct::comm_node_struct &from_node,
-                                           const lattice_struct &lattice) {
+                                           const lattice_struct_ptr lattice) {
 
     unsigned n = from_node.n_sites(par);
     T *d_buffer;
@@ -439,7 +439,7 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 
     unsigned N_blocks = n / N_threads + 1;
     place_comm_elements_kernel<<<N_blocks, N_threads>>>((*this), d_buffer, from_node.offset(par), n,
-                                                        lattice.field_alloc_size());
+                                                        lattice->mynode.field_alloc_size);
 
 #ifndef GPU_AWARE_MPI
     gpuFree(d_buffer);
@@ -483,7 +483,7 @@ auto field_storage<T>::get(const unsigned i, const unsigned field_alloc_size) co
     return value;
 }
 template <typename T>
-auto field_storage<T>::get_element(const unsigned i, const lattice_struct &lattice) const {
+auto field_storage<T>::get_element(const unsigned i, const lattice_struct_ptr lattice) const {
     T value;
     return value;
 }

@@ -28,13 +28,13 @@ void lattice_struct::setup_layout() {
     foralldir(d) {
         if (d != 0)
             hila::out0 << " x ";
-        hila::out0 << size(d);
+        hila::out0 << l_size[d];
     }
     hila::out0 << "  =  " << l_volume << " sites\n";
     hila::out0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
     hila::out0 << "Layout using vector of " << number_of_subnodes << " elements\n";
 
-    foralldir(d) if (size(d) % 2 != 0) {
+    foralldir(d) if (l_size[d] % 2 != 0) {
         hila::out0 << "Lattice must be even to all directions for vector/AVX layout.\n"
                    << "Use std layout or GPU for odd sizes\n";
         hila::finishrun();
@@ -72,12 +72,12 @@ void lattice_struct::setup_layout() {
     CoordinateVector nsize;
     int64_t ghosts[NDIM];
     foralldir(d) {
-        int64_t cosize = l_volume / size(d);
-        int64_t n = size(d);
+        int64_t cosize = l_volume / l_size[d];
+        int64_t n = l_size[d];
         while ((n * cosize) % nn != 0)
             n++; // virtual size can be odd
         // now nsize is the new would-be size
-        ghosts[d] = (n - size(d)) * cosize;
+        ghosts[d] = (n - l_size[d]) * cosize;
         nsize[d] = n;
     }
 
@@ -107,7 +107,7 @@ void lattice_struct::setup_layout() {
             gdir = -1;
 
         foralldir(i) {
-            nodesiz[i] = (i == gdir) ? nsize[i] : size(i); // start with ghosted lattice size
+            nodesiz[i] = (i == gdir) ? nsize[i] : l_size[i]; // start with ghosted lattice size
             divisions[i] = 1;
         }
 
@@ -227,10 +227,10 @@ void lattice_struct::setup_layout() {
         // Node divisors: note, this MUST BE compatible with
         // node_rank in lattice.cpp
         // to be sure, we use naively the same method than in node_rank
-        // last element will be size(dir), for convenience
+        // last element will be l_size[dir], for convenience
         int n = -1;
-        for (int i = 0; i <= size(dir); i++)
-            if ((i * nodes.n_divisions[dir]) / size(dir) != n) {
+        for (int i = 0; i <= l_size[dir]; i++)
+            if ((i * nodes.n_divisions[dir]) / l_size[dir] != n) {
                 ++n;
                 nodes.divisors[dir][n] = i;
             }
@@ -244,7 +244,7 @@ void lattice_struct::setup_layout() {
     // Now division done - check how good it is
     int ghost_slices = 0;
     if (gdir >= 0) {
-        ghost_slices = nsize[gdir] - size(gdir);
+        ghost_slices = nsize[gdir] - l_size[gdir];
 
         hila::out0 << "\nUsing uneven node division to direction " << gdir << ":\n";
         hila::out0 << "Lengths: " << nodes.n_divisions[gdir] - ghost_slices << " * ("
@@ -256,7 +256,7 @@ void lattice_struct::setup_layout() {
                 hila::out0 << " - ";
             hila::out0 << nodes.divisors[gdir][i + 1] - nodes.divisors[gdir][i];
         }
-        hila::out0 << "\nFilling efficiency: " << (100.0 * size(gdir)) / nsize[gdir] << "%\n";
+        hila::out0 << "\nFilling efficiency: " << (100.0 * l_size[gdir]) / nsize[gdir] << "%\n";
 
         if (ghost_slices > nodes.n_divisions[gdir] / 2)
             hila::out0 << "NOTE: number of smaller nodes > large nodes \n";

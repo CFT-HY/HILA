@@ -28,7 +28,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     //     code << "const lattice_struct * RESTRICT loop_lattice = lattice;\n";
     // }
 
-    code << "const lattice_struct & loop_lattice = lattice;\n";
+    code << "const lattice_struct & loop_lattice = lattice.ref();\n";
 
     // Set the start and end points
     code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";

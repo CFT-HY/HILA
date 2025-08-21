@@ -62,14 +62,14 @@ template <typename T>
 using vector_type = typename vectorize_struct<T, hila::vector_info<T>::vector_size>::type;
 
 template <typename T>
-void field_storage<T>::allocate_field(const lattice_struct &lattice) {
+void field_storage<T>::allocate_field(const lattice_struct_ptr lattice) {
     if constexpr (hila::is_vectorizable_type<T>::value) {
         fieldbuf = (T *)memalloc(
-            lattice.backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
+            lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
                 ->field_alloc_size() *
             sizeof(T));
     } else {
-        fieldbuf = (T *)memalloc(sizeof(T) * lattice.field_alloc_size());
+        fieldbuf = (T *)memalloc(sizeof(T) * lattice->mynode.field_alloc_size);
     }
 }
 
@@ -170,7 +170,7 @@ inline T field_storage<T>::get_element(const unsigned idx) const {
 /// Fetch elements from the field to buffer using sites in index_list
 template <typename T>
 void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                       int n, const lattice_struct &lattice) const {
+                                       int n, const lattice_struct_ptr lattice) const {
 
     for (unsigned j = 0; j < n; j++) {
         buffer[j] = get_element(index_list[j]);
@@ -182,7 +182,7 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
 template <typename T>
 void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
                                                const unsigned *RESTRICT index_list, int n,
-                                               const lattice_struct &lattice) const {
+                                               const lattice_struct_ptr lattice) const {
     if constexpr (hila::has_unary_minus<T>::value) {
         for (unsigned j = 0; j < n; j++) {
             buffer[j] = -get_element(index_list[j]); /// requires unary - !!
@@ -199,7 +199,7 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
 /// Vectorized implementation of setting elements
 template <typename T>
 void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                      int n, const lattice_struct &lattice) {
+                                      int n, const lattice_struct_ptr lattice) {
     for (unsigned j = 0; j < n; j++) {
         set_element(buffer[j], index_list[j]);
     }
@@ -207,7 +207,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 
 template <typename T>
 void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const lattice_struct &lattice,
+                                                   const lattice_struct_ptr lattice,
                                                    bool antiperiodic) {
 
 #ifndef SPECIAL_BOUNDARY_CONDITIONS
@@ -227,7 +227,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         // bc " << (int)antiperiodic << '\n';
 
         const auto vector_lattice =
-            lattice.backend_lattice
+            lattice->backend_lattice
                 ->template get_vectorized_lattice<hila::vector_info<T>::vector_size>();
         // The halo copy and permutation is only necessary if vectorization
         // splits the lattice in this Direction or local boundary is copied
@@ -304,18 +304,18 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
             // need to copy or do something w. local boundary
             unsigned n, start = 0;
             if (par == ODD) {
-                n = lattice.special_boundaries[dir].n_odd;
-                start = lattice.special_boundaries[dir].n_even;
+                n = lattice->special_boundaries[dir].n_odd;
+                start = lattice->special_boundaries[dir].n_even;
             } else {
                 if (par == EVEN)
-                    n = lattice.special_boundaries[dir].n_even;
+                    n = lattice->special_boundaries[dir].n_even;
                 else
-                    n = lattice.special_boundaries[dir].n_total;
+                    n = lattice->special_boundaries[dir].n_total;
             }
-            unsigned offset = lattice.special_boundaries[dir].offset + start;
+            unsigned offset = lattice->special_boundaries[dir].offset + start;
 
             gather_elements_negated(fieldbuf + offset,
-                                    lattice.special_boundaries[dir].move_index + start, n, lattice);
+                                    lattice->special_boundaries[dir].move_index + start, n, lattice);
         }
 #endif
     }

@@ -20,9 +20,9 @@
 /// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible 
 /// change is made.  This is the default below.
 
-#define HILA_SIGNATURE_NUMBER    3
+#define HILA_SIGNATURE_NUMBER    4
 
-#define MINIMUM_HILAPP_SIGNATURE 3
-#define MINIMUM_HILA_SIGNATURE   3
+#define MINIMUM_HILAPP_SIGNATURE 4
+#define MINIMUM_HILA_SIGNATURE   4
 
 #endif

@@ -148,7 +148,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     //     code << "const lattice_struct & loop_lattice = " << fieldname << ".fs->lattice;\n";
     // } else {
     // now no fields in loop - default lattice
-    code << "const lattice_struct & loop_lattice = lattice;\n";
+    code << "const lattice_struct & loop_lattice = lattice.ref();\n";
 
 
     kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
@@ -303,13 +303,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Switch to static here for now
     // Add __launch_bounds__ directive here
     kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
-//           << "( backend_lattice_struct d_lattice";
-        << "(int _hila_loop_begin, int _hila_loop_end";
-//    code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
-    // code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    // code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
-    code << "int _hila_loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "int _hila_loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
+           << "(int _hila_loop_begin, int _hila_loop_end";
+    code << "int _hila_loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "int _hila_loop_end = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
             "N_threads - 1)/N_threads;\n";
@@ -378,13 +374,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (s.previous_selection == nullptr) {
             // define mask, coord and possible value holder
             code << "char * " << s.maskname << ";\n";
-            code << "gpuMalloc( & " << s.maskname << ", lattice.mynode.volume() );\n";
+            code << "gpuMalloc( & " << s.maskname << ", lattice->mynode.volume );\n";
             code << "SiteIndex * " << s.sitename << ";\n";
             code << "gpuMalloc( & " << s.sitename
-                 << ", lattice.mynode.volume()*sizeof(SiteIndex) );\n";
+                 << ", lattice->mynode.volume * sizeof(SiteIndex) );\n";
             if (s.assign_expr != nullptr) {
                 code << s.val_type << " * " << s.valname << ";\n";
-                code << "gpuMalloc( & " << s.valname << ", lattice.mynode.volume()*sizeof("
+                code << "gpuMalloc( & " << s.valname << ", lattice->mynode.volume * sizeof("
                      << s.val_type << ") );\n";
             }
         }
@@ -926,7 +922,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << "if(threadIdx.x < HILA__i) {\n";
 
             // STD: using += may fail in reductions, if the operator is
-            // not kernelized.  
+            // not kernelized.
             // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
             //        << "sh[threadIdx.x + HILA__i];\n";
             kernel << "_hila_kernel_add_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
@@ -991,8 +987,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr <<
             // ");\n";
 
-            code << "for (int HILA__tmp_idx=0; HILA__tmp_idx < (" << ar.size_expr << "); HILA__tmp_idx++) "
-                 << ar.name << "[HILA__tmp_idx]";
+            code << "for (int HILA__tmp_idx=0; HILA__tmp_idx < (" << ar.size_expr
+                 << "); HILA__tmp_idx++) " << ar.name << "[HILA__tmp_idx]";
             if (ar.reduction_type == reduction::SUM)
                 code << " += a_v__tmp[HILA__tmp_idx];\n";
             else
