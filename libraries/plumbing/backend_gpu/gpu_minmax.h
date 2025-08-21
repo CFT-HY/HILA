@@ -22,7 +22,7 @@ using keyvalueindexT = long;
 #else
 using keyvalueindexT = int;
 #endif
-#endif  // HIP
+#endif // HIP
 
 
 template <typename T>
@@ -30,11 +30,12 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     // skip the cub/hipcub bits in hilapp, not needed
 
-    int64_t num_items = lattice.loop_end(par) - lattice.loop_begin(par);
+    const lattice_struct &mylat = fs->mylattice.ref();
+    int64_t num_items = mylat.loop_end(par) - mylat.loop_begin(par);
 
     // Declare, allocate, and initialize device-accessible pointers
     // for input and output
-    T *data_in = this->field_buffer() + lattice.loop_begin(par); // ptr to data
+    T *data_in = this->field_buffer() + mylat.loop_begin(par); // ptr to data
     gpucub::KeyValuePair<keyvalueindexT, T> *result_p, result;
 
     gpuMalloc(&result_p, sizeof(gpucub::KeyValuePair<keyvalueindexT, T>));
@@ -66,15 +67,16 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     gpuFree(d_temp_storage);
 
-    gpuMemcpy(&result, result_p, sizeof(gpucub::KeyValuePair<keyvalueindexT, T>), gpuMemcpyDeviceToHost);
+    gpuMemcpy(&result, result_p, sizeof(gpucub::KeyValuePair<keyvalueindexT, T>),
+              gpuMemcpyDeviceToHost);
 
     gpuFree(result_p);
 
-    loc = lattice.coordinates(result.key + lattice.loop_begin(par));
+    loc = mylat.coordinates(result.key + mylat.loop_begin(par));
     return result.value;
 }
 
-#endif  // ! HILAPP
+#endif // ! HILAPP
 
 
 #endif

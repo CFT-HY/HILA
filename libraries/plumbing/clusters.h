@@ -345,15 +345,15 @@ inline void clusters::make_local_clist() {
     size_t temp_storage_bytes = 0;
     uint64_t *buf;
 
-    gpuMalloc(&buf, lattice.mynode.volume() * sizeof(uint64_t));
+    gpuMalloc(&buf, lattice->mynode.volume * sizeof(uint64_t));
     GPU_CHECK(gpucub::DeviceRadixSort::SortKeys(
-        d_temp_storage, temp_storage_bytes, labels.field_buffer(), buf, lattice.mynode.volume()));
+        d_temp_storage, temp_storage_bytes, labels.field_buffer(), buf, lattice->mynode.volume));
 
     // Allocate temporary storage
     gpuMalloc(&d_temp_storage, temp_storage_bytes);
 
     GPU_CHECK(gpucub::DeviceRadixSort::SortKeys(
-        d_temp_storage, temp_storage_bytes, labels.field_buffer(), buf, lattice.mynode.volume()));
+        d_temp_storage, temp_storage_bytes, labels.field_buffer(), buf, lattice->mynode.volume));
 
     gpuFree(d_temp_storage);
     // now buf contains sorted labels
@@ -362,13 +362,13 @@ inline void clusters::make_local_clist() {
     temp_storage_bytes = 0;
     uint64_t *d_labels;
     int64_t *d_sizes, *d_num_clust;
-    gpuMalloc(&d_labels, lattice.mynode.volume() * sizeof(uint64_t));
-    gpuMalloc(&d_sizes, (lattice.mynode.volume() + 1) * sizeof(int64_t));
-    d_num_clust = d_sizes + lattice.mynode.volume(); // the last element
+    gpuMalloc(&d_labels, lattice->mynode.volume * sizeof(uint64_t));
+    gpuMalloc(&d_sizes, (lattice->mynode.volume + 1) * sizeof(int64_t));
+    d_num_clust = d_sizes + lattice->mynode.volume; // the last element
 
     GPU_CHECK(gpucub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, buf,
                                                     d_labels, d_sizes, d_num_clust,
-                                                    lattice.mynode.volume()));
+                                                    lattice->mynode.volume));
 
     // Allocate temporary storage
     gpuMalloc(&d_temp_storage, temp_storage_bytes);
@@ -376,7 +376,7 @@ inline void clusters::make_local_clist() {
     // Run encoding
     GPU_CHECK(gpucub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, buf,
                                                     d_labels, d_sizes, d_num_clust,
-                                                    lattice.mynode.volume()));
+                                                    lattice->mynode.volume));
 
     gpuFree(d_temp_storage);
 
@@ -408,13 +408,13 @@ inline void clusters::make_local_clist() {
     // this changes the ordering of labels - copy it
     auto lb = labels;
     auto *buf = lb.field_buffer();
-    std::sort(buf, buf + lattice.mynode.volume());
+    std::sort(buf, buf + lattice->mynode.volume);
     // background labels are last after sort, stop handling when these are met
     int64_t i = 0;
-    while (i < lattice.mynode.volume() && get_cl_label_type(buf[i]) != background) {
+    while (i < lattice->mynode.volume && get_cl_label_type(buf[i]) != background) {
         int64_t istart = i;
         auto label = buf[i];
-        for (++i; i < lattice.mynode.volume() && buf[i] == label; ++i)
+        for (++i; i < lattice->mynode.volume && buf[i] == label; ++i)
             ;
         clist.push_back({label, i - istart, 0});
     }

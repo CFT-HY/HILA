@@ -76,7 +76,7 @@ class Field {
     class field_struct {
       public:
         field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-        int lattice_id;
+        lattice_struct_ptr mylattice;
 #ifdef VECTORIZED
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
@@ -152,12 +152,12 @@ class Field {
          * @return auto
          */
         inline auto get(const unsigned i) const {
-            return payload.get(i, lattice.field_alloc_size());
+            return payload.get(i, lattice->mynode.field_alloc_size);
         }
 
         template <typename A>
         inline void set(const A &value, const unsigned i) {
-            payload.set(value, i, lattice.field_alloc_size());
+            payload.set(value, i, lattice->mynode.field_alloc_size);
         }
 
         /**
@@ -364,12 +364,12 @@ class Field {
      */
     void allocate() {
         assert(fs == nullptr);
-        if (lattice.volume() == 0) {
+        if (!lattice.is_initialized()) {
             hila::out0 << "Can not allocate Field variables before lattice.setup()\n";
             hila::terminate(0);
         }
         fs = (field_struct *)memalloc(sizeof(field_struct));
-        fs->lattice_id = lattice.id();
+        fs->mylattice = lattice;
         fs->allocate_payload();
         fs->initialize_communication();
         mark_changed(ALL);   // guarantees communications will be done
@@ -378,9 +378,9 @@ class Field {
         for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
 #if !defined(CUDA) && !defined(HIP)
-            fs->neighbours[d] = lattice.neighb[d];
+            fs->neighbours[d] = lattice->neighb[d];
 #else
-            fs->payload.neighbours[d] = lattice.backend_lattice->d_neighb[d];
+            fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
 #endif
         }
 
@@ -393,7 +393,7 @@ class Field {
 
 #ifdef VECTORIZED
         if constexpr (hila::is_vectorizable_type<T>::value) {
-            fs->vector_lattice = lattice.backend_lattice
+            fs->vector_lattice = lattice->backend_lattice
                                      ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
         } else {
             fs->vector_lattice = nullptr;
@@ -566,7 +566,7 @@ class Field {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
 
         return hila::bc_need_communication(fs->boundary_condition[dir]) ||
-               !lattice.mynode.is_on_edge(dir);
+               !fs->mylattice->mynode.is_on_edge(dir);
 #else
         return true;
 #endif
@@ -596,18 +596,20 @@ class Field {
 
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
+
+        lattice_struct * mylat = fs->mylattice.ptr();
         fs->boundary_condition[dir] = bc;
         fs->boundary_condition[-dir] = bc;
 #if !defined(CUDA) && !defined(HIP)
-        fs->neighbours[dir] = lattice.get_neighbour_array(dir, bc);
-        fs->neighbours[-dir] = lattice.get_neighbour_array(-dir, bc);
+        fs->neighbours[dir] = mylat->get_neighbour_array(dir, bc);
+        fs->neighbours[-dir] = mylat->get_neighbour_array(-dir, bc);
 #else
         if (bc == hila::bc::PERIODIC) {
-            fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb[dir];
-            fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb[-dir];
+            fs->payload.neighbours[dir] = mylat->backend_lattice->d_neighb[dir];
+            fs->payload.neighbours[-dir] = mylat->backend_lattice->d_neighb[-dir];
         } else {
-            fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb_special[dir];
-            fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb_special[-dir];
+            fs->payload.neighbours[dir] = mylat->backend_lattice->d_neighb_special[dir];
+            fs->payload.neighbours[-dir] = mylat->backend_lattice->d_neighb_special[-dir];
         }
 #endif
 
@@ -760,15 +762,15 @@ class Field {
         //         if (this->fs == rhs.fs)
         //             return *this;
         //
-        //         assert(this->fs->lattice_id == rhs.fs->lattice_id &&
+        //         assert(this->fs->mylattice == rhs.fs->mylattice &&
         //                "Cannot assign fields which belong to different lattices!");
         //
         // #if !defined(CUDA) && !defined(HIP)
         //         memcpy(this->field_buffer(), rhs.field_buffer(), sizeof(T) *
-        //         lattice.mynode.volume());
+        //         lattice->mynode.volume);
         // #else
         //         gpuMemcpy(this->field_buffer(), rhs.field_buffer(), sizeof(T) *
-        //         lattice.mynode.volume(),
+        //         lattice->mynode.volume,
         //                   gpuMemcpyDeviceToDevice);
         // #endif
         //         this->mark_changed(ALL);
@@ -1206,8 +1208,8 @@ class Field {
         T element;
         element = value;
         assert(is_initialized(ALL) && "Field not initialized yet");
-        if (lattice.is_on_mynode(coord)) {
-            set_value_at(element, lattice.site_index(coord));
+        if (fs->mylattice->is_on_mynode(coord)) {
+            set_value_at(element, fs->mylattice->site_index(coord));
         }
         mark_changed(coord.parity());
         return element;
@@ -1223,10 +1225,10 @@ class Field {
         T element;
 
         assert(is_initialized(ALL) && "Field not initialized yet");
-        int owner = lattice.node_rank(coord);
+        int owner = fs->mylattice->node_rank(coord);
 
         if (hila::myrank() == owner) {
-            element = get_value_at(lattice.site_index(coord));
+            element = get_value_at(fs->mylattice->site_index(coord));
         }
 
         hila::broadcast(element, owner);
@@ -1285,8 +1287,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v += av;
             set_value_at(v, i);
@@ -1298,8 +1300,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v -= av;
             set_value_at(v, i);
@@ -1311,8 +1313,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v *= av;
             set_value_at(v, i);
@@ -1324,8 +1326,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v /= av;
             set_value_at(v, i);
@@ -1962,7 +1964,7 @@ void Field<T>::random() {
 
     if (!hila::is_device_rng_on()) {
 
-        std::vector<T> rng_buffer(lattice.mynode.volume());
+        std::vector<T> rng_buffer(lattice->mynode.volume);
         for (auto &element : rng_buffer)
             hila::random(element);
         (*this).set_local_data(rng_buffer);
@@ -1988,7 +1990,7 @@ void Field<T>::gaussian_random(double width) {
 
     if (!hila::is_device_rng_on()) {
 
-        std::vector<T> rng_buffer(lattice.mynode.volume());
+        std::vector<T> rng_buffer(lattice->mynode.volume);
         for (auto &element : rng_buffer)
             hila::gaussian_random(element, width);
         (*this).set_local_data(rng_buffer);

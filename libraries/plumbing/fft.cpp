@@ -35,19 +35,18 @@ void FFT_delete_plans() {
 }
 
 
-
 size_t pencil_get_buffer_offsets(const Direction dir, const size_t elements,
-                              CoordinateVector &offset, CoordinateVector &nmin) {
+                                 CoordinateVector &offset, CoordinateVector &nmin) {
 
     offset[dir] = 1;
-    nmin = lattice.mynode.min;
+    nmin = lattice->mynode.min;
 
-    size_t element_offset = lattice.mynode.size[dir];
+    size_t element_offset = lattice->mynode.size[dir];
     size_t s = element_offset * elements;
 
     foralldir(d) if (d != dir) {
         offset[d] = s;
-        s *= lattice.mynode.size[d];
+        s *= lattice->mynode.size[d];
     }
 
     return element_offset;
@@ -60,18 +59,26 @@ size_t pencil_get_buffer_offsets(const Direction dir, const size_t elements,
 
 void init_pencil_direction(Direction dir) {
 
+    static lattice_struct *fftlat = nullptr;
+    if (fftlat == nullptr)
+        fftlat = lattice.ptr();
+    else if (fftlat != lattice.ptr()) {
+        hila::out0 << "FFT ERROR: different lattice size!\n";
+        hila::terminate(0);
+    }
+
     if (hila_pencil_comms[dir].size() == 0) {
         // basic structs not yet set, do it here
 
-        hila_pencil_comms[dir].resize(lattice.nodes.n_divisions[dir]);
+        hila_pencil_comms[dir].resize(lattice->nodes.n_divisions[dir]);
 
         int nodenumber = 0;
-        for (int nodenumber = 0; nodenumber < lattice.nodes.number; ++nodenumber) {
+        for (int nodenumber = 0; nodenumber < lattice->nodes.number; ++nodenumber) {
 
-            const node_info n = lattice.nodes.nodeinfo(nodenumber);
+            const node_info n = lattice->nodes.nodeinfo(nodenumber);
 
             bool is_in_column = true;
-            foralldir(d) if (d != dir && n.min[d] != lattice.mynode.min[d]) {
+            foralldir(d) if (d != dir && n.min[d] != lattice->mynode.min[d]) {
                 is_in_column = false;
                 break; // breaks out of foralldir
             }
@@ -82,25 +89,24 @@ void init_pencil_direction(Direction dir) {
                 pencil_struct fn;
                 fn.node = nodenumber;
                 fn.size_to_dir = n.size[dir];
-                for (int i = 0; i < lattice.nodes.n_divisions[dir]; i++) {
-                    if (n.min[dir] == lattice.nodes.divisors[dir][i]) {
+                for (int i = 0; i < lattice->nodes.n_divisions[dir]; i++) {
+                    if (n.min[dir] == lattice->nodes.divisors[dir][i]) {
                         hila_pencil_comms[dir].at(i) = fn;
                     }
                 }
             }
         }
 
-        size_t total_columns = lattice.mynode.sites / lattice.mynode.size[dir];
+        size_t total_columns = lattice->mynode.volume / lattice->mynode.size[dir];
 
         size_t nodes = hila_pencil_comms[dir].size();
 
         // column offset and number are used for sending
         size_t i = 0;
         for (pencil_struct &fn : hila_pencil_comms[dir]) {
-            fn.column_offset =
-                ((i * total_columns) / nodes) * lattice.mynode.size[dir];
-            fn.column_number = (((i + 1) * total_columns) / nodes) -
-                               fn.column_offset / lattice.mynode.size[dir];
+            fn.column_offset = ((i * total_columns) / nodes) * lattice->mynode.size[dir];
+            fn.column_number =
+                (((i + 1) * total_columns) / nodes) - fn.column_offset / lattice->mynode.size[dir];
 
             if (fn.node == hila::myrank()) {
                 hila_fft_my_columns[dir] = fn.column_number;

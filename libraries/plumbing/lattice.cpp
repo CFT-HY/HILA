@@ -8,10 +8,10 @@
 
 void report_too_large_node() {
     if (hila::myrank() == 0) {
-        hila::out << "Node size too large: size = " << lattice.mynode.size[0];
+        hila::out << "Node size too large: size = " << lattice->mynode.size[0];
         for (int d = 1; d < NDIM; d++)
-            hila::out << " x " << lattice.mynode.size[d];
-        hila::out << " + communication buffers = " << lattice.mynode.field_alloc_size;
+            hila::out << " x " << lattice->mynode.size[d];
+        hila::out << " + communication buffers = " << lattice->mynode.field_alloc_size;
         hila::out << "\nConsider using more nodes (smaller node size).\n";
         hila::out << "[TODO: allow 64bit index?]\n";
     }
@@ -19,17 +19,23 @@ void report_too_large_node() {
 }
 
 
-// Define the global lattice var
-lattice_struct lattice;
+// Define the global lattice handle
+lattice_struct_ptr lattice;
 /// A list of all defined lattices (for the future expansion)
 
 // Keep track of defined lattices
-static std::vector<lattice_struct> lattices;
+std::vector<lattice_struct *> defined_lattices;
+
+// global bookkeeping
+namespace hila {
+int64_t n_gather_avoided = 0, n_gather_done = 0;
+}
 
 /// General lattice setup
-void lattice_struct::setup(const CoordinateVector &siz) {
+void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
 
-    l_label = lattices.size();
+    l_label = defined_lattices.size();
+    defined_lattices.push_back(this);
 
     l_volume = 1;
     foralldir(i) {
@@ -37,13 +43,9 @@ void lattice_struct::setup(const CoordinateVector &siz) {
         l_volume *= siz[i];
     }
 
-    // initialize gather counters
-    n_gather_avoided = n_gather_done = 0;
-
     setup_layout();
 
     setup_nodes();
-
 
     // set up the comm arrays
     create_std_gathers();
@@ -72,9 +74,6 @@ void lattice_struct::setup(const CoordinateVector &siz) {
     }
 
     test_std_gathers();
-
-    // Add this lattice to the list
-    lattices.push_back(*this);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -88,6 +87,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 /// This is the fundamental routine which defines how the nodes
 /// are mapped.  map_node_layout MUST BE compatible with this
 /// algorithm!  So if you change this, change that too
+/// Divisor moved now below
 ///
 /// Here the node number along one Direction is calculated with
 ///    loc * n_divisions/l_size  (with integer division)
@@ -109,6 +109,31 @@ int lattice_struct::node_rank(const CoordinateVector &loc) const {
 
     return (i);
 }
+
+////////////////////////////////////////////////////////////////////////
+/// In this routine we set up the node divisors
+/// this must be compatible with the node_rank above
+////////////////////////////////////////////////////////////////////////
+
+void lattice_struct::setup_node_divisors() {
+
+    foralldir(dir) {
+        nodes.divisors[dir].resize(nodes.n_divisions[dir] + 1);
+        // to be sure, we use naively the same method than in node_rank
+        // last element will be size(dir), for convenience
+        int n = -1;
+        for (int i = 0; i <= l_size[dir]; i++) {
+            while (n < (i * nodes.n_divisions[dir]) / l_size[dir]) {
+                ++n;
+                nodes.divisors[dir][n] = i;
+            }
+        }
+        // hila::out0 << "Divisors ";
+        // for (int i=0;i<nodes.n_divisions[dir]; i++) hila::out0 << nodes.divisors[dir][i]
+        // << " "; hila::out0 << '\n';
+    }
+}
+
 
 ///////////////////////////////////////////////////////////////////////
 /// Is the coordinate on THIS node
@@ -340,7 +365,7 @@ void lattice_struct::setup_nodes() {
 
         // use the opportunity to set up mynode when it is met
         if (i == hila::myrank())
-            mynode.setup(ni, lattice);
+            mynode.setup(ni, *this);
     }
 }
 
@@ -356,9 +381,10 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
 
     evensites = ni.evensites;
     oddsites = ni.oddsites;
-    sites = ni.evensites + ni.oddsites;
+    volume = ni.evensites + ni.oddsites;
 
     first_site_even = (min.parity() == EVEN);
+    parent = &lattice;
 
     // neighbour node indices
     foralldir(d) {
@@ -373,9 +399,9 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     // after the above site_index should work
 
 #ifdef EVEN_SITES_FIRST
-    coordinates.resize(sites);
+    coordinates.resize(volume);
     CoordinateVector l = min;
-    for (unsigned i = 0; i < sites; i++) {
+    for (unsigned i = 0; i < volume; i++) {
         coordinates[lattice.site_index(l)] = l;
         // walk through the coordinates
         foralldir(d) {
@@ -419,7 +445,7 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
     // return false unless lattice size is odd to direction d
     // and mynode is on the boundary of the lattice
 
-    return (lattice.size(d) % 2 > 0 && lattice.mynode.is_on_edge(d));
+    return (lattice.size(d) % 2 > 0 && lattice->mynode.is_on_edge(d));
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -433,7 +459,7 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
 //     CoordinateVector ln, l;
 //     unsigned count;
 
-//     for (int i = 0; i < mynode.sites; i++) {
+//     for (int i = 0; i < mynode.volume; i++) {
 //         l = coordinates(i);
 //         // set ln to be the neighbour of the site
 //         // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
@@ -452,10 +478,10 @@ void lattice_struct::create_std_gathers() {
     // be allocated on "device" memory too!
 
     for (int d = 0; d < NDIRS; d++) {
-        neighb[d] = (unsigned *)memalloc(((size_t)mynode.sites) * sizeof(unsigned));
+        neighb[d] = (unsigned *)memalloc(((size_t)mynode.volume) * sizeof(unsigned));
     }
 
-    size_t c_offset = mynode.sites; // current offset in field-arrays
+    size_t c_offset = mynode.volume; // current offset in field-arrays
 
     // We set the communication and the neigbour-array here
     int too_large_node = 0;
@@ -478,17 +504,17 @@ void lattice_struct::create_std_gathers() {
         // first pass through the sites
         // - set the neighb array, anything to communicate?
 
-        for (size_t i = 0; i < mynode.sites; i++) {
+        for (size_t i = 0; i < mynode.volume; i++) {
             CoordinateVector ln, l;
             l = coordinates(i);
             // set ln to be the neighbour of the site
-            ln = (l + d).mod(size());
+            ln = (l + d).mod(l_size);
 
             if (is_on_mynode(ln)) {
                 neighb[d][i] = site_index(ln);
             } else {
                 // short-circuit neighbour array, for later handling
-                neighb[d][i] = mynode.sites;
+                neighb[d][i] = mynode.volume;
 
                 // Now site is off-node, this leads to gathering
                 if (from_node.rank == mynode.rank) {
@@ -533,8 +559,8 @@ void lattice_struct::create_std_gathers() {
             // index - no sorting needed
             size_t to_even = 0, to_odd = 0, from_even = 0, from_odd = 0;
 
-            for (size_t i = 0; i < mynode.sites; i++) {
-                if (neighb[d][i] == mynode.sites) {
+            for (size_t i = 0; i < mynode.volume; i++) {
+                if (neighb[d][i] == mynode.volume) {
                     CoordinateVector l, ln;
                     l = coordinates(i);
 
@@ -553,7 +579,7 @@ void lattice_struct::create_std_gathers() {
                         ++from_odd;
                     }
 
-                    ln = (l + d).mod(size());
+                    ln = (l + d).mod(l_size);
                     if (ln.parity() == EVEN) {
                         to_node.sitelist[to_even++] = i;
                     } else {
@@ -599,15 +625,15 @@ void lattice_struct::initialize_wait_arrays() {
      * at that dir is out of the local volume
      */
 
-    wait_arr_ = (dir_mask_t *)memalloc(mynode.sites * sizeof(unsigned char));
+    wait_arr_ = (dir_mask_t *)memalloc(mynode.volume * sizeof(unsigned char));
 
-    for (size_t i = 0; i < mynode.sites; i++) {
+    for (size_t i = 0; i < mynode.volume; i++) {
         wait_arr_[i] = 0; /* basic, no wait */
         foralldir(dir) {
             Direction odir = -dir;
-            if (neighb[dir][i] >= mynode.sites)
+            if (neighb[dir][i] >= mynode.volume)
                 wait_arr_[i] = wait_arr_[i] | (1 << dir);
-            if (neighb[odir][i] >= mynode.sites)
+            if (neighb[odir][i] >= mynode.volume)
                 wait_arr_[i] = wait_arr_[i] | (1 << odir);
         }
     }
@@ -634,8 +660,8 @@ void lattice_struct::init_special_boundaries() {
         Direction od = -d;
         int coord = -1;
         // do we get up/down boundary?
-        if (is_up_dir(d) && mynode.min[d] + mynode.size[d] == size(d))
-            coord = size(d) - 1;
+        if (is_up_dir(d) && mynode.min[d] + mynode.size[d] == l_size[d])
+            coord = l_size[d] - 1;
         if (is_up_dir(od) && mynode.min[od] == 0)
             coord = 0;
 
@@ -646,7 +672,7 @@ void lattice_struct::init_special_boundaries() {
                 special_boundaries[d].is_needed = true;
                 special_boundaries[d].offset = mynode.field_alloc_size;
 
-                for (unsigned i = 0; i < mynode.sites; i++)
+                for (unsigned i = 0; i < mynode.volume; i++)
                     if (coordinate(i, abs(d)) == coord) {
                         // set buffer indices
                         special_boundaries[d].n_total++;
@@ -661,7 +687,7 @@ void lattice_struct::init_special_boundaries() {
 
         // hila::out << "Node " << hila::myrank() << " dir " << d << " min " <<
         // mynode.min << " is_on_edge "
-        //   << lattice.mynode.is_on_edge(d) << '\n';
+        //   << lattice->mynode.is_on_edge(d) << '\n';
 
         // allocate neighbours only on 1st use, otherwise unneeded
         special_boundaries[d].neighbours = nullptr;
@@ -708,19 +734,19 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
         return;
 
     // now allocate neighbour array and the gathering array
-    special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * mynode.sites);
+    special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * mynode.volume);
     special_boundaries[d].move_index =
         (unsigned *)memalloc(sizeof(unsigned) * special_boundaries[d].n_total);
 
     int coord;
     int offs = special_boundaries[d].offset;
     if (is_up_dir(d))
-        coord = size(d) - 1;
+        coord = l_size[d] - 1;
     else
         coord = 0;
 
     int k = 0;
-    for (int i = 0; i < mynode.sites; i++) {
+    for (int i = 0; i < mynode.volume; i++) {
         if (coordinate(i, abs(d)) != coord) {
             special_boundaries[d].neighbours[i] = neighb[d][i];
         } else {
@@ -755,17 +781,61 @@ bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
 }
 
 
-bool lattice_struct::block(const CoordinateVector &blocking_factor, bool test) {
+int lattice_struct::block(const CoordinateVector &blocking_factor) {
     if (!can_block(blocking_factor)) {
-        if (test) {
-            return false;
-        } else {
-            hila::out0 << "Cannot block lattice with factor " << blocking_factor << '\n';
-            hila::terminate(0);
-        }
+        hila::out0 << "Cannot block lattice with factor " << blocking_factor << '\n';
+        hila::terminate(0);
     }
 
-    return true;
+    CoordinateVector blockvol;
+    foralldir(d) blockvol[d] = lattice.size(d) / blocking_factor[d];
+
+    hila::synchronize();
+
+    int i = 0;
+    bool found = false;
+    for (auto * l : defined_lattices) {
+        if (l->l_size == blockvol) {
+            found = true;
+            break;
+        }
+        i++;
+    }
+
+    if (!found) {
+        // Now did not find a lattice, make one
+
+        i = defined_lattices.size(); // label for new lattice
+
+        auto * lp = new lattice_struct;
+
+        defined_lattices.push_back(lp);
+        lp->setup_blocked_lattice(blockvol, i, lattice.ref());
+    }
+
+    lattice.set(defined_lattices[i]);
+
+    return i;
+}
+
+
+void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int label,
+                                           const lattice_struct &orig) {
+
+    l_label = label;
+
+    l_volume = 1;
+    foralldir(i) {
+        l_size[i] = siz[i];
+        l_volume *= siz[i];
+    }
+
+    nodes.n_divisions = orig.nodes.n_divisions;
+
+    nodes.number = orig.nodes.number;
+
+
+    // layout: just copy from parent
 }
 
 
@@ -799,7 +869,7 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
 
     // pass over sites
     int num = 0; // number of sites off node
-    for (unsigned i = 0; i < mynode.sites; i++) {
+    for (unsigned i = 0; i < mynode.volume; i++) {
         CoordinateVector ln, l;
         l = coordinates(i);
         ln = (l + offset).mod(size());
@@ -813,7 +883,7 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
             unsigned r = node_rank(ln);
 
             if (receive) {
-                index[i] = mynode.sites + r;
+                index[i] = mynode.volume + r;
 
                 // using parity of THIS
                 if (l.parity() == EVEN)
@@ -874,7 +944,7 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
     if (!receive) {
         // sending end -- create sitelists
 
-        for (unsigned i = 0; i < mynode.sites; i++) {
+        for (unsigned i = 0; i < mynode.volume; i++) {
             CoordinateVector ln, l;
             l = coordinates(i);
             ln = (l + offset).mod(size());
@@ -902,9 +972,9 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
         // receive end
         // fill in the index pointers
 
-        for (unsigned i = 0; i < mynode.sites; i++) {
-            if (index[i] >= mynode.sites) {
-                int r = index[i] - mynode.sites;
+        for (unsigned i = 0; i < mynode.volume; i++) {
+            if (index[i] >= mynode.volume) {
+                int r = index[i] - mynode.volume;
                 int n = 0;
                 // find the node which sends this
                 while (node_v[n].rank != r)
@@ -930,7 +1000,7 @@ lattice_struct::create_general_gather(const CoordinateVector &offset) {
     gen_comminfo_struct ci;
 
     // communication buffer
-    ci.index = (unsigned *)memalloc(mynode.sites * sizeof(unsigned));
+    ci.index = (unsigned *)memalloc(mynode.volume * sizeof(unsigned));
 
     ci.from_node =
         create_comm_node_vector(offset, ci.index, true);          // create receive end

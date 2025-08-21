@@ -157,7 +157,7 @@ void hila_fft<cmplx_t>::gather_data() {
             }
 
             MPI_Irecv(rec_p[j], (int)siz, MPI_BYTE, fn.node, WRK_GATHER_TAG,
-                      lattice.mpi_comm_lat, &recreq[i]);
+                      lattice->mpi_comm_lat, &recreq[i]);
 
             i++;
         }
@@ -169,10 +169,10 @@ void hila_fft<cmplx_t>::gather_data() {
         if (fn.node != hila::myrank()) {
 
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice.mynode.size[dir] *
+            int n = fn.column_number * elements * lattice->mynode.size[dir] *
                     sizeof(cmplx_t);
 
-            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice.mpi_comm_lat,
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
                       &sendreq[i]);
             i++;
         }
@@ -208,10 +208,10 @@ void hila_fft<cmplx_t>::scatter_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice.mynode.size[dir] * sizeof(cmplx_t);
+            int n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
             MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG,
-                      lattice.mpi_comm_lat, &recreq[i]);
+                      lattice->mpi_comm_lat, &recreq[i]);
 
             i++;
         }
@@ -223,7 +223,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         if (fn.node != hila::myrank()) {
 
             MPI_Isend(rec_p[j], (int)(fn.recv_buf_size * elements * sizeof(cmplx_t)), MPI_BYTE, fn.node,
-                      WRK_SCATTER_TAG, lattice.mpi_comm_lat, &sendreq[i]);
+                      WRK_SCATTER_TAG, lattice->mpi_comm_lat, &sendreq[i]);
 
             i++;
         }

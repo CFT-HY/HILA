@@ -92,7 +92,7 @@ class SiteSelect {
     }
 
     void setup() {
-        sites.resize(lattice.mynode.volume());
+        sites.resize(lattice->mynode.volume);
         current_index = 0;
         previous_site = SIZE_MAX;
         n_overflow = 0;
@@ -221,19 +221,19 @@ class SiteSelect {
         size_t temp_storage_bytes = 0;
 
         T *out;
-        gpuMalloc(&out, lattice.mynode.volume() * sizeof(T));
+        gpuMalloc(&out, lattice->mynode.volume * sizeof(T));
 
         int *num_selected_d;
         gpuMalloc(&num_selected_d, sizeof(int));
 
 
         GPU_CHECK(gpucub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag,
-                                                out, num_selected_d, lattice.mynode.volume()));
+                                                out, num_selected_d, lattice->mynode.volume));
 
         gpuMalloc(&d_temp_storage, temp_storage_bytes);
 
         GPU_CHECK(gpucub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag,
-                                                out, num_selected_d, lattice.mynode.volume()));
+                                                out, num_selected_d, lattice->mynode.volume));
 
         gpuFree(d_temp_storage);
 
@@ -279,7 +279,7 @@ class SiteValueSelect : public SiteSelect {
 
     void setup() {
         SiteSelect::setup();
-        values.resize(lattice.mynode.volume());
+        values.resize(lattice->mynode.volume);
     }
 
     void clear() {

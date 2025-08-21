@@ -88,13 +88,13 @@ void hila_reduce_sums() {
 
         if (allreduce_on) {
             MPI_Allreduce((void *)double_reduction_buffer.data(), (void *)work.data(), n_double,
-                          MPI_DOUBLE, MPI_SUM, lattice.mpi_comm_lat);
+                          MPI_DOUBLE, MPI_SUM, lattice->mpi_comm_lat);
             for (int i = 0; i < n_double; i++)
                 *(double_reduction_ptrs[i]) = work[i];
 
         } else {
             MPI_Reduce((void *)double_reduction_buffer.data(), work.data(), n_double, MPI_DOUBLE,
-                       MPI_SUM, 0, lattice.mpi_comm_lat);
+                       MPI_SUM, 0, lattice->mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_double; i++)
                     *(double_reduction_ptrs[i]) = work[i];
@@ -112,13 +112,13 @@ void hila_reduce_sums() {
 
         if (allreduce_on) {
             MPI_Allreduce((void *)float_reduction_buffer.data(), work.data(), n_float, MPI_FLOAT,
-                          MPI_SUM, lattice.mpi_comm_lat);
+                          MPI_SUM, lattice->mpi_comm_lat);
             for (int i = 0; i < n_float; i++)
                 *(float_reduction_ptrs[i]) = work[i];
 
         } else {
             MPI_Reduce((void *)float_reduction_buffer.data(), work.data(), n_float, MPI_FLOAT,
-                       MPI_SUM, 0, lattice.mpi_comm_lat);
+                       MPI_SUM, 0, lattice->mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_float; i++)
                     *(float_reduction_ptrs[i]) = work[i];
@@ -167,10 +167,10 @@ void hila::initialize_communications(int &argc, char ***argv) {
         mpi_initialized = true;
 
         // global var lattice exists, assign the mpi comms there
-        lattice.mpi_comm_lat = MPI_COMM_WORLD;
+        lattice.ptr()->mpi_comm_lat = MPI_COMM_WORLD;
 
-        MPI_Comm_rank(lattice.mpi_comm_lat, &lattice.mynode.rank);
-        MPI_Comm_size(lattice.mpi_comm_lat, &lattice.nodes.number);
+        MPI_Comm_rank(lattice->mpi_comm_lat, &lattice.ptr()->mynode.rank);
+        MPI_Comm_size(lattice->mpi_comm_lat, &lattice.ptr()->nodes.number);
     }
 }
 
@@ -183,7 +183,7 @@ bool hila::is_comm_initialized(void) {
 void hila::abort_communications(int status) {
     if (mpi_initialized) {
         mpi_initialized = false;
-        MPI_Abort(lattice.mpi_comm_lat, 0);
+        MPI_Abort(lattice->mpi_comm_lat, 0);
     }
 }
 
@@ -210,7 +210,7 @@ void hila::broadcast(std::string &var, int rank) {
     }
     // copy directy to data() buffer
     broadcast_timer.start();
-    MPI_Bcast((void *)var.data(), size, MPI_BYTE, rank, lattice.mpi_comm_lat);
+    MPI_Bcast((void *)var.data(), size, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
 }
 
@@ -240,7 +240,7 @@ int hila::myrank() {
     if (!mpi_initialized || hila::check_input)
         return node;
 
-    MPI_Comm_rank(lattice.mpi_comm_lat, &node);
+    MPI_Comm_rank(lattice->mpi_comm_lat, &node);
     return node;
 }
 
@@ -250,20 +250,20 @@ int hila::number_of_nodes() {
         return hila::check_with_nodes;
 
     int nodes;
-    MPI_Comm_size(lattice.mpi_comm_lat, &nodes);
+    MPI_Comm_size(lattice->mpi_comm_lat, &nodes);
     return (nodes);
 }
 
 void hila::synchronize() {
     synchronize_timer.start();
     hila::synchronize_threads();
-    MPI_Barrier(lattice.mpi_comm_lat);
+    MPI_Barrier(lattice->mpi_comm_lat);
     synchronize_timer.stop();
 }
 
 void hila::barrier() {
     synchronize_timer.start();
-    MPI_Barrier(lattice.mpi_comm_lat);
+    MPI_Barrier(lattice->mpi_comm_lat);
     synchronize_timer.stop();
 }
 
@@ -292,13 +292,13 @@ void hila::split_into_partitions(int this_lattice) {
     if (hila::check_input)
         return;
 
-    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.mpi_comm_lat)) != MPI_SUCCESS) {
+    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.ptr()->mpi_comm_lat)) != MPI_SUCCESS) {
         hila::out0 << "MPI_Comm_split() call failed!\n";
         hila::finishrun();
     }
     // reset also the rank and numbers -fields
-    MPI_Comm_rank(lattice.mpi_comm_lat, &lattice.mynode.rank);
-    MPI_Comm_size(lattice.mpi_comm_lat, &lattice.nodes.number);
+    MPI_Comm_rank(lattice->mpi_comm_lat, &lattice.ptr()->mynode.rank);
+    MPI_Comm_size(lattice->mpi_comm_lat, &lattice.ptr()->nodes.number);
 }
 
 void hila::synchronize_partitions() {
@@ -366,12 +366,12 @@ void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool all
     if (allreduce) {
         MPI_Allreduce((void *)value, (void *)recv_data.data(), send_count,
                       MPI_ExtendedPrecision_type, MPI_ExtendedPrecision_sum_op,
-                      lattice.mpi_comm_lat);
+                      lattice->mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
         MPI_Reduce((void *)value, (void *)recv_data.data(), send_count, MPI_ExtendedPrecision_type,
-                   MPI_ExtendedPrecision_sum_op, 0, lattice.mpi_comm_lat);
+                   MPI_ExtendedPrecision_sum_op, 0, lattice->mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];

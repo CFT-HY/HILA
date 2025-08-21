@@ -100,32 +100,32 @@ class ReductionVector {
             if (is_nonblocking_) {
                 MPI_Iallreduce(MPI_IN_PLACE, (void *)val.data(),
                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
-                               operation, lattice.mpi_comm_lat, &request);
+                               operation, lattice->mpi_comm_lat, &request);
             } else {
                 MPI_Allreduce(MPI_IN_PLACE, (void *)val.data(),
                               sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
-                              operation, lattice.mpi_comm_lat);
+                              operation, lattice->mpi_comm_lat);
             }
         } else {
             if (hila::myrank() == 0) {
                 if (is_nonblocking_) {
                     MPI_Ireduce(MPI_IN_PLACE, (void *)val.data(),
                                 sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
-                                operation, 0, lattice.mpi_comm_lat, &request);
+                                operation, 0, lattice->mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce(MPI_IN_PLACE, (void *)val.data(),
                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
-                               operation, 0, lattice.mpi_comm_lat);
+                               operation, 0, lattice->mpi_comm_lat);
                 }
             } else {
                 if (is_nonblocking_) {
                     MPI_Ireduce((void *)val.data(), (void *)val.data(),
                                 sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
-                                operation, 0, lattice.mpi_comm_lat, &request);
+                                operation, 0, lattice->mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce((void *)val.data(), (void *)val.data(),
                                sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,
-                               operation, 0, lattice.mpi_comm_lat);
+                               operation, 0, lattice->mpi_comm_lat);
                 }
             }
         }

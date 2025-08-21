@@ -52,27 +52,27 @@ class Reduction {
         if (is_allreduce()) {
             if (is_nonblocking()) {
                 MPI_Iallreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
-                               dtype, operation, lattice.mpi_comm_lat, &request);
+                               dtype, operation, lattice->mpi_comm_lat, &request);
             } else {
                 MPI_Allreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
-                              dtype, operation, lattice.mpi_comm_lat);
+                              dtype, operation, lattice->mpi_comm_lat);
             }
         } else {
             if (hila::myrank() == 0) {
                 if (is_nonblocking()) {
                     MPI_Ireduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
-                                dtype, operation, 0, lattice.mpi_comm_lat, &request);
+                                dtype, operation, 0, lattice->mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
-                               dtype, operation, 0, lattice.mpi_comm_lat);
+                               dtype, operation, 0, lattice->mpi_comm_lat);
                 }
             } else {
                 if (is_nonblocking()) {
                     MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
-                                operation, 0, lattice.mpi_comm_lat, &request);
+                                operation, 0, lattice->mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype,
-                               operation, 0, lattice.mpi_comm_lat);
+                               operation, 0, lattice->mpi_comm_lat);
                 }
             }
         }
@@ -374,14 +374,14 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
         // after allreduce rdata contains the min value and rank where it is
         if (is_min) {
-            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MINLOC, lattice.mpi_comm_lat);
+            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MINLOC, lattice->mpi_comm_lat);
         } else {
-            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MAXLOC, lattice.mpi_comm_lat);
+            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MAXLOC, lattice->mpi_comm_lat);
         }
         val = rdata.v;
 
         // send the coordinatevector of the minloc to all nodes
-        MPI_Bcast(&loc, sizeof(CoordinateVector), MPI_BYTE, rdata.rank, lattice.mpi_comm_lat);
+        MPI_Bcast(&loc, sizeof(CoordinateVector), MPI_BYTE, rdata.rank, lattice->mpi_comm_lat);
     }
 
     return val;

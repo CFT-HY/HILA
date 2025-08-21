@@ -88,7 +88,7 @@ void hila::seed_random(uint64_t seed, bool device_init) {
     rng_is_initialized = true;
 
     if (!lattice.is_initialized()) {
-        hila::error("lattice.initialize() must be called before hila::seed_random()");
+        hila::error("lattice.setup() must be called before hila::seed_random()");
     }
 
 

@@ -74,6 +74,10 @@ void hila::initialize(int argc, char **argv) {
 #endif
 #endif
 
+    // First, get the base lattice_struct - used for storing basic data
+    lattice_struct * base_lat = new lattice_struct;
+    lattice.set(base_lat);
+
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);
 
@@ -137,7 +141,7 @@ void hila::initialize(int argc, char **argv) {
 
     // check the "-check" -input early
     // do it only with 1 node
-    if (lattice.nodes.number == 1) {
+    if (lattice->nodes.number == 1) {
         // Check whether '-check' was found and only then search for '-n'
         if (hila::cmdline.flag_present("-check")) {
 
@@ -152,8 +156,8 @@ void hila::initialize(int argc, char **argv) {
             hila::out << "****** INPUT AND LAYOUT CHECK ******" << std::endl;
 
             // reset node variables
-            lattice.mynode.rank = 0;
-            lattice.nodes.number = hila::check_with_nodes;
+            lattice.ptr()->mynode.rank = 0;
+            lattice.ptr()->nodes.number = hila::check_with_nodes;
         }
     }
 
@@ -166,7 +170,7 @@ void hila::initialize(int argc, char **argv) {
             device = 0;
         hila::out0 << "Chose device " << device << "\n";
 
-        initialize_gpu(lattice.mynode.rank, device);
+        initialize_gpu(lattice->mynode.rank, device);
     }
 #endif
 
@@ -299,8 +303,8 @@ void hila::finishrun() {
     report_timers();
 
 
-    int64_t gathers = lattice.n_gather_done;
-    int64_t avoided = lattice.n_gather_avoided;
+    int64_t gathers = hila::n_gather_done;
+    int64_t avoided = hila::n_gather_avoided;
 
     if (gathers + avoided > 0) {
         hila::out0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
