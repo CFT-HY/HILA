@@ -76,7 +76,7 @@ void hila::initialize(int argc, char **argv) {
 
     // First, get the base lattice_struct - used for storing basic data
     lattice_struct * base_lat = new lattice_struct;
-    lattice.set(base_lat);
+    lattice.set_lattice_pointer(base_lat);
 
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);

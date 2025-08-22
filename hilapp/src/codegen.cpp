@@ -102,6 +102,19 @@ void TopLevelVisitor::create_reduction_list(std::list<var_info> &vi_list,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Helper for printing filename and line on the file
+///////////////////////////////////////////////////////////////////////////////
+
+std::string TopLevelVisitor::get_filename_and_line(Stmt *S) {
+    std::stringstream result;
+    result << "File " << srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin()).str()
+           << " on line "
+           << srcMgr.getSpellingLineNumber(get_real_range(S->getSourceRange()).getBegin());
+    return result.str();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 /// The main entry point for code generation
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -195,6 +208,13 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             code << l.new_name << ".check_alloc();\n";
         }
 
+    for (field_info &l : field_info_list) {
+        code << "if (" << l.new_name << ".fs->mylattice.ptr() != lattice.ptr()) {"
+             << "hila::out0 << \"" << get_filename_and_line(S) << ": Field " << l.old_name
+             << " initialized on different lattice\\n\";\n"
+             << "hila::terminate(1);\n}\n";
+    }
+
     // Check that read fields are initialized
     for (field_info &l : field_info_list) {
         if (l.is_read_nb || l.is_read_atX) {
@@ -215,13 +235,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
             if (cmdline::check_initialization) {
 
-                std::string fname =
-                    srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin()).str();
-                code << "if (!" << l.new_name << ".is_initialized(" << init_par
-                     << ")){\nhila::out0 << \"File " << fname << " on line "
-                     << srcMgr.getSpellingLineNumber(get_real_range(S->getSourceRange()).getBegin())
-                     << ":\\n Value of variable " << l.old_name
-                     << " is used but it is not properly initialized\\n\";\n";
+                code << "if (!" << l.new_name << ".is_initialized(" << init_par << ")) {\n";
+                code << "hila::out0 << \"" << get_filename_and_line(S) << ":\\n Variable "
+                     << l.old_name << " is not properly initialized\\n\";\n";
                 code << "hila::terminate(1);\n}\n";
             }
         }

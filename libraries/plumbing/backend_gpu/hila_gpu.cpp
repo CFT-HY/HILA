@@ -170,19 +170,13 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
               gpuMemcpyHostToDevice);
     free(tmp);
 
-    gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
-                      gpuMemcpyHostToDevice);
-
 
 #endif
 
     // Other backend_lattice parameters
     field_alloc_size = lat.mynode.field_alloc_size;
 
-    gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
-                      gpuMemcpyHostToDevice);
-
-    set_lattice_globals(lat);
+    set_device_globals(lat);
 }
 
 #endif // not HILAPP
@@ -190,7 +184,17 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 // set some gobal variables, visible on GPUs
 // thus, hilapp needs to see this definition
 
-void backend_lattice_struct::set_lattice_globals(lattice_struct &lat) {
+void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
+
+    
+#ifdef EVEN_SITES_FIRST
+
+    gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
+                      gpuMemcpyHostToDevice);
+#endif
+    
+    gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
+                      gpuMemcpyHostToDevice);
 
     _d_volume = lat.l_volume;
     _d_size = lat.l_size;

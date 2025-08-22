@@ -774,7 +774,7 @@ void test_extended() {
     Field<double> g;
 
     ExtendedPrecision e = 2.4;
-    e = 5 * e - e - e - 3*e;
+    e = 5 * e - e - e - 3 * e;
     report_pass("ExtendedPrecision basic arithmetics: " + hila::prettyprint(e), fabs(e.to_double()),
                 1e-20);
 
@@ -946,6 +946,24 @@ int main(int argc, char **argv) {
     test_matrix_algebra();
     test_extended();
     test_clusters();
+
+    CoordinateVector blocking;
+    blocking.fill(2);
+    if (lattice.can_block(blocking)) {
+        lattice.block(blocking);
+        hila::out0 << "Blocking lattice to size " << lattice.size() << '\n';
+
+        test_site_access();
+        test_set_elements_and_select();
+
+        lattice.unblock();
+        hila::print_dashed_line();
+        hila::out0 << "Return lattice to size " << lattice.size() << '\n';
+
+        test_site_access();
+        test_set_elements_and_select();
+    }
+
 
     hila::finishrun();
 }

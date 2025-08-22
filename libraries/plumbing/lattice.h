@@ -70,9 +70,11 @@ class lattice_struct {
 
     int l_label; // running number, identification of the lattice (TODO)
 
-
     // Guarantee 64 bits for these - 32 can overflow!
     MPI_Comm mpi_comm_lat;
+
+    // is this lattice derived from another, through e.g. .block()?  Pointer to parent lattice
+    lattice_struct *parent;
 
     /// Information about the node stored on this process
     struct node_struct {
@@ -80,7 +82,6 @@ class lattice_struct {
         size_t volume, evensites, oddsites;
         size_t field_alloc_size;    // how many sites/node in allocations
         CoordinateVector min, size; // node local coordinate ranges
-        unsigned nn[NDIRS];         // nn-node of node down/up to dirs
         int rank;                   // rank of this node
         bool first_site_even;       // is location min even or odd?
 
@@ -182,7 +183,7 @@ class lattice_struct {
             }
         }
 
-        void reset() {
+        void init() {
             sites = evensites = oddsites = 0;
             buffer = 0;
             sitelist = nullptr;
@@ -368,14 +369,20 @@ class lattice_struct {
 
     bool is_this_odd_boundary(Direction d) const;
 
-    int block(const CoordinateVector &blocking_factor);
+    lattice_struct * block(const CoordinateVector &blocking_factor);
 
     bool can_block(const CoordinateVector &blocking_factor) const;
 
     void setup_blocked_lattice(const CoordinateVector &vol, int label,
-                               const lattice_struct &orig_lattice);
+                               lattice_struct &orig_lattice);
+
+    void set_lattice_globals() const;
+    
 };
 
+
+/// and the listing of lattices
+extern std::vector<lattice_struct *> defined_lattices;
 
 class lattice_struct_ptr {
 
@@ -384,8 +391,14 @@ class lattice_struct_ptr {
     lattice_struct *lat_ptr = nullptr;
 
   public:
-    void set(lattice_struct * lat) {
+    void set_lattice_pointer(lattice_struct *lat) {
         lat_ptr = lat;
+    }
+
+    lattice_struct *switch_to(lattice_struct *lat) {
+        lat_ptr = lat;
+        lat->set_lattice_globals();
+        return lat;
     }
 
     bool is_initialized() const {
@@ -422,17 +435,36 @@ class lattice_struct_ptr {
         return lat_ptr;
     }
 
-    inline const lattice_struct & ref() const {
+    inline const lattice_struct &ref() const {
         return *lat_ptr;
+    }
+
+    bool can_block(const CoordinateVector &cv) const {
+        return lat_ptr->can_block(cv);
+    }
+
+    lattice_struct *block(const CoordinateVector &cv) {
+        return lat_ptr->block(cv);
+    }
+
+    bool is_base_lattice() const {
+        return lat_ptr == defined_lattices.front();
+    }
+
+    lattice_struct *unblock() {
+        if (lat_ptr->parent != nullptr) {
+            return switch_to(lat_ptr->parent);
+        } else {
+            hila::out0 << "ERROR : cannot unblock lattice, no parent\n";
+            hila::terminate(0);
+            return lat_ptr;
+        }
     }
 };
 
 
 /// global handle to lattice
 extern lattice_struct_ptr lattice;
-
-/// and the listing of lattices
-extern std::vector<lattice_struct *> defined_lattices;
 
 
 #ifdef VANILLA
