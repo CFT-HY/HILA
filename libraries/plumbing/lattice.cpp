@@ -36,6 +36,7 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
 
     l_label = defined_lattices.size();
     defined_lattices.push_back(this);
+    parent = nullptr; // this has no parent lattice
 
     l_volume = 1;
     foralldir(i) {
@@ -105,6 +106,8 @@ int lattice_struct::node_rank(const CoordinateVector &loc) const {
     }
 
     /* do we want to remap this?  YES PLEASE */
+    if (i < 0 || i >= hila::number_of_nodes())
+        hila::out << "NODE NUMBER " << i << " CV " << loc << " MYNODE " << hila::myrank() << '\n';
     i = nodes.remap(i);
 
     return (i);
@@ -386,15 +389,6 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     first_site_even = (min.parity() == EVEN);
     parent = &lattice;
 
-    // neighbour node indices
-    foralldir(d) {
-        CoordinateVector l = min; // this is here on purpose
-        l[d] = (min[d] + size[d]) % lattice.l_size[d];
-        nn[d] = lattice.node_rank(l);
-        l[d] = (lattice.l_size[d] + min[d] - 1) % lattice.l_size[d];
-        nn[opp_dir(d)] = lattice.node_rank(l);
-    }
-
     // map site indexes to locations -- coordinates array
     // after the above site_index should work
 
@@ -496,8 +490,8 @@ void lattice_struct::create_std_gathers() {
         // NOTE: this is not the send to Direction d, but to -d!
         comm_node_struct &to_node = nn_comminfo[-d].to_node;
 
-        from_node.reset();
-        to_node.reset();
+        from_node.init();
+        to_node.init();
 
         // if there are no communications the rank is left as is
 
@@ -542,16 +536,10 @@ void lattice_struct::create_std_gathers() {
 
         assert(from_node.sites == to_node.sites);
 
-        if (from_node.sites > 0) {
+        if (to_node.sites > 0) {
 
             // sitelist tells us which sites to send
             to_node.sitelist = (unsigned *)memalloc(to_node.sites * sizeof(unsigned));
-
-#ifndef VANILLA
-            // non-vanilla code MAY want to have receive buffers, so we need mapping to
-            // field
-            from_node.sitelist = (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
-#endif
 
             // set the remaining neighbour array indices and sitelists in another go
             // over sites. temp counters NOTE: ordering is automatically right: with a
@@ -566,16 +554,10 @@ void lattice_struct::create_std_gathers() {
 
                     if (l.parity() == EVEN) {
                         neighb[d][i] = c_offset + from_even;
-#ifndef VANILLA
-                        from_node.sitelist[from_even] = i;
-#endif
                         ++from_even;
 
                     } else {
                         neighb[d][i] = c_offset + from_node.evensites + from_odd;
-#ifndef VANILLA
-                        from_node.sitelist[from_odd + from_node.evensites] = i;
-#endif
                         ++from_odd;
                     }
 
@@ -587,6 +569,12 @@ void lattice_struct::create_std_gathers() {
                     }
                 }
             }
+
+#if defined(CUDA) || defined(HIP)
+            auto p = copy_array_to_gpu(to_node.sitelist, to_node.sites);
+            free(to_node.sitelist);
+            to_node.sitelist = p;
+#endif
         }
 
         // and advance offset for next direction
@@ -618,6 +606,8 @@ static_assert(NDIM <= 4 && "Dimensions at most 4 in dir_mask_t = unsigned char! 
                            "larger type to circumvent");
 
 void lattice_struct::initialize_wait_arrays() {
+
+#if !(defined(CUDA) || defined(HIP))
     int i, dir;
 
     /* Allocate here the mask array needed for forallsites_wait
@@ -637,6 +627,7 @@ void lattice_struct::initialize_wait_arrays() {
                 wait_arr_[i] = wait_arr_[i] | (1 << odir);
         }
     }
+#endif
 }
 
 
@@ -761,6 +752,13 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
 #endif // SPECIAL_BOUNDARY_CONDITIONS
 
 
+void lattice_struct::set_lattice_globals() const {
+#if defined(CUDA) || defined(HIP)
+    this->backend_lattice->set_device_globals(*this);
+#endif
+}
+
+
 bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
 
 #ifdef SUBNODE_LAYOUT
@@ -773,7 +771,7 @@ bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
             hila::out0 << "ERROR: invalid blocking factor " << blocking_factor[d] << '\n';
             hila::terminate(0);
         }
-        ok = ok && (lattice.size(d) % blocking_factor[d] == 0);
+        ok = ok && (l_size[d] % blocking_factor[d] == 0);
     }
     return ok;
 
@@ -781,46 +779,41 @@ bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
 }
 
 
-int lattice_struct::block(const CoordinateVector &blocking_factor) {
+lattice_struct *lattice_struct::block(const CoordinateVector &blocking_factor) {
     if (!can_block(blocking_factor)) {
         hila::out0 << "Cannot block lattice with factor " << blocking_factor << '\n';
         hila::terminate(0);
     }
 
     CoordinateVector blockvol;
-    foralldir(d) blockvol[d] = lattice.size(d) / blocking_factor[d];
+    foralldir(d) blockvol[d] = l_size[d] / blocking_factor[d];
 
     hila::synchronize();
 
-    int i = 0;
-    bool found = false;
-    for (auto * l : defined_lattices) {
+    for (auto *l : defined_lattices) {
         if (l->l_size == blockvol) {
-            found = true;
-            break;
+            lattice.switch_to(l);
+            return l;
         }
-        i++;
     }
 
-    if (!found) {
-        // Now did not find a lattice, make one
+    // Now did not find a lattice, make one
 
-        i = defined_lattices.size(); // label for new lattice
+    int i = defined_lattices.size(); // label for new lattice
 
-        auto * lp = new lattice_struct;
+    auto *lp = new lattice_struct;
 
-        defined_lattices.push_back(lp);
-        lp->setup_blocked_lattice(blockvol, i, lattice.ref());
-    }
+    defined_lattices.push_back(lp);
+    lp->setup_blocked_lattice(blockvol, i, *this);
 
-    lattice.set(defined_lattices[i]);
-
-    return i;
+    return lp;
 }
 
 
 void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int label,
-                                           const lattice_struct &orig) {
+                                           lattice_struct &orig) {
+
+    lattice.set_lattice_pointer(this);
 
     l_label = label;
 
@@ -830,12 +823,39 @@ void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int labe
         l_volume *= siz[i];
     }
 
+    parent = &orig;
+
+    mpi_comm_lat = orig.mpi_comm_lat;
+
+    // set the layout by hand from orig lattice
     nodes.n_divisions = orig.nodes.n_divisions;
-
     nodes.number = orig.nodes.number;
+    setup_node_divisors();
 
+    nodes.map_array = orig.nodes.map_array;
+    nodes.map_inverse = orig.nodes.map_inverse;
 
-    // layout: just copy from parent
+    setup_nodes();
+    create_std_gathers();
+
+    initialize_wait_arrays();
+
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+    // do this after std. boundary is done
+    init_special_boundaries();
+#endif
+
+    // Alignment: set field_alloc_size to be divisible by 256
+    if (mynode.field_alloc_size % 256 > 0)
+        mynode.field_alloc_size += 256 - mynode.field_alloc_size % 256;
+
+#ifndef VANILLA
+    /* Setup backend-specific lattice info if necessary */
+    backend_lattice = new backend_lattice_struct;
+    backend_lattice->setup(*this);
+#endif
+
+    test_std_gathers();
 }
 
 

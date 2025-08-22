@@ -41,7 +41,7 @@ __device__ inline auto field_storage<T>::get(const unsigned i,
     } u;
     const base_t *fp = (base_t *)(fieldbuf);
     for (unsigned e = 0; e < n_elements; e++) {
-         u.arr[e] = fp[e * field_alloc_size + i];
+        u.arr[e] = fp[e * field_alloc_size + i];
     }
     return u.value;
 
@@ -210,8 +210,9 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
 #endif
 
 template <typename T>
-__global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer, unsigned *site_index,
-                                            const int n, const unsigned field_alloc_size) {
+__global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer,
+                                            const unsigned *site_index, const int n,
+                                            const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
         using base_t = hila::arithmetic_type<T>;
@@ -228,7 +229,7 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer, u
 // gather -elements only if unary - exists
 template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
 __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *buffer,
-                                                    unsigned *site_index, const int n,
+                                                    const unsigned *site_index, const int n,
                                                     const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
@@ -243,31 +244,6 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
     }
 }
 
-// Index list is constant? Map each cpu pointer to a device pointer and copy just once
-struct cuda_comm_node_struct {
-    const unsigned *cpu_index;
-    unsigned *gpu_index;
-    int n;
-};
-
-inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node, Parity par,
-                                int &n) {
-    static std::vector<struct cuda_comm_node_struct> comm_nodes;
-
-    const unsigned *cpu_index = to_node.get_sitelist(par, n);
-    for (struct cuda_comm_node_struct comm_node : comm_nodes) {
-        if (cpu_index == comm_node.cpu_index && n == comm_node.n) {
-            return comm_node.gpu_index;
-        }
-    }
-    struct cuda_comm_node_struct comm_node;
-    comm_node.cpu_index = cpu_index;
-    comm_node.n = n;
-    gpuMalloc(&(comm_node.gpu_index), n * sizeof(unsigned));
-    gpuMemcpy(comm_node.gpu_index, cpu_index, n * sizeof(unsigned), gpuMemcpyHostToDevice);
-    comm_nodes.push_back(comm_node);
-    return comm_node.gpu_index;
-}
 
 // MPI buffer on the device. Use the gather_elements and gather_elements_negated
 // kernels to fill the buffer.
@@ -277,7 +253,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
                                             Parity par, const lattice_struct_ptr lattice,
                                             bool antiperiodic) const {
     int n;
-    unsigned *d_site_index = get_site_index(to_node, par, n);
+    const unsigned *d_site_index = to_node.get_sitelist(par, n);
     T *d_buffer;
 
 #ifdef GPU_AWARE_MPI
@@ -290,7 +266,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
 
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
-#ifdef SPECIAL_BOUNDARY_CONDITIONS    
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
     if (antiperiodic) {
 
         if constexpr (hila::has_unary_minus<T>::value) {
@@ -305,7 +281,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
 #else
     gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                          lattice->mynode.field_alloc_size);
-#endif    
+#endif
 
 #ifndef GPU_AWARE_MPI
     // Copy the result to the host

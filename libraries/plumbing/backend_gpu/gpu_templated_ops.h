@@ -455,7 +455,17 @@ void gpu_set_value(T *vec, const T &val, size_t N) {
 //     gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 // }
 
-
 #endif // !HILAPP
+
+/// Just copy the array to GPU memory, returning its device address
+template <typename T>
+T * copy_array_to_gpu(T *data, int n) {
+    T * buf;
+    gpuMalloc(&buf,n*sizeof(T));
+    gpuMemcpy(buf, data, n * sizeof(T), gpuMemcpyHostToDevice);
+    return buf;
+}
+
+
 
 #endif

@@ -12,17 +12,17 @@ void gather_test() {
     }
 
     if (s != lattice.volume()) {
-        hila::out0 << " Reduction test error!  Sum " << s << " should be "
-                << lattice.volume() << '\n';
+        hila::out0 << " Reduction test error!  Sum " << s << " should be " << lattice.volume()
+                   << '\n';
         hila::terminate(1);
     }
 
 
-    foralldir (d) {
+    foralldir(d) {
 
         CoordinateVector dif1 = 0, dif2 = 0;
         Field<CoordinateVector> f1, f2;
-        
+
         onsites(ALL) {
             f1[X] = X.coordinates();
             f2[X] = (X.coordinates() + d).mod(lattice.size());
@@ -34,17 +34,17 @@ void gather_test() {
         }
 
         if (dif1.squarenorm() != 0) {
-            hila::out0 << " Std up-gather test error! Node " << hila::myrank()
-                    << " direction " << hila::prettyprint(d) << " dif1 " << dif1 << '\n';
+            hila::out0 << " Std up-gather test error! Node " << hila::myrank() << " direction "
+                       << hila::prettyprint(d) << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
 
         if (dif2.squarenorm() != 0) {
-            hila::out0 << " Std down-gather test error! Node " << hila::myrank()
-                    << " direction " << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
+            hila::out0 << " Std down-gather test error! Node " << hila::myrank() << " direction "
+                       << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
             hila::terminate(1);
         }
-        
+
         onsites(EVEN) {
             dif1 += abs(f1[X + d] - f2[X]);
             dif2 += abs(f1[X] - f2[X - d]);
@@ -52,13 +52,13 @@ void gather_test() {
 
         if (dif1.squarenorm() != 0) {
             hila::out0 << " EVEN parity up-gather test error! Node " << hila::myrank()
-                    << " direction " << hila::prettyprint(d) << " dif1 " << dif1 << '\n';
+                       << " direction " << hila::prettyprint(d) << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
 
         if (dif2.squarenorm() != 0) {
             hila::out0 << " EVEN parity down-gather test error! Node " << hila::myrank()
-                    << " direction " << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
+                       << " direction " << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
             hila::terminate(1);
         }
 

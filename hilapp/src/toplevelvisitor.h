@@ -209,6 +209,9 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Code generation headers start here
     /// Starting point for new code
     void generate_code(Stmt *S);
+
+    std::string get_filename_and_line(Stmt *S);
+
     void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par);
 
     std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,

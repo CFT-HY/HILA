@@ -17,12 +17,12 @@
 /// If 1 is not true, an error message is printed suggesting recompilation of hilapp.
 /// If 2 is not true, an error message suggests updating hila framework (git pull)
 ///
-/// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible 
+/// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible
 /// change is made.  This is the default below.
 
-#define HILA_SIGNATURE_NUMBER    4
+#define HILA_SIGNATURE_NUMBER    5
 
-#define MINIMUM_HILAPP_SIGNATURE 4
-#define MINIMUM_HILA_SIGNATURE   4
+#define MINIMUM_HILAPP_SIGNATURE 5
+#define MINIMUM_HILA_SIGNATURE   5
 
 #endif

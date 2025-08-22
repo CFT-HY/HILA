@@ -450,7 +450,9 @@ template <typename T>
 Field<T> Field<T>::FFT(fft_direction fftdir) const {
     CoordinateVector cv;
     cv.fill(true);
-    return FFT(cv, fftdir);
+    Field<T> res;
+    FFT_field(*this, res, cv, fftdir);
+    return res;
 }
 
 

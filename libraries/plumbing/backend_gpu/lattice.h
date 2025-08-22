@@ -55,7 +55,7 @@ struct backend_lattice_struct {
     /// setup the backend lattice data
     void setup(lattice_struct &lattice);
 
-    void set_lattice_globals(lattice_struct &lattice);
+    void set_device_globals(const lattice_struct &lattice);
 };
 
 ////////////////////////////////////////////////////////////////////////////
