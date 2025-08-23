@@ -10,6 +10,8 @@
 #%                                                   K=2: "Luscher-Weisz"
 #%                                                   K=3: "IWASAKI"         (default)
 #%                                                   K=4: "DBW2"
+#%    BCOPEN=<dir>           - Use open boundary conditions in direction <dir> for heat-batch
+#&                             and overraxation updates. (default: -1 (no open boundary))
 
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
@@ -22,6 +24,9 @@ NCOL := 3
 # "WILSON": 0, "BP": 1, "LW": 2, "IWASAKI": 3, "DBW2": 4
 GFLOWS := 3
 
+# Open boundary conditions?
+# off: -1, ex_: 0, e_y: 1, e_z: 2, e_t: 3
+BCOPEN := -1
 
 ifndef ARCH
 ARCH := vanilla
@@ -37,7 +42,7 @@ include $(HILA_DIR)/libraries/main.mk
 #HILAPP_OPTS += -comment-pragmas
 HILAPP_OPTS += -check-init
 
-APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL} -DGFLOWACTION=${GFLOWS}
+APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL} -DGFLOWACTION=${GFLOWS} -DBCOPEN=${BCOPEN}
 
 ifdef SUN_OVERRELAX_dFJ
 APP_OPTS += -DSUN_OVERRELAX_dFJ
@@ -46,10 +51,10 @@ endif
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-suN_gauge_gf: build/su${NCOL}_gauge_gf_fs${GFLOWS}_${ARCH} ; @:
+suN_gauge_gf: build/su${NCOL}_gauge_gf_fs${GFLOWS}_bco${BCOPEN}_${ARCH} ; @:
 
 # Now the linking step for each target executable
-build/su${NCOL}_gauge_gf_fs${GFLOWS}_${ARCH}: Makefile build/suN_gauge_gf.o $(HILA_OBJECTS) $(HEADERS)
+build/su${NCOL}_gauge_gf_fs${GFLOWS}_bco${BCOPEN}_${ARCH}: Makefile build/suN_gauge_gf.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/suN_gauge_gf.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) 
 
 
