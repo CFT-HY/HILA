@@ -176,6 +176,69 @@ void Field<T>::read(std::ifstream &inputfile) {
     std::free(buffer);
 }
 
+/// Read the Field from a stream
+template <typename T>
+void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
+    constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
+    constexpr size_t read_size = sites_per_read * sizeof(T);
+
+    if (!this->is_allocated())
+        this->allocate();
+
+    mark_changed(ALL);
+
+    std::vector<CoordinateVector> coord_list(sites_per_read);
+    T *buffer = (T *)memalloc(read_size);
+
+    CoordinateVector lsize = lattice.size();
+    int scalef[NDIM];
+    size_t tvol = 1;
+    size_t scvol = 1;
+    foralldir(d) {
+        scalef[d] = lsize[d] / insize[d];
+        tvol *= insize[d];
+        scvol *= scalef[d];
+    }
+
+    for (size_t i = 0; i < tvol; i += sites_per_read) {
+        size_t sites = std::min(sites_per_read, tvol - i);
+        if (hila::myrank() == 0) {
+            inputfile.read((char *)buffer, sites * sizeof(T));
+        }
+        
+        for (size_t j = 0; j < sites; j++) {
+            size_t ind = i + j;
+            foralldir(dir) {
+                coord_list[j][dir] = ind % insize[dir];
+                ind /= insize[dir];
+            }
+        }
+
+        if (sites < sites_per_read) {
+            coord_list.resize(sites);
+        }
+
+        fs->scatter_elements(buffer, coord_list);
+
+        // if input lattice fits multiple times on the current lattice size,
+        // replicate input lattice to fill current lattice:
+        for (size_t sci = 1; sci < scvol; ++sci) {
+            std::vector<CoordinateVector> tcoord_list(coord_list.size());
+            size_t ind = sci;
+            foralldir(dir) {
+                int tsf = ind % scalef[dir];
+                ind /= scalef[dir];
+                for (size_t j = 0; j < sites; j++) {
+                    tcoord_list[j][dir] = (coord_list[j][dir] + tsf * insize[dir]) % lsize[dir];
+                }
+            }
+            fs->scatter_elements(buffer, tcoord_list);
+        }
+    }
+
+    std::free(buffer);
+}
+
 // Read Field contents from the beginning of a file
 template <typename T>
 void Field<T>::read(const std::string &filename) {

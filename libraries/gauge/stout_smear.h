@@ -311,7 +311,7 @@ void stout_smeark_force(
                 // turn staple sum into plaquette sum by multiplying with link variable:
                 // T tplaqs = U[d1][X] * staps[X];
                 T tplaqs = U[d1][X] * staps[d1][X];
-                // the following function computes first for X = -coeff * tplaqs the smearing
+                // the following function computes first for X = (-coeff * tplaqs).project_to_algebra() the smearing
                 // operator Q = exp(X) and its derivatives dQ/dX[][], and uses these to
                 // compute the two matrices:
                 // mtexp = Q.dagger() * KS[d1][X].expand() * Q

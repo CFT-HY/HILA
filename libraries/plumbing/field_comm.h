@@ -570,7 +570,7 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
     std::fill(sites_on_rank.begin(), sites_on_rank.end(), 0);
 
     int nranks = 0;
-    int i = 0;
+    size_t i = 0;
     for (CoordinateVector c : coord_list) {
         int rank = lattice->node_rank(c);
         if (hila::myrank() == rank) {
@@ -587,7 +587,7 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
     //                         recv_buffer.size(), lattice);
 
     if (hila::myrank() != root && sites_on_rank[hila::myrank()] > 0) {
-        std::vector<T> recv_buffer(index_list.size());
+        std::vector<T> recv_buffer(sites_on_rank[hila::myrank()]);
         MPI_Status status;
 
         MPI_Recv((char *)recv_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T), MPI_BYTE,
@@ -608,12 +608,11 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
             nloc[n] = nloc[n - 1] + sites_on_rank[n - 1];
             ncount[n] = 0;
         }
-        for (int i = 0; i < coord_list.size(); i++) {
+        for (size_t i = 0; i < coord_list.size(); i++) {
             int node = reshuffle_list[i];
             pb[nloc[node] + ncount[node]] = buffer[i];
             ncount[node]++;
         }
-
         std::vector<MPI_Request> mpi_req(nranks);
         int nreqs = 0;
         for (int n = 0; n < sites_on_rank.size(); n++) {
@@ -624,15 +623,16 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
                 }
             }
         }
-
-        payload.place_elements(pb.data() + nloc[root], index_list.data(), index_list.size(),
+        if(sites_on_rank[root] > 0) {
+            payload.place_elements(pb.data() + nloc[root], index_list.data(), index_list.size(),
                                lattice);
-
+        }
         if (nreqs > 0) {
             std::vector<MPI_Status> stat_arr(nreqs);
             MPI_Waitall(nreqs, mpi_req.data(), stat_arr.data());
         }
     }
+    //MPI_Barrier(lattice.mpi_comm_lat);
 }
 
 template <typename T>

@@ -139,7 +139,7 @@ void lattice_struct::setup_node_divisors() {
 
 
 ///////////////////////////////////////////////////////////////////////
-/// Is the coordinate on THIS node
+/// Is the coordinate on THIS node ?
 ///////////////////////////////////////////////////////////////////////
 
 bool lattice_struct::is_on_mynode(const CoordinateVector &loc) const {
@@ -608,7 +608,6 @@ static_assert(NDIM <= 4 && "Dimensions at most 4 in dir_mask_t = unsigned char! 
 void lattice_struct::initialize_wait_arrays() {
 
 #if !(defined(CUDA) || defined(HIP))
-    int i, dir;
 
     /* Allocate here the mask array needed for forallsites_wait
      * This will contain a bit at location dir if the neighbour
