@@ -456,7 +456,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
             wait_receive_timer.stop();
 
-#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) 
+#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST)
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
 #endif
         }
@@ -916,5 +916,103 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 #endif
 }
 
+
+template <typename T>
+void Field<T>::block_from(Field<T> &orig) {
+    assert(orig.is_initialized(ALL) && "block_from()-method field is not initialized");
+
+    this->check_alloc();
+    lattice_struct *blocklat = this->fs->mylattice.ptr();
+    lattice_struct *parentlat = orig.fs->mylattice.ptr();
+    lattice_struct *currentlat = lattice.ptr();
+
+    assert(blocklat->parent == parentlat && "blocking must happen from parent lattice Field");
+
+    // If no sites on this node there's nothing to do
+    if (blocklat->mynode.volume == 0)
+        return;
+
+
+    // alloc temp array, size of the blocked lattice
+    size_t bufsize = blocklat->mynode.volume;
+    T *buf = (T *)d_malloc(bufsize * sizeof(T));
+
+    // switch to parent if needed
+    lattice.switch_to(parentlat);
+
+    CoordinateVector blockfactor = parentlat->l_size.element_div(blocklat->l_size);
+    CoordinateVector cvmin = blocklat->mynode.min;
+    auto size_factor = blocklat->mynode.size_factor;
+
+#pragma hila direct_access(buf)
+    onsites(ALL) {
+        if (X.coordinates().is_divisible(blockfactor)) {
+            // get blocked coords logically on this
+            Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
+            buf[cv.dot(size_factor)] = orig[X];
+        }
+    }
+
+    lattice.switch_to(blocklat);
+
+#pragma hila direct_access(buf)
+    onsites(ALL) {
+        // get blocked coords logically on this node
+        Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
+        (*this)[X] = buf[cv.dot(size_factor)];
+    }
+
+    lattice.switch_to(currentlat);
+
+    d_free(buf);
+}
+
+template <typename T>
+void Field<T>::unblock_to(Field<T> &target) const {
+    assert(this->is_initialized(ALL) && "unblock_to()-method field is not initialized");
+    target.check_alloc();
+
+    lattice_struct *blocklat = this->fs->mylattice.ptr();
+    lattice_struct *parentlat = target.fs->mylattice.ptr();
+    lattice_struct *currentlat = lattice.ptr();
+
+    assert(blocklat->parent == parentlat && "unblocking must happen to parent lattice Field");
+
+    // If no sites on this node there's nothing to do
+    if (blocklat->mynode.volume == 0)
+        return;
+
+    // alloc temp array, size of the blocked lattice
+    size_t bufsize = blocklat->mynode.volume;
+    T *buf = (T *)d_malloc(bufsize * sizeof(T));
+
+    CoordinateVector blockfactor = parentlat->l_size.element_div(blocklat->l_size);
+    CoordinateVector cvmin = blocklat->mynode.min;
+    auto size_factor = blocklat->mynode.size_factor;
+
+    lattice.switch_to(blocklat);
+
+#pragma hila direct_access(buf)
+    onsites(ALL) {
+        // get blocked coords logically on this node
+        Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
+        buf[cv.dot(size_factor)] = (*this)[X];
+    }
+
+    lattice.switch_to(parentlat);
+
+#pragma hila direct_access(buf)
+    onsites(ALL) {
+        if (X.coordinates().is_divisible(blockfactor)) {
+            // get blocked coords logically on this
+            Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
+            target[X] = buf[cv.dot(size_factor)];
+        }
+    }
+
+    lattice.switch_to(currentlat);
+
+    d_free(buf);
+}
 
 #endif

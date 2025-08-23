@@ -348,7 +348,7 @@ class Field {
     }
 
     ~Field() {
-        free();
+        clear();
 
 #ifdef HILAPP
         // Because destructor is instantiated for all fields,
@@ -405,7 +405,7 @@ class Field {
      * @brief Destroys field data
      * @details don't call destructors when exiting - either MPI or cuda can already be off.
      */
-    void free() {
+    void clear() {
         if (fs != nullptr && !hila::about_to_finish) {
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
@@ -830,7 +830,7 @@ class Field {
      */
     Field<T> &operator=(Field<T> &&rhs) {
         if (this != &rhs) {
-            free();
+            clear();
             fs = rhs.fs;
             rhs.fs = nullptr;
         }
@@ -1471,6 +1471,62 @@ class Field {
 
     void random();
     void gaussian_random(double width = 1.0);
+
+
+    /**
+     * @brief Fill blocked lattice Field from parent lattice Field (see lattice.block())
+     * 
+     * @details 
+     * If Field<T> a belongs to original (parent) lattice and Field<T> belongs to blocked 
+     * lattice, the operation
+     * @code{.cpp}
+     * b.block_from(a);
+     * @endcode
+     * copies data from the sparse (blocked) sites of a to b.
+     * @example
+     * @code{.cpp}
+     * ...
+     * 
+     * Field<Complex<double>> df;
+     * df.gaussian_random();
+     * smear(df,n);              // do n times semaring op (assuming smear() exists)
+     * 
+     * lattice.block({2,2,2});
+     * Field<Complex<double>> dfb1;
+     * dfb1.block_from(df);
+     * smear(dfb1,n);
+     * 
+     * lattice.block({2,2,2});
+     * Field<Complex<double>> dfb2;
+     * dfb2.block_from(dfb1);
+     * smear(dfb2,n);
+     * 
+     * // analyse dfb2 here ...
+     * 
+     * lattice.switch_to_base();  // undo all blocking
+     * @endcode  
+     * 
+     * The sites which are blocked can be accessed with the CoordinateVector function is_divisible:
+     * @code{.cpp}
+     * CoordinateVector factor = {2,2,2};
+     * onsites(ALL) {
+     *     if (X.coordinates().is_divisible(factor)) {
+     *         // now we're on site which will be copied by .block_from()
+     *         ...
+     *     }
+     * }
+     * @endcode
+     * 
+     */
+    void block_from(Field<T> &orig);
+
+    /**
+     * @brief Copy content to the argument Field on blocked (sparse) sites.
+     * a.unblock_to(b) is the inverse of a.block_from(b)
+     * 
+     * Leaves other sites of the argument Field unmodified.
+     */
+    void unblock_to(Field<T> &target) const;
 
 
 }; // End of class Field<>

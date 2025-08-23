@@ -908,6 +908,52 @@ void test_clusters() {
     }
 }
 
+void test_blocking() {
+
+    CoordinateVector blocking;
+    blocking.fill(2);
+    if (lattice.can_block(blocking)) {
+
+        Field<CoordinateVector> cvf, cvfb;
+        cvf[ALL] = X.coordinates();
+
+        hila::print_dashed_line();
+        lattice.block(blocking);
+        hila::out0 << "Testing blocked lattice of size " << lattice.size() << '\n';
+
+        cvfb.block_from(cvf);
+        double sum = 0;
+        onsites(ALL) {
+            sum += (cvfb[X] - 2*X.coordinates()).squarenorm();
+            cvfb[X] *= -1;
+        }
+
+        report_pass("Field blocking test",sum,1e-5);
+
+        test_site_access();
+        test_set_elements_and_select();
+
+        lattice.unblock();
+        cvfb.unblock_to(cvf);
+
+        hila::print_dashed_line();
+        hila::out0 << "Return lattice to size " << lattice.size() << '\n';
+
+
+        sum = 0;
+        onsites(ALL) {
+            if (X.coordinates().is_divisible({2,2,2})) {
+                sum += (X.coordinates() + cvf[X]).squarenorm();
+            }
+        }
+
+        report_pass("Field unblocking test",sum,1e-5);
+
+        test_site_access();
+        test_set_elements_and_select();
+    }
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -946,24 +992,7 @@ int main(int argc, char **argv) {
     test_matrix_algebra();
     test_extended();
     test_clusters();
-
-    CoordinateVector blocking;
-    blocking.fill(2);
-    if (lattice.can_block(blocking)) {
-        lattice.block(blocking);
-        hila::out0 << "Blocking lattice to size " << lattice.size() << '\n';
-
-        test_site_access();
-        test_set_elements_and_select();
-
-        lattice.unblock();
-        hila::print_dashed_line();
-        hila::out0 << "Return lattice to size " << lattice.size() << '\n';
-
-        test_site_access();
-        test_set_elements_and_select();
-    }
-
+    test_blocking();
 
     hila::finishrun();
 }
