@@ -103,9 +103,11 @@ void test_std_gathers() {
     gpuMemPoolPurge();
 #endif
 
-    hila::out0 << "Communication tests done - time " << hila::gettime() - t0 << "s\n";
+    if (lattice.is_base()) {
+        hila::out0 << "Communication tests done - time " << hila::gettime() - t0 << "s\n";
 
-    hila::print_dashed_line();
+        hila::print_dashed_line();
+    }
 
     if (hila::myrank() == 0)
         hila::out.flush();

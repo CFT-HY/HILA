@@ -751,6 +751,9 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
 
 #endif // SPECIAL_BOUNDARY_CONDITIONS
 
+/**
+ * @internal set lattice global variables, useful for GPUs
+ */
 
 void lattice_struct::set_lattice_globals() const {
 #if defined(CUDA) || defined(HIP)
@@ -759,7 +762,11 @@ void lattice_struct::set_lattice_globals() const {
 }
 
 
-bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
+/**
+ * @internal implementation of lattice.can_block()
+ */
+
+bool lattice_struct::can_block_by_factor(const CoordinateVector &blocking_factor) const {
 
 #ifdef SUBNODE_LAYOUT
     return false; // blocking not implemented for vector layout!
@@ -778,9 +785,12 @@ bool lattice_struct::can_block(const CoordinateVector &blocking_factor) const {
 #endif
 }
 
+/**
+ * @internal implementation of lattice.block()
+ */
 
-lattice_struct *lattice_struct::block(const CoordinateVector &blocking_factor) {
-    if (!can_block(blocking_factor)) {
+lattice_struct *lattice_struct::block_by_factor(const CoordinateVector &blocking_factor) {
+    if (!can_block_by_factor(blocking_factor)) {
         hila::out0 << "Cannot block lattice with factor " << blocking_factor << '\n';
         hila::terminate(0);
     }
@@ -809,6 +819,9 @@ lattice_struct *lattice_struct::block(const CoordinateVector &blocking_factor) {
     return lp;
 }
 
+/**
+ * @internal create blocked lattice
+ */
 
 void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int label,
                                            lattice_struct &orig) {

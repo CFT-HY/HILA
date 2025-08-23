@@ -369,52 +369,64 @@ class lattice_struct {
 
     bool is_this_odd_boundary(Direction d) const;
 
-    lattice_struct * block(const CoordinateVector &blocking_factor);
+    lattice_struct *block_by_factor(const CoordinateVector &blocking_factor);
 
-    bool can_block(const CoordinateVector &blocking_factor) const;
+    bool can_block_by_factor(const CoordinateVector &blocking_factor) const;
 
     void setup_blocked_lattice(const CoordinateVector &vol, int label,
                                lattice_struct &orig_lattice);
 
     void set_lattice_globals() const;
-    
 };
 
 
-/// and the listing of lattices
+/**
+ * @brief global vector of defined lattice pointers
+ */
+
 extern std::vector<lattice_struct *> defined_lattices;
+
+
+/**
+ * @brief main interface to lattice
+ */
 
 class lattice_struct_ptr {
 
   private:
-    // ptr to main lattice
+    // ptr to current lattice_struct
     lattice_struct *lat_ptr = nullptr;
 
   public:
+    /**
+     * @internal Set the lattice_struct pointer only
+     */
+
     void set_lattice_pointer(lattice_struct *lat) {
         lat_ptr = lat;
     }
 
-    lattice_struct *switch_to(lattice_struct *lat) {
-        lat_ptr = lat;
-        lat->set_lattice_globals();
-        return lat;
-    }
+    /**
+     * @internal check if the base lattice has been set
+     */
 
     bool is_initialized() const {
         return lat_ptr != nullptr;
     }
 
-    inline const lattice_struct *operator->() const noexcept {
-        return lat_ptr;
-    }
-
-    // volume
+    /**
+     * @brief lattice.volume() returns int64_t volume
+     * Can be used inside onsites()-loops
+     */
     inline int64_t volume() const {
         return lat_ptr->l_volume;
     }
 
-    // size routines
+    /**
+     * @brief lattice.size() -> CoordinateVector  or lattice.size(d) -> int returns the
+     * dimensions of the lattice
+     * Can be used inside onsites()-loops
+     */
     inline int size(Direction d) const {
         return lat_ptr->l_size[d];
     }
@@ -425,32 +437,119 @@ class lattice_struct_ptr {
         return lat_ptr->l_size;
     }
 
+    /**
+     * @brief lattice.setup(CoordinateVector size) - set up the base lattice. Called at the
+     * beginning of the program
+     */
     void setup(const CoordinateVector &siz) {
         assert(lat_ptr != nullptr);
         lat_ptr->setup_base_lattice(siz);
     }
 
-    // get the ptr as non-const with this function
+    /**
+     * @brief lattice-> defines an operator with which detailed lattice_struct fields
+     * can be accessed.
+     *
+     * @details For example:
+     *  lattice->mynode.min: CoordinateVector of the min-corner managed by this MPI rank
+     *  lattice->mynode.size: CV of the local node dimensions.
+     *
+     *  For further info, check the class lattice_struct.  This cannot be used
+     *  within onsites(), copy the relevant field to local variable first.
+     */
+    inline const lattice_struct *operator->() const noexcept {
+        return lat_ptr;
+    }
+
+    /**
+     * @internal get non-const pointer to lattice_struct (cf. operator ->)
+     */
+
     inline lattice_struct *ptr() const {
         return lat_ptr;
     }
 
+    /**
+     * @brief get const ref to lattice_struct, lattice.ref(). is equivalent to lattice->
+     */
     inline const lattice_struct &ref() const {
         return *lat_ptr;
     }
 
-    bool can_block(const CoordinateVector &cv) const {
-        return lat_ptr->can_block(cv);
+    /**
+     * @brief With a valid lattice_struct pointer, switch this lattice to be active.
+     */
+    lattice_struct *switch_to(lattice_struct *lat) {
+        if (lat_ptr != lat) {
+            lat_ptr = lat;
+            lat->set_lattice_globals();
+        }
+        return lat_ptr;
     }
 
+    /**
+     * @brief Test if lattice can be blocked by factor given in argument.
+     * @details lattice.size() must be element-by-element divisible by factor
+     *
+     * Example: lattice.can_block({2,2,2}) returns true if (3-dim) lattice dimensions are even
+     */
+    bool can_block(const CoordinateVector &factor) const {
+        return lat_ptr->can_block_by_factor(factor);
+    }
+
+    /**
+     * @brief block the lattice by factor, switching to smaller lattice.
+     * @details lattice.size() must be element-by-element divisible by factor
+     *
+     * @example lattice.block({2,2,2}) reduces current lattice size by 2 to each direction.
+     * 
+     * @note Previously used Field variables cannot be used in onsites(). However,
+     * their content can be blocked to new Field with Field<T>::block_from(),
+     * which copies the content from the blocked (sparse) set of sites;
+     * 
+     * @code{.cpp}
+     * Field<double> a;
+     * a[ALL] = X.x() + X.y() + X.z();   // in 3d
+     * 
+     * CoordinateVector factor{2,2,2};
+     * 
+     * lattice.block(factor);
+     * Field<double> b;
+     * 
+     * b.block_from(a);               // Now b contains 0+0+0, 2+0+0 ...
+     * b[ALL] = -b[X];                // Do operations, here flip sign
+     * // onsites(ALL) a[X] = 1;      // ERROR, a belongs to original lattice
+     * b.unblock_to(a);               // copy content of b back to a on blocked sites, 
+     *                                // leaving other sites of a 
+     * lattice.unblock();             // return to original lattice
+     * 
+     * // Now a can be used, it contains -(0+0+0), 1+0+0, -(2+0+0), ... 
+     * @endcode
+     * 
+     * @note Fields which were not used previously can be used in blocked levels, or
+     * their association (and content) can be deleted with .clear():
+     * 
+     * @code{.cpp}
+     * Field<double> a,b;
+     * a = 1;
+     * lattice.block({2,2,1});
+     * b = 2;       // OK, b was not used before blocking
+     * a = 3;       // ERROR; a belongs to non-blocked lattice
+     * a.clear();
+     * a = 3;       // OK, now a belongs to blocked lattice
+     * @endcode
+     * 
+     * 
+     * @returns lattice_struct * to blocked lattice
+     */
     lattice_struct *block(const CoordinateVector &cv) {
-        return lat_ptr->block(cv);
+        return lat_ptr->block_by_factor(cv);
     }
 
-    bool is_base_lattice() const {
-        return lat_ptr == defined_lattices.front();
-    }
-
+    /**
+     * @brief Unblock lattice, returning to parent. Current lattice must be a blocked lattice
+     * @returns lattice_struct * to new lattice
+     */
     lattice_struct *unblock() {
         if (lat_ptr->parent != nullptr) {
             return switch_to(lat_ptr->parent);
@@ -460,10 +559,31 @@ class lattice_struct_ptr {
             return lat_ptr;
         }
     }
+
+    /**
+     * @brief lattice.is_base() is used to check if the current lattice is the original one,
+     * i.e. not a blocked one
+     * @returns true if current lattice is the base lattice, otherwise false
+     */
+
+    bool is_base() const {
+        return lat_ptr == defined_lattices.front();
+    }
+
+    /**
+     * @brief lattice.switch_to_base() switches the base lattice active (if not already)
+     * @returns lattice_struct * for the base lattice
+     */
+
+    lattice_struct *switch_to_base() {
+        return switch_to(defined_lattices.front());
+    }
 };
 
 
-/// global handle to lattice
+/**
+ * @brief global handle to lattice. For methods, see class lattice_struct_ptr
+ */
 extern lattice_struct_ptr lattice;
 
 
