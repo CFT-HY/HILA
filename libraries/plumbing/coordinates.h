@@ -243,10 +243,12 @@ static inline bool is_even_odd_parity(Parity p) {
 }
 
 
-/// Positive mod(): we define here the positive mod utility function pmod(a,b).
-/// It mods the arguments 0 <= a < m.  This is not the standard
-/// for integer operator% in c++, which gives negative results if a<0.  This is useful
-/// in calculating lattice vector additions on a periodic box
+/**
+ * @brief Positive mod(): mods the result so that 0 <= a % b < b.
+ * @details This is not the standard mod for integer operator % in c++,
+ * which gives negative results if a<0.  This is useful in calculating lattice vector
+ * additions on a periodic box. Second arg b must be positive.
+ */
 
 inline int pmod(const int a, const int b) {
     int r = a % b;
@@ -322,16 +324,15 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     //     return v;
     // }
 
-    /// 
+    ///
 
     /// Assignment from vector
-    template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline CoordinateVector_t &operator=(const Vector<NDIM,S> &v) out_only & {
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    inline CoordinateVector_t &operator=(const Vector<NDIM, S> &v) out_only & {
         foralldir(d) this->e(d) = v[d];
         return *this;
     }
-    
+
     /// Assign from 0
     inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
         foralldir(d) this->e(d) = 0;
@@ -464,9 +465,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return res;
     }
 
-
-    /// Positive mod for coordinate vector, see  int mod(int a, int b).  If
-    /// 2nd argument m is lattice.size(), this mods the vector a to periodic lattice.
+    /**
+     * @brief Positive mod for coordinate vector
+     *
+     * @details each element will be modded interval 0 <= .. < m[d]
+     * See function pmod(a,b)
+     * If second argument is lattice.size(), will mod the vector periodically
+     * "in" the lattice:
+     *
+     * @code{.cpp}
+     *  res = (a + b).mod(lattice.size());
+     * @endcode
+     * Now res will be lattice site vector
+     */
 
     inline CoordinateVector_t mod(const CoordinateVector_t &m) const {
         CoordinateVector_t<T> r;
@@ -488,6 +499,41 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     /// Return site index of the coordinate vector -- assumes a valid lattice vector
 
     // inline SiteIndex index() const;
+
+    /**
+     * @brief Element-by-element multiplication of CoordinateVectors
+     * @code{.cpp}
+     *  res = a.element_mul(b);
+     * @endcode
+     */
+
+    CoordinateVector_t element_mul(const CoordinateVector_t &m) const {
+        CoordinateVector_t<T> res;
+        foralldir(d) res[d] = (*this)[d] * m[d];
+        return res;
+    }
+
+    /**
+     * @brief Element-by-element division
+     * See also .mod(), which does element-by-element positive mod
+     */
+    CoordinateVector_t element_div(const CoordinateVector_t &m) const {
+        CoordinateVector_t<T> res;
+        foralldir(d) res[d] = (*this)[d] / m[d];
+        return res;
+    }
+
+    /**
+     * @brief Returns true if vector is integer multiple of arg vector
+     */
+
+    bool is_divisible(const CoordinateVector_t &m) const {
+        foralldir(d) {
+            if ((*this)[d] % m[d] != 0)
+                return false;
+        }
+        return true;
+    }
 };
 
 /**
