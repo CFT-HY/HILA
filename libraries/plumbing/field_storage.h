@@ -33,7 +33,7 @@ class field_storage {
     T *RESTRICT fieldbuf = nullptr;
     const unsigned *RESTRICT neighbours[NDIRS];
 
-    void allocate_field(const lattice_struct_ptr lattice);
+    void allocate_field(const Lattice lattice);
     void free_field();
 
 #ifndef VECTORIZED
@@ -44,9 +44,9 @@ class field_storage {
     DEVICE inline void set(const T &value, const unsigned i, const unsigned field_alloc_size);
 
     // Get a single element outside loops
-    auto get_element(const unsigned i, const lattice_struct_ptr lattice) const;
+    auto get_element(const unsigned i, const Lattice lattice) const;
     template <typename A>
-    void set_element(A &value, const unsigned i, const lattice_struct_ptr lattice);
+    void set_element(A &value, const unsigned i, const Lattice lattice);
 
 #else
     inline T get_element(const unsigned i) const;
@@ -72,22 +72,22 @@ class field_storage {
 #endif
 
     void gather_comm_elements(T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node,
-                              Parity par, const lattice_struct_ptr lattice, bool antiperiodic) const;
+                              Parity par, const Lattice lattice, bool antiperiodic) const;
 
     void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
-                         const lattice_struct_ptr lattice) const;
+                         const Lattice lattice) const;
 
     void gather_elements_negated(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
-                                 const lattice_struct_ptr lattice) const;
+                                 const Lattice lattice) const;
 
     /// Place boundary elements from neighbour
     void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                              const lattice_struct::comm_node_struct &from_node,
-                             const lattice_struct_ptr lattice);
+                             const Lattice lattice);
     void place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
-                        const lattice_struct_ptr lattice);
+                        const Lattice lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-    void set_local_boundary_elements(Direction dir, Parity par, const lattice_struct_ptr lattice,
+    void set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice,
                                      bool antiperiodic);
 
     // Allocate buffers for mpi communication

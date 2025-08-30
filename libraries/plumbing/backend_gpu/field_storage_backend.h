@@ -6,7 +6,7 @@
 
 /* CUDA / HIP implementations */
 template <typename T>
-void field_storage<T>::allocate_field(const lattice_struct_ptr lattice) {
+void field_storage<T>::allocate_field(const Lattice lattice) {
     // Allocate space for the field of the device
     gpuMalloc(&fieldbuf, sizeof(T) * lattice->mynode.field_alloc_size);
     if (fieldbuf == nullptr) {
@@ -78,7 +78,7 @@ __global__ void get_element_kernel(field_storage<T> field, char *buffer, unsigne
 }
 
 template <typename T>
-auto field_storage<T>::get_element(const unsigned i, const lattice_struct_ptr lattice) const {
+auto field_storage<T>::get_element(const unsigned i, const Lattice lattice) const {
     char *d_buffer;
     T value;
 
@@ -108,7 +108,7 @@ __global__ void set_element_kernel_ptr(field_storage<T> field, const T *buf, uns
 
 template <typename T>
 template <typename A>
-void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct_ptr lattice) {
+void field_storage<T>::set_element(A &value, const unsigned i, const Lattice lattice) {
     T t_value = value;
 
     if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE) {
@@ -140,7 +140,7 @@ __global__ void gather_elements_kernel(field_storage<T> field, T *buffer, unsign
 /// CUDA implementation of gather_elements without CUDA aware MPI
 template <typename T>
 void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                       int n, const lattice_struct_ptr lattice) const {
+                                       int n, const Lattice lattice) const {
     unsigned *d_site_index;
     T *d_buffer;
 
@@ -180,7 +180,7 @@ __global__ void gather_elements_negated_kernel(field_storage<T> field, T *buffer
 template <typename T>
 void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
                                                const unsigned *RESTRICT index_list, int n,
-                                               const lattice_struct_ptr lattice) const {
+                                               const Lattice lattice) const {
     unsigned *d_site_index;
     T *d_buffer;
 
@@ -250,7 +250,7 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
 template <typename T>
 void field_storage<T>::gather_comm_elements(T *buffer,
                                             const lattice_struct::comm_node_struct &to_node,
-                                            Parity par, const lattice_struct_ptr lattice,
+                                            Parity par, const Lattice lattice,
                                             bool antiperiodic) const {
     int n;
     const unsigned *d_site_index = to_node.get_sitelist(par, n);
@@ -303,7 +303,7 @@ __global__ void place_elements_kernel(field_storage<T> field, T *buffer, unsigne
 /// CUDA implementation of place_elements without CUDA aware MPI
 template <typename T>
 void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                      int n, const lattice_struct_ptr lattice) {
+                                      int n, const Lattice lattice) {
     unsigned *d_site_index;
     T *d_buffer;
 
@@ -338,7 +338,7 @@ __global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsig
 
 template <typename T>
 void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const lattice_struct_ptr lattice,
+                                                   const Lattice lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -399,7 +399,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer, un
 template <typename T>
 void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
                                            const lattice_struct::comm_node_struct &from_node,
-                                           const lattice_struct_ptr lattice) {
+                                           const Lattice lattice) {
 
     unsigned n = from_node.n_sites(par);
     T *d_buffer;
@@ -459,7 +459,7 @@ auto field_storage<T>::get(const unsigned i, const unsigned field_alloc_size) co
     return value;
 }
 template <typename T>
-auto field_storage<T>::get_element(const unsigned i, const lattice_struct_ptr lattice) const {
+auto field_storage<T>::get_element(const unsigned i, const Lattice lattice) const {
     T value;
     return value;
 }

@@ -642,7 +642,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 
         bool is_X_index_type = (objtype.find("X_index_type") != std::string::npos);
 
-        if (is_X_index_type || objtype.find("lattice_struct") != std::string::npos) {
+        if (is_X_index_type || objtype.find("Lattice") != std::string::npos) {
             // now it is a method of X
 
             // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
