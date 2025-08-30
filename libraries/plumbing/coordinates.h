@@ -59,13 +59,15 @@ constexpr unsigned NDIRS = NDIRECTIONS;
 // Increment for directions:  ++dir,  dir++  does the obvious
 // dir-- not defined, should we?
 
-static inline Direction next_direction(Direction dir) {
+#pragma hila loop_function
+inline Direction next_direction(Direction dir) {
     return static_cast<Direction>(static_cast<unsigned>(dir) + 1);
 }
-static inline Direction &operator++(Direction &dir) {
+#pragma hila loop_function
+inline Direction &operator++(Direction &dir) {
     return dir = next_direction(dir);
 }
-static inline Direction operator++(Direction &dir, int) {
+inline Direction operator++(Direction &dir, int) {
     Direction d = dir;
     ++dir;
     return d;
@@ -75,7 +77,7 @@ static inline Direction operator++(Direction &dir, int) {
  * @brief Macro to loop over (all) ::Direction(s)
  *
  */
-#define foralldir(d) for (Direction d = e_x; d < NDIM; ++d)
+#define foralldir(d) for (Direction d = e_x; d < NDIM; d = next_direction(d))
 
 inline Direction opp_dir(const Direction d) {
     return static_cast<Direction>(NDIRS - 1 - static_cast<int>(d));
@@ -371,19 +373,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return true;
     }
 
-    // #pragma hila loop function
+#pragma hila loop_function
     T &operator[](const int i) {
         return this->e(i);
     }
-    // #pragma hila loop function
+#pragma hila loop_function
     T &operator[](const Direction d) {
         return this->e((int)d);
     }
-    // #pragma hila loop function
+#pragma hila loop_function
     T operator[](const int i) const {
         return this->e(i);
     }
-    // #pragma hila loop function
+#pragma hila loop_function
     T operator[](const Direction d) const {
         return this->e((int)d);
     }

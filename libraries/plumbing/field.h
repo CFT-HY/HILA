@@ -343,6 +343,7 @@ class Field {
      * @param rhs
      */
     Field(Field &&rhs) {
+        assert(rhs.fs->mylattice.ptr() == lattice.ptr());
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
@@ -363,11 +364,8 @@ class Field {
      * @brief  Sets up memory for field content and communication.
      */
     void allocate() {
+        assert(lattice.is_initialized() && "Fields cannot be used before lattice.setup()");
         assert(fs == nullptr);
-        if (!lattice.is_initialized()) {
-            hila::out0 << "Can not allocate Field variables before lattice.setup()\n";
-            hila::terminate(0);
-        }
         fs = (field_struct *)memalloc(sizeof(field_struct));
         fs->mylattice = lattice;
         fs->allocate_payload();
@@ -597,7 +595,7 @@ class Field {
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
 
-        lattice_struct * mylat = fs->mylattice.ptr();
+        lattice_struct *mylat = fs->mylattice.ptr();
         fs->boundary_condition[dir] = bc;
         fs->boundary_condition[-dir] = bc;
 #if !defined(CUDA) && !defined(HIP)
@@ -830,6 +828,8 @@ class Field {
      */
     Field<T> &operator=(Field<T> &&rhs) {
         if (this != &rhs) {
+            assert((fs == nullptr || (rhs.fs->mylattice.ptr() == fs->mylattice.ptr())) &&
+                   "Field = Field assignment possible only if fields belong to the same lattice");
             clear();
             fs = rhs.fs;
             rhs.fs = nullptr;
@@ -1476,9 +1476,9 @@ class Field {
 
     /**
      * @brief Fill blocked lattice Field from parent lattice Field (see lattice.block())
-     * 
-     * @details 
-     * If Field<T> a belongs to original (parent) lattice and Field<T> belongs to blocked 
+     *
+     * @details
+     * If Field<T> a belongs to original (parent) lattice and Field<T> belongs to blocked
      * lattice, the operation
      * @code{.cpp}
      * b.block_from(a);
@@ -1487,26 +1487,26 @@ class Field {
      * @example
      * @code{.cpp}
      * ...
-     * 
+     *
      * Field<Complex<double>> df;
      * df.gaussian_random();
      * smear(df,n);              // do n times semaring op (assuming smear() exists)
-     * 
+     *
      * lattice.block({2,2,2});
      * Field<Complex<double>> dfb1;
      * dfb1.block_from(df);
      * smear(dfb1,n);
-     * 
+     *
      * lattice.block({2,2,2});
      * Field<Complex<double>> dfb2;
      * dfb2.block_from(dfb1);
      * smear(dfb2,n);
-     * 
+     *
      * // analyse dfb2 here ...
-     * 
+     *
      * lattice.switch_to_base();  // undo all blocking
-     * @endcode  
-     * 
+     * @endcode
+     *
      * The sites which are blocked can be accessed with the CoordinateVector function is_divisible:
      * @code{.cpp}
      * CoordinateVector factor = {2,2,2};
@@ -1517,14 +1517,14 @@ class Field {
      *     }
      * }
      * @endcode
-     * 
+     *
      */
     void block_from(Field<T> &orig);
 
     /**
      * @brief Copy content to the argument Field on blocked (sparse) sites.
      * a.unblock_to(b) is the inverse of a.block_from(b)
-     * 
+     *
      * Leaves other sites of the argument Field unmodified.
      */
     void unblock_to(Field<T> &target) const;
