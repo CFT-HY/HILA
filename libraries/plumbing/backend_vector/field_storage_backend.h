@@ -62,7 +62,7 @@ template <typename T>
 using vector_type = typename vectorize_struct<T, hila::vector_info<T>::vector_size>::type;
 
 template <typename T>
-void field_storage<T>::allocate_field(const lattice_struct_ptr lattice) {
+void field_storage<T>::allocate_field(const Lattice lattice) {
     if constexpr (hila::is_vectorizable_type<T>::value) {
         fieldbuf = (T *)memalloc(
             lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
@@ -170,7 +170,7 @@ inline T field_storage<T>::get_element(const unsigned idx) const {
 /// Fetch elements from the field to buffer using sites in index_list
 template <typename T>
 void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                       int n, const lattice_struct_ptr lattice) const {
+                                       int n, const Lattice lattice) const {
 
     for (unsigned j = 0; j < n; j++) {
         buffer[j] = get_element(index_list[j]);
@@ -182,7 +182,7 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
 template <typename T>
 void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
                                                const unsigned *RESTRICT index_list, int n,
-                                               const lattice_struct_ptr lattice) const {
+                                               const Lattice lattice) const {
     if constexpr (hila::has_unary_minus<T>::value) {
         for (unsigned j = 0; j < n; j++) {
             buffer[j] = -get_element(index_list[j]); /// requires unary - !!
@@ -199,7 +199,7 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
 /// Vectorized implementation of setting elements
 template <typename T>
 void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                      int n, const lattice_struct_ptr lattice) {
+                                      int n, const Lattice lattice) {
     for (unsigned j = 0; j < n; j++) {
         set_element(buffer[j], index_list[j]);
     }
@@ -207,7 +207,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 
 template <typename T>
 void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const lattice_struct_ptr lattice,
+                                                   const Lattice lattice,
                                                    bool antiperiodic) {
 
 #ifndef SPECIAL_BOUNDARY_CONDITIONS

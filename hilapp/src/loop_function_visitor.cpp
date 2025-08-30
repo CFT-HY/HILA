@@ -367,7 +367,7 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
             //    std::string objtype =
             //    MCall->getImplicitObjectArgument()->getType().getAsString();
             std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());
-            if (objtype.find("lattice_struct") != std::string::npos) {
+            if (objtype.find("Lattice") != std::string::npos) {
 
                 // llvm::errs() << "CALL in LOOP FUNC: " << get_stmt_str(Call) << '\n';
                 special_function_call sfc;

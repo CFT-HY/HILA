@@ -76,7 +76,7 @@ class Field {
     class field_struct {
       public:
         field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-        lattice_struct_ptr mylattice;
+        Lattice mylattice;
 #ifdef VECTORIZED
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
@@ -1528,6 +1528,16 @@ class Field {
      * Leaves other sites of the argument Field unmodified.
      */
     void unblock_to(Field<T> &target) const;
+
+    /**
+     * @brief Return the lattice to which this field instance belongs to.
+     * @details Useful for switching lattices,for example
+     *    lattice.switch_to(a.mylattice());
+     * changes active lattice to the one to which Field variable a belongs to.
+     */
+    Lattice mylattice() const {
+        return fs->mylattice;
+    }
 
 
 }; // End of class Field<>

@@ -388,10 +388,12 @@ extern std::vector<lattice_struct *> defined_lattices;
 
 
 /**
- * @brief main interface to lattice
+ * @brief main interface class to lattices.  
+ * @details Lightweight class, contains only pointer to lattice_struct so
+ * can be returned as such from functions.
  */
 
-class lattice_struct_ptr {
+class Lattice {
 
   private:
     // ptr to current lattice_struct
@@ -399,7 +401,7 @@ class lattice_struct_ptr {
 
   public:
     /**
-     * @internal Set the lattice_struct pointer only
+     * @internal Set the lattice_struct pointer only. Don't use this in normal code!
      */
 
     void set_lattice_pointer(lattice_struct *lat) {
@@ -415,8 +417,9 @@ class lattice_struct_ptr {
     }
 
     /**
-     * @brief lattice.volume() returns int64_t volume
+     * @brief lattice.volume() returns lattice volume
      * Can be used inside onsites()-loops
+     * @return lattice volume
      */
     inline int64_t volume() const {
         return lat_ptr->l_volume;
@@ -424,7 +427,7 @@ class lattice_struct_ptr {
 
     /**
      * @brief lattice.size() -> CoordinateVector  or lattice.size(d) -> int returns the
-     * dimensions of the lattice
+     * dimensions of the lattice, in latter case to direction d
      * Can be used inside onsites()-loops
      */
     inline int size(Direction d) const {
@@ -439,7 +442,7 @@ class lattice_struct_ptr {
 
     /**
      * @brief lattice.setup(CoordinateVector size) - set up the base lattice. Called at the
-     * beginning of the program
+     * beginning of the program. Can be called only once during the program run
      */
     void setup(const CoordinateVector &siz) {
         assert(lat_ptr != nullptr);
@@ -462,7 +465,10 @@ class lattice_struct_ptr {
     }
 
     /**
-     * @internal get non-const pointer to lattice_struct (cf. operator ->)
+     * @brief get non-const pointer to lattice_struct (cf. operator ->)
+     *
+     * @details This can be used to access fields of lattice_struct, this time
+     * returning non-const. reference.  NOTE! you should not
      */
 
     inline lattice_struct *ptr() const {
@@ -477,14 +483,43 @@ class lattice_struct_ptr {
     }
 
     /**
+     * @brief Equality operator == is true if the two Lattices are the same, i.e. point
+     * to the same lattice
+     *
+     * @param rhs
+     */
+
+    bool operator==(const Lattice &rhs) {
+        return (this->lat_ptr == rhs.ptr());
+    }
+
+    bool operator!=(const Lattice &rhs) {
+        return (this->lat_ptr != rhs.ptr());
+    }
+
+    /**
      * @brief With a valid lattice_struct pointer, switch this lattice to be active.
      */
-    lattice_struct *switch_to(lattice_struct *lat) {
+    Lattice switch_to(lattice_struct *lat) {
         if (lat_ptr != lat) {
             lat_ptr = lat;
             lat->set_lattice_globals();
         }
-        return lat_ptr;
+        return *this;
+    }
+
+    /**
+     * @brief With a valid Lattice, switch this lattice to be active.
+     * @details useful e.g. in switching to lattice where field a belongs to:
+     *    lattice.switch_to(a.mylattice());
+     *
+     */
+    Lattice switch_to(Lattice &lat) {
+        if (lat_ptr != lat.ptr()) {
+            lat_ptr = lat.ptr();
+            lat_ptr->set_lattice_globals();
+        }
+        return *this;
     }
 
     /**
@@ -502,33 +537,33 @@ class lattice_struct_ptr {
      * @details lattice.size() must be element-by-element divisible by factor
      *
      * @example lattice.block({2,2,2}) reduces current lattice size by 2 to each direction.
-     * 
+     *
      * @note Previously used Field variables cannot be used in onsites(). However,
      * their content can be blocked to new Field with Field<T>::block_from(),
      * which copies the content from the blocked (sparse) set of sites;
-     * 
+     *
      * @code{.cpp}
      * Field<double> a;
      * a[ALL] = X.x() + X.y() + X.z();   // in 3d
-     * 
+     *
      * CoordinateVector factor{2,2,2};
-     * 
+     *
      * lattice.block(factor);
      * Field<double> b;
-     * 
+     *
      * b.block_from(a);               // Now b contains 0+0+0, 2+0+0 ...
      * b[ALL] = -b[X];                // Do operations, here flip sign
      * // onsites(ALL) a[X] = 1;      // ERROR, a belongs to original lattice
-     * b.unblock_to(a);               // copy content of b back to a on blocked sites, 
-     *                                // leaving other sites of a 
+     * b.unblock_to(a);               // copy content of b back to a on blocked sites,
+     *                                // leaving other sites of a
      * lattice.unblock();             // return to original lattice
-     * 
-     * // Now a can be used, it contains -(0+0+0), 1+0+0, -(2+0+0), ... 
+     *
+     * // Now a can be used, it contains -(0+0+0), 1+0+0, -(2+0+0), ...
      * @endcode
-     * 
+     *
      * @note Fields which were not used previously can be used in blocked levels, or
      * their association (and content) can be deleted with .clear():
-     * 
+     *
      * @code{.cpp}
      * Field<double> a,b;
      * a = 1;
@@ -538,25 +573,26 @@ class lattice_struct_ptr {
      * a.clear();
      * a = 3;       // OK, now a belongs to blocked lattice
      * @endcode
-     * 
-     * 
+     *
+     *
      * @returns lattice_struct * to blocked lattice
      */
-    lattice_struct *block(const CoordinateVector &cv) {
-        return lat_ptr->block_by_factor(cv);
+    Lattice block(const CoordinateVector &cv) {
+        lat_ptr->block_by_factor(cv);
+        return *this;
     }
 
     /**
      * @brief Unblock lattice, returning to parent. Current lattice must be a blocked lattice
      * @returns lattice_struct * to new lattice
      */
-    lattice_struct *unblock() {
+    Lattice unblock() {
         if (lat_ptr->parent != nullptr) {
             return switch_to(lat_ptr->parent);
         } else {
             hila::out0 << "ERROR : cannot unblock lattice, no parent\n";
             hila::terminate(0);
-            return lat_ptr;
+            return *this;
         }
     }
 
@@ -572,19 +608,19 @@ class lattice_struct_ptr {
 
     /**
      * @brief lattice.switch_to_base() switches the base lattice active (if not already)
-     * @returns lattice_struct * for the base lattice
+     * @returns The Lattice for the base lattice (i.e. the first lattice)
      */
 
-    lattice_struct *switch_to_base() {
+    Lattice switch_to_base() {
         return switch_to(defined_lattices.front());
     }
 };
 
 
 /**
- * @brief global handle to lattice. For methods, see class lattice_struct_ptr
+ * @brief global handle to lattice. For methods, see classes Lattice and lattice_struct
  */
-extern lattice_struct_ptr lattice;
+extern Lattice lattice;
 
 
 #ifdef VANILLA

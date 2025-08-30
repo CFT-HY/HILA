@@ -492,7 +492,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         // if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT
         // LATTICE_STRUCT PTR!!!\n";
 
-        if (typ.getAsString(PP) == "X_index_type" || typ.getAsString(PP) == "lattice_struct")
+        if (typ.getAsString(PP) == "X_index_type" || typ.getAsString(PP) == "Lattice")
             return nullptr;
 
         if (typ.getAsString(PP) == "SiteSelect") {

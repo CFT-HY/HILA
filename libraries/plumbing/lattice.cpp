@@ -20,7 +20,7 @@ void report_too_large_node() {
 
 
 // Define the global lattice handle
-lattice_struct_ptr lattice;
+Lattice lattice;
 /// A list of all defined lattices (for the future expansion)
 
 // Keep track of defined lattices
@@ -34,7 +34,9 @@ int64_t n_gather_avoided = 0, n_gather_done = 0;
 /// General lattice setup
 void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
 
-    l_label = defined_lattices.size();
+    assert(defined_lattices.size() == 0 && "lattice.setup() can be called only once");
+
+    l_label = 0;
     defined_lattices.push_back(this);
     parent = nullptr; // this has no parent lattice
 
