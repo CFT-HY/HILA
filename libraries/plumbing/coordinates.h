@@ -373,19 +373,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return true;
     }
 
-#pragma hila loop_function
+    // #pragma hila loop function
     T &operator[](const int i) {
         return this->e(i);
     }
-#pragma hila loop_function
+    // #pragma hila loop function
     T &operator[](const Direction d) {
         return this->e((int)d);
     }
-#pragma hila loop_function
+    // #pragma hila loop function
     T operator[](const int i) const {
         return this->e(i);
     }
-#pragma hila loop_function
+    // #pragma hila loop function
     T operator[](const Direction d) const {
         return this->e((int)d);
     }
