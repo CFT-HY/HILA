@@ -66,17 +66,21 @@ HILA_GPU_EXTERN __constant__ unsigned _dev_field_alloc_size;
 HILA_GPU_EXTERN __constant__ CoordinateVector *_dev_coordinates;
 #endif
 
-inline __device__ const CoordinateVector &get_dev_coordinates(unsigned idx) {
-    return _dev_coordinates[idx];
+template <typename T>
+inline __device__ const CoordinateVector &get_dev_coordinates(T idx) {
+     return _dev_coordinates[idx];
+}
+
+template <typename T, typename D>
+inline __device__ int get_dev_coordinate(T idx, D dir) {
+     return _dev_coordinates[idx][dir];
 }
 
 
-inline __device__ int get_dev_coordinate(unsigned idx, Direction dir) {
-    return _dev_coordinates[idx][dir];
-}
-
+// make this template to avoid code generation if not needed
 #ifdef EVEN_SITES_FIRST
-inline __device__ Parity get_dev_site_parity(unsigned idx) {
+template <typename T>
+inline __device__ Parity get_dev_site_parity(T idx) {
     auto cv = get_dev_coordinates(idx);
     int s = 0;
     foralldir(d) s += cv.e(d);

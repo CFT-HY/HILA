@@ -294,7 +294,6 @@ class Matrix_t {
     // declare single e here too in case we have a vector
     // (n || m == 1)
 
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
