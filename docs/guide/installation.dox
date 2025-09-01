@@ -671,8 +671,7 @@ Additionally we have some ARCH values tuned for specific HPC platforms:
 |------------|-----------------------------------------------------------|
 | `lumi      ` | CPU-MPI implementation for LUMI supercomputer             |
 | `lumi-hip-CC  ` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.0.3 and cray compilers   |
-| `lumi-hip-6.2.2-gnu  ` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.2.2 and gnu compilers   |
-| `lumi-hip-6.2.2-cray  ` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.2.2 and cray compilers   |
+| `lumi-hip-6.2.2` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.2.2 and cray or gnu compilers   |
 | `mahti     ` | CPU-MPI implementation for MAHTI supercomputer            |
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
