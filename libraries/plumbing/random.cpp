@@ -44,13 +44,6 @@ namespace hila {
  * and also avoids giving the same seed for 2 nodes
  * For single MPI node seed remains unchanged
  */
-
-/**
- * @brief Random shuffling of rng seed for MPI nodes.
- * @details Do it in a manner makes it difficult to give the same seed by mistake
- * and also avoids giving the same seed for 2 nodes
- * For single MPI node seed remains unchanged
- */
 uint64_t shuffle_rng_seed(uint64_t seed) {
 
     uint64_t n = hila::myrank();

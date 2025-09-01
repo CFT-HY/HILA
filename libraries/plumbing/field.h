@@ -281,8 +281,6 @@ class Field {
 #ifdef VECTORIZED
         static_assert(sizeof(hila::arithmetic_type<T>) == 4 ||
                           sizeof(hila::arithmetic_type<T>) == 8,
-        static_assert(sizeof(hila::arithmetic_type<T>) == 4 ||
-                          sizeof(hila::arithmetic_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
@@ -1615,10 +1613,7 @@ class Field {
 
 // operator +  (Field + Field) -generic
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value &&
-                               !std::is_same<hila::type_plus<A, B>, B>::value,
-                           int> = 0>
+template <typename A, typename B>
 auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs[X] + rhs[X];
@@ -1646,10 +1641,7 @@ auto operator+(const A &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>
 //////////////////////////////
 // operator - Field - Field -generic
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value &&
-                               !std::is_same<hila::type_minus<A, B>, B>::value,
-                           int> = 0>
+template <typename A, typename B>
 auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs[X];
@@ -1709,32 +1701,11 @@ auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B
  * @param rhs Second (right) Field
  * @return Field<hila::type_plus<A, B>> Multiplied Field
  */
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value &&
-                               !std::is_same<hila::type_mul<A, B>, B>::value,
-                           int> = 0>
+template <typename A, typename B>
 auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs[X] * rhs[X];
     return tmp;
-}
-
-// reuse 1st
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
-Field<A> operator*(Field<A> lhs, const Field<B> &rhs) {
-    lhs[ALL] = lhs[X] * rhs[X];
-    return lhs;
-}
-
-// reuse 2nd
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value &&
-                               std::is_same<hila::type_mul<A, B>, B>::value,
-                           int> = 0>
-Field<B> operator*(const Field<A> &lhs, Field<B> rhs) {
-    rhs[ALL] = lhs[X] * rhs[X];
-    return rhs;
 }
 
 /////////////////////////////////
@@ -1790,38 +1761,17 @@ auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>>
  * @param rhs Second (right) Field
  * @return Field<hila::type_plus<A, B>> Subtracted Field
  */
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value &&
-                               !std::is_same<hila::type_div<A, B>, B>::value,
-                           int> = 0>
+template <typename A, typename B>
 auto operator/(const Field<A> &l, const Field<B> &r) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = l[X] / r[X];
     return tmp;
 }
 
-// reuse 1st
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
-Field<A> operator/(Field<A> l, const Field<B> &r) {
-    l[ALL] = l[X] / r[X];
-    return l;
-}
-
-// reuse 2nd
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value &&
-                               std::is_same<hila::type_div<A, B>, B>::value,
-                           int> = 0>
-Field<B> operator/(const Field<A> &l, Field<B> r) {
-    r[ALL] = l[X] / r[X];
-    return r;
-}
 
 //////////////////////////////////
 // operator /  (scalar/Field)
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_div<A, B>, B>::value, int> = 0>
+template <typename A, typename B>
 auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs / rhs[X];
@@ -1830,8 +1780,7 @@ auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>>
 
 //////////////////////////////////
 // operator /  (Field/scalar)
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
+template <typename A, typename B>
 auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs[X] / rhs;
