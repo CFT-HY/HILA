@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <regex>
+#include <charconv>
 #include "hila.h"
 
 using strvec = std::vector<std::string>;
@@ -12,8 +13,7 @@ using strvec = std::vector<std::string>;
 /// @brief Prints the help texts associated with recognized flags and quits the
 ///        program
 ////////////////////////////////////////////////////////////////////////////////
-void cmdlinearguments::quit_with_help()
-{
+void cmdlinearguments::quit_with_help() {
     print_help();
     hila::finishrun();
 }
@@ -28,13 +28,17 @@ void cmdlinearguments::quit_with_help()
 /// @var std::string argmap_val::help_text
 /// @brief A string describing the use of the flag
 ///
+/// @var int argmap_val::number
+/// @brief number of args for each flag.  < 0: unspecified
+///
 /// @var bool argmap_val::present
 /// @brief A boolean telling whether the flag was found in argv
 ////////////////////////////////////////////////////////////////////////////////
-struct argmap_val
-{
+struct argmap_val {
     strvec val_strings;
+    std::string aux;
     std::string help_text;
+    int number;
     bool present;
 };
 
@@ -67,17 +71,14 @@ void cmdlinearguments::initialise_args(int argc0, char **argv0) {
 /// @param flag   flag given as string
 /// @return vector of arguments
 ////////////////////////////////////////////////////////////////////////////////
-strvec cmdlinearguments::values(std::string flag)
-{
+strvec cmdlinearguments::values(const std::string &flag) {
     strvec valvec = argmap[flag].val_strings;
-    if (argmap.count(flag) == 0)
-    {
+    if (argmap.count(flag) == 0) {
         hila::out0 << "Flag '" << flag << "' is not recognized!\n";
         quit_with_help();
     }
 
-    if (valvec.size() == 0)
-    {
+    if (valvec.size() == 0) {
         hila::out0 << "\n\nFlag '" << flag << "' has no entries"
                    << " and the associated vector of strings is of length zero!\n\n";
     }
@@ -94,19 +95,18 @@ strvec cmdlinearguments::values(std::string flag)
 ///                    Will be printed when error occurs. For formatting, a newline
 ///                    can be used to split the help_text, as it will help with
 ///                    correct formatting in print_help().
+/// @param number      required number of args for each key appearance.  default -1: number
+///                    unspecified
 ////////////////////////////////////////////////////////////////////////////////
-void cmdlinearguments::add_flag(std::string flag, std::string help_text)
-{
-    if (argmap.count(flag) > 0)
-    {
+void cmdlinearguments::add_flag(const std::string &flag, const std::string &help_text,
+                                std::string aux, int number) {
+    if (argmap.count(flag) > 0) {
         hila::out0 << "\n###################################################\n";
         hila::out0 << "# Flag " << flag << " is already set! Terminating.\n";
         hila::out0 << "###################################################\n\n";
         quit_with_help();
-    }
-    else
-    {
-        argmap[flag] = {std::vector<std::string>(), help_text, false};
+    } else {
+        argmap[flag] = {std::vector<std::string>(), aux, help_text, number, false};
     }
 }
 
@@ -121,23 +121,24 @@ void cmdlinearguments::add_flag(std::string flag, std::string help_text)
 /// @param  flag   string corresponding to the flag
 /// @return Vector containing the found entries.
 ////////////////////////////////////////////////////////////////////////////////
-strvec cmdlinearguments::read_arg_vector(const char *flag)
-{
+strvec cmdlinearguments::read_arg_vector(const char *flag) {
     strvec uargs;
 
-    int u_ind[argc];
-    for (int i = 0; i < argc; i++) u_ind[i] = -1;
-    int *p_ind = u_ind;
+    std::vector<int> u_ind(argc);
+    for (int i = 0; i < argc; i++)
+        u_ind[i] = -1;
+    int *p_ind = u_ind.data();
 
     // Anything of the format "-[a letter][whatever]" is parsed as a flag
     const std::regex forbidden_user_input("^-[a-zA-Z].*");
 
-    for (int i = 0; i < argc; i++)
-    {
+    for (int i = 0; i < argc; i++) {
         const char *p = argv[i];
         // check if its the flag
-        if (std::strcmp(p, flag) == 0)
-        {
+        int n = 0;
+        bool match = false;
+        if (std::strcmp(p, flag) == 0) {
+            match = true;
             // Indicate that the flag has been spotted in argv
             argmap[flag].present = true;
             // Slate for removal and move onto the
@@ -145,19 +146,18 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
             *(p_ind++) = 1;
             i++;
             if (i < argc)
-                    p = argv[i];
-            else
-            {
+                p = argv[i];
+            else {
                 break;
             }
             // Check if the string is a valid input
             // (Not of type ^-[a-zA-Z].*)
             // and push into vector uargs
-            while (!std::regex_match(p, forbidden_user_input))
-            {
+            while (!std::regex_match(p, forbidden_user_input)) {
                 *(p_ind++) = 1;
                 uargs.push_back(std::string(p));
                 i++;
+                n++;
                 if (i < argc)
                     p = argv[i];
                 else
@@ -168,17 +168,30 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
             // reason, set the current index to be removed
             // and compensate for the for loop increase in
             // i and p_ind
-            if (std::strcmp(p, flag) == 0)
-            {
+            if (std::strcmp(p, flag) == 0) {
                 *(p_ind--) = 1;
                 i--;
             }
         }
+
+        if (match) {
+
+            if (argmap[flag].number >= 0) {
+                if (argmap[flag].number != n) {
+                    hila::out0 << "Error: command line flag " << flag << " requires "
+                               << argmap[flag].number << " arguments\n";
+                    quit_with_help();
+                }
+            }
+        }
+
         p_ind++;
     }
     // Effectively remove user arguments from argv
     int j = 0;
-    for (int i = 0; i < argc; i++) if (u_ind[i] < 0) argv[j++] = argv[i];
+    for (int i = 0; i < argc; i++)
+        if (u_ind[i] < 0)
+            argv[j++] = argv[i];
     argc = j;
 
     return uargs;
@@ -187,17 +200,14 @@ strvec cmdlinearguments::read_arg_vector(const char *flag)
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Loops over the known flags and fills the argmap struct from argv
 ////////////////////////////////////////////////////////////////////////////////
-void cmdlinearguments::fill_argmap()
-{
+void cmdlinearguments::fill_argmap() {
     // Loop through the flags (keys of the map)
-    for (auto const& p : argmap)
-    {
+    for (auto const &p : argmap) {
         // Get corresponding input and set it to uarg[flag]
         std::vector<std::string> arg_vec = read_arg_vector(p.first.c_str());
         argmap[std::string(p.first)].val_strings = arg_vec;
     }
-    if (argc > 1)
-    {
+    if (argc > 1) {
         hila::out0 << "There remain unprocessed command-line arguments:\n";
         for (int i = 1; i < argc; i++)
             hila::out0 << "'" << argv[i] << "', ";
@@ -211,14 +221,12 @@ void cmdlinearguments::fill_argmap()
 /// @brief Splits a help_text string into a vector of strings at newline.
 /// @return A vector containing the lines.
 ////////////////////////////////////////////////////////////////////////////////
-strvec cmdlinearguments::parse_help(std::string help_text)
-{
+strvec cmdlinearguments::parse_help(std::string help_text) {
     strvec lines;
     std::stringstream stream(help_text);
     std::string line;
 
-    while (std::getline(stream, line))
-    {
+    while (std::getline(stream, line)) {
         lines.push_back(line);
     }
 
@@ -228,24 +236,21 @@ strvec cmdlinearguments::parse_help(std::string help_text)
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Prints the recognized flags and their help texts.
 ////////////////////////////////////////////////////////////////////////////////
-void cmdlinearguments::print_help()
-{
+void cmdlinearguments::print_help() {
     hila::out0 << "Recognized command-line flags and their possible arguments:\n";
 
-    for (auto const& p : argmap)
-    {
-        std::string flag = p.first;
-        std::string help = p.second.help_text;
+    const std::string padding = "                        ";
+    for (auto const &p : argmap) {
+        const std::string &flag = p.first;
+        const std::string &help = p.second.help_text;
+        const std::string &aux = p.second.aux;
         strvec help_vec = parse_help(help);
-        hila::out0 << "    " << flag << std::setw(20 - flag.length())
+        hila::out0 << "  " << flag << " " << aux << std::setw(22 - flag.length() - aux.length() - 1)
                    << ": " << help_vec[0] << "\n";
-        for (int i = 1; i < help_vec.size(); i++)
-        {
-            std::string padding = "                        ";
+        for (int i = 1; i < help_vec.size(); i++) {
             hila::out0 << padding << help_vec[i] << "\n";
         }
     }
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -254,11 +259,11 @@ void cmdlinearguments::print_help()
 ///
 /// @param flag
 ////////////////////////////////////////////////////////////////////////////////
-int cmdlinearguments::flag_set(const char *flag)
-{
+int cmdlinearguments::flag_set(const char *flag) {
     if (argmap.count(flag) > 0)
         return argmap[flag].val_strings.size();
-    else return 0;
+    else
+        return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -266,8 +271,7 @@ int cmdlinearguments::flag_set(const char *flag)
 ///
 /// @return Boolean indicating the statement.
 ////////////////////////////////////////////////////////////////////////////////
-bool cmdlinearguments::flag_present(const char *flag)
-{
+bool cmdlinearguments::flag_present(const char *flag) {
     return argmap[flag].present;
 }
 
@@ -278,12 +282,10 @@ bool cmdlinearguments::flag_present(const char *flag)
 /// @param i      index of the desired entry (default = 0);
 /// @return long conversion of the desired entry
 ////////////////////////////////////////////////////////////////////////////////
-long cmdlinearguments::get_int(const char *flag, int i)
-{
+long cmdlinearguments::get_int(const char *flag, int i) {
     // If flag is found and non-empty
     int set = flag_set(flag);
-    if (set)
-    {
+    if (set) {
         std::string opt;
         if (i < set)
             opt = argmap[flag].val_strings[i];
@@ -299,16 +301,13 @@ long cmdlinearguments::get_int(const char *flag, int i)
         const std::regex permitted_user_input("^[+-]?[0-9]+");
         if (std::regex_match(opt, permitted_user_input)) {
             val = std::stol(opt);
-        }
-        else
-        {
+        } else {
             hila::out0 << "Expected a number (integer) after command line parameter '" << flag
                        << "'\n";
             quit_with_help();
         }
         return val;
-    }
-    else {
+    } else {
         hila::out0 << "Flag '" << flag << "' is missing an entry!\n";
         hila::out0 << "Terminating.\n";
         quit_with_help();
@@ -324,12 +323,10 @@ long cmdlinearguments::get_int(const char *flag, int i)
 /// @param i      index of the desired entry (default = 0);
 /// @return double conversion of the desired entry
 ////////////////////////////////////////////////////////////////////////////////
-double cmdlinearguments::get_double(const char *flag, int i)
-{
+double cmdlinearguments::get_double(const char *flag, int i) {
     // If flag is found and non-empty
     int set = flag_set(flag);
-    if (set)
-    {
+    if (set) {
         std::string opt;
         if (i < set)
             opt = argmap[flag].val_strings[i];
@@ -343,21 +340,25 @@ double cmdlinearguments::get_double(const char *flag, int i)
 
         double val;
         // We're not going to manually check the format for this
-        try
-        {
-            val = std::stod(opt);
-        }
-        catch(std::exception &e)
-        {
+        auto [p, ec] = std::from_chars(opt.data(), opt.data() + opt.size(), val);
+        if (p == opt.data()) {
             hila::out0 << "Expected a number (double) after command line parameter '" << flag
                        << "'\n";
             quit_with_help();
         }
+
+        // try {
+        //     val = std::stod(opt);
+        // } catch (std::exception &e) {
+        //     hila::out0 << "Expected a number (double) after command line parameter '" << flag
+        //                << "'\n";
+        //     quit_with_help();
+        // }
+
         return val;
     }
     // if not found
-    else
-    {
+    else {
         hila::out0 << "Flag '" << flag << "' is missing an entry!\n";
         hila::out0 << "Terminating.\n";
         quit_with_help();
@@ -373,27 +374,25 @@ double cmdlinearguments::get_double(const char *flag, int i)
 /// @param i      index of the desired entry (default = 0);
 /// @return the desired entry
 ////////////////////////////////////////////////////////////////////////////////
-std::string cmdlinearguments::get_string(const char *flag, int i)
-{
+std::string cmdlinearguments::get_string(const char *flag, int i, bool clear) {
     int set = flag_set(flag);
-    if (set)
-    {
-        if (i < set)
-            return argmap[flag].val_strings[i];
-        else {
+    if (set) {
+        if (i < set) {
+            auto t = argmap[flag].val_strings[i];
+            if (clear)
+                argmap[flag].val_strings[i].clear();
+            return t;
+        } else {
             hila::out0 << "Flag '" << flag << "' has only " << set + 1
                        << " entries. Can't return index " << i << ".\n";
             hila::out0 << "Terminating.\n";
             quit_with_help();
             return "";
         }
-    }
-    else
-    {
+    } else {
         hila::out0 << "Flag '" << flag << "' is missing an entry!\n";
         hila::out0 << "Terminating.\n";
         quit_with_help();
         return "";
     }
 }
-

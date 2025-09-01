@@ -3,28 +3,53 @@ name: Deploy singularity container to github release page under nightly release
 on:
   push:
     branches:
-      - documentation
+      - master
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build the singularity container'
 
 jobs:
   build_release:
-    if: "contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
+    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
     name: build_nightly_release
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      #Build singularity container
-      - name: build-singularity-container
+
+      # Cache the deb so it's not downloaded every run
+      - name: Cache singularity deb
+        uses: actions/cache@v3
+        with:
+          path: singularity-ce_3.11.3-jammy_amd64.deb
+          key: singularity-deb-3.11.3
+
+      # Install singularity from cached deb or download if missing
+      - name: Install Singularity
         run: |
-          wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
+          if [ ! -f singularity-ce_3.11.3-jammy_amd64.deb ]; then
+            wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
+          fi
           sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
+          singularity --version
+
+      # Build the container separately
+      - name: Build singularity container
+        run: |
           cd singularity
           sudo singularity build hilapp.sif hilapp_local.def
           cd ..
-          ls -l --block-size=M ./singularity/hilapp.sif
-      #Publish singularity container
+          ls -lh ./singularity/hilapp.sif
+
+      - name: Upload SIF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hilapp-sif
+          path: ./singularity/hilapp.sif
+
       - name: Update nightly release
         uses: pyTooling/Actions/releaser@main
         with:

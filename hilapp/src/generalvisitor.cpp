@@ -182,8 +182,8 @@ bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee, bool *decrement
             if (decrement)
                 *decrement = (OP->getOperator() == OverloadedOperatorKind::OO_MinusMinus);
 
-            if (prefix) 
-                *prefix = (OP->getNumArgs() == 1);   // postfix has 2nd dummy int arg!
+            if (prefix)
+                *prefix = (OP->getNumArgs() == 1); // postfix has 2nd dummy int arg!
 
             if (sl)
                 *sl = OP->getOperatorLoc();
@@ -492,7 +492,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         // if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT
         // LATTICE_STRUCT PTR!!!\n";
 
-        if (typ.getAsString(PP) == "X_index_type" || typ.getAsString(PP) == "lattice_struct")
+        if (typ.getAsString(PP) == "X_index_type" || typ.getAsString(PP) == "Lattice")
             return nullptr;
 
         if (typ.getAsString(PP) == "SiteSelect") {
@@ -608,6 +608,13 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
     //     vi.type = "element<" + vi.type + ">";
     // llvm::errs() << " + Got " << vi.type << '\n';
 
+    // check if it's a lambda var ref
+    if (Expr *E = vi.decl->getInit()) {
+        if (LambdaExpr *LE = dyn_cast<LambdaExpr>(E)) {
+            vi.is_lambda_var_ref = true;
+        }
+    }
+
     // is it loop-local?
     vi.is_loop_local = false;
     for (var_decl &d : var_decl_list) {
@@ -658,6 +665,12 @@ var_info *GeneralVisitor::add_var_to_decl_list(VarDecl *var, int scope_level) {
     if (var->hasInit()) {
         ip->is_site_dependent = is_site_dependent(var->getInit(), &ip->dependent_vars);
         ip->is_assigned = true;
+        // also check here if it's a lambda function var ref
+        if (Expr *E = var->getInit()) {
+            if (auto LE = dyn_cast<LambdaExpr>(E)) {
+                ip->is_lambda_var_ref = true;
+            }
+        }
     } else {
         ip->is_assigned = false;
     }
@@ -666,6 +679,186 @@ var_info *GeneralVisitor::add_var_to_decl_list(VarDecl *var, int scope_level) {
 
     return ip;
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////
+/// We come in here either with global var.value()  or with just var. The latter is the
+/// cast operation!
+/// This is done only within site loops and loop functions
+///
+
+bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
+
+    bool got_error = false;
+    Expr *E = nullptr;
+
+    // The commented code below was for .value() -method.  Cancel this for simplicity
+    //
+    // if (CXXMemberCallExpr *MCall = dyn_cast<CXXMemberCallExpr>(CE)) {
+    //     std::string funcname = CE->getDirectCallee()->getNameInfo().getAsString();
+    //     std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());
+    //     if (objtype.find("hila::global<") != std::string::npos) {
+    //         llvm::errs() << "    FULL EXPRESSION " << get_stmt_str(CE) << '\n';
+
+    //         llvm::errs() << "    FOUND REF TO GLOBAL TYPE: " << objtype << " FUNC " << funcname
+    //                      << '\n';
+
+    //         // The line below was for auto casting trials - becomes messy
+    //         // bool is_autocast = (funcname.find("operator const") != std::string::npos);
+    //         // if (!is_autocast && funcname != "value") {
+    //         if (funcname != "value") {
+    //             got_error = true;
+    //         }
+
+    //         llvm::errs() << "     REF NAME " << get_stmt_str(MCall->getImplicitObjectArgument())
+    //                      << '\n';
+
+    //         E = MCall->getImplicitObjectArgument()->IgnoreParens()->IgnoreImplicit();
+    //     }
+
+    // } else
+
+    if (auto *OP = dyn_cast<CXXOperatorCallExpr>(CE)) {
+
+        if (OP->getOperator() == OverloadedOperatorKind::OO_Call) {
+            auto typ = get_expr_type(OP->getArg(0));
+            if (typ.find("hila::global<") != std::string::npos) {
+                E = OP->getArg(0)->IgnoreParens()->IgnoreImplicit();
+            }
+        }
+    }
+
+    if (E) {
+        if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+
+            if (target.kernelize) {
+
+                auto constvarname = generate_constant_var_name(DRE);
+
+                SourceRange sr = CE->getSourceRange();
+
+                srcBuf *sb = get_file_srcBuf(sr.getBegin());
+
+                std::string repl = "\n#ifdef ";
+                if (target.cuda) {
+                    repl.append("__CUDA_ARCH__");
+                } else if (target.hip) {
+                    repl.append("__HIP_DEVICE_COMPILE__");
+                } else {
+                    llvm::errs() << "Internal error: target.kernelize without cuda or hip?\n";
+                    got_error = true;
+                }
+                repl.append("\n");
+                repl.append(constvarname);
+                repl.append("\n#else\n");
+                repl.append(get_stmt_str(CE));
+                repl.append("\n#endif\n");
+
+                sb->replace(sr, "");
+                sb->insert(sr.getBegin(), repl, false, true);
+            }
+
+        } else {
+            got_error = true;
+        }
+
+        if (got_error) {
+            SourceLocation sl = CE->getSourceRange().getBegin();
+
+            llvm::errs() << "hilapp internal error in global variable reference\n"
+                         << " on line " << srcMgr.getSpellingLineNumber(sl) << " file "
+                         << srcMgr.getFilename(sl) << '\n';
+            exit(1);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+/// Make a name for generated __constant__ variable
+/// Use this interface, in order to guarantee the same name
+/////////////////////////////////////////////////////////////////////////
+
+std::string GeneralVisitor::generate_constant_var_name(const std::string &varname, bool isnamespace,
+                                                       const std::string &nspace) {
+
+    std::string name("HILA_device_constant_");
+
+    if (isnamespace) {
+        name.append(nspace);
+        name.append("__");
+    }
+
+    name.append(varname);
+
+    for (int i = 0; i < name.size(); i++)
+        if (name[i] == ':')
+            name[i] = '_';
+
+    return name;
+}
+
+/////////////////////////////////////////////////////////////////////////
+/// Generate varname from DeclRefExpr
+/////////////////////////////////////////////////////////////////////////
+
+std::string GeneralVisitor::generate_constant_var_name(DeclRefExpr *DRE) {
+
+    std::string varname = DRE->getNameInfo().getAsString();
+
+    bool qualified = false;
+    std::string nspace;
+
+    if (DRE->hasQualifier()) {
+        auto *NSP = DRE->getQualifier()->getAsNamespace();
+        if (NSP) {
+            NSP = NSP->getCanonicalDecl();
+
+            nspace = NSP->getQualifiedNameAsString();
+            qualified = true;
+        }
+    }
+
+    return generate_constant_var_name(varname, qualified, nspace);
+}
+
+/////////////////////////////////////////////////////////////////////////
+/// handle global variable reference (not a .visit() this time)
+/// Can be problematic, but let us try for now
+/////////////////////////////////////////////////////////////////////////
+
+bool GeneralVisitor::handle_global_var_ref(DeclRefExpr *DRE) {
+
+    // auto vtype = get_expr_type(DRE);
+    // if (vtype.find("hila::global<") != std::string::npos) {
+    //     // it is global var ref, check
+
+    //     auto constvarname = generate_constant_var_name(DRE);
+    //     SourceRange sr = DRE->getSourceRange();
+
+
+    //     srcBuf *sb = get_file_srcBuf(sr.getBegin());
+
+    //     llvm::errs() << "Replacing text  " << sb->get(sr);
+
+    //     std::string repl = "\n#ifdef _GPU_DEVICE_COMPILE_\n";
+    //     repl.append(constvarname);
+    //     repl.append("\n#else\n");
+    //     repl.append(get_stmt_str(DRE));
+    //     repl.append(".value()\n#endif\n");
+
+    //     sb->replace(sr, repl);
+
+    //     llvm::errs() << "  with " << sb->get(sr) << '\n';
+
+    //     return true;
+    // }
+    return false;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Pragma handling: has_pragma()

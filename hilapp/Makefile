@@ -30,8 +30,15 @@
 # then llvm-config-$(LLVM_DEFAULT_VERSION)
 
 
+# First, let's find out what distro we have
+DISTRO := $(shell cat /etc/*-release | grep -iE "^(ID=)" | cut -f2 -d"=")
+
+$(info --------------------------------------------------------------)
+$(info We are on $(DISTRO) distribution)
+$(info --------------------------------------------------------------)
+
 # keep 14 as default for now
-LLVM_DEFAULT_VERSION := 14
+LLVM_DEFAULT_VERSION := 18
 
 ifdef LLVM_VERSION 
 
@@ -44,20 +51,29 @@ endif
 else   
 # Now LLVM_VERSION not set
 # Try plain llvm-config
+$(info LLVM_VERSION not set, trying llvm-config)
 ifneq (, $(shell which llvm-config))
 LLVM_PATH := $(shell llvm-config --prefix)
 else
 
 # llvm-config not found, next step...
-$(info "llvm-config" not found along PATH, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
+$(info "llvm-config" not found along PATH, trying version from clang.. )
+VERSION_FROM_CLANG := $(shell clang --version | head -1 | awk 'BEGIN{FS="version *"} {print $$2}' | awk 'BEGIN{FS="."} {print $$1}' )
+$(info clang version $(VERSION_FROM_CLANG))
+ifneq (, $(shell which llvm-config-$(VERSION_FROM_CLANG)))
+LLVM_PATH := $(shell llvm-config-$(VERSION_FROM_CLANG) --prefix)
+
+else
+$(info "clang" failed, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
+
 ifeq (, $(shell which llvm-config-$(LLVM_DEFAULT_VERSION)))
 $(info llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH! )
 $(error Use "make [..] LLVM_VERSION=<N>" )
 else
 LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
 endif
-
 endif
+endif    
 
 # get the llvm version number if not set before
 LLVM_VERSION = $(shell $(LLVM_PATH)/bin/llvm-config --version | cut -d. -f1)
@@ -83,7 +99,9 @@ $(info --------------------------------------------------------------)
 # CXX := clang++
 CXX := $(LLVM_BIN_PATH)/clang++
 
-CXXFLAGS := -fno-rtti -std=c++17 -g
+# CXXFLAGS := -fno-rtti -std=c++17 -g
+CXXFLAGS := -fno-rtti -std=c++17 -O1
+
 
 # Directories where stuff is found and built
 SRCDIR := src
@@ -113,7 +131,18 @@ else
 # Now static target
 # option --ignore-libllvm gives all libs as .a -files and libLLVM.so is not included
 
-LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
+# llvim-config --system-libs return libz3.so on Debian GNU/linux, which causes link failure
+# for static building of hilapp. The first conditional directive remove this unwanted shared object file
+# by extended regex. In fact, this pattern will match and remove all *so lib
+
+  ifeq ($(DISTRO), debian)
+  LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs \
+                   | sed -E 's/[(\/)[:alpha:][:digit:]_-]+\.(so)//'`
+  else
+
+  LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
+  endif
+
 STATIC := -static
 
 # and target "static" depends only on hilapp
@@ -149,6 +178,7 @@ endif
 
 
 CLANG_LIBS := \
+	-Wl,--start-group \
 	-lclangTooling \
 	-lclangASTMatchers \
 	-lclangFrontend \
@@ -158,8 +188,8 @@ CLANG_LIBS := \
 	-lclangSema \
 	-lclangEdit \
 	-lclangAnalysis \
+	-lclangTooling \
 	-lclangToolingCore \
-	-lclangAST \
 	-lclangRewrite \
 	-lclangLex \
 	-lclangBasic \
@@ -167,15 +197,24 @@ CLANG_LIBS := \
 	-lclangRewriteFrontend \
 	-lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers \
-	-lclangStaticAnalyzerCore
+	-lclangStaticAnalyzerCore \
+	-lclangAST \
+	-lclangToolingSyntax
 
 
 # Add new libs if clang version is > 14
 compare = $(shell if [ $(1) -gt $(2) ] ; then echo gt ; else echo le ; fi)
 
 ifeq ($(call compare,$(LLVM_VERSION),14),gt)
-   CLANG_LIBS += -lclangSupport
+	CLANG_LIBS += \
+		-lclangSupport \
+		-lclangAPINotes 
 endif
+
+# And close group
+CLANG_LIBS += -Wl,--end-group
+
+
 # Sources for this project
 
 
@@ -186,7 +225,7 @@ HEADERS = \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
   $(SRCDIR)/optionsparser.h \
-  $(SRCDIR)/specialization_db.h
+  ../libraries/hila_signatures.h
 
 
 OBJECTS = \
@@ -213,7 +252,6 @@ OBJECTS = \
   $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/sourceloc_utils.o \
-  $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
 
 

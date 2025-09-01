@@ -1,0 +1,16 @@
+# This is a parameter file for SUN_gauge_gf
+
+lattice size           12,12,12,12
+beta                   17.
+number of trajectories 10
+updates in trajectory  10
+overrelax steps        1
+thermalization trajs   10
+gflow freq             0
+gflow max lambda       0.
+gflow lambda step      0.1
+gflow abs. accuracy    1.0e-7
+gflow rel. accuracy    1.0e-4
+random seed            0
+trajs/saved            20
+config name            config

@@ -1,5 +1,5 @@
-#ifndef CPU_DEFS_H
-#define CPU_DEFS_H
+#ifndef HILA_CPU_DEFS_H
+#define HILA_CPU_DEFS_H
 
 #include "plumbing/defs.h"
 

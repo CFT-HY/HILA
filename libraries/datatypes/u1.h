@@ -148,16 +148,18 @@ std::ostream &operator<<(std::ostream &strm, const U1<T> A) {
 }
 
 
+namespace hila {
 // Cast operators to different number type
 // cast_to<double>(a);
 
 template <typename Ntype, typename T,
-          std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 U1<Ntype> cast_to(const U1<T> m) {
     U1<Ntype> res;
     res.phase = m.phase;
     return res;
 }
 
+} // namespace hila
 
 #endif

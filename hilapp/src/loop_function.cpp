@@ -5,6 +5,7 @@
 #include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
+#include "clang/AST/ASTLambda.h"
 
 // #define LOOP_FUNCTION_DEBUG
 
@@ -27,6 +28,12 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
         return;
     }
 
+    // and treat a global variable reference v.value()
+    if (handle_global_var_method_call(Call)) {
+        parsing_state.skip_children = 1;
+        return;
+    }
+
     // Get the declaration of the function
     Decl *decl = Call->getCalleeDecl();
 
@@ -39,7 +46,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
     } else {
         vectorizable = !contains_novector(D->getBody());
     }
-    
+
     if (has_pragma(D, pragma_hila::CONTAINS_RNG)) {
         contains_rng = true;
     } else if (D->hasBody()) {
@@ -66,7 +73,27 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
 
     ci.is_vectorizable = ci.is_vectorizable && vectorizable;
 
-    // llvm::errs() << "FUNC " << D->getNameAsString() << " vectorizable " << ci.is_vectorizable << '\n';
+    // llvm::errs() << "FUNC " << D->getNameAsString() << " vectorizable " << ci.is_vectorizable <<
+    // '\n';
+
+    // check if lambda function call:
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+        if (isLambdaCallOperator(MD)) {
+            // CXXRecordDecl *RD = MD->getParent();
+            // check if lambda is defined inside the loop:
+            for (var_decl &vd : var_decl_list) {
+                if (vd.scope >= 0 && vd.decl->hasInit()) {
+                    if (LambdaExpr *LE = dyn_cast<LambdaExpr>(vd.decl->getInit())) {
+                        if (LE->getCallOperator() == MD) {
+                            // found local decl for the lambda
+                            ci.is_loop_local_lambda = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);
@@ -90,7 +117,6 @@ bool TopLevelVisitor::loop_constant_function_call(Stmt *s) {
         return true;
     }
     return false;
-
 }
 
 
@@ -107,6 +133,11 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 
     // Get the declaration of the constructor
     CXXConstructorDecl *decl = CtorE->getConstructor();
+
+    // If inherited, go to inherited parent
+    if (decl->isInheritingConstructor()) {
+        decl = decl->getInheritedConstructor().getConstructor();
+    }
 
     // if constructor for index types return, nothing to do
     std::string name = decl->getNameAsString();
@@ -611,7 +642,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 
         bool is_X_index_type = (objtype.find("X_index_type") != std::string::npos);
 
-        if (is_X_index_type || objtype.find("lattice_struct") != std::string::npos) {
+        if (is_X_index_type || objtype.find("Lattice") != std::string::npos) {
             // now it is a method of X
 
             // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
@@ -637,7 +668,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             std::string l_lattice;
 
             if (target.kernelize)
-                l_lattice = "d_lattice.";
+                l_lattice = "get_dev_";
             else
                 l_lattice = "loop_lattice.";
 
@@ -738,5 +769,5 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 void TopLevelVisitor::process_loop_functions() {
 
     // spin off to a new visitor
-    visit_loop_functions(loop_function_calls);
+    visit_loop_function_calls(loop_function_calls);
 }

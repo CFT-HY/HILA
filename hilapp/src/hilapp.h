@@ -29,7 +29,7 @@ const std::string default_output_suffix("cpt");
 const std::string out_only_keyword("out_only");
 const std::string const_function_keyword("const_function");
 
-const std::string name_prefix("_HILA_");
+const std::string name_prefix("HILA_");
 const std::string var_name_prefix(name_prefix + "var_");
 const std::string field_name_prefix(name_prefix + "field_");
 const std::string type_name_prefix(name_prefix + "type_");
@@ -62,8 +62,6 @@ extern llvm::cl::opt<bool> dump_ast;
 extern llvm::cl::opt<bool> no_include;
 extern llvm::cl::opt<std::string> dummy_def;
 extern llvm::cl::opt<std::string> dummy_incl;
-extern llvm::cl::opt<bool> function_spec_no_inline;
-extern llvm::cl::opt<bool> method_spec_no_inline;
 extern llvm::cl::opt<bool> funcinfo;
 extern llvm::cl::opt<bool> no_output;
 extern llvm::cl::opt<bool> syntax_only;
@@ -114,6 +112,9 @@ struct global_state {
     //  std::vector<const TemplateParameterList *> class_templ_params = {};
     //  std::vector<const TemplateArgumentList *> class_templ_args = {};
     FunctionDecl *currentFunctionDecl = nullptr;
+    int namespace_level = 0;
+    SourceRange namespace_range;
+
     /// Describes a code location
     struct location_struct {
         SourceLocation function;
@@ -301,10 +302,11 @@ struct var_info {
     bool is_site_dependent;         // is the value of variable site dependent
     bool is_special_reduction_type; // is variable defined with Reduction<T>
     bool is_raw;                    // is it raw access var?
+    bool is_lambda_var_ref;         // is it a var ref to a lambda function
 
     var_info() {
         is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type = is_raw =
-            false;
+            is_lambda_var_ref = false;
         decl = nullptr;
         reduction_type = reduction::NONE;
     }
@@ -454,8 +456,9 @@ struct call_info_struct {
     bool is_site_dependent;
     bool has_site_dependent_conditional;
     bool contains_random;
-    bool is_defaulted; // We assume that Clang "default" classification functions
-                       // do not need to be handled (incl. default methods)
+    bool is_defaulted;         // We assume that Clang "default" classification functions
+                               // do not need to be handled (incl. default methods)
+    bool is_loop_local_lambda; // if it calls to a lambda function declared inside the loop
 
     call_info_struct() {
         call = nullptr;
@@ -464,7 +467,7 @@ struct call_info_struct {
         ctordecl = nullptr;
         arguments.clear();
         is_method = is_operator = is_site_dependent = contains_random = false;
-        has_site_dependent_conditional = is_defaulted = false;
+        has_site_dependent_conditional = is_defaulted = is_loop_local_lambda = false;
         decl_only = false;
         is_vectorizable = true;
         vector_type_only = number_type::UNKNOWN;

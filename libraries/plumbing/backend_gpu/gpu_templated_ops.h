@@ -1,5 +1,5 @@
-#ifndef GPU_TEMPLATED_OPS_H
-#define GPU_TEMPLATED_OPS_H
+#ifndef HILA_GPU_TEMPLATED_OPS_H
+#define HILA_GPU_TEMPLATED_OPS_H
 
 #include "plumbing/defs.h"
 #include "plumbing/backend_gpu/defs.h"
@@ -12,6 +12,20 @@
 // #if defined(__CUDACC__) || defined(__HIPCC__)
 
 #if !defined(HILAPP)
+#if defined(CUDA)
+#include <cub/cub.cuh>
+namespace gpucub = cub;
+using gpuStream_t = cudaStream_t;
+
+#endif
+
+// Ensure no #pragma directives are embedded within macro arguments in the code.
+
+#if defined(HIP)
+#include <hipcub/hipcub.hpp>
+namespace gpucub = hipcub;
+using gpuStream_t = hipStream_t;
+#endif
 
 /* Reduction */
 /*
@@ -266,10 +280,11 @@ __device__ inline T atomicAdd(T *dp, B v) {
 /// requires that hila::arithmetic_type is defined
 template <
     typename T, typename B,
-    std::enable_if_t<!std::is_arithmetic<T>::value && std::is_convertible<B, T>::value, int> = 0>
+    std::enable_if_t<!std::is_arithmetic<T>::value && std::is_assignable<T &, T>::value, int> = 0>
 __device__ inline void atomicAdd(T *d, const B &bv) {
 
-    T v = bv;
+    T v;
+    v = bv;
     hila::arithmetic_type<T> *dp;
     const hila::arithmetic_type<T> *dv;
     constexpr int N = sizeof(T) / sizeof(hila::arithmetic_type<T>);
@@ -317,70 +332,65 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// NOTE: IF YOU DEFINE ALT_VECTOR_REDUCTION YOU NEED TO DEFINE THE SAME IN
-// codegen_gpu.cpp!
+/**
+ * @brief Vector reduction kernel using CUB block reduce
+ * @details Reduces 8192 chunk subarrays in input data and outupts them to output array of size
+ * reduction vector
+ *
+ * @tparam T Lattice data type
+ * @param D input data of size 8192*reduction_size
+ * @param output output array of size reduction_size
+ * @param reduction_size reduction vector length
+ * @param threads max number of threads which is 8192
+ */
+template <typename T, int BLOCK_SIZE>
+__global__ void sum_blocked_vectorreduction_kernel_cub(T *D, T *output, int reduction_size,
+                                                       int threads) {
+    using BlockReduce = gpucub::BlockReduce<T, BLOCK_SIZE>;
+    __shared__ typename BlockReduce::TempStorage temp_storage;
 
-// #define ALT_VECTOR_REDUCTION
+    int global_thread_id = blockIdx.x * threads + threadIdx.x;
+    int stride = BLOCK_SIZE;
+    T local_sum;
+    _hila_kernel_set_zero(local_sum);
 
-template <typename T>
-__global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_size,
-                                                   const int threads) {
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-
-    T sum;
-
-#ifndef ALT_VECTOR_REDUCTION
-    if (id < reduction_size) {
-        // id is now the reduction coordinate
-        sum = D[id];
-        for (int i = 1; i < threads; i++) {
-            // add everything to zero
-            sum += D[id + i * reduction_size];
+    for (int i = 0; i < max(1, (threads + stride - 1) / stride); i++) {
+        int index = global_thread_id + i * stride;
+        if (index < reduction_size * threads) {
+            _hila_kernel_add_var(local_sum, D[index]);
         }
-        D[id] = sum;
     }
 
-#else
-    if (id < reduction_size) {
-        // id is now the reduction coordinate
-        sum = D[id * threads];
-        for (int i = 1; i < threads; i++) {
-            sum += D[id * threads + i];
-        }
-        D[id * threads] = sum;
-    }
-#endif
-}
-
-#ifdef ALT_VECTOR_REDUCTION
-
-template <typename T>
-__global__ void sum_blocked_vectorreduction_k2(T *D, const int reduction_size, const int threads) {
-
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-    if (id < threads) {
-        for (; id < reduction_size; id += threads) {
-            D[id] = D[id * threads];
-        }
+    T total_sum;
+    total_sum = BlockReduce(temp_storage).Sum(local_sum);
+    if (threadIdx.x == 0) {
+        _hila_kernel_copy_var(output[blockIdx.x], total_sum);
     }
 }
 
-#endif
-
+/**
+ * @brief host function that calls device kernel sum_blocked_vectorredcutin_kernel_cub
+ * @details If one runs out of shared memory or resources for kernel launch it is due to the type T
+ * requiring too many resources. One can change GPU_BLOCK_REDUCTION_THREADS to a smaller number at
+ * the cost of a slight performance loss.
+ *
+ * @tparam T Lattice data type
+ * @param D input data of size 8192*reduction_size
+ * @param output output array of size reduction_size
+ * @param reduction_size reduction vector length
+ * @param threads max number of threads which is 8192
+ */
 template <typename T>
-void sum_blocked_vectorreduction(T *data, const int reduction_size, const int threads) {
+void sum_blocked_vectorreduction(T *data, T *output, const int reduction_size, const int threads) {
+    T *output_device;
+    gpuMalloc(&output_device, reduction_size * sizeof(T));
+    sum_blocked_vectorreduction_kernel_cub<T, GPU_BLOCK_REDUCTION_THREADS>
+        <<<reduction_size, GPU_BLOCK_REDUCTION_THREADS>>>(data, output_device, reduction_size,
+                                                          threads);
 
-    // straightforward implementation, use as many threads as elements in reduction vector
-
-    int blocks = (reduction_size + N_threads - 1) / N_threads;
-
-    sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
-
-#ifdef ALT_VECTOR_REDUCTION
-
-    sum_blocked_vectorreduction_k2<<<1, N_threads>>>(data, reduction_size, threads);
-#endif
-
+    hila::synchronize_threads();
+    gpuMemcpy(output, output_device, reduction_size * sizeof(T), gpuMemcpyDeviceToHost);
+    gpuFree(output_device);
     check_device_error("sum_blocked_vectorreduction");
 }
 
@@ -394,6 +404,16 @@ __global__ void gpu_set_value_kernel(T *vector, T value, int elems) {
         vector[Index] = value;
     }
 }
+
+// passing a ptr instead of value directly
+template <typename T>
+__global__ void gpu_set_value_kernel_ptr(T *vector, const T *valptr, int elems) {
+    int Index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (Index < elems) {
+        vector[Index] = *valptr;
+    }
+}
+
 
 // template <typename T>
 // __global__ void gpu_set_zero_kernel(T *vector, int elems) {
@@ -414,7 +434,19 @@ inline void gpu_set_zero(T *vec, size_t N) {
 template <typename T>
 void gpu_set_value(T *vec, const T &val, size_t N) {
     int blocks = N / N_threads + 1;
-    gpu_set_value_kernel<<<blocks, N_threads>>>(vec, val, N);
+    if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE)
+        // small T size, pass as arg to __global__
+        gpu_set_value_kernel<<<blocks, N_threads>>>(vec, val, N);
+    else {
+        // bigger size, memcopy
+        T *buf;
+        gpuMalloc(&buf, sizeof(T));
+        gpuMemcpy(buf, (char *)&val, sizeof(T), gpuMemcpyHostToDevice);
+
+        // call the kernel to set correct indexes
+        gpu_set_value_kernel_ptr<<<blocks, N_threads>>>(vec, buf, N);
+        gpuFree(buf);
+    }
 }
 
 // template <typename T>
@@ -423,7 +455,17 @@ void gpu_set_value(T *vec, const T &val, size_t N) {
 //     gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 // }
 
-
 #endif // !HILAPP
+
+/// Just copy the array to GPU memory, returning its device address
+template <typename T>
+T * copy_array_to_gpu(T *data, int n) {
+    T * buf;
+    gpuMalloc(&buf,n*sizeof(T));
+    gpuMemcpy(buf, data, n * sizeof(T), gpuMemcpyHostToDevice);
+    return buf;
+}
+
+
 
 #endif

@@ -12,14 +12,10 @@
 #include "hilapp.h"
 #include "toplevelvisitor.h"
 #include "stringops.h"
+#include "clang/AST/ASTLambda.h"
 
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
-
-// NOTE: If you define ALT_VECTOR_REDUCTION you need to define
-// it also in gpu_templated_ops.h !
-
-// #define ALT_VECTOR_REDUCTION
 
 extern std::string looping_var;
 extern std::string parity_name;
@@ -36,6 +32,32 @@ void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
         return;
     }
 
+    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(fd)) {
+        if (isLambdaCallOperator(MD)) {
+            CXXRecordDecl *RD = MD->getParent();
+            if (RD->isLambda()) { // isLambda check probably redundant?
+                                  // clang-format off
+            // reportDiag(DiagnosticsEngine::Level::Remark,fd->getInnerLocStart(),"fd begin\n");
+            // reportDiag(DiagnosticsEngine::Level::Remark,RD->getInnerLocStart(),"RD begin\n");
+            // fd->getInnerLocStart points to here:------------------------------v
+            //                        auto lambda =   [captures]     (params) -> return_type { ... };
+            // RD->getInnerLocStart points to here:---^           ^
+            //                                                    |
+            // __device__ __host__ should be inserted in here ----|
+                                  // clang-format on
+                // not standard, on nvcc needs --expt-extended-lambda
+                if (true) { // use some gpu_use_extended_lambda flag?
+                    sl = RD->getInnerLocStart();
+                    sl = ::skipParens(TheRewriter.getSourceMgr(), sl,
+                                      '['); // skip over capture group [...]
+                    if (!sb->is_edited(sl))
+                        sb->insert(sl, "__device__ __host__", true, true);
+                }
+                return;
+            }
+        }
+    }
+
     if (!sb->is_edited(sl))
         sb->insert(sl, "__device__ __host__ ", true, true);
 }
@@ -46,6 +68,8 @@ void GeneralVisitor::handle_loop_function_gpu(call_info_struct &ci) {
 
     if (ci.is_defaulted)
         return; // cuda can take care of these
+    if (ci.is_loop_local_lambda)
+        return; // loop local lambdas do not need __device__ __host__
 
     gpu_loop_function_marker(ci.funcdecl);
     FunctionDecl *proto;
@@ -66,18 +90,25 @@ void GeneralVisitor::handle_loop_constructor_gpu(call_info_struct &ci) {
         // it's a system file -- should we do something?
         return;
     }
+
+    // llvm::errs() << "marking CTOR " << sb->get(ci.ctordecl->getSourceRange()) << '\n';
+
     sb->insert(sl, "__device__ __host__ ", true, true);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+// keep running index to disambiguate kernels
+static uint64_t kernel_index = 1;
+
 /// Help routine to write (part of) a name for a kernel
 std::string TopLevelVisitor::make_kernel_name() {
     return kernel_name_prefix +
-           clean_name(global.currentFunctionDecl->getNameInfo().getName().getAsString()) + "_" +
-           std::to_string(TheRewriter.getSourceMgr().
-                          // getSpellingLineNumber(global.location.loop));
-                          getFileOffset(global.location.loop));
+           clean_name(global.currentFunctionDecl->getNameInfo().getName().getAsString()) + "_K" +
+           //    std::to_string(TheRewriter.getSourceMgr().
+           //                   // getSpellingLineNumber(global.location.loop));
+           //                   getFileOffset(global.location.loop));
+           std::to_string(kernel_index++);
 }
 
 std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
@@ -105,9 +136,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                          << loop_info.parity_str << ");\n";
                 }
         } else {
-            code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                    "++_HILAdir_) {\n"
-                 << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str << ");\n}\n";
+            code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                    "++HILA_dir_) {\n"
+                 << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
         }
     }
 
@@ -117,7 +148,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     //     code << "const lattice_struct & loop_lattice = " << fieldname << ".fs->lattice;\n";
     // } else {
     // now no fields in loop - default lattice
-    code << "const lattice_struct & loop_lattice = lattice;\n";
+    code << "const lattice_struct & loop_lattice = lattice.ref();\n";
 
 
     kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
@@ -212,17 +243,18 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 code << "// copy array/vector '" << ar.name << "' to device\n";
 
                 code << ar.element_type << " * " << ar.new_name << ";\n";
-                code << "gpuMalloc( & " << ar.new_name << ", " << ar.size_expr << " * sizeof("
+                code << "gpuMalloc( & " << ar.new_name << ", (" << ar.size_expr << ") * sizeof("
                      << ar.element_type << ") );\n";
 
-                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr << ", "
-                     << ar.size_expr << " * sizeof(" << ar.element_type << "), "
+                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr << ", ("
+                     << ar.size_expr << ") * sizeof(" << ar.element_type << "), "
                      << "gpuMemcpyHostToDevice);\n\n";
             }
 
         } else if (ar.type == array_ref::REDUCTION) {
 
             // Now there is reductionvector - do we have special reduction blocks or use atomic?
+            // revisit this below and write out the "header"
 
             std::string rv_block_str;
             if (is_macro_defined("GPU_VECTOR_REDUCTION_THREAD_BLOCKS", &rv_block_str)) {
@@ -240,6 +272,67 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     }
                 }
             }
+        }
+    }
+
+    // check if contains outside of kernel lambdas, and generate templates for them.. (lambdas dont
+    // have expressible type...)
+    bool first_lambda_tmp = true;
+    size_t lambda_tmp_name_i = 0;
+    for (var_info &vi : var_info_list) {
+        if (vi.is_lambda_var_ref && !vi.is_loop_local) {
+            if (first_lambda_tmp) {
+                kernel << "template<";
+                first_lambda_tmp = false;
+            } else
+                kernel << ", ";
+            // for lambdas vi.type is just some expanded source location string...
+            // So we override it here with a template type name,
+            // Now vi.type is correct and we dont need to modify the code where the kernel func
+            // params are written.
+            vi.type = "HILA_lmbd_" + std::to_string(lambda_tmp_name_i++);
+            kernel << "typename " + vi.type + " ";
+        }
+    }
+    if (!first_lambda_tmp)
+        kernel << ">\n";
+
+    // Generate the function definition and call
+    // "inline" makes cuda complain, but it is needed to avoid multiple definition error
+    // use "static" instead??
+    // Switch to static here for now
+    // Add __launch_bounds__ directive here
+    kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
+           << "(int _hila_loop_begin, int _hila_loop_end";
+    code << "int _hila_loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "int _hila_loop_end = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
+
+    code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
+            "N_threads - 1)/N_threads;\n";
+
+    if (use_thread_blocks) {
+        code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
+             << ";\n";
+    }
+
+    // Check for reductions and allocate device memory for each var
+    for (reduction_expr &r : reduction_list) {
+
+        code << r.type << " * dev_" << r.reduction_name << ";\n";
+        code << "gpuMalloc( & dev_" << r.reduction_name << "," << "sizeof(" << r.type
+             << ") * N_blocks );\n";
+        if (r.reduction_type == reduction::SUM) {
+            // no need to zero the array
+            // code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
+        }
+        if (r.reduction_type == reduction::PRODUCT) {
+            code << "gpu_set_value(dev_" << r.reduction_name << ", 1, N_blocks);\n";
+        }
+    }
+
+    // Write vector reduction header
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
 
             ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
 
@@ -248,15 +341,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             std::stringstream array_size; // keep size expression in string
 
             if (loop_has_reductionvector_blocks) {
-                code << "// Create reduction array with " << thread_block_number
-                     << " * N_threads parallel reductions\n";
-
-                array_size << ar.size_expr << " * N_threads * " << thread_block_number;
+                code << "// Create reduction array with (N_blocks * N_threads) parallel "
+                        "reductions\n";
+                array_size << '(' << ar.size_expr << ") * N_threads * N_blocks";
 
             } else {
                 code << "// Create reduction array - using atomicAdd for accumulation\n";
-
-                array_size << ar.size_expr;
+                array_size << '(' << ar.size_expr << ')';
             }
 
             code << "gpuMalloc( & " << ar.new_name << ", " << array_size.str() << " * sizeof("
@@ -274,40 +365,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
-
-    // Generate the function definition and call
-    // "inline" makes cuda complain, but it is needed to avoid multiple definition error
-    // use "static" instead??
-    // Add __launch_bounds__ directive here
-    kernel << "inline __global__ void __launch_bounds__(N_threads) " << kernel_name
-           << "( backend_lattice_struct d_lattice";
-    code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
-    code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
-
-    code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
-            "N_threads - 1)/N_threads;\n";
-
-    if (use_thread_blocks) {
-        code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
-             << ";\n";
-    }
-
-    // Check for reductions and allocate device memory for each var
-    for (reduction_expr &r : reduction_list) {
-
-        code << r.type << " * dev_" << r.reduction_name << ";\n";
-        code << "gpuMalloc( & dev_" << r.reduction_name << ","
-             << "sizeof(" << r.type << ") * N_blocks );\n";
-        if (r.reduction_type == reduction::SUM) {
-            code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
-        }
-        if (r.reduction_type == reduction::PRODUCT) {
-            code << "gpu_set_value(dev_" << r.reduction_name << ", 1, N_blocks);\n";
-        }
-    }
-
-
     // and for selections
     for (selection_info &s : selection_info_list) {
         s.maskname = s.new_name + "_mask";
@@ -317,13 +374,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (s.previous_selection == nullptr) {
             // define mask, coord and possible value holder
             code << "char * " << s.maskname << ";\n";
-            code << "gpuMalloc( & " << s.maskname << ", lattice.mynode.volume() );\n";
+            code << "gpuMalloc( & " << s.maskname << ", lattice->mynode.volume );\n";
             code << "SiteIndex * " << s.sitename << ";\n";
             code << "gpuMalloc( & " << s.sitename
-                 << ", lattice.mynode.volume()*sizeof(SiteIndex) );\n";
+                 << ", lattice->mynode.volume * sizeof(SiteIndex) );\n";
             if (s.assign_expr != nullptr) {
                 code << s.val_type << " * " << s.valname << ";\n";
-                code << "gpuMalloc( & " << s.valname << ", lattice.mynode.volume()*sizeof("
+                code << "gpuMalloc( & " << s.valname << ", lattice->mynode.volume * sizeof("
                      << s.val_type << ") );\n";
             }
         }
@@ -334,10 +391,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     if (target.cuda) {
-        code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
+        code << kernel_name << "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
     } else if (target.hip) {
         code << "hipLaunchKernelGGL(" << kernel_name
-             << ", dim3(N_blocks), dim3(N_threads), 0, 0, lattice_info";
+             << ", dim3(N_blocks), dim3(N_threads), 0, 0, _hila_loop_begin, _hila_loop_end";
     } else {
         llvm::errs() << "Internal bug - unknown kernelized target\n";
         exit(1);
@@ -422,7 +479,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         std::string repl_string;
         repl_string = "{\n " + s.maskname + looping + " = 1;\n";
         repl_string +=
-            s.sitename + looping + " = SiteIndex(d_lattice.coordinates(" + looping_var + "));\n";
+            s.sitename + looping + " = SiteIndex(_dev_coordinates[" + looping_var + "]);\n";
 
         if (s.assign_expr == nullptr) {
 
@@ -495,6 +552,16 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             code << ", " << ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
+            // kernel variable name for size of array
+            std::string array_size_varname;
+            if (loop_has_reductionvector_blocks) {
+                // in this case need to pass the size of the vector (original!) to the kernel
+                array_size_varname = ar.new_name + "_size";
+
+                code << ", " << ar.size_expr;
+                kernel << ", const int " << array_size_varname;
+            }
+
 
             for (bracket_ref_t &br : ar.refs) {
                 // change the name
@@ -548,12 +615,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     //    new_name[static_cast<int>(ind)*N_threads_total + thread_idx] += val
                     // static cast is added if the type of the index is not of int type
 
-                    // in this case pass the size of the vector (original!) to the kernel
-                    std::string ar_size_varname(ar.new_name + "_size");
-
-                    code << ", " << ar.size_expr;
-                    kernel << ", const int " << ar_size_varname;
-
                     // Now have to be careful not to insert on the index variable "area",
                     // go in front of it
 
@@ -571,20 +632,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     loopBuf.replace(idx, idx, replstr);
 
-                    // _HILA_thread_id is defined in kernel start below
+                    // HILA_thread_id is defined in kernel start below
                     l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
                             .getLocWithOffset(1);
 
-#ifndef ALT_VECTOR_REDUCTION
-                    // Normal simpler way to accumulate vectorreductions
-                    loopBuf.insert(l, " ) + _HILA_thread_id * " + ar_size_varname);
-
-#else
-                    // ALT of above is below
-                    std::stringstream ss;
-                    ss << " )*(N_threads * " << thread_block_number << ") + _HILA_thread_id";
-                    loopBuf.insert(l, ss.str());
-#endif
+                    loopBuf.insert(l, " )*N_threads*gridDim.x + HILA_thread_id");
                 }
             }
         }
@@ -645,22 +697,22 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     /////////////////////////////////////////////////////////////////////////////
     // Standard boilerplate in CUDA kernels: calculate site index
 
-    kernel << "int _HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
-    kernel << "unsigned " << looping_var << " = _HILA_thread_id + d_lattice.loop_begin;\n";
+    kernel << "int HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
+    kernel << "unsigned " << looping_var << " = HILA_thread_id + _hila_loop_begin;\n";
 
     if (!use_thread_blocks) {
 
         // The last block may exceed the lattice size. Do nothing in that case.
-        kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+        kernel << "if(" << looping_var << " < _hila_loop_end) { \n";
 
     } else {
         // In this case let all threads to iterate over sites
         // use long long type (64 bits) just in case to avoid wrapping
         // the iteration will stop on the
-        kernel << "for (long long _HILA_idx_l_ = " << looping_var
-               << "; _HILA_idx_l_ < d_lattice.loop_end; _HILA_idx_l_ += N_threads * "
+        kernel << "for (long long HILA_idx_l_ = " << looping_var
+               << "; HILA_idx_l_ < _hila_loop_end; HILA_idx_l_ += N_threads * "
                << thread_block_number << ") {\n"
-               << looping_var << " = _HILA_idx_l_;\n";
+               << looping_var << " = HILA_idx_l_;\n";
     }
 
     // Create temporary field element variables
@@ -687,7 +739,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     // Create the temp variable and call the getter
                     kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
                            << l.new_name << ".get(" << l.new_name << ".neighbours[" << dirname
-                           << "][" << looping_var << "], d_lattice.field_alloc_size);\n";
+                           << "][" << looping_var << "], _dev_field_alloc_size);\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -695,31 +747,39 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     }
                 }
             } else {
+
                 // now local var dependent neighbour
+                // Two methods, either fetch all neighbours to vars and use them in loop,
+                // or fetch element every time it is used. Clearly case-by-case either one
+                // can be better.  Use the latter for now.
+                // TODO: make selection automatic? At least tunable by pragma?
 
-                // std::string loop_array_name = l.new_name + "_dirs";
-                // kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
-                // kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
-                //           "++_HILAdir_) {\n"
-                //        << loop_array_name << "[_HILAdir_] = " << l.new_name <<
-                //        ".get("
-                //        << l.new_name << ".neighbours[_HILAdir_][" << looping_var
-                //        << "], d_lattice.field_alloc_size);\n}\n";
+#ifdef BUILD_VARIABLE_NB_DIR_ELEMENTS
 
-                // // and replace references in loop body
-                // for (dir_ptr &d : l.dir_list) {
-                //     std::string dirname;
-                //     if (d.is_constant_direction)
-                //         dirname = d.direxpr_s; // orig. string
-                //     else
-                //         dirname = remove_X(loopBuf.get(
-                //             d.parityExpr->getSourceRange())); // mapped name was
 
-                //     for (field_ref *ref : d.ref_list) {
-                //         loopBuf.replace(ref->fullExpr,
-                //                         loop_array_name + "[" + dirname + "]");
-                //     }
-                // }
+                std::string loop_array_name = l.new_name + "_dirs";
+                kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
+                kernel << "for (int HILA_dir_ = 0; HILA_dir_ < NDIRS; "
+                          "++HILA_dir_) {\n"
+                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get(" << l.new_name
+                       << ".neighbours[HILA_dir_][" << looping_var
+                       << "], _dev_field_alloc_size);\n}\n";
+
+                // and replace references in loop body
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr, loop_array_name + "[" + dirname + "]");
+                    }
+                }
+
+#else
 
                 // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
@@ -734,9 +794,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                         loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + l.new_name +
                                                            ".neighbours[" + dirname + "][" +
                                                            looping_var +
-                                                           "], d_lattice.field_alloc_size)");
+                                                           "], _dev_field_alloc_size)");
                     }
                 }
+#endif
             }
         }
 
@@ -748,7 +809,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // if (!l.is_written)
             //     kernel << "const ";
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name << ".get("
-                   << looping_var << ", d_lattice.field_alloc_size);\n           ";
+                   << looping_var << ", _dev_field_alloc_size);\n           ";
             // if (l.is_written)
             //    kernel << "// TODO: READ MAY BE UNNECESSARY!  Do more careful
             //    assignment analysis!\n";
@@ -820,7 +881,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             std::string type_name = l.type_template;
             type_name.erase(0, 1).erase(type_name.end() - 1, type_name.end());
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
-                   << ", d_lattice.field_alloc_size );\n";
+                   << ", _dev_field_alloc_size );\n";
         }
 
     // end the if ( looping_var < d_lattice.loop_end) or for() {
@@ -832,7 +893,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     for (reduction_expr &r : reduction_list) {
         // OLD
         // kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
-        kernel << "_hila_kernel_copy_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name << "sum);\n";
+        kernel << "_hila_kernel_copy_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
+               << "sum);\n";
     }
 
     // Handle reductions: Need to sync threads once, then do reduction
@@ -855,22 +917,23 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // } else if (vi.reduction_type == reduction::PRODUCT) {
         //     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
         // }
-        kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
+        kernel << "for( int HILA__i=N_threads/2; HILA__i>0; HILA__i/=2 ){\n";
         if (r.reduction_type == reduction::SUM) {
-            kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-                   << " < d_lattice.loop_end) {\n";
-            // STD
+            kernel << "if(threadIdx.x < HILA__i) {\n";
+
+            // STD: using += may fail in reductions, if the operator is
+            // not kernelized.
             // kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
-            //        << "sh[threadIdx.x+_H_i];\n";
+            //        << "sh[threadIdx.x + HILA__i];\n";
             kernel << "_hila_kernel_add_var(" << r.loop_name << "sh[threadIdx.x], " << r.loop_name
-                   << "sh[threadIdx.x + _H_i]);\n";
+                   << "sh[threadIdx.x + HILA__i]);\n";
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
-            kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-                   << " < d_lattice.loop_end) {\n";
+            kernel << "if(threadIdx.x < HILA__i) {\n";
+
             kernel << r.loop_name << "sh[threadIdx.x] *= " << r.loop_name
-                   << "sh[threadIdx.x+_H_i];\n";
+                   << "sh[threadIdx.x + HILA__i];\n";
             kernel << "}\n";
             kernel << "__syncthreads();\n";
         }
@@ -907,30 +970,31 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
-
+            // generate this inside {} to avoid name collisions
+            code << "{\n";
+            code << ar.element_type << "* a_v__tmp = new " << ar.element_type << "[" << ar.size_expr
+                 << "];\n";
             if (loop_has_reductionvector_blocks) {
                 // there are now N_blocks * loop_blocks -- reduce these
                 // (code in hila_gpu.cpp)
 
-                code << "sum_blocked_vectorreduction(" << ar.new_name << ", " << ar.size_expr
-                     << ", " << thread_block_number << " * N_threads);\n";
+                code << "   sum_blocked_vectorreduction(" << ar.new_name << ", " << "a_v__tmp"
+                     << ", " << ar.size_expr << ", N_blocks * N_threads);\n";
 
                 // after this the data can be collected from the array as in non-blocked reduction!
             }
 
-            code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr << ");\n";
-            code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", " << ar.size_expr
-                 << " * sizeof(" << ar.element_type << "), "
-                 << "gpuMemcpyDeviceToHost);\n\n";
+            // code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr <<
+            // ");\n";
 
-            code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr << "; _H_tmp_idx++) "
-                 << ar.name << "[_H_tmp_idx]";
+            code << "for (int HILA__tmp_idx=0; HILA__tmp_idx < (" << ar.size_expr
+                 << "); HILA__tmp_idx++) " << ar.name << "[HILA__tmp_idx]";
             if (ar.reduction_type == reduction::SUM)
-                code << " += a_v__tmp[_H_tmp_idx];\n";
+                code << " += a_v__tmp[HILA__tmp_idx];\n";
             else
-                code << " *= a_v__tmp[_H_tmp_idx];\n";
+                code << " *= a_v__tmp[HILA__tmp_idx];\n";
 
-            code << " }\n";
+            code << "delete[] a_v__tmp;\n}\n";
         }
 
         if (ar.type != array_ref::REPLACE && (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
@@ -943,12 +1007,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // Run reduction
         if (r.reduction_type == reduction::SUM) {
             code << r.reduction_name << " = gpu_reduce_sum( dev_" << r.reduction_name
-                 << ", N_blocks"
-                 << ");\n";
+                 << ", N_blocks" << ");\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             code << r.reduction_name << " = gpu_reduce_product( dev_" << r.reduction_name
-                 << ", N_blocks"
-                 << ");\n";
+                 << ", N_blocks" << ");\n";
         }
         // Free memory allocated for the reduction
         code << "gpuFree(dev_" << r.reduction_name << ");\n";

@@ -1,5 +1,5 @@
-#ifndef REAL_VAR_OPS_H_
-#define REAL_VAR_OPS_H_
+#ifndef HILA_REAL_VAR_OPS_H_
+#define HILA_REAL_VAR_OPS_H_
 
 #include "plumbing/defs.h"
 #include "plumbing/random.h"
@@ -74,6 +74,11 @@ std::string to_string(const T v, int prec = 8, char separator = ' ') {
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 std::string prettyprint(const T v, int prec = 8) {
     return to_string(v, prec);
+}
+
+template <typename Ntype, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+inline Ntype cast_to(T val) {
+    return static_cast<Ntype>(val);
 }
 
 

@@ -169,14 +169,16 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     void process_loop_functions();
 
-    void visit_loop_functions(std::vector<call_info_struct> &calls);
+    void visit_loop_function_calls(std::vector<call_info_struct> &calls);
 
     bool handle_special_loop_function(CallExpr *Call);
+
+    bool handle_global_var_decl(Decl *D);
 
     // check if stmt is lf[par] = ... -type
     // bool is_field_parity_assignment(Stmt *s);
 
-    bool is_field_with_coordinate_stmt(Stmt *s);
+    bool handle_field_with_coordinate_stmt(Stmt *s);
     void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc, char optype);
     void field_with_coordinate_read(Expr *E);
     bool handle_field_coordinate_expr(Expr *e);
@@ -207,6 +209,9 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Code generation headers start here
     /// Starting point for new code
     void generate_code(Stmt *S);
+
+    std::string get_filename_and_line(Stmt *S);
+
     void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par);
 
     std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,

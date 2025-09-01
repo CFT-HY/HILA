@@ -16,7 +16,11 @@
 #include "optionsparser.h"
 #include "stringops.h"
 #include "toplevelvisitor.h"
-#include "specialization_db.h"
+
+
+#if __has_include("../../libraries/hila_signatures.h")
+#include "../../libraries/hila_signatures.h"
+#endif
 
 // definitions for global variables
 // lots of global state, which we do not bother passing around in arguments
@@ -50,16 +54,6 @@ llvm::cl::opt<std::string> cmdline::dummy_def("D", llvm::cl::value_desc("macro[=
 llvm::cl::opt<std::string> cmdline::dummy_incl("I", llvm::cl::value_desc("directory"),
                                                llvm::cl::desc("Directory for include file search"),
                                                llvm::cl::cat(HilappCategory));
-
-llvm::cl::opt<bool> cmdline::function_spec_no_inline(
-    "function-spec-no-inline",
-    llvm::cl::desc("Do not mark generated function specializations \"inline\""),
-    llvm::cl::cat(HilappCategory));
-
-llvm::cl::opt<bool> cmdline::method_spec_no_inline(
-    "method-spec-no-inline",
-    llvm::cl::desc("Do not mark generated method specializations \"inline\""),
-    llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::allow_func_globals(
     "allow-func-globals",
@@ -330,7 +324,7 @@ void check_pragmas(std::string &arg, SourceLocation prloc, SourceLocation refloc
                 // exit pragma scan loop
                 break;
             } // if found
-        }     // for
+        } // for
 
         if (!found_now) {
             auto &DE = myCompilerInstance->getDiagnostics();
@@ -734,7 +728,8 @@ bool is_macro_defined(const char *name, std::string *arg) {
 /////////////////////////////////////////////////////////////////////////////
 /// Global variable where the file buffers are hanging
 
-std::list<file_buffer> file_buffer_list = {};
+static std::list<file_buffer> file_buffer_list = {};
+
 
 /////////////////////////////////////////////////////////////////////////////
 /// get the file buffer for the file; create if it does not exist
@@ -749,23 +744,15 @@ srcBuf *get_file_buffer(Rewriter &R, const FileID fid) {
 
     SourceManager &SM = R.getSourceMgr();
 
-    // System files should not be buffered!  FIle is OK if its name contains /hila/
-    // if not found, return nullptr
-    // TODO: this sounds pretty fragile!!
-    // IT IS TOO FRAGILE; COMMENT OUT
-    // std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
-    // if (path.find("/hila/") == std::string::npos)
-    //    return nullptr;
-
     file_buffer fb;
     fb.fid = fid;
     file_buffer_list.push_back(fb);
-    SourceRange r(SM.getLocForStartOfFile(fid), SM.getLocForEndOfFile(fid));
+    SourceRange sr(SM.getLocForStartOfFile(fid), SM.getLocForEndOfFile(fid));
 
     // llvm::errs() << "Create buf for file "
     //              << SM.getFilename(SM.getLocForStartOfFile(fid)) << '\n';
 
-    file_buffer_list.back().sbuf.create(&R, r);
+    file_buffer_list.back().sbuf.create(&R, sr);
     return (&file_buffer_list.back().sbuf);
 }
 
@@ -798,15 +785,131 @@ void remove_ifdef_HILAPP_sections() {
 /////////////////////////////////////////////////////////////////////////////////
 /// Implementation of the ASTConsumer interface for reading an AST produced
 /// by the Clang parser.
-/// This starts the main AST Visitor too
+/// This starts our main AST Visitor (TopLevelVisitor)
 /////////////////////////////////////////////////////////////////////////////////
 
 class MyASTConsumer : public ASTConsumer {
+  private:
+    TopLevelVisitor Visitor;
+
   public:
     MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R, C) {}
 
-    // HandleTranslationUnit is called after the AST for the whole TU is completed
-    // Need to use this interface to ensure that specializations are present
+
+    // Unwind macro definitions so that you get the real location in code.
+    SourceLocation getrealbeginloc(Decl *d) {
+        // Find the beginning location of the Declaration
+        SourceLocation beginloc = d->getBeginLoc();
+        // Macro source range doesn't point to it's actual location in the file
+        // Find where the macro is called
+        if (beginloc.isMacroID()) {
+            Preprocessor &pp = myCompilerInstance->getPreprocessor();
+            // Is there an easier way?
+            CharSourceRange CSR =
+                Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange(beginloc);
+            beginloc = CSR.getBegin();
+        }
+        return beginloc;
+    }
+
+    // Function to check signatures in compiled hilapp executable versus the source file.
+    // These have to satisfy the constraints in order to ensure successful compilation
+
+    bool check_signatures() {
+
+#ifdef HILA_SIGNATURE_NUMBER
+        // do checks only if signatures are in code
+
+        std::string s;
+
+        if (is_macro_defined("HILA_SIGNATURE_NUMBER", &s) &&
+            !is_macro_defined("NO_SIGNATURE_CHECK")) {
+            // Now signatures defined in source, check
+            auto code_signature = std::atoi(s.c_str());
+
+            if (is_macro_defined("MINIMUM_HILAPP_SIGNATURE", &s)) {
+                auto min_signature = std::atoi(s.c_str());
+
+                if (min_signature > HILA_SIGNATURE_NUMBER) {
+                    // Now source wants higher hilapp signature
+
+                    llvm::errs()
+                        << "******* ERROR: hila source requires hilapp signature >= "
+                        << min_signature << ", but hilapp executable has signature "
+                        << HILA_SIGNATURE_NUMBER << ".\n "
+                        << "        Recompile hilapp with current code version.\n"
+                        << "This check can be omitted by defining NO_SIGNATURE_CHECK, but it "
+                           "may lead to incorrect program.\n";
+
+                    exit(1);
+                }
+            }
+
+            if (code_signature < MINIMUM_HILA_SIGNATURE) {
+                // Now hilapp is too new for the code!
+
+                llvm::errs() << "******* ERROR: hila source has signature " << code_signature
+                             << ", but hilapp executable requires >= " << MINIMUM_HILA_SIGNATURE
+                             << ".\n " << "        Update hila framework source.\n"
+                             << "This check can be omitted by defining NO_SIGNATURE_CHECK, but it "
+                                "may lead to incorrect program.\n";
+
+                exit(1);
+            }
+        }
+#endif
+
+        return true;
+    }
+
+
+    // handle one top level declaration, going in namespace declarations for
+    // locations for generating kernels and specializations
+    void HandleToplevelDecl(SourceManager &SM, Decl *dp, SourceLocation beginloc) {
+
+        if (NamespaceDecl *NSD = dyn_cast<NamespaceDecl>(dp)) {
+            if (global.namespace_level == 0) {
+                global.namespace_range = NSD->getSourceRange();
+            }
+            global.namespace_level++;
+
+            // it is a namespace decl, go in independent decls
+            for (Decl *d : NSD->decls()) {
+                beginloc = getrealbeginloc(d);
+                HandleToplevelDecl(SM, d, beginloc);
+            }
+            global.namespace_level--;
+
+        } else {
+            // Now not namespace decl
+
+            // get our own file edit buffer (unless it exists)
+            Visitor.set_writeBuf(SM.getFileID(beginloc));
+
+            // save this for source location
+            global.location.top = dp->getSourceRange().getBegin();
+            global.location.bot = Visitor.getSourceLocationAtEndOfRange(dp->getSourceRange());
+
+            // set the default insertion point for possibly generated kernels
+            // go to the beginning of line
+            SourceLocation sl = global.location.top;
+            while (sl.isValid() && getChar(SM, sl) != '\n')
+                sl = sl.getLocWithOffset(-1);
+            global.location.kernels = sl;
+
+
+            // Traverse the declaration using our AST visitor.
+            // if theres "#pragma skip" don't do it
+            if (!skip_this_translation_unit)
+                Visitor.TraverseDecl(dp);
+        }
+    }
+
+
+    // HandleTranslationUnit is called after the AST for the whole TU is completed.
+    // This is where we start processing the AST and generating new code.  We need to
+    // use this interface to ensure that all template specializations are present in the AST
+
     virtual void HandleTranslationUnit(ASTContext &ctx) override {
 
         SourceManager &SM = ctx.getSourceManager();
@@ -814,6 +917,11 @@ class MyASTConsumer : public ASTConsumer {
         // tud->dump();
 
         Visitor.reset_parsing_state();
+
+        if (!check_signatures()) {
+            state::compile_errors_occurred = true;
+            return;
+        }
 
         // Traverse each declaration in the translation unit
         for (Decl *d : tud->decls()) {
@@ -823,42 +931,14 @@ class MyASTConsumer : public ASTConsumer {
             // in a system file or a virtual file.
 
             // Find the beginning location of the Declaration
-            SourceLocation beginloc = d->getBeginLoc();
-            // Macro source range doesn't point to it's actual location in the file
-            // Find where the macro is called
-            if (beginloc.isMacroID()) {
-                Preprocessor &pp = myCompilerInstance->getPreprocessor();
-                // Is there an easier way?
-                CharSourceRange CSR =
-                    Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange(beginloc);
-                beginloc = CSR.getBegin();
-            }
+            SourceLocation beginloc = getrealbeginloc(d);
 
             if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
 
                 // llvm::errs() << "Processing file " << SM.getFilename(beginloc) <<
                 // "\n";
-                // TODO: ensure that we go only through files which are needed!
 
-                // get our own file edit buffer (unless it exists)
-                Visitor.set_writeBuf(SM.getFileID(beginloc));
-
-                // save this for source location
-                global.location.top = d->getSourceRange().getBegin();
-                global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
-
-                // set the default insertion point for possibly generated kernels
-                // go to the beginning of line
-                SourceLocation sl = global.location.top;
-                while (sl.isValid() && getChar(SM, sl) != '\n')
-                    sl = sl.getLocWithOffset(-1);
-                global.location.kernels = sl;
-
-
-                // Traverse the declaration using our AST visitor.
-                // if theres "#pragma skip" don't do it
-                if (!skip_this_translation_unit)
-                    Visitor.TraverseDecl(d);
+                HandleToplevelDecl(SM, d, beginloc);
 
                 // llvm::errs() << "Dumping level " << i++ << "\n";
                 if (cmdline::dump_ast) {
@@ -872,13 +952,13 @@ class MyASTConsumer : public ASTConsumer {
         auto &DE = ctx.getDiagnostics();
         state::compile_errors_occurred = DE.hasErrorOccurred();
     }
-
-  private:
-    TopLevelVisitor Visitor;
 };
 
-/// This struct will be used to keep track of #include-chains.
-std::vector<FileID> file_id_list = {};
+////////////////////////////////////////////////////////////////////////////////
+/// This struct will be used to keep track of #include-chains and insertions
+
+static std::vector<FileID> file_id_list = {};
+
 
 /// Tiny utility to search for the list
 bool search_fid(const FileID FID) {
@@ -895,7 +975,7 @@ void set_fid_modified(const FileID FID) {
         // new file to be added
         file_id_list.push_back(FID);
 
-        SourceManager &SM = myCompilerInstance->getSourceManager();
+        // SourceManager &SM = myCompilerInstance->getSourceManager();
         // llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName()
         // <<
         // '\n';
@@ -904,6 +984,10 @@ void set_fid_modified(const FileID FID) {
 
 /// For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
+  private:
+    Rewriter TheRewriter;
+    // ASTContext  TheContext;
+
   public:
     MyFrontendAction() {}
 
@@ -1097,8 +1181,6 @@ class MyFrontendAction : public ASTFrontendAction {
                 write_output_file(cmdline::output_filename,
                                   get_file_buffer(TheRewriter, SM.getMainFileID())->dump());
 
-                if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline)
-                    write_specialization_db();
             } else {
                 llvm::errs() << program_name << ": not writing output due to compile errors\n";
             }
@@ -1120,10 +1202,6 @@ class MyFrontendAction : public ASTFrontendAction {
         return std::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
 #endif
     }
-
-  private:
-    Rewriter TheRewriter;
-    // ASTContext  TheContext;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -1160,4 +1238,3 @@ int main(int argc, const char **argv) {
     // To further customize this, we could create our own factory class.
     return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
-

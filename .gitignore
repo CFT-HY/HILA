@@ -1,5 +1,9 @@
 build/
 hilapp/bin/*
+applications/muca_example
+applications/suN_gauge_twist/fourier_profile_*
+applications/suN_gauge_twist/surface_smooth_*
+applications/suN_gauge_twist/out.txt
 singularity/hilapp.sif
 settings.json
 .vscode/
@@ -13,3 +17,9 @@ docs/html/*
 !docs/html/images/
 latex/
 html/
+.vs/slnx.sqlite
+*config*
+*run_status
+*out.txt
+*out*.txt
+applications/*/test*/*

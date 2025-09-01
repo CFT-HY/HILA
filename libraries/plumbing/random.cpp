@@ -44,6 +44,13 @@ namespace hila {
  * and also avoids giving the same seed for 2 nodes
  * For single MPI node seed remains unchanged
  */
+
+/**
+ * @brief Random shuffling of rng seed for MPI nodes.
+ * @details Do it in a manner makes it difficult to give the same seed by mistake
+ * and also avoids giving the same seed for 2 nodes
+ * For single MPI node seed remains unchanged
+ */
 uint64_t shuffle_rng_seed(uint64_t seed) {
 
     uint64_t n = hila::myrank();
@@ -87,6 +94,10 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 
     rng_is_initialized = true;
 
+    if (!lattice.is_initialized()) {
+        hila::error("lattice.setup() must be called before hila::seed_random()");
+    }
+
 
     uint64_t n = hila::myrank();
     if (hila::partitions.number() > 1)
@@ -104,6 +115,9 @@ void hila::seed_random(uint64_t seed, bool device_init) {
         }
         hila::broadcast(seed);
     }
+
+    if (hila::partitions.number() > 1)
+        seed = seed ^ ((static_cast<uint64_t>(hila::partitions.mylattice())) << 28);
 
 #ifndef SITERAND
 
@@ -155,6 +169,10 @@ void hila::seed_random(uint64_t seed, bool device_init) {
  *unless seeded again using `initialize_device_rng()`. Frees the memory RNG takes on the device. 
  */  
 void hila::free_device_rng() {}
+
+/**
+ *@details Returns `true` on non-GPU archs.
+ */
 
 /**
  *@details Returns `true` on non-GPU archs.

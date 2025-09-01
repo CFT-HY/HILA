@@ -68,7 +68,8 @@ class DiagonalMatrix {
      * @brief Element access - e(i) gives diagonal element i
      *
      */
-
+    
+    #pragma hila loop_function
     inline T e(const int i) const {
         return c[i];
     }
@@ -127,37 +128,6 @@ class DiagonalMatrix {
         return *this;
     }
 
-    /**
-     * @brief Boolean operator == to determine if two matrices are exactly the same
-     */
-    template <typename S>
-    bool operator==(const DiagonalMatrix<n, S> &rhs) const {
-        for (int i = 0; i < n; i++) {
-            if (e(i) != rhs.e(i))
-                return false;
-        }
-        return true;
-    }
-
-    /**
-     * @brief Boolean operator == to compare with square matrix
-     */
-    template <typename S, typename Mtype>
-    bool operator==(const Matrix_t<n, n, S, Mtype> &rhs) const {
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (i == j) {
-                    if (e(i) != rhs.e(i, i))
-                        return false;
-                } else {
-                    if (rhs.e(i, j) != 0)
-                        return false;
-                }
-            }
-        }
-        return true;
-    }
-
 
     /**
      * @brief Boolean operator != to check if matrices are exactly different
@@ -172,10 +142,8 @@ class DiagonalMatrix {
      * Assignment operators: assign from another DiagonalMatrix, scalar or initializer list
      */
 
-
-#pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline DiagonalMatrix &operator=(const DiagonalMatrix<n, S> &rhs) out_only {
+    inline DiagonalMatrix &operator=(const DiagonalMatrix<n, S> &rhs) out_only & {
 
         for (int i = 0; i < n; i++) {
             c[i] = rhs.e(i);
@@ -183,10 +151,10 @@ class DiagonalMatrix {
         return *this;
     }
 
-// Assign from "scalar"
-#pragma hila loop_function
+    // Assign from "scalar"
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline DiagonalMatrix &operator=(const S &rhs) out_only {
+    inline DiagonalMatrix &operator=(const S &rhs) out_only & {
 
         for (int i = 0; i < n; i++) {
             c[i] = rhs;
@@ -194,10 +162,10 @@ class DiagonalMatrix {
         return *this;
     }
 
-// Assign from initializer list
-#pragma hila loop_function
+    // Assign from initializer list
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline DiagonalMatrix &operator=(std::initializer_list<S> rhs) out_only {
+    inline DiagonalMatrix &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == n && "Initializer list has a wrong size in assignment");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
@@ -208,18 +176,18 @@ class DiagonalMatrix {
 
 
     // +=
-#pragma hila loop_function
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    DiagonalMatrix &operator+=(const DiagonalMatrix<n, S> &rhs) {
+    DiagonalMatrix &operator+=(const DiagonalMatrix<n, S> &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] += rhs.e(i);
         }
         return *this;
     }
 
-#pragma hila loop_function
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    DiagonalMatrix &operator+=(const S &rhs) {
+    DiagonalMatrix &operator+=(const S &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] += rhs;
         }
@@ -227,18 +195,18 @@ class DiagonalMatrix {
     }
 
     // -=
-#pragma hila loop_function
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    DiagonalMatrix &operator-=(const DiagonalMatrix<n, S> &rhs) {
+    DiagonalMatrix &operator-=(const DiagonalMatrix<n, S> &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] -= rhs.e(i);
         }
         return *this;
     }
 
-#pragma hila loop_function
+
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    DiagonalMatrix &operator-=(const S &rhs) {
+    DiagonalMatrix &operator-=(const S &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] -= rhs;
         }
@@ -246,20 +214,20 @@ class DiagonalMatrix {
     }
 
     // *=
-#pragma hila loop_function
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
-    DiagonalMatrix &operator*=(const DiagonalMatrix<n, S> &rhs) {
+    DiagonalMatrix &operator*=(const DiagonalMatrix<n, S> &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] *= rhs.e(i);
         }
         return *this;
     }
 
-#pragma hila loop_function
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
-    DiagonalMatrix &operator*=(const S &rhs) {
+    DiagonalMatrix &operator*=(const S &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] *= rhs;
         }
@@ -267,20 +235,20 @@ class DiagonalMatrix {
     }
 
     // /=
-#pragma hila loop_function
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
-    DiagonalMatrix &operator/=(const DiagonalMatrix<n, S> &rhs) {
+    DiagonalMatrix &operator/=(const DiagonalMatrix<n, S> &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] /= rhs.e(i);
         }
         return *this;
     }
 
-#pragma hila loop_function
+
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
-    DiagonalMatrix &operator/=(const S &rhs) {
+    DiagonalMatrix &operator/=(const S &rhs) & {
         for (int i = 0; i < n; i++) {
             c[i] /= rhs;
         }
@@ -301,7 +269,7 @@ class DiagonalMatrix {
     /**
      * @brief transpose - leaves diagonal matrix as is
      */
-    const DiagonalMatrix &transpose() const {
+    DiagonalMatrix &transpose() const {
         return *this;
     }
 
@@ -470,11 +438,11 @@ class DiagonalMatrix {
     }
 
     Vector<n, T> &asVector() const_function {
-        return *(reinterpret_cast<Vector<n,T> *>(this));
+        return *(reinterpret_cast<Vector<n, T> *>(this));
     }
 
     const Vector<n, T> &asVector() const {
-        return *(reinterpret_cast<const Vector<n,T> *>(this));
+        return *(reinterpret_cast<const Vector<n, T> *>(this));
     }
 
     /// implement sort as casting to matrix
@@ -492,6 +460,51 @@ class DiagonalMatrix {
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @brief Boolean operator == to determine if two diagonal matrices are exactly the same
+ */
+template <typename A, typename B, int n, int m>
+inline bool operator==(const DiagonalMatrix<n, A> &lhs, const DiagonalMatrix<m, B> &rhs) {
+    if constexpr (m != n)
+        return false;
+
+    for (int i = 0; i < n; i++) {
+        if (lhs.e(i) != rhs.e(i))
+            return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Boolean operator == to compare with square matrix
+ * Matrices are equal if diagonals are equal and off-diag is zero
+ */
+template <typename A, typename S, typename Mtype, int n, int m1, int m2>
+inline bool operator==(const DiagonalMatrix<n, A> &lhs, const Matrix_t<m1, m2, S, Mtype> &rhs) {
+    if constexpr (m1 != n || m2 != n)
+        return false;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) {
+                if (lhs.e(i) != rhs.e(i, i))
+                    return false;
+            } else {
+                if (rhs.e(i, j) != 0)
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+template <typename A, typename S, typename Mtype, int n, int m1, int m2>
+inline bool operator==(const Matrix_t<m1, m2, S, Mtype> &lhs, const DiagonalMatrix<n, A> &rhs) {
+    return rhs == lhs;
+}
+
+// Compiler generates operator!= automatically
 
 template <int n, typename T>
 inline const auto &transpose(const DiagonalMatrix<n, T> &arg) {
@@ -561,9 +574,8 @@ namespace hila {
 
 template <typename Mt, typename S, typename Enable = void>
 struct diagonalmatrix_scalar_op_s {
-    using type =
-        DiagonalMatrix<Mt::rows(),
-                       Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
+    using type = DiagonalMatrix<
+        Mt::rows(), Complex<hila::type_plus<hila::arithmetic_type<Mt>, hila::arithmetic_type<S>>>>;
 };
 
 template <typename Mt, typename S>
@@ -946,28 +958,6 @@ inline auto pow(const DiagonalMatrix<n, T> &a, const Complex<S> &p) {
     return res;
 }
 
-// Cast operators to different number or Complex type
-// cast_to<double>(a);
-// Cast from number->number, number->Complex, Complex->Complex OK,
-//     Complex->number not.
-
-template <typename Ntype, typename T, int n,
-          std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-DiagonalMatrix<n, Ntype> cast_to(const DiagonalMatrix<n, T> &mat) {
-    DiagonalMatrix<n, Ntype> res;
-    for (int i = 0; i < n; i++)
-        res.c[i] = mat.c[i];
-    return res;
-}
-
-template <typename Ntype, typename T, int n, std::enable_if_t<hila::is_complex<T>::value, int> = 0>
-DiagonalMatrix<n, Ntype> cast_to(const DiagonalMatrix<n, T> &mat) {
-    DiagonalMatrix<n, Ntype> res;
-    for (int i = 0; i < n; i++)
-        res.c[i] = cast_to<Ntype>(mat.c[i]);
-    return res;
-}
-
 /// Stream operator
 template <int n, typename T>
 std::ostream &operator<<(std::ostream &strm, const DiagonalMatrix<n, T> &A) {
@@ -975,6 +965,34 @@ std::ostream &operator<<(std::ostream &strm, const DiagonalMatrix<n, T> &A) {
 }
 
 namespace hila {
+
+/**
+ * @brief Cast to different basic number:
+ * 
+ * @details
+ * hila::cast_to<Ntype>(a);
+ * 
+ * where a is DiagonalMatrix<n,T> does 
+ * DiagonalMatrix<n,T> -> DiagonalMatrix<n,Ntype>
+ * 
+ */
+
+template <typename Ntype, typename T, int n,
+          std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
+DiagonalMatrix<n, Ntype> cast_to(const DiagonalMatrix<n, T> &mat) {
+    DiagonalMatrix<n, Ntype> res;
+    for (int i = 0; i < n; i++)
+        res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
+
+template <typename Ntype, typename T, int n, std::enable_if_t<hila::is_complex<T>::value, int> = 0>
+DiagonalMatrix<n, Complex<Ntype>> cast_to(const DiagonalMatrix<n, T> &mat) {
+    DiagonalMatrix<n, Complex<Ntype>> res;
+    for (int i = 0; i < n; i++)
+        res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
 
 template <int n, typename T>
 std::string to_string(const DiagonalMatrix<n, T> &A, int prec = 8, char separator = ' ') {

@@ -5,14 +5,19 @@
 #include <type_traits>
 #include "defs.h"
 #include "input.h"
+#include "cmdline.h"
 #include <errno.h>
 #include <iomanip>
 
 #define COMMENT_CHAR '#'
 
+#define CMDLINE_USED_FLAG "#ÄÄ#"
+
+static int input_file_count = 0;
+
 //////////////////////////////////////////////////////////////////////////////
-/// Parameter file input system
-/// Check input.h for user instructions
+// Parameter file input system
+// Check input.h for user instructions
 //////////////////////////////////////////////////////////////////////////////
 
 namespace hila {
@@ -20,14 +25,17 @@ namespace hila {
 static std::string empty_key("");
 
 bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_error) {
-    extern const char *input_file;
 
     std::string fname;
 
-    if (use_cmdline && input_file != nullptr) {
+    file_number = ++input_file_count;
+    cmdline_p.clear();
 
-        fname = input_file;
-        input_file = nullptr; // set this null, so that it is not used again
+    if (use_cmdline && input_file_count == 1 && hila::cmdline.flag_present("-i")) {
+        // input_file_count guarantees this is done only 1st time
+
+        fname = hila::cmdline.get_string("-i");
+
     } else {
         fname = file_name;
     }
@@ -45,18 +53,24 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             if (fname == "-") {
                 use_cin = true;
                 if (speaking)
-                    print_dashed_line("Reading from standard input");
+                    hila::print_dashed_line("Reading from standard input");
             } else {
                 use_cin = false;
                 inputfile.open(fname);
+                if (!inputfile.is_open()) {
+                    if(hila::partitions.number() > 1) {
+                        // try to open inputfile from upper level
+                        filename = "../" + fname;
+                        inputfile.open(filename);
+                    }
+                }
+
                 if (inputfile.is_open()) {
                     is_initialized = true;
-
                     if (speaking)
-                        print_dashed_line("Reading file " + filename);
+                        hila::print_dashed_line("Reading file " + filename);
 
                 } else {
-
                     if (speaking) {
                         if (exit_on_error)
                             hila::out0 << "ERROR: ";
@@ -68,6 +82,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             }
         }
     }
+    
     hila::broadcast(got_error);
     if (got_error && exit_on_error) {
         hila::finishrun();
@@ -78,11 +93,28 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
 
 void input::close() {
     if (is_initialized && !use_cin) {
-        inputfile.close();
+        if (inputfile.is_open())
+            inputfile.close();
         is_initialized = false;
     }
+
+    // check if some cmdline -p args are unused
+    bool is_unused = false;
+    if (hila::myrank() == 0 && file_number == 1 && cmdline_p.size() > 0) {
+        for (int i = 0; i < cmdline_p.size(); i += 2) {
+            if (cmdline_p[i] != CMDLINE_USED_FLAG) {
+                hila::out0 << "Error: unused command line -p argument, flag " << cmdline_p[i]
+                           << '\n';
+                is_unused = true;
+            }
+        }
+    }
+    hila::broadcast(is_unused);
+    if (is_unused)
+        hila::finishrun();
+
     if (speaking)
-        print_dashed_line();
+        hila::print_dashed_line();
 
     // automatic cleaning of other vars
 }
@@ -112,7 +144,7 @@ bool input::get_line() {
 
         is_line_printed = false; // not yet printed
     }
-    return true;                 // sync this at another spot
+    return true; // sync this at another spot
 }
 
 // print the read-in line with a bit special formatting
@@ -266,15 +298,42 @@ bool input::handle_key(const std::string &key) {
         if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
             if (speaking) {
                 hila::out0 << "Error: expecting key '" << key << "', found instead:\n";
-                print_linebuf(0);
+                hila::out0 << "\"" << linebuffer << "\"\n----\n";
             }
             return false;
         }
+
+        // check the command line args, if this is the first input file
+        scan_cmdline(key, end_of_key);
 
         print_linebuf(end_of_key);
     }
     return true;
 }
+
+
+void input::scan_cmdline(const std::string &key, int &end_of_key) {
+
+    if (file_number == 1) {
+        if (cmdline_p.size() == 0 && hila::cmdline.flag_present("-p")) {
+            cmdline_p = hila::cmdline.values("-p");
+        }
+
+        for (int i = 0; i < cmdline_p.size(); i += 2) {
+            if (cmdline_p[i] == key) {
+
+                cmdline_p[i] = CMDLINE_USED_FLAG;
+                linebuffer = key + " " + cmdline_p.at(i + 1);
+                lb_start = key.size();
+                end_of_key = lb_start;
+                if (speaking)
+                    hila::out0 << "OVERRIDE from command line: " << key << ":\n";
+                break;
+            }
+        }
+    }
+}
+
 
 // is the input string int/double/string and return it
 

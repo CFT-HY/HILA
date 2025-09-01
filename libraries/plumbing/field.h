@@ -1,10 +1,11 @@
+#ifndef HILA_FIELD_H
+#define HILA_FIELD_H
+
 /**
  * @file field.h
  * @brief This files containts definitions for the Field class and the classes required to define
  * it such as field_struct.
  */
-#ifndef FIELD_H
-#define FIELD_H
 
 #include <sstream>
 #include <iostream>
@@ -75,7 +76,7 @@ class Field {
     class field_struct {
       public:
         field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-        int lattice_id;
+        Lattice mylattice;
 #ifdef VECTORIZED
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
@@ -151,12 +152,12 @@ class Field {
          * @return auto
          */
         inline auto get(const unsigned i) const {
-            return payload.get(i, lattice.field_alloc_size());
+            return payload.get(i, lattice->mynode.field_alloc_size);
         }
 
         template <typename A>
         inline void set(const A &value, const unsigned i) {
-            payload.set(value, i, lattice.field_alloc_size());
+            payload.set(value, i, lattice->mynode.field_alloc_size);
         }
 
         /**
@@ -280,6 +281,8 @@ class Field {
 #ifdef VECTORIZED
         static_assert(sizeof(hila::arithmetic_type<T>) == 4 ||
                           sizeof(hila::arithmetic_type<T>) == 8,
+        static_assert(sizeof(hila::arithmetic_type<T>) == 4 ||
+                          sizeof(hila::arithmetic_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
@@ -342,12 +345,13 @@ class Field {
      * @param rhs
      */
     Field(Field &&rhs) {
+        assert(rhs.fs->mylattice.ptr() == lattice.ptr());
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
 
     ~Field() {
-        free();
+        clear();
 
 #ifdef HILAPP
         // Because destructor is instantiated for all fields,
@@ -362,13 +366,10 @@ class Field {
      * @brief  Sets up memory for field content and communication.
      */
     void allocate() {
+        assert(lattice.is_initialized() && "Fields cannot be used before lattice.setup()");
         assert(fs == nullptr);
-        if (lattice.volume() == 0) {
-            hila::out0 << "Can not allocate Field variables before lattice.setup()\n";
-            hila::terminate(0);
-        }
         fs = (field_struct *)memalloc(sizeof(field_struct));
-        fs->lattice_id = lattice.id();
+        fs->mylattice = lattice;
         fs->allocate_payload();
         fs->initialize_communication();
         mark_changed(ALL);   // guarantees communications will be done
@@ -377,9 +378,9 @@ class Field {
         for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
 #if !defined(CUDA) && !defined(HIP)
-            fs->neighbours[d] = lattice.neighb[d];
+            fs->neighbours[d] = lattice->neighb[d];
 #else
-            fs->payload.neighbours[d] = lattice.backend_lattice->d_neighb[d];
+            fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
 #endif
         }
 
@@ -392,7 +393,7 @@ class Field {
 
 #ifdef VECTORIZED
         if constexpr (hila::is_vectorizable_type<T>::value) {
-            fs->vector_lattice = lattice.backend_lattice
+            fs->vector_lattice = lattice->backend_lattice
                                      ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
         } else {
             fs->vector_lattice = nullptr;
@@ -404,7 +405,7 @@ class Field {
      * @brief Destroys field data
      * @details don't call destructors when exiting - either MPI or cuda can already be off.
      */
-    void free() {
+    void clear() {
         if (fs != nullptr && !hila::about_to_finish) {
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
@@ -565,7 +566,7 @@ class Field {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
 
         return hila::bc_need_communication(fs->boundary_condition[dir]) ||
-               !lattice.mynode.is_on_edge(dir);
+               !fs->mylattice->mynode.is_on_edge(dir);
 #else
         return true;
 #endif
@@ -595,18 +596,20 @@ class Field {
 
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
+
+        lattice_struct *mylat = fs->mylattice.ptr();
         fs->boundary_condition[dir] = bc;
         fs->boundary_condition[-dir] = bc;
 #if !defined(CUDA) && !defined(HIP)
-        fs->neighbours[dir] = lattice.get_neighbour_array(dir, bc);
-        fs->neighbours[-dir] = lattice.get_neighbour_array(-dir, bc);
+        fs->neighbours[dir] = mylat->get_neighbour_array(dir, bc);
+        fs->neighbours[-dir] = mylat->get_neighbour_array(-dir, bc);
 #else
         if (bc == hila::bc::PERIODIC) {
-            fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb[dir];
-            fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb[-dir];
+            fs->payload.neighbours[dir] = mylat->backend_lattice->d_neighb[dir];
+            fs->payload.neighbours[-dir] = mylat->backend_lattice->d_neighb[-dir];
         } else {
-            fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb_special[dir];
-            fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb_special[-dir];
+            fs->payload.neighbours[dir] = mylat->backend_lattice->d_neighb_special[dir];
+            fs->payload.neighbours[-dir] = mylat->backend_lattice->d_neighb_special[-dir];
         }
 #endif
 
@@ -748,6 +751,24 @@ class Field {
      */
     Field<T> &operator=(const Field<T> &rhs) {
         (*this)[ALL] = rhs[X];
+
+        // // This is direct memcpy version of the routine, slightly faster on cpus
+        //         if (this->fs == rhs.fs)
+        //             return *this;
+        //
+        //         assert(this->fs->mylattice == rhs.fs->mylattice &&
+        //                "Cannot assign fields which belong to different lattices!");
+        //
+        // #if !defined(CUDA) && !defined(HIP)
+        //         memcpy(this->field_buffer(), rhs.field_buffer(), sizeof(T) *
+        //         lattice->mynode.volume);
+        // #else
+        //         gpuMemcpy(this->field_buffer(), rhs.field_buffer(), sizeof(T) *
+        //         lattice->mynode.volume,
+        //                   gpuMemcpyDeviceToDevice);
+        // #endif
+        //         this->mark_changed(ALL);
+
         return *this;
     }
 
@@ -803,7 +824,9 @@ class Field {
      */
     Field<T> &operator=(Field<T> &&rhs) {
         if (this != &rhs) {
-            free();
+            assert((fs == nullptr || (rhs.fs->mylattice.ptr() == fs->mylattice.ptr())) &&
+                   "Field = Field assignment possible only if fields belong to the same lattice");
+            clear();
             fs = rhs.fs;
             rhs.fs = nullptr;
         }
@@ -1095,17 +1118,24 @@ class Field {
 
     /**
      * @brief Field comparison operator.
-     * @details Computes squarenorm of difference of two fields and checks if squarenorm is less
-     * than tolerance epsilon=0.
+     * @details Fields are equal if their content is element-by-element equal
      *
      * @param rhs Field to compare Field with
      * @return true
      * @return false
      */
-    bool operator==(const Field<T> &rhs) const {
-        hila::arithmetic_type<T> epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Field<S> &rhs) const {
+        double s = 0;
+        onsites(ALL) s += !((*this)[X] == rhs[X]);
+        return (s == 0);
     }
+
+    template <typename S>
+    bool operator!=(const Field<S> &rhs) const {
+        return !(*this == rhs);
+    }
+
 
     /**
      * @brief Squarenorm
@@ -1196,7 +1226,6 @@ class Field {
     void wait_gather(Direction d, Parity p) const;
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
-    void cancel_comm(Direction d, Parity p) const;
 
     /**
      * @brief Create a periodically shifted copy of the field
@@ -1242,8 +1271,8 @@ class Field {
         T element;
         element = value;
         assert(is_initialized(ALL) && "Field not initialized yet");
-        if (lattice.is_on_mynode(coord)) {
-            set_value_at(element, lattice.site_index(coord));
+        if (fs->mylattice->is_on_mynode(coord)) {
+            set_value_at(element, fs->mylattice->site_index(coord));
         }
         mark_changed(coord.parity());
         return element;
@@ -1259,10 +1288,10 @@ class Field {
         T element;
 
         assert(is_initialized(ALL) && "Field not initialized yet");
-        int owner = lattice.node_rank(coord);
+        int owner = fs->mylattice->node_rank(coord);
 
         if (hila::myrank() == owner) {
-            element = get_value_at(lattice.site_index(coord));
+            element = get_value_at(fs->mylattice->site_index(coord));
         }
 
         hila::broadcast(element, owner);
@@ -1321,8 +1350,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v += av;
             set_value_at(v, i);
@@ -1334,8 +1363,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v -= av;
             set_value_at(v, i);
@@ -1347,8 +1376,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v *= av;
             set_value_at(v, i);
@@ -1360,8 +1389,8 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
-        if (lattice.is_on_mynode(coord)) {
-            auto i = lattice.site_index(coord);
+        if (fs->mylattice->is_on_mynode(coord)) {
+            auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
             v /= av;
             set_value_at(v, i);
@@ -1428,6 +1457,7 @@ class Field {
     void write(const std::string &filename, bool binary = true, int precision = 8) const;
 
     void read(std::ifstream &inputfile);
+    void read(std::ifstream &inputfile, const CoordinateVector &insize);
     void read(const std::string &filename);
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
@@ -1507,6 +1537,72 @@ class Field {
     void gaussian_random(double width = 1.0);
 
 
+    /**
+     * @brief Fill blocked lattice Field from parent lattice Field (see lattice.block())
+     *
+     * @details
+     * If Field<T> a belongs to original (parent) lattice and Field<T> belongs to blocked
+     * lattice, the operation
+     * @code{.cpp}
+     * b.block_from(a);
+     * @endcode
+     * copies data from the sparse (blocked) sites of a to b.
+     * @example
+     * @code{.cpp}
+     * ...
+     *
+     * Field<Complex<double>> df;
+     * df.gaussian_random();
+     * smear(df,n);              // do n times semaring op (assuming smear() exists)
+     *
+     * lattice.block({2,2,2});
+     * Field<Complex<double>> dfb1;
+     * dfb1.block_from(df);
+     * smear(dfb1,n);
+     *
+     * lattice.block({2,2,2});
+     * Field<Complex<double>> dfb2;
+     * dfb2.block_from(dfb1);
+     * smear(dfb2,n);
+     *
+     * // analyse dfb2 here ...
+     *
+     * lattice.switch_to_base();  // undo all blocking
+     * @endcode
+     *
+     * The sites which are blocked can be accessed with the CoordinateVector function is_divisible:
+     * @code{.cpp}
+     * CoordinateVector factor = {2,2,2};
+     * onsites(ALL) {
+     *     if (X.coordinates().is_divisible(factor)) {
+     *         // now we're on site which will be copied by .block_from()
+     *         ...
+     *     }
+     * }
+     * @endcode
+     *
+     */
+    void block_from(Field<T> &orig);
+
+    /**
+     * @brief Copy content to the argument Field on blocked (sparse) sites.
+     * a.unblock_to(b) is the inverse of a.block_from(b)
+     *
+     * Leaves other sites of the argument Field unmodified.
+     */
+    void unblock_to(Field<T> &target) const;
+
+    /**
+     * @brief Return the lattice to which this field instance belongs to.
+     * @details Useful for switching lattices,for example
+     *    lattice.switch_to(a.mylattice());
+     * changes active lattice to the one to which Field variable a belongs to.
+     */
+    Lattice mylattice() const {
+        return fs->mylattice;
+    }
+
+
 }; // End of class Field<>
 
 ///////////////////////////////
@@ -1529,58 +1625,23 @@ auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plu
     return tmp;
 }
 
-// (Possibly) optimzed version where the 1st argument can be reused
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
-auto operator+(Field<A> lhs, const Field<B> &rhs) {
-    lhs[ALL] += rhs[X];
-    return lhs;
-}
-
-// Optimzed version where the 2nd argument can be reused
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value &&
-                               std::is_same<hila::type_plus<A, B>, B>::value,
-                           int> = 0>
-auto operator+(const Field<A> &lhs, Field<B> rhs) {
-    rhs[ALL] += lhs[X];
-    return rhs;
-}
-
 //////////////////////////////
 // operator + (Field + scalar)
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
+template <typename A, typename B>
 auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs[X] + rhs;
     return tmp;
 }
 
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
-Field<A> operator+(Field<A> lhs, const B &rhs) {
-    lhs[ALL] += rhs;
-    return lhs;
-}
-
-
 //////////////////////////////
 /// operator + (scalar + Field)
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, B>::value, int> = 0>
+template <typename A, typename B>
 auto operator+(const A &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
     return rhs + lhs;
 }
-
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_plus<A, B>, B>::value, int> = 0>
-Field<B> operator+(const A &lhs, Field<B> rhs) {
-    return rhs + lhs;
-}
-
 
 //////////////////////////////
 // operator - Field - Field -generic
@@ -1595,58 +1656,24 @@ auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_min
     return tmp;
 }
 
-// Optimzed version where the 1st argument can be reused
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_minus<A, B>, A>::value, int> = 0>
-auto operator-(Field<A> lhs, const Field<B> &rhs) {
-    lhs[ALL] -= rhs[X];
-    return lhs;
-}
-
-// Optimzed version where the 2nd argument can be reused
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value &&
-                               std::is_same<hila::type_minus<A, B>, B>::value,
-                           int> = 0>
-auto operator-(const Field<A> &lhs, Field<B> rhs) {
-    rhs[ALL] = lhs[X] - rhs[X];
-    return rhs;
-}
-
 //////////////////////////////
 /// operator - (Field - scalar)
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value, int> = 0>
+template <typename A, typename B>
 auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs;
     return tmp;
 }
 
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_minus<A, B>, A>::value, int> = 0>
-Field<A> operator-(Field<A> lhs, const B &rhs) {
-    lhs[ALL] -= rhs;
-    return lhs;
-}
-
 //////////////////////////////
 // operator - (scalar - Field)
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, B>::value, int> = 0>
+template <typename A, typename B>
 auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs - rhs[X];
     return tmp;
-}
-
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_minus<A, B>, B>::value, int> = 0>
-Field<B> operator-(const A &lhs, Field<B> rhs) {
-    rhs[ALL] = lhs - rhs[X];
-    return rhs;
 }
 
 ///////////////////////////////
@@ -1713,37 +1740,21 @@ Field<B> operator*(const Field<A> &lhs, Field<B> rhs) {
 /////////////////////////////////
 // operator * (scalar * field)
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, B>::value, int> = 0>
+template <typename A, typename B>
 auto operator*(const A &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs * rhs[X];
     return tmp;
 }
 
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_mul<A, B>, B>::value, int> = 0>
-Field<B> operator*(const A &lhs, Field<B> rhs) {
-    rhs[ALL] = lhs * rhs[X];
-    return rhs;
-}
-
 /////////////////////////////////
 // operator * (field * scalar)
 
-template <typename A, typename B,
-          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
+template <typename A, typename B>
 auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs[X] * rhs;
     return tmp;
-}
-
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
-Field<A> operator*(Field<A> lhs, const B &rhs) {
-    lhs[ALL] = lhs[X] * rhs;
-    return lhs;
 }
 
 ///////////////////////////////
@@ -1817,13 +1828,6 @@ auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>>
     return tmp;
 }
 
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_div<A, B>, B>::value, int> = 0>
-Field<B> operator/(const A &lhs, Field<B> rhs) {
-    rhs[ALL] = lhs / rhs[X];
-    return rhs;
-}
-
 //////////////////////////////////
 // operator /  (Field/scalar)
 template <typename A, typename B,
@@ -1834,27 +1838,11 @@ auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>>
     return tmp;
 }
 
-template <typename A, typename B,
-          std::enable_if_t<std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
-auto operator/(Field<A> lhs, const B &rhs) {
-    lhs[ALL] = lhs[X] / rhs;
-    return lhs;
-}
-
-/**
- * @brief std:swap() for Fields
- */
-namespace std {
-template <typename T>
-void swap(Field<T> &A, Field<T> &B) {
-    std::swap(A.fs, B.fs);
-}
-} // namespace std
+namespace hila {
 
 /**
  * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
  */
-namespace hila {
 template <typename T>
 void swap(Field<T> &A, Field<T> &B) {
     std::swap(A.fs, B.fs);
@@ -2066,39 +2054,41 @@ Field<T> Field<T>::shift(const CoordinateVector &v) const {
 
 
 ///  @internal
-///  drop_comms():  if field is changed or deleted,
-///  cancel ongoing communications.  This should happen very seldom,
-///  only if there are "by-hand" start_gather operations and these are not needed
+///  drop_comms(): if field is changed or deleted, 'cancel' ongoing communications. Now just wait
+///  for the communications to finish don't actually cancel them. Still separate this from using
+///  only wait_gather since this needs to be called in ~Field() and we need to check if there are
+///  ongoing communications. User gets nottified if there was redundant communications if
+///  drop_comms_timer is in the run print out.
+///
+///  This should happen very seldom, only if there are "by-hand" start_gather operations and these
+///  are not needed.
 template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
 
-    if (is_comm_initialized()) {
-        if (is_gather_started(d, ALL))
-            cancel_comm(d, ALL);
-        if (p != ALL) {
-            if (is_gather_started(d, p))
-                cancel_comm(d, p);
-        } else {
-            if (is_gather_started(d, EVEN))
-                cancel_comm(d, EVEN);
-            if (is_gather_started(d, ODD))
-                cancel_comm(d, ODD);
+    if (hila::is_comm_initialized()) {
+        if (is_gather_started(d, ALL)) {
+            drop_comms_timer.start();
+            wait_gather(d, ALL);
+            drop_comms_timer.stop();
         }
-    }
-}
-
-/// @internal cancel ongoing send and receive
-template <typename T>
-void Field<T>::cancel_comm(Direction d, Parity p) const {
-    if (lattice.nn_comminfo[d].from_node.rank != hila::myrank()) {
-        cancel_receive_timer.start();
-        MPI_Cancel(&fs->receive_request[(int)p - 1][d]);
-        cancel_receive_timer.stop();
-    }
-    if (lattice.nn_comminfo[d].to_node.rank != hila::myrank()) {
-        cancel_send_timer.start();
-        MPI_Cancel(&fs->send_request[(int)p - 1][d]);
-        cancel_send_timer.stop();
+        if (p != ALL) {
+            if (is_gather_started(d, p)) {
+                drop_comms_timer.start();
+                wait_gather(d, p);
+                drop_comms_timer.stop();
+            }
+        } else {
+            if (is_gather_started(d, EVEN)) {
+                drop_comms_timer.start();
+                wait_gather(d, EVEN);
+                drop_comms_timer.stop();
+            }
+            if (is_gather_started(d, ODD)) {
+                drop_comms_timer.start();
+                wait_gather(d, ODD);
+                drop_comms_timer.stop();
+            }
+        }
     }
 }
 
@@ -2123,7 +2113,7 @@ void Field<T>::random() {
 
     if (!hila::is_device_rng_on()) {
 
-        std::vector<T> rng_buffer(lattice.mynode.volume());
+        std::vector<T> rng_buffer(lattice->mynode.volume);
         for (auto &element : rng_buffer)
             hila::random(element);
         (*this).set_local_data(rng_buffer);
@@ -2149,7 +2139,7 @@ void Field<T>::gaussian_random(double width) {
 
     if (!hila::is_device_rng_on()) {
 
-        std::vector<T> rng_buffer(lattice.mynode.volume());
+        std::vector<T> rng_buffer(lattice->mynode.volume);
         for (auto &element : rng_buffer)
             hila::gaussian_random(element, width);
         (*this).set_local_data(rng_buffer);

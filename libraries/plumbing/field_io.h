@@ -1,5 +1,5 @@
-#ifndef FIELD_IO_H_
-#define FIELD_IO_H_
+#ifndef HILA_FIELD_IO_H_
+#define HILA_FIELD_IO_H_
 
 //////////////////////////////////////////////////////////////////////
 // This file collects Field<> I/O routines
@@ -85,12 +85,13 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
 
     std::vector<CoordinateVector> coord_list(sites_per_write);
     T *buffer = (T *)memalloc(write_size);
-    CoordinateVector size = lattice.size();
+    auto mylat = fs->mylattice;
+    CoordinateVector size = mylat.size();
 
-    for (size_t i = 0; i < lattice.volume(); i += sites_per_write) {
-        size_t sites = std::min(sites_per_write, lattice.volume() - i);
+    for (size_t i = 0; i < mylat.volume(); i += sites_per_write) {
+        size_t sites = std::min(sites_per_write, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
-            coord_list[j] = lattice.global_coordinates(i + j);
+            coord_list[j] = mylat->global_coordinates(i + j);
 
         if (sites < sites_per_write)
             coord_list.resize(sites);
@@ -155,12 +156,13 @@ void Field<T>::read(std::ifstream &inputfile) {
 
     std::vector<CoordinateVector> coord_list(sites_per_read);
     T *buffer = (T *)memalloc(read_size);
-    CoordinateVector size = lattice.size();
+    auto mylat = fs->mylattice;
+    CoordinateVector size = mylat.size();
 
-    for (size_t i = 0; i < lattice.volume(); i += sites_per_read) {
-        size_t sites = std::min(sites_per_read, lattice.volume() - i);
+    for (size_t i = 0; i < mylat.volume(); i += sites_per_read) {
+        size_t sites = std::min(sites_per_read, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
-            coord_list[j] = lattice.global_coordinates(i + j);
+            coord_list[j] = mylat->global_coordinates(i + j);
 
         if (sites < sites_per_read)
             coord_list.resize(sites);
@@ -169,6 +171,69 @@ void Field<T>::read(std::ifstream &inputfile) {
             inputfile.read((char *)buffer, sites * sizeof(T));
 
         fs->scatter_elements(buffer, coord_list);
+    }
+
+    std::free(buffer);
+}
+
+/// Read the Field from a stream
+template <typename T>
+void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
+    constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
+    constexpr size_t read_size = sites_per_read * sizeof(T);
+
+    if (!this->is_allocated())
+        this->allocate();
+
+    mark_changed(ALL);
+
+    std::vector<CoordinateVector> coord_list(sites_per_read);
+    T *buffer = (T *)memalloc(read_size);
+
+    CoordinateVector lsize = lattice.size();
+    int scalef[NDIM];
+    size_t tvol = 1;
+    size_t scvol = 1;
+    foralldir(d) {
+        scalef[d] = lsize[d] / insize[d];
+        tvol *= insize[d];
+        scvol *= scalef[d];
+    }
+
+    for (size_t i = 0; i < tvol; i += sites_per_read) {
+        size_t sites = std::min(sites_per_read, tvol - i);
+        if (hila::myrank() == 0) {
+            inputfile.read((char *)buffer, sites * sizeof(T));
+        }
+        
+        for (size_t j = 0; j < sites; j++) {
+            size_t ind = i + j;
+            foralldir(dir) {
+                coord_list[j][dir] = ind % insize[dir];
+                ind /= insize[dir];
+            }
+        }
+
+        if (sites < sites_per_read) {
+            coord_list.resize(sites);
+        }
+
+        fs->scatter_elements(buffer, coord_list);
+
+        // if input lattice fits multiple times on the current lattice size,
+        // replicate input lattice to fill current lattice:
+        for (size_t sci = 1; sci < scvol; ++sci) {
+            std::vector<CoordinateVector> tcoord_list(coord_list.size());
+            size_t ind = sci;
+            foralldir(dir) {
+                int tsf = ind % scalef[dir];
+                ind /= scalef[dir];
+                for (size_t j = 0; j < sites; j++) {
+                    tcoord_list[j][dir] = (coord_list[j][dir] + tsf * insize[dir]) % lsize[dir];
+                }
+            }
+            fs->scatter_elements(buffer, tcoord_list);
+        }
     }
 
     std::free(buffer);
@@ -220,7 +285,7 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
     size_t sites = 1;
     int line_len = 1; // number of elements on 1st non-trivial dimension
     foralldir(d) {
-        assert(cmin[d] >= 0 && cmax[d] >= cmin[d] && cmax[d] < lattice.size(d) &&
+        assert(cmin[d] >= 0 && cmax[d] >= cmin[d] && cmax[d] < fs->mylattice.size(d) &&
                "subvolume size mismatch");
         sites *= cmax[d] - cmin[d] + 1;
 
@@ -292,7 +357,7 @@ void Field<T>::write_slice(outf_type &outf, const CoordinateVector &slice, int p
     foralldir(d) {
         if (slice[d] < 0) {
             cmin[d] = 0;
-            cmax[d] = lattice.size(d) - 1;
+            cmax[d] = fs->mylattice.size(d) - 1;
         } else {
             cmin[d] = cmax[d] = slice[d];
         }

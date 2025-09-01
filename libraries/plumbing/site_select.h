@@ -1,29 +1,18 @@
-#ifndef SITE_SELECT_H_
-#define SITE_SELECT_H_
+#ifndef HILA_SITE_SELECT_H_
+#define HILA_SITE_SELECT_H_
 
 // We insert the GPU code in the same file too
 // hilapp should not read in .cuh, because it does not understand it
 
-//#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
-#if !defined(HILAPP)
-#if defined(CUDA)
-#include <cub/cub.cuh>
-namespace gpucub = cub;
-#endif
-
-#if defined(HIP)
-#include <hipcub/hipcub.hpp>
-namespace gpucub = hipcub;
-#endif
-#endif // HILAPP
 
 #include "hila.h"
 
+#include "gpucub.h"
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Site selection: special vector to accumulate chosen sites or sites + variable
 ///
-/// SiteSelect<> s;
+/// SiteSelect s;
 /// SiteValueSelect<T> sv;
 ///
 /// To be used within site loops as
@@ -103,7 +92,7 @@ class SiteSelect {
     }
 
     void setup() {
-        sites.resize(lattice.mynode.volume());
+        sites.resize(lattice->mynode.volume);
         current_index = 0;
         previous_site = SIZE_MAX;
         n_overflow = 0;
@@ -130,6 +119,10 @@ class SiteSelect {
 
     // Don't even implement assignments
 
+    /// @brief  std::move SiteIndex vector of selected sites, invalidating this variable
+    std::vector<SiteIndex> move_sites() {
+        return std::move(sites);
+    }
 
     void join() {
         if (!joined) {
@@ -228,19 +221,19 @@ class SiteSelect {
         size_t temp_storage_bytes = 0;
 
         T *out;
-        gpuMalloc(&out, lattice.mynode.volume() * sizeof(T));
+        gpuMalloc(&out, lattice->mynode.volume * sizeof(T));
 
         int *num_selected_d;
         gpuMalloc(&num_selected_d, sizeof(int));
 
 
         GPU_CHECK(gpucub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag,
-                                                out, num_selected_d, lattice.mynode.volume()));
+                                                out, num_selected_d, lattice->mynode.volume));
 
         gpuMalloc(&d_temp_storage, temp_storage_bytes);
 
         GPU_CHECK(gpucub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag,
-                                                out, num_selected_d, lattice.mynode.volume()));
+                                                out, num_selected_d, lattice->mynode.volume));
 
         gpuFree(d_temp_storage);
 
@@ -286,7 +279,7 @@ class SiteValueSelect : public SiteSelect {
 
     void setup() {
         SiteSelect::setup();
-        values.resize(lattice.mynode.volume());
+        values.resize(lattice->mynode.volume);
     }
 
     void clear() {

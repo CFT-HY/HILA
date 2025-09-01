@@ -5,11 +5,15 @@
 #include "defs.h"
 
 //////////////////////////////////////////////////////////////////
-/// Time related routines (runtime - timing - timelimit)
-/// Check timing.h for details
+// Time related routines (runtime - timing - timelimit)
+// Check timing.h for details
 //////////////////////////////////////////////////////////////////
 
 #include "com_mpi.h"
+
+// these includes need to be outside namespace hila
+#include <csignal>
+#include <cstring>
 
 namespace hila {
 
@@ -104,13 +108,13 @@ void timer::report(bool print_not_timed) {
         double ttime = gettime();
         if (count > 0 && !is_error) {
             if (t_total / count > 0.1) {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f s  %8.4f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f s  %9.6f\n", label.c_str(),
                               t_total, (long)count, t_total / count, t_total / ttime);
             } else if (t_total / count > 1e-4) {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f ms %8.4f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f ms %9.6f\n", label.c_str(),
                               t_total, (long)count, 1e3 * t_total / count, t_total / ttime);
             } else {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f μs %8.4f\n", label.c_str(),
+                std::snprintf(line, 200, "%-20s: %14.5f %14ld %12.5f us %9.6f\n", label.c_str(),
                               t_total, (long)count, 1e6 * t_total / count, t_total / ttime);
             }
             hila::out << line;
@@ -138,17 +142,17 @@ void report_timers() {
 #endif
 #endif
 
-            hila::out << "TIMER REPORT:             total(sec)          calls     "
+            hila::out << "TIMER REPORT:             total(sec)          calls       "
                          "time/call  fraction\n";
             hila::out << "------------------------------------------------------------"
-                         "---------------\n";
+                         "-----------------\n";
 
             for (auto tp : timer_list) {
                 tp->report();
             }
 
             hila::out << "------------------------------------------------------------"
-                         "---------------\n";
+                         "-----------------\n";
         } else {
             hila::out << "No timers defined\n";
         }
@@ -179,42 +183,183 @@ void inittime() {
 
 //////////////////////////////////////////////////////////////////
 /// Routines for checking remaining cpu-time
-/// time_to_exit() is called periodically on a point where exit can be done.
+/// void setup_timelimit():   set the time limit to watch
+/// bool time_to_finish(): is called periodically on a point where exit can be done.
 /// It uses the max of the time intervals for the estimate for one further round.
 /// If not enough time returns true, else false
 ///
 
 static double timelimit = 0;
 
-void setup_timelimit(long seconds) {
-    timelimit = (double)seconds;
+///
+/// Setup time limit with seconds
+
+void setup_timelimit(const double secs) {
+    timelimit = secs;
+    hila::broadcast(timelimit);
+    hila::out0 << "Time limit is " << timelimit << " seconds\n";
 }
 
-bool time_to_exit() {
+///
+/// setup time limit from the time given in timestr
+/// Format is d-h:m:s, not required to be "normalized" to std ranges
+/// Fields can be unused from the largest fields onwards, i.e. simplest case only seconds
+/// string "slurm" indicates that we call slurm 'squeue' to obtain the time limit
+
+void setup_timelimit(const std::string &timestr) {
+    //
+    constexpr int timelimit_buf_size = 100;
+
+    int status = 0;
+    if (hila::myrank() == 0) {
+        const char *str = timestr.c_str();
+        char buf[timelimit_buf_size];
+
+        if (timestr == "slurm") {
+
+            const char cmd[] = "squeue -h --job ${SLURM_JOB_ID} -O TimeLeft";
+            std::FILE *fp = popen(cmd, "r");
+
+            if (fp && fgets(buf, timelimit_buf_size - 1, fp)) {
+                buf[timelimit_buf_size - 1] = 0;
+                // zero extra spaces and lf at the end of the buf
+                for (int i = std::strlen(buf) - 1; i >= 0 && std::isspace(buf[i]); i--)
+                    buf[i] = 0;
+
+                str = buf;
+                hila::out0 << "Got time limit with command '" << cmd << '\n';
+            } else {
+                hila::out0 << "COULD NOT GET TIME FROM squeue COMMAND\n";
+                status = -1; // exit the program
+            }
+            pclose(fp);
+        }
+
+        if (status == 0) {
+
+            unsigned d{0}, h{0}, m{0}, s{0};
+            // use short circuiting of || here to stop parsing on 1st match
+            // zeroing the incorrectly read time variables in the same chain
+            int nargs = 5;
+            if (std::sscanf(str, "%u-%u:%u:%u", &d, &h, &m, &s) == --nargs ||
+                std::sscanf(str, "%u:%u:%u", &h, &m, &s) == --nargs ||
+                std::sscanf(str, "%u:%u", &m, &s) == --nargs ||
+                std::sscanf(str, "%u", &s) == --nargs) {
+
+                if (nargs < 4) d = 0;
+                if (nargs < 3) h = 0;
+                if (nargs < 2) m = 0;
+
+                timelimit = s + 60.0 * (m + 60.0 * (h + 24.0 * d));
+                hila::out0 << "Time limit is " << str << " = " << timelimit << " seconds\n";
+
+            } else {
+                hila::out0 << "INVALID TIMELIMIT -t ARGUMENT " << str << '\n';
+                status = -1; // exit the program
+            }
+        }
+    }
+    hila::broadcast(status);
+    if (status == -1)
+        hila::terminate(0);
+
+    hila::broadcast(timelimit);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/// Set up signal handling - signal SIGUSR1 causes the time_to_finish function to return
+/// true.  Function hila::setup_signal_handler(); is called at the beginning of the program.
+/// Function hila::signal_status() returns signal value (!=0) if signal has been received.
+/// Signal is _not_ broadcast across nodes
+///
+/// Could also trap SIGTERM, but that would mean programs which do not handle the signal
+/// would not be killable by ctrl-C
+///
+
+static volatile std::sig_atomic_t received_signal;
+
+void signal_handler(int signal) {
+    received_signal = signal;
+}
+
+void setup_signal_handler() {
+    // std::signal(SIGTERM, signal_handler);
+    std::signal(SIGUSR1, signal_handler);
+}
+
+int signal_status() {
+    return received_signal;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+/// Check the cpu time limit or if signal SIGUSR1 is up - this function is meant to be called
+/// periodically, and returns true if it is time to exit or signal has been raised.
+///
+/// Use case: on main loop check 'hila::time_to_finish()' periodically, and if it returns true
+/// checkpoint/exit.
+///
+/// This makes sense only if the program can checkpoint or otherwise clean up.
+///
+/// Time limit or signaling are alternative ways to ensure clean exit. Both can be used
+/// at the same time. Time limit has the advantage that if the program does periodic
+/// checkpointing, it automatically adjusts the grace time to allow for checkpointing
+/// at the end. With signal the grace time must be estimated in advance.
+///
+/// Time limit can be given with program command line argument
+///   -t <time>  or  -t slurm
+/// or calling function  hila::setup_timelimit(time), see above
+///
+/// Signal can be set in slurm submit script with
+///   #SBATCH --signal=SIGUSR1@180
+/// where the last number is the time in seconds when the signal SIGUSR1 is sent before
+/// the run time expires.  This time must allow for the periodic check interval and the time
+/// the cleanup takes.
+///
+/// Signal can also be sent to slurm jobs from terminal session with
+///   $ scancel --signal=SIGUSR1  <jobid>
+/// and, of course, for normal "terminal" runs with
+///   $ kill -s SIGUSR1  <pid0>
+/// Note: signal must be sent to MPI rank 0. It can be sent to all ranks too.
+///
+
+
+bool time_to_finish() {
     static double max_interval = 0.0;
     static double previous_time = 0.0;
     bool finish;
 
-    // if no time limit set
-    if (timelimit == 0.0)
-        return false;
+    // is signal up?
+    int signal = signal_status();
 
     if (hila::myrank() == 0) {
-        double this_time = gettime();
-        if (this_time - previous_time > max_interval)
-            max_interval = this_time - previous_time;
-        previous_time = this_time;
-
-        // Give 5 min margin for the exit - perhaps needed for writing etc.
-        if (timelimit - this_time < max_interval + 5 * 60.0)
+        if (signal != 0) {
             finish = true;
-        else
+            hila::out0 << "FINISH UP ON SIGNAL SIGUSR1\n";
+
+        } else if (timelimit == 0.0) {
+            // no signal nor time limit set
             finish = false;
 
-        hila::out << "TIMECHECK: " << this_time << "s used, " << timelimit - this_time
-                  << "s remaining\n";
-        if (finish)
-            hila::out << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
+        } else {
+
+            double this_time = gettime();
+            if (this_time - previous_time > max_interval)
+                max_interval = this_time - previous_time;
+            previous_time = this_time;
+
+            // Give 2 min margin for the exit - perhaps needed for writing etc.
+            if (timelimit - this_time < max_interval + 2 * 60.0)
+                finish = true;
+            else
+                finish = false;
+
+            // hila::out << "TIMECHECK: " << this_time << "s used, " << timelimit - this_time
+            //           << "s remaining\n";
+
+            if (finish)
+                hila::out << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
+        }
     }
     hila::broadcast(finish);
     return finish;
