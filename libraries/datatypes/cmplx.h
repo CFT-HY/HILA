@@ -120,8 +120,6 @@ class Complex {
      * Equivalent to `Complex<MyType> C` and `Complex<MyType> C(0)`
      *
      */
-    Complex<T>() = default;
-    ~Complex<T>() = default;
     Complex<T>(const Complex<T> &a) = default;
 
     // constructor from single complex --IS THIS NEEDED?
@@ -411,12 +409,6 @@ class Complex {
      *
      *
      */
-    template <typename A>
-    inline Complex<T> &operator+=(const Complex<A> &lhs) & {
-        re += lhs.re;
-        im += lhs.im;
-        return *this;
-    }
 
     template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
     inline Complex<T> &operator+=(const A &a) & {
