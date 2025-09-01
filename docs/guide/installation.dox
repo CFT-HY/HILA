@@ -45,17 +45,17 @@ sudo apt-get -y install clang-$LLVM_VERSION \
 ### Installing dependencies for HILA applications:
 
 
-> __NOTE__: _If one opts to use docker, **skip** directly to the [installation](#installation) section._
+> NOTE: _If one opts to use docker, **skip** directly to the [installation](#installation) section._
 
 
-**Installing non GPU dependencies on ubuntu**:
+* **Installing non GPU dependencies on ubuntu:**
 
-~~~bash
+```bash
 sudo apt install build-essential \
             libopenmpi-dev \
             libfftw3-dev \
             libomp-dev
-~~~
+```
 
 
 * **CUDA:**
@@ -70,10 +70,17 @@ See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/
 
 # Building and Installation{#building-and-installation}
 
-Begin by cloning HILA repository:
+Begin by cloning HILA main repository:
 
 ~~~bash
 git clone https://github.com/CFT-HY/HILA
+~~~
+
+Currently one can switch to alpha release for more stability and less features:
+
+~~~bash
+git fetch --tags
+git checkout tags/{release-version}
 ~~~
 
 The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source with proper dependency supports,  and both steps have their respective containerization options available. 
@@ -126,7 +133,7 @@ For step-by-step guide of [Spack](https://spack.readthedocs.io/en/latest) buildi
 On computing platform without module system such as [Linux Workstation](#workstation), command `spack find --path llvm` will return the installation location, which is necessary information for [builing HILA preprocessor](#hila-preprocessor). 
 In this case, user may pass the absolute path through shell variable or GNU Make flag.
 
-**After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
+* **After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
 ## Containers {#containers}
 
@@ -178,10 +185,22 @@ The singularity container offers a more packaged approach where one doesn't need
 
 ---
 
-One can download the singularity container hilapp.sif directly from this github repositories release page. If downloaded skip directly to the **Using singulartiy container** section:
+One can download the singularity container `hilapp.sif` directly from this github repositories release page. If downloaded skip directly to the **Using singulartiy container** section:
 
 ```
 wget https://github.com/CFT-HY/HILA/releases/download/Nightly/hilapp.sif
+```
+
+If one is using the latest alpha release then one can download the corresponding container
+
+```
+wget https://github.com/CFT-HY/HILA/releases/download/{release-version}/hilapp.sif
+```
+
+Lastly one needs to give appropriate permissions to the singularity container
+
+```
+chmod +x hilapp.sif
 ```
 
 __Installing singularity__
@@ -221,9 +240,13 @@ mv hilapp.sif HILA/hilapp/bin/hilapp
 
 Now one can simply move the singularity container to any give supercomputer.
 
-Note that on supercomputers the default paths aren't the same as on default linux operating systems. Thus one will need to mount their HILA source folder to singularity using the APPTAINER_BIND environment variable. Simple navigate to the base of your HILA source directory and run
+Note that on supercomputers the default paths aren't the same as on default linux operating systems. Thus one will need to mount their HILA source folder to singularity using the APPTAINER_BIND or SINGULARITY_BIND environment variable. Simple navigate to the base of your HILA source directory and run
 
     export APPTAINER_BIND=$(pwd)
+
+    or
+
+    export SINGULARITY_BIND=$(pwd)
 
 ---
 
@@ -493,7 +516,7 @@ bin field time      :          2.792              7      0.399 s    0.1157
 Finishing -- date Thu Jun  1 11:18:46 2023  run time 24.14s
 ------------------------------------------------------------
 ~~~
-**NOTE: Naturally the run time depends on your system**
+> **NOTE: Naturally the run time depends on your system**
 
 </details>
 
@@ -638,18 +661,22 @@ Finishing -- date Fri Jun  2 12:58:39 2023  run time 6.891s
 ------------------------------------------------------------
 
 ~~~
-**NOTE: Naturally the run time depends on your system**
+> **NOTE: Naturally the run time depends on your system**
 
 </details>
 
 Additionally we have some ARCH values tuned for specific HPC platforms:
 
-| ARCH       | Description                                               |
+| ARCH=       | Description                                               |
 |------------|-----------------------------------------------------------|
-| `lumi` | CPU-MPI implementation for LUMI supercomputer             |
-| `lumi-hip` | GPU-MPI implementation for LUMI supercomputer using HIP   |
-| `mahti` | CPU-MPI implementation for MAHTI supercomputer            |
+| `lumi      ` | CPU-MPI implementation for LUMI supercomputer             |
+| `lumi-hip-CC  ` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.0.3 and cray compilers   |
+| `lumi-hip-6.2.2-gnu  ` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.2.2 and gnu compilers   |
+| `lumi-hip-6.2.2-cray  ` | GPU-MPI implementation for LUMI supercomputer using HIP with rocm 6.2.2 and cray compilers   |
+| `mahti     ` | CPU-MPI implementation for MAHTI supercomputer            |
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
+
+The respective makefiles will output important information on loading modules etc.
 
 We will discuss the computing platforms more in the creating a HILA application guide.
 
