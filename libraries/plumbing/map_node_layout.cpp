@@ -23,15 +23,15 @@
 
 void lattice_struct::allnodes::create_remap() {
     hila::out0 << "Node remapping: NODE_LAYOUT_TRIVIAL (no reordering)\n";
-    lattice.nodes.map_array = nullptr;
-    lattice.nodes.map_inverse = nullptr;
+    lattice->nodes.map_array = nullptr;
+    lattice->nodes.map_inverse = nullptr;
 }
 
-unsigned lattice_struct::allnodes::remap(unsigned i) const {
+int lattice_struct::allnodes::remap(int i) const {
     return i;
 }
 
-unsigned lattice_struct::allnodes::inverse_remap(unsigned i) const {
+int lattice_struct::allnodes::inverse_remap(int i) const {
     return i;
 }
 
@@ -53,12 +53,11 @@ unsigned lattice_struct::allnodes::inverse_remap(unsigned i) const {
 
 void lattice_struct::allnodes::create_remap() {
 
-    hila::out0 << "Node remapping: NODE_LAYOUT_BLOCK with blocksize " << NODE_LAYOUT_BLOCK
-            << '\n';
+    hila::out0 << "Node remapping: NODE_LAYOUT_BLOCK with blocksize " << NODE_LAYOUT_BLOCK << '\n';
 
     // let us allow only factors of 5,3 and 2 in NODE_LAYOUT_BLOCK
     CoordinateVector blocksize;
-    CoordinateVector blockdivs = lattice.nodes.n_divisions;
+    CoordinateVector blockdivs = lattice->nodes.n_divisions;
     int nblocks = NODE_LAYOUT_BLOCK;
     blocksize.fill(1);
 
@@ -66,7 +65,7 @@ void lattice_struct::allnodes::create_remap() {
     while (found && nblocks > 1) {
 
         found = false; // if not divisible stop trying
-        foralldir (d) {
+        foralldir(d) {
             // divide directions one by one
             int div;
             for (div = 2; div <= 5; div++)
@@ -86,27 +85,23 @@ void lattice_struct::allnodes::create_remap() {
     // now blocksize tells us how many nodes to each direction in block
     // these are taken in order
 
-    lattice.nodes.map_array =
-        (unsigned *)memalloc(lattice.nodes.number * sizeof(unsigned));
-    // we don't need the inverse at the moment?
-    // lattice.nodes.map_inverse = (unsigned *)memalloc(lattice.nodes.number *
-    // sizeof(unsigned));
-    lattice.nodes.map_inverse = nullptr;
+    this->map_array = (int *)memalloc(this->number * sizeof(int));
+    this->map_inverse = (int *)memalloc(this->number * sizeof(int));
+    // nodes.map_inverse = nullptr;
 
     nblocks = 1;
-    foralldir (d)
-        nblocks *= blocksize[d];
+    foralldir(d) nblocks *= blocksize[d];
 
     // Loop over the "logical" node indices (i.e.)
 
-    for (int i = 0; i < lattice.nodes.number; i++) {
+    for (int i = 0; i < this->number; i++) {
         // lcoord is the coordinate of the logical node,
         // bcoord the block coord and icoord coord inside block
         CoordinateVector lcoord, bcoord, icoord;
         int idiv = i;
-        foralldir (d) {
-            lcoord[d] = idiv % lattice.nodes.n_divisions[d];
-            idiv /= lattice.nodes.n_divisions[d];
+        foralldir(d) {
+            lcoord[d] = idiv % this->n_divisions[d];
+            idiv /= this->n_divisions[d];
 
             bcoord[d] = lcoord[d] / blocksize[d];
             icoord[d] = lcoord[d] % blocksize[d];
@@ -128,22 +123,21 @@ void lattice_struct::allnodes::create_remap() {
         // hila::out0 << lcoord << bcoord << icoord << '\n';
         // hila::out0 << "ii " << ii << " bi " << bi << '\n';
 
-        lattice.nodes.map_array[i] = bi * nblocks + ii;
+        this->map_array[i] = bi * nblocks + ii;
+        this->map_inverse[bi * nblocks + ii] = i;
     }
 }
 
 /// And the call interface for remapping
 
-unsigned lattice_struct::allnodes::remap(unsigned i) const {
-    return lattice.nodes.map_array[i];
+int lattice_struct::allnodes::remap(int i) const {
+    assert( i >= 0 && i < hila::number_of_nodes());
+    return this->map_array[i];
 }
 
-unsigned lattice_struct::allnodes::inverse_remap(unsigned idx) const {
-    for (int i = 0; i < lattice.nodes.number; i++)
-        if (lattice.nodes.map_array[i] == idx)
-            return i;
-
-    return 1 << 30; // big number, crash
+int lattice_struct::allnodes::inverse_remap(int i) const {
+    assert( i >= 0 && i < hila::number_of_nodes());
+    return this->map_inverse[i];
 }
 
 

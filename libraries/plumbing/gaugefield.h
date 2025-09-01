@@ -1,10 +1,11 @@
+#ifndef HILA_GAUGEFIELD_H_
+#define HILA_GAUGEFIELD_H_
+
 /**
  * @file gaugefield.h
  * @brief Definition of Gauge Field
  * @details This file contains the definition for the GaugeField class
  */
-#ifndef GAUGEFIELD_H_
-#define GAUGEFIELD_H_
 
 #include "hila.h"
 
@@ -143,6 +144,12 @@ class GaugeField {
         }
     }
 
+    void read(std::ifstream &inputfile, CoordinateVector &insize) {
+        foralldir(d) {
+            fdir[d].read(inputfile, insize);
+        }
+    }
+
     void read(const std::string &filename) {
         std::ifstream inputfile;
         hila::open_input_file(filename, inputfile);
@@ -207,32 +214,35 @@ class GaugeField {
                            << " is " << f << '\n';
         }
 
+        CoordinateVector insize = lattice.size();
         if (ok && hila::myrank() == 0) {
-
             foralldir(d) {
                 inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-                ok = ok && (f == lattice.size(d));
+                insize[d] = f;
+                ok = ok && (lattice.size(d) % insize[d] == 0);
                 if (!ok)
                     hila::out0 << conferr << "incorrect lattice dimension " << hila::prettyprint(d)
-                               << " is " << f << " should be " << lattice.size(d) << '\n';
+                               << " is " << f << " should be (or divide)" << lattice.size(d) << '\n';
             }
         }
 
         if (!hila::broadcast(ok)) {
             hila::terminate(1);
+        } else {
+            hila::broadcast_array(insize.c, NDIM);
         }
 
-        read(inputfile);
+        read(inputfile, insize);
         hila::close_file(filename, inputfile);
     }
 };
 
 
-/// Implement std::swap for gauge fields
-namespace std {
+/// Implement hila::swap for gauge fields
+namespace hila {
 template <typename T>
 void swap(GaugeField<T> &A, GaugeField<T> &B) {
-    foralldir(d) std::swap(A[d], B[d]);
+    foralldir(d) hila::swap(A[d], B[d]);
 }
 } // namespace std
 

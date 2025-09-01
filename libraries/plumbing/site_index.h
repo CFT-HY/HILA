@@ -1,5 +1,5 @@
-#ifndef SITEINDEX_H
-#define SITEINDEX_H
+#ifndef HILA_SITEINDEX_H
+#define HILA_SITEINDEX_H
 
 #include "coordinates.h"
 #include "lattice.h"

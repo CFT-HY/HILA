@@ -20,20 +20,20 @@ void lattice_struct::setup_layout() {
     int nfactors[NPRIMES];
     CoordinateVector nodesiz;
 
-    print_dashed_line();
+    hila::print_dashed_line();
     hila::out0 << "LAYOUT: lattice size  ";
     foralldir(d) {
         if (d != 0)
             hila::out0 << " x ";
-        hila::out0 << size(d);
+        hila::out0 << l_size[d];
     }
     hila::out0 << "  =  " << l_volume << " sites\n";
     hila::out0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
 
-    foralldir(d) if (size(d) % 2 != 0) {
-        hila::out0 << "Lattice must be even to all directions (odd size:TODO)\n";
-        hila::finishrun();
-    }
+    // foralldir(d) if (l_size[d] % 2 != 0) {
+    //     hila::out0 << "Lattice must be even to all directions (odd size:TODO)\n";
+    //     hila::finishrun();
+    // }
 
     // Factorize the node number in primes
     // These factors must be used in slicing the lattice!
@@ -53,8 +53,6 @@ void lattice_struct::setup_layout() {
         hila::finishrun();
     }
 
-    int64_t remainder = l_volume % nn; // remainder = 0 even division
-
     // strategy: try to increase the box size to one of the directions until rem = 0
     // find the optimal direction to do it
     // Use simple heuristic: take the dim with the least amount of added "ghost sites"
@@ -63,12 +61,12 @@ void lattice_struct::setup_layout() {
     int64_t ghosts[NDIM]; // int is too small
 
     foralldir(d) {
-        int64_t cosize = l_volume / size(d);
-        int64_t n = size(d);
+        int64_t cosize = l_volume / l_size[d];
+        int64_t n = l_size[d];
         while ((n * cosize) % nn != 0)
             n++; // virtual size can be odd
         // now nsize is the new would-be size
-        ghosts[d] = (n - size(d)) * cosize;
+        ghosts[d] = (n - l_size[d]) * cosize;
         nsize[d] = n;
     }
 
@@ -83,7 +81,7 @@ void lattice_struct::setup_layout() {
         // nsize[mdir] << '\n';
 
         foralldir(i) {
-            nodesiz[i] = (i == mdir) ? nsize[i] : size(i); // start with ghosted lattice size
+            nodesiz[i] = (i == mdir) ? nsize[i] : l_size[i]; // start with ghosted lattice size
             nodes.n_divisions[i] = 1;
         }
 
@@ -147,25 +145,10 @@ void lattice_struct::setup_layout() {
 
     // set up struct nodes variables
     nodes.number = hila::number_of_nodes();
-    foralldir(dir) {
-        nodes.divisors[dir].resize(nodes.n_divisions[dir] + 1);
-        // Node divisors: note, this MUST BE compatible with
-        // node_rank in lattice.cpp
-        // to be sure, we use naively the same method than in node_rank
-        // last element will be size(dir), for convenience
-        int n = -1;
-        for (int i = 0; i <= size(dir); i++)
-            if ((i * nodes.n_divisions[dir]) / size(dir) != n) {
-                ++n;
-                nodes.divisors[dir][n] = i;
-            }
-        // hila::out0 << "Divisors ";
-        // for (int i=0;i<nodes.n_divisions[dir]; i++) hila::out0 << nodes.divisors[dir][i]
-        // << " "; hila::out0 << '\n';
-    }
+    setup_node_divisors();
 
     // Now division done - check how good it is
-    int ghost_slices = nsize[mdir] - size(mdir);
+    int ghost_slices = nsize[mdir] - l_size[mdir];
     if (ghost_slices > 0) {
         hila::out0 << "\nUsing uneven node division to direction " << mdir << ":\n";
         hila::out0 << "Lengths: " << nodes.n_divisions[mdir] - ghost_slices << " * ("
@@ -177,7 +160,7 @@ void lattice_struct::setup_layout() {
                 hila::out0 << " - ";
             hila::out0 << nodes.divisors[mdir][i + 1] - nodes.divisors[mdir][i];
         }
-        hila::out0 << "\nFilling efficiency: " << (100.0 * size(mdir)) / nsize[mdir] << "%\n";
+        hila::out0 << "\nFilling efficiency: " << (100.0 * l_size[mdir]) / nsize[mdir] << "%\n";
 
         if (ghost_slices > nodes.n_divisions[mdir] / 2)
             hila::out0 << "NOTE: number of smaller nodes > large nodes \n";
@@ -221,5 +204,5 @@ void lattice_struct::setup_layout() {
     nodes.create_remap();
 
 
-    print_dashed_line();
+    hila::print_dashed_line();
 }

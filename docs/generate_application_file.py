@@ -12,6 +12,7 @@ def get_source_files(file_path):
 def find_brief(source_files):
     files_and_briefs = {}
     for file in source_files:
+        print(file)
         opened_file = open(file,"r")
         file_content = opened_file.read()
         if re.search(r'@file', file_content):

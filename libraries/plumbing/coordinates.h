@@ -1,3 +1,6 @@
+#ifndef HILA_COORDINATES_H_
+#define HILA_COORDINATES_H_
+
 /**
  * @file coordinates.h
  * @brief This header file defines:
@@ -8,9 +11,6 @@
  * These are used to traverse the lattice coordinate systems
  *
  */
-
-#ifndef COORDINATES_H_
-#define COORDINATES_H_
 
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
@@ -59,13 +59,15 @@ constexpr unsigned NDIRS = NDIRECTIONS;
 // Increment for directions:  ++dir,  dir++  does the obvious
 // dir-- not defined, should we?
 
-static inline Direction next_direction(Direction dir) {
+#pragma hila loop_function
+inline Direction next_direction(Direction dir) {
     return static_cast<Direction>(static_cast<unsigned>(dir) + 1);
 }
-static inline Direction &operator++(Direction &dir) {
+#pragma hila loop_function
+inline Direction &operator++(Direction &dir) {
     return dir = next_direction(dir);
 }
-static inline Direction operator++(Direction &dir, int) {
+inline Direction operator++(Direction &dir, int) {
     Direction d = dir;
     ++dir;
     return d;
@@ -75,7 +77,7 @@ static inline Direction operator++(Direction &dir, int) {
  * @brief Macro to loop over (all) ::Direction(s)
  *
  */
-#define foralldir(d) for (Direction d = e_x; d < NDIM; ++d)
+#define foralldir(d) for (Direction d = e_x; d < NDIM; d = next_direction(d))
 
 inline Direction opp_dir(const Direction d) {
     return static_cast<Direction>(NDIRS - 1 - static_cast<int>(d));
@@ -126,30 +128,42 @@ inline dir_mask_t get_dir_mask(const Direction d) {
     return (dir_mask_t)(1 << d);
 }
 
-/// define hila::direction_name() and hila::prettyprint(Direction)
 namespace hila {
 
+
+// define hila::direction_name() and hila::prettyprint(Direction)
+
 constexpr inline const char *direction_name(Direction d) {
-    const char *dirnames[NDIRS] = {
-        "e_x",
-        "e_y",
+    switch (d) {
+    case e_x:
+        return "e_x";
+    case e_x_down:
+        return "-e_x";
+    case e_y:
+        return "e_y";
+    case e_y_down:
+        return "-e_y";
 #if NDIM > 2
-        "e_z",
+    case e_z:
+        return "e_z";
+    case e_z_down:
+        return "-e_z";
+#endif
 #if NDIM > 3
-        "e_t",
-        "-e_t",
+    case e_t:
+        return "e_t";
+    case e_t_down:
+        return "-e_t";
 #endif
-        "-e_z",
-#endif
-        "-e_y",
-        "-e_x"
-    };
-    return dirnames[d];
+    default:
+        return "ILLEGAL DIRECTION";
+    }
 }
 
 inline std::string prettyprint(Direction d) {
     return direction_name(d);
 }
+
 } // namespace hila
 
 // This should not be used from loops ...
@@ -182,9 +196,17 @@ constexpr Parity ALL = Parity::all;
 
 // this is used in diagnostics - make static inline so can be defd here
 namespace hila {
-inline const char *parity_name(Parity p) {
-    const char *parity_name_s[4] = {"Parity::none", "EVEN", "ODD", "ALL"};
-    return parity_name_s[(int)p];
+constexpr inline const char *parity_name(Parity p) {
+    switch (p) {
+    case EVEN:
+        return "EVEN";
+    case ODD:
+        return "ODD";
+    case ALL:
+        return "ALL";
+    default:
+        return "ILLEGAL PARITY";
+    }
 }
 
 inline std::string prettyprint(Parity p) {
@@ -223,10 +245,12 @@ static inline bool is_even_odd_parity(Parity p) {
 }
 
 
-/// Positive mod(): we define here the positive mod utility function pmod(a,b).
-/// It mods the arguments 0 <= a < m.  This is not the standard
-/// for integer operator% in c++, which gives negative results if a<0.  This is useful
-/// in calculating lattice vector additions on a periodic box
+/**
+ * @brief Positive mod(): mods the result so that 0 <= a % b < b.
+ * @details This is not the standard mod for integer operator % in c++,
+ * which gives negative results if a<0.  This is useful in calculating lattice vector
+ * additions on a periodic box. Second arg b must be positive.
+ */
 
 inline int pmod(const int a, const int b) {
     int r = a % b;
@@ -240,14 +264,16 @@ inline int pmod(const int a, const int b) {
  * @brief Class for coordinate vector useful in indexing lattice
  *
  * @details Defined as Vector<NDIM, int> meaning that all operations from Matrix class are inherited
- * 
- *  Note: this is defined as a template, with generic "int" type T, and the type is defined below as alias:
-*   @code{.cpp}
+ *
+ *  Note: this is defined as a template, with generic "int" type T, and the type is defined below as
+ * alias:
+ *   @code{.cpp}
  *  using CoordinateVector = CoordinateVector_t<int>
  *  @endcode
  *  Reason for this is that if CoordinateVector is used in Field variables (Field<CoordinateVector>)
- *  hilapp is able to upgrade the int to vectorized int when vectorized compilation are used (AVX2, AVX512)
- * 
+ *  hilapp is able to upgrade the int to vectorized int when vectorized compilation are used (AVX2,
+ * AVX512)
+ *
  * @tparam T int
  */
 template <typename T>
@@ -294,23 +320,30 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
     // /// cast to vector<NDIM,int> - useful for method inheritance
-    // #pragma hila loop_function
     // inline operator Vector<NDIM, int>() {
     //     Vector<NDIM, int> v;
     //     foralldir(d) v.e(d) = this->e(d);
     //     return v;
     // }
 
+    ///
+
+    /// Assignment from vector
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    inline CoordinateVector_t &operator=(const Vector<NDIM, S> &v) out_only & {
+        foralldir(d) this->e(d) = v[d];
+        return *this;
+    }
+
     /// Assign from 0
-#pragma hila loop_function
-    inline CoordinateVector_t &operator=(std::nullptr_t z) {
+    inline CoordinateVector_t &operator=(std::nullptr_t z) out_only & {
         foralldir(d) this->e(d) = 0;
         return *this;
     }
 
     /// Assign from initializer list
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) {
+    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) out_only & {
         assert(rhs.size() == NDIM && "Initializer list has a wrong size in assignment");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
@@ -319,7 +352,18 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    // Assign
+    // Assign from direction
+    inline CoordinateVector_t &operator=(Direction d) out_only & {
+        foralldir(dir) {
+            this->e(dir) = dir_dot_product(d, dir);
+        }
+        return *this;
+    }
+
+    // and delete assign to rvalue
+    template <typename S>
+    CoordinateVector_t &operator=(const S &s) && = delete;
+
 
     bool operator==(const CoordinateVector_t<T> &rhs) const {
         foralldir(d) {
@@ -377,19 +421,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     // add coordinate vector -- def explicit as loop_function
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) {
+    CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) & {
         foralldir(d) this->e(d) += rhs.e(d);
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) {
+    CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) & {
         foralldir(d) this->e(d) -= rhs.e(d);
         return *this;
     }
 
     // and also additions for Direction -- dir acts like a unit vector
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const Direction dir) {
+    CoordinateVector_t &operator+=(const Direction dir) & {
         if (is_up_dir(dir))
             ++this->e(dir);
         else
@@ -397,7 +441,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const Direction dir) {
+    CoordinateVector_t &operator-=(const Direction dir) & {
         if (is_up_dir(dir))
             --this->e(dir);
         else
@@ -423,9 +467,19 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return res;
     }
 
-
-    /// Positive mod for coordinate vector, see  int mod(int a, int b).  If
-    /// 2nd argument m is lattice.size(), this mods the vector a to periodic lattice.
+    /**
+     * @brief Positive mod for coordinate vector
+     *
+     * @details each element will be modded interval 0 <= .. < m[d]
+     * See function pmod(a,b)
+     * If second argument is lattice.size(), will mod the vector periodically
+     * "in" the lattice:
+     *
+     * @code{.cpp}
+     *  res = (a + b).mod(lattice.size());
+     * @endcode
+     * Now res will be lattice site vector
+     */
 
     inline CoordinateVector_t mod(const CoordinateVector_t &m) const {
         CoordinateVector_t<T> r;
@@ -435,10 +489,53 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return r;
     }
 
+    /// @brief Convert momentum space CoordinateVector to wave number k, where -pi/2 < k_i <= pi_2
+    /// Utility function for FFT
+    /// wave vector k_i = 2 pi n_i / N_i, where N_i = lattice.size(i) and
+    /// where n_i is the coordinate modded to interval -N_i/2 < n_i <= N_i/2, or
+    /// if n_i > N_i/2 then n_i = n_i - N_i.
+    ///
+    /// @return wave number vector k
+    inline Vector<NDIM, double> convert_to_k() const;
+
     /// Return site index of the coordinate vector -- assumes a valid lattice vector
 
-    // #pragma hila loop_function
     // inline SiteIndex index() const;
+
+    /**
+     * @brief Element-by-element multiplication of CoordinateVectors
+     * @code{.cpp}
+     *  res = a.element_mul(b);
+     * @endcode
+     */
+
+    CoordinateVector_t element_mul(const CoordinateVector_t &m) const {
+        CoordinateVector_t<T> res;
+        foralldir(d) res[d] = (*this)[d] * m[d];
+        return res;
+    }
+
+    /**
+     * @brief Element-by-element division
+     * See also .mod(), which does element-by-element positive mod
+     */
+    CoordinateVector_t element_div(const CoordinateVector_t &m) const {
+        CoordinateVector_t<T> res;
+        foralldir(d) res[d] = (*this)[d] / m[d];
+        return res;
+    }
+
+    /**
+     * @brief Returns true if vector is integer multiple of arg vector
+     */
+
+    bool is_divisible(const CoordinateVector_t &m) const {
+        foralldir(d) {
+            if ((*this)[d] % m[d] != 0)
+                return false;
+        }
+        return true;
+    }
 };
 
 /**

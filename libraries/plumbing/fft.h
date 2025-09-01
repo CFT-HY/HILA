@@ -1,6 +1,7 @@
-/** @file fft.h */
 #ifndef HILA_FFT_H
 #define HILA_FFT_H
+
+/** @file fft.h */
 
 #if !defined(CUDA) && !defined(HIP)
 #define USE_FFTW
@@ -29,10 +30,13 @@
  * now  k_i = 2 pi n_i / lattice.size(i)
  */
 
-inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
+
+#pragma hila novector
+template <typename T>
+inline Vector<NDIM, double> CoordinateVector_t<T>::convert_to_k() const {
     Vector<NDIM, double> k;
     foralldir(d) {
-        int n = pmod(cv.e(d), lattice.size(d));
+        int n = pmod((*this).e(d), lattice.size(d));
         if (n > lattice.size(d) / 2)
             n -= lattice.size(d);
 
@@ -41,6 +45,9 @@ inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     return k;
 }
 
+inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
+    return cv.convert_to_k();
+}
 
 // hold static fft node data structures
 struct pencil_struct {
@@ -103,7 +110,7 @@ class hila_fft {
         fftdir = _fftdir;
         only_reflect = _reflect;
 
-        local_volume = lattice.mynode.volume();
+        local_volume = lattice->mynode.volume;
 
         // init dirs here at one go
         foralldir(d) init_pencil_direction(d);
@@ -295,8 +302,6 @@ class hila_fft {
     void full_transform(const Field<T> &input, Field<T> &result,
                         const CoordinateVector &directions) {
 
-        assert(lattice.id() == input.fs->lattice_id && "Default lattice mismatch in fft");
-
         // Make sure the result is allocated and mark it changed
         result.check_alloc();
 
@@ -451,7 +456,9 @@ template <typename T>
 Field<T> Field<T>::FFT(fft_direction fftdir) const {
     CoordinateVector cv;
     cv.fill(true);
-    return FFT(cv, fftdir);
+    Field<T> res;
+    FFT_field(*this, res, cv, fftdir);
+    return res;
 }
 
 
@@ -522,6 +529,11 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
 
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
+
+    foralldir(d) {
+        assert(lattice.size(d) % 2 == 0 &&
+               "FFT_complex_to_real works only with even lattice size to all directions");
+    }
 
     // first, do a full reflection of the field, giving rf(x) = f(L-x) = "f(-x)"
     auto rf = this->reflect();

@@ -6,6 +6,8 @@
  */
 #include "hila.h"
 
+#include "clusters.h"
+
 // unistd.h needed for isatty()
 #include <unistd.h>
 
@@ -28,7 +30,7 @@ bool report_pass(std::string message, double eps, double limit) {
         }
     }
 
-    if (eps < limit) {
+    if (abs(eps) < limit) {
         hila::out0 << ok_string << message << " passed" << std::endl;
         return true;
     } else {
@@ -38,40 +40,165 @@ bool report_pass(std::string message, double eps, double limit) {
     }
 }
 
+/**
+ * @brief Test various functions on fields.
+ * @details Test functions exp (on both real and complex field) and sin.
+ *
+ */
+void test_functions() {
+
+    Field<double> df = 0;
+    report_pass("Field functions: real exp", exp(df).sum() - lattice.volume(), 1e-8);
+
+    Field<Complex<double>> cf = 0;
+    report_pass("Field functions: complex exp", abs(exp(cf).sum() - lattice.volume()), 1e-8);
+
+    df[ALL] = sin(X.x() * 2 * M_PI / lattice.size(e_x));
+    report_pass("Field functions: sin", df.sum(), 1e-8);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 
-void check_reductions() {
+/**
+ * @brief Test reduction operations on fields
+ * @details Test normal reduction `+=` and ReductionVector on fields with different types such as
+ * real, complex, matrix and SU matrix.
+ *
+ */
+void test_reductions() {
 
 
     // test reductions
 
-    Field<Complex<double>> f;
-    f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
+    {
+        Field<Complex<double>> f;
+        f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
 
-    Complex<double> sum = 0;
-    onsites(ALL) sum += f[X];
+        Complex<double> sum = 0;
+        onsites(ALL) sum += f[X];
 
-    sum /= lattice.volume();
-    report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
+        sum /= lattice.volume();
+        report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
 
-    ReductionVector<Complex<double>> rv(lattice.size(e_x));
+        ReductionVector<Complex<double>> rv(lattice.size(e_x));
 
-    onsites(ALL) {
-        rv[X.coordinate(e_x)] += f[X];
+        onsites(ALL) {
+            rv[X.coordinate(e_x)] += f[X];
+        }
+
+        sum = 0;
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            sum += expi(2 * M_PI * i / lattice.size(e_x)) -
+                   rv[i] / (lattice.volume() / lattice.size(e_x));
+        }
+        report_pass("Complex ReductionVector, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+        // do a combined reduction too
+        sum = 0;
+        rv = 0;
+        onsites(ALL) {
+            rv[X.x()] += f[X];
+            rv[0] += 1;
+            rv[1] += -0.01;
+
+            sum += f[X];
+        }
+
+        sum /= lattice.volume();
+        Complex<double> sum2 = 0;
+        rv[0] -= lattice.volume();
+        rv[1] += 0.01 * lattice.volume();
+
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            sum2 += expi(2 * M_PI * i / lattice.size(e_x)) -
+                    rv[i] / (lattice.volume() / lattice.size(e_x));
+        }
+        report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
+                        hila::prettyprint(sum2),
+                    abs(sum) + abs(sum2), 1e-4);
     }
 
-    sum = 0;
-    for (int i = 0; i < lattice.size(e_x); i++) {
-        sum +=
-            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
+    {
+        // reductionvector with long
+        Field<int64_t> lf;
+        lf[ALL] = X.x();
+
+        ReductionVector<int64_t> rv(lattice.size(e_x));
+
+        onsites(ALL) {
+            rv[X.x()] += lf[X];
+        }
+
+        long s = 0;
+        for (int x = 0; x < rv.size(); x++) {
+            s += abs(rv[x] - x * (lattice.volume() / lattice.size(e_x)));
+        }
+
+        report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
+
+        int64_t psum = 0;
+        onsites(ALL) {
+            if (X.parity() == EVEN)
+                psum += 1;
+        }
+        // If volume is odd there is 1 extra even site
+        psum -= lattice.volume() / 2 + lattice.volume() % 2;
+
+        report_pass("Reduction with parity", psum, 1e-15);
     }
-    report_pass("Vector reduction, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+    {
+        // reductionvector with long
+        Field<int64_t> lf;
+        lf[ALL] = X.x();
+
+        ReductionVector<int64_t> rv(lattice.size(e_x));
+
+        onsites(ALL) {
+            rv[X.x()] += lf[X];
+        }
+
+        long s = 0;
+        for (int x = 0; x < rv.size(); x++) {
+            s += abs(rv[x] - x * (lattice.volume() / lattice.size(e_x)));
+        }
+
+        report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
+    }
+
+
+    {
+
+        constexpr int N = 5;
+
+        Field<SU<N, double>> mf;
+        mf = 1;
+        // onsites(ALL) mf[X] = (mf[X] + mf[X])*0.5;
+
+        ReductionVector<SU<N, double>> rmf(lattice.size(e_x));
+
+        onsites(ALL) {
+            rmf[X.x()] += mf[X];
+        }
+
+
+        double diff = 0;
+        for (int i = 0; i < lattice.size(e_x); i++) {
+            diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
+        }
+
+
+        report_pass("SU(" + std::to_string(N) + ") ReductionVector", diff, 1e-8);
+    }
 }
 
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// write something to a location
-
+/**
+ * @brief Test site access
+ * @details Test simple site access by writing and reading to random field site index c.
+ *
+ */
 void test_site_access() {
 
     Field<Complex<double>> f = 0;
@@ -90,35 +217,58 @@ void test_site_access() {
 }
 
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// test maxloc and minloc operation
-
+/**
+ * @brief Test min and max operations on fields
+ * @details Test min and max operations on fields with different parities.
+ *
+ */
 void test_minmax() {
 
     CoordinateVector c, loc;
     Field<double> n;
-    n[ALL] = hila::random();
-    foralldir(d) c[d] = hila::random() * lattice.size(d);
-    hila::broadcast(c);
-    n[c] = 2;
 
-    auto v = n.max(loc);
-    report_pass("Maxloc is " + hila::prettyprint(loc.transpose()), (c - loc).norm(), 1e-8);
-    report_pass("Max value " + hila::prettyprint(v), v - 2, 1e-9);
+    for (Parity par : {ALL, EVEN, ODD}) {
 
+        n[par] = hila::random();
+        do {
+            foralldir(d) c[d] = hila::random() * lattice.size(d);
+        } while (!(par == ALL || c.parity() == par));
+        hila::broadcast(c);
+        n[c] = 2;
 
-    foralldir(d) c[d] = hila::random() * lattice.size(d);
-    hila::broadcast(c);
-    n[c] = -1;
-    v = n.min(loc);
-    report_pass("Minloc is " + hila::prettyprint(loc.transpose()), (c - loc).norm(), 1e-8);
-    report_pass("Min value " + hila::prettyprint(v), v + 1, 1e-9);
+        if (par != ALL)
+            n[opp_parity(par)] = 3;
+
+        auto v = n.max(par, loc);
+        report_pass("Maxloc parity " + hila::prettyprint(par) + " is " +
+                        hila::prettyprint(loc.transpose()),
+                    (c - loc).norm(), 1e-8);
+        report_pass("Max parity " + hila::prettyprint(par) + " value " + hila::prettyprint(v),
+                    v - 2, 1e-9);
+
+        do {
+            foralldir(d) c[d] = hila::random() * lattice.size(d);
+        } while (!(par == ALL || c.parity() == par));
+        hila::broadcast(c);
+        n[c] = -1;
+
+        if (par != ALL)
+            n[opp_parity(par)] = -3;
+
+        v = n.min(par, loc);
+        report_pass("Minloc parity " + hila::prettyprint(par) + " is " +
+                        hila::prettyprint(loc.transpose()),
+                    (c - loc).norm(), 1e-8);
+        report_pass("Min parity " + hila::prettyprint(par) + " value " + hila::prettyprint(v),
+                    v + 1, 1e-9);
+    }
 }
 
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// test random number properties
-// rough test, testing spectrum of gaussians
-
+/**
+ * @brief Test Gaussian random field generation
+ * @details Generate a Gaussian random field and check its average and width^2.
+ *
+ */
 void test_random() {
 
     constexpr int n_loops = 100;
@@ -126,34 +276,33 @@ void test_random() {
     Field<double> f;
 
     double fsum = 0, fsqr = 0;
-    for (int i=0; i<n_loops; i++) {
+    for (int i = 0; i < n_loops; i++) {
         f.gaussian_random();
         double s = 0, s2 = 0;
         onsites(ALL) {
-            f[X] = hila::gaussrand();
             s += f[X];
             s2 += sqr(f[X]);
         }
-        fsum += s/lattice.volume();
-        fsqr += s2/lattice.volume();
+        fsum += s / lattice.volume();
+        fsqr += s2 / lattice.volume();
     }
 
     fsum /= n_loops;
     fsqr /= n_loops;
 
-    report_pass("Gaussian random average (6 sigma limit) " + hila::prettyprint(fsum), 
-    abs(fsum), 6/sqrt(((double)n_loops)*lattice.volume()));
+    report_pass("Gaussian random average (6 sigma limit) " + hila::prettyprint(fsum), abs(fsum),
+                6 / sqrt(((double)n_loops) * lattice.volume()));
 
-    report_pass("Gaussian random width^2 " + hila::prettyprint(fsqr),
-    fsqr - 1, 6/sqrt(((double)n_loops)*lattice.volume()));
-
+    report_pass("Gaussian random width^2 " + hila::prettyprint(fsqr), fsqr - 1,
+                6 / sqrt(((double)n_loops) * lattice.volume()));
 }
 
 
-
-// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// test access to a list of sites
-
+/**
+ * @brief Test setting elements and selecting them
+ * @details Set elements in a field at random coordinates and then select them using SiteSelect
+ * and SiteValueSelect.
+ */
 void test_set_elements_and_select() {
 
     Field<Complex<double>> f = 0;
@@ -245,8 +394,11 @@ void test_set_elements_and_select() {
     onsites(ALL) {}
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Test subvolume operations
+ *
+ */
 void test_subvolumes() {
 
     bool ok = true;
@@ -257,6 +409,7 @@ void test_subvolumes() {
         if (si.coordinates() != c)
             ok = false;
     }
+
 
     report_pass("SiteIndex", ok == false, 1e-2);
 
@@ -325,10 +478,12 @@ void test_subvolumes() {
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////
-
-
-void fft_test() {
+/**
+ * @brief Test FFT
+ * @details Test forward and inverse FFT on fields.
+ *
+ */
+void test_fft() {
 
 
     using T = Complex<double>;
@@ -373,7 +528,8 @@ void fft_test() {
             kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
         }
 
-        kv = convert_to_k(kx);
+        kv = kx.convert_to_k();
+
 
         onsites(ALL) {
             double d = kv.dot(X.coordinates());
@@ -403,17 +559,24 @@ void fft_test() {
 
         report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
 
-        auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
-        eps = squarenorm_relative(r, r2);
+        bool odd = false;
+        foralldir(d) odd = odd || (lattice.size(d) % 2 > 0);
+        if (!odd) {
+            auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
+            eps = squarenorm_relative(r, r2);
 
-        report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
+            report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
+        } else {
+            hila::out0 << " ...  Skipping FFT complex to real because lattice size is odd\n";
+        }
     }
 
     //-----------------------------------------------------------------
     // Check fft norm
 
+
     onsites(ALL) {
-        p[X] = hila::random() * exp(-convert_to_k(X.coordinates()).squarenorm());
+        p[X] = hila::random() * exp(-X.coordinates().convert_to_k().squarenorm());
     }
     f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
 
@@ -436,9 +599,12 @@ void fft_test() {
     report_pass("Norm of binned FFT = " + hila::prettyprint(s), (s - np) / np, 1e-10);
 }
 
-//---------------------------------------------------------------------------
-
-void spectraldensity_test() {
+/**
+ * @brief Test spectral density
+ * @details Test spectral density extraction from field.
+ *
+ */
+void test_spectraldensity() {
 
 
     // test spectral density for single waves
@@ -456,7 +622,7 @@ void spectraldensity_test() {
         foralldir(d) {
             kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
         }
-        kv = convert_to_k(kx);
+        kv = kx.convert_to_k();
         auto absk = kv.norm();
 
         // test first std. binning (normally )
@@ -511,8 +677,38 @@ void test_field_slices() {
 }
 
 
-//--------------------------------------------------------------------------------
+/**
+ * @brief Test matrix operations
+ * @details Test matrix multiplication and addition, as well as operations with imaginary operator.
+ *
+ */
+void test_matrix_operations() {
 
+    Field<Matrix<3, 2, Complex<double>>> mf;
+
+    onsites(ALL) mf[X].fill(1 + I);
+
+    Matrix<3, 3, Complex<double>> cm;
+    cm.asArray() = 4;
+    double sum = 0;
+    onsites(ALL) {
+        sum += (mf[X] * mf[X].dagger() - cm).squarenorm();
+    }
+
+    report_pass("matrix multiply and addition", sum, 1e-8);
+
+    auto dm = cm * I - 2 * I;
+    dm.asArray() *= I;
+    dm = ((dm - 2).asArray() + 4).asMatrix();
+    report_pass("Array and imaginary unit operations", dm.squarenorm(), 1e-8);
+}
+
+
+/**
+ * @brief Test matrix decomposition
+ * @details Test matrix decompositions such as eigen decomposition and singular value decomposition
+ * (SVD).
+ */
 void test_matrix_algebra() {
 
     using myMatrix = SquareMatrix<4, Complex<double>>;
@@ -522,8 +718,8 @@ void test_matrix_algebra() {
 
     M.gaussian_random(2.0);
 
-    // eigenvalue test - show that  M = U D U^*, where D is diagonal eigenvalue matrix and U matrix
-    // of eigenvectors
+    // eigenvalue test - show that  M = U D U^*, where D is diagonal eigenvalue matrix and U
+    // matrix of eigenvectors
 
     onsites(ALL) {
         auto H = M[X] * M[X].dagger(); // make hermitean
@@ -565,8 +761,197 @@ void test_matrix_algebra() {
     report_pass("Fully pivoted SVD with " + hila::prettyprint(myMatrix::rows()) + "x" +
                     hila::prettyprint(myMatrix::columns()) + " Complex matrix",
                 max_delta, 1e-10);
+}
+
+/**
+ * @brief Test extended type
+ * @details Test extended type for sums that exibit loss in accuracy with double.
+ *
+ */
+void test_extended() {
+
+    // ExtendedPrecision type test with T = double
+    Field<double> g;
+
+    ExtendedPrecision e = 2.4;
+    e = 5 * e - e - e - 3 * e;
+    report_pass("ExtendedPrecision basic arithmetics: " + hila::prettyprint(e), fabs(e.to_double()),
+                1e-20);
+
+    e = 1;
+    e += 1e-25;
+    bool ok = (e > 1) && (e == e);
+
+    report_pass("ExtendedPrecision comparison ops", ok ? 0 : 1, 1e-20);
+
+    for (double mag = 1e8; mag <= 1e+32; mag *= 1e8) {
+
+        size_t nsqr = 0, nmag = 0, n1 = 0;
+
+        onsites(ALL) {
+            if (X.x() % 2 == 0) {
+                if (X.y() % 2 == 0) {
+                    g[X] = sqr(mag);
+                    nsqr += 1;
+                } else {
+                    g[X] = mag;
+                    nmag += 1;
+                }
+            } else {
+                g[X] = 1;
+                n1 += 1;
+            }
+        }
+        ExtendedPrecision ev = 0;
+        double s = 0;
+        onsites(ALL) {
+            ev += g[X];
+            s += g[X];
+        }
+
+        double result = n1 + nmag * mag + nsqr * sqr(mag);
+
+        // ev -= lattice.volume() / 2;
+        // ev -= mag * (lattice.volume() / 4);
+        // ev -= sqr(mag) * (lattice.volume() / 4);
+
+        // above multiplication loses precision!  Subtracting
+        // here step-by-step
+
+        ExtendedPrecision res = 0, r;
+        r = sqr(mag);
+        r *= nsqr;
+        res = r;
+
+        r = mag;
+        r *= nmag;
+        res += r;
+
+        r = 1;
+        r *= n1;
+        res += r;
+
+        ev -= res;
+        s -= res.to_double();
 
 
+        // for (int i = 0; i < n1; i++) {
+        //     ev -= 1;
+        //     s -= 1;
+        // }
+
+
+        // for (int i = 0; i < lattice.volume() / 4; i++) {
+        //     ev -= mag;
+        //     ev -= sqr(mag);
+        //     s -= mag;
+        //     s -= sqr(mag);
+        // }
+
+        // s -= sqr(mag) * lattice.volume() / 4;
+        // s -= mag * lattice.volume() / 4;
+        // s -= lattice.volume() / 2;
+
+        // hila::out0 << "RES " << ev.value << " + " << ev.compensation << " + " <<
+        // ev.compensation2
+        //           << '\n';
+
+
+        std::stringstream ssres;
+        ssres << "Extended reduction residual w. delta " << mag << " : " << ev.to_double() / result
+              << " (double " << s / result << ")";
+
+        report_pass(ssres.str(), ev.to_double() / result, 1e-20);
+    }
+}
+
+
+//--------------------------------------------------------------------------------
+
+void test_clusters() {
+
+    Field<int> m;
+
+    m = hila::clusters::background;
+
+    onsites(ALL) {
+        auto c = X.coordinates();
+        if (c[e_x] == 0 && c[e_y] == 0)
+            m[X] = 1;
+        else if (c[e_x] == 2 && c[e_z] == 2)
+            m[X] = 2;
+        else if (c[e_x] == 4 && c[e_y] < 3 && c[e_z] > 1 && c[e_z] <= 4)
+            m[X] = 3;
+    }
+
+    hila::clusters cl(m);
+
+    report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
+    if (cl.number() == 3) {
+        double sumsize =
+            fabs(cl.size(0) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
+            fabs(cl.size(1) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
+            fabs(cl.size(2) - 1 * 3 * 3);
+        report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
+
+        double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
+        report_pass("Cluster test: cluster types ", types, 1e-10);
+
+#if NDIM == 3
+        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) +
+                      abs(cl.area(1) - 4 * lattice.size(e_y)) +
+                      abs(cl.area(2) - 2 * (1 * 3 + 1 * 3 + 3 * 3));
+
+        report_pass("Cluster test: cluster area ", area, 1e-10);
+
+#endif
+    }
+}
+
+void test_blocking() {
+
+    CoordinateVector blocking;
+    blocking.fill(2);
+    if (lattice.can_block(blocking)) {
+
+        Field<CoordinateVector> cvf, cvfb;
+        cvf[ALL] = X.coordinates();
+
+        hila::print_dashed_line();
+        lattice.block(blocking);
+        hila::out0 << "Testing blocked lattice of size " << lattice.size() << '\n';
+
+        cvfb.block_from(cvf);
+        double sum = 0;
+        onsites(ALL) {
+            sum += (cvfb[X] - 2*X.coordinates()).squarenorm();
+            cvfb[X] *= -1;
+        }
+
+        report_pass("Field blocking test",sum,1e-5);
+
+        test_site_access();
+        test_set_elements_and_select();
+
+        lattice.unblock();
+        cvfb.unblock_to(cvf);
+
+        hila::print_dashed_line();
+        hila::out0 << "Return lattice to size " << lattice.size() << '\n';
+
+
+        sum = 0;
+        onsites(ALL) {
+            if (X.coordinates().is_divisible({2,2,2})) {
+                sum += (X.coordinates() + cvf[X]).squarenorm();
+            }
+        }
+
+        report_pass("Field unblocking test",sum,1e-5);
+
+        test_site_access();
+        test_set_elements_and_select();
+    }
 }
 
 
@@ -594,23 +979,20 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////
     // start tests
 
-    check_reductions();
-
+    test_reductions();
+    test_functions();
     test_site_access();
-
     test_minmax();
-
     test_random();
-
     test_set_elements_and_select();
-
     test_subvolumes();
-
-    fft_test();
-
-    spectraldensity_test();
-
+    test_matrix_operations();
+    test_fft();
+    test_spectraldensity();
     test_matrix_algebra();
+    test_extended();
+    test_clusters();
+    test_blocking();
 
     hila::finishrun();
 }

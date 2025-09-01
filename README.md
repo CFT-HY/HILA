@@ -11,7 +11,7 @@ etc.).  Details of the parallelization and computing architecture are hidden fro
 all applications automatically run on present or future platform.
 Write once -- run anywhere.
 
-Hila is based on HILA preprocessor "hilapp", which is a C++ source-to-source transformer using the 
+Hila is based on HILA preprocessor "hilapp", which is a C++ source-to-source transpiler using the 
 [libtooling](https://clang.llvm.org/docs/LibTooling.html) toolbox of the
 [Clang](https://clang.llvm.org/) compiler.
 It converts application C++ to platform-specific C++ code,
@@ -26,7 +26,7 @@ Field<double> g = 0;
 onsites(ALL) f[X].gaussian_random();
 
 foralldir(d){
-  g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
+  g[ALL] += abs(f[X + d] - 2 * f[X] + f[X - d]);
 }
 ```
 
@@ -39,6 +39,11 @@ lattice fields differently for different computing platforms: 'array of structur
 ## Installation and documentation
 
 Installation and user guide can be viewed on the [web documentation](https://cft-hy.github.io/HILA)
+
+## Development and Contribution 
+
+HILA is community-driven FOSS project. Before sending out PR, make sure have a close look on 
+[guide line for contributing HILA](https://cft-hy.github.io/HILA.home/community).
 
 ## License 
 

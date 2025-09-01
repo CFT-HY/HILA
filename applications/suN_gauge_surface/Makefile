@@ -9,7 +9,7 @@
 HILA_DIR := ../..
 
 # Number of colors
-NCOL := 3
+NCOL := 4
 
 # Set default goal and arch
 .DEFAULT_GOAL := suN_gauge_surface
@@ -34,11 +34,19 @@ endif
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
+pre_targets = build/suN_gauge_surface build/suN_gauge_surface_oddT
+
 suN_gauge_surface: build/suN_gauge_surface ; @:
 
+suN_gauge_surface_oddT: build/suN_gauge_surface_oddT ; @:
+
 # Now the linking step for each target executable
-build/suN_gauge_surface: Makefile build/suN_gauge_surface.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/suN_gauge_surface.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
+$(pre_targets): % : %.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ $*.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
+
+
+
+
 
 
 #build/suN_gauge_bare.o: src/suN_gauge_bare.h

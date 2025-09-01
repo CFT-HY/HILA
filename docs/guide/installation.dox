@@ -105,7 +105,9 @@ On the other hand, HPC library building system [Spack](https://spack.readthedocs
 
 ### WINDOWS
 
-On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. One can also opt to use WSL, in this case see LINUX installation instructions.
+On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. 
+
+One can also opt to use WSL, which is compatible with CUDA. In this case, see guide \subpage wsl_installation
 
 
 ### HPC{#HPC}
@@ -124,7 +126,7 @@ For step-by-step guide of [Spack](https://spack.readthedocs.io/en/latest) buildi
 On computing platform without module system such as [Linux Workstation](#workstation), command `spack find --path llvm` will return the installation location, which is necessary information for [builing HILA preprocessor](#hila-preprocessor). 
 In this case, user may pass the absolute path through shell variable or GNU Make flag.
 
-* **After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
+**After installing the HILA preprocessor with one of the above options one can move on to the [building HILA applications](#building-hila-applications) section.**
 
 ## Containers {#containers}
 

@@ -419,7 +419,7 @@ inline auto operator*(const SU2<A> &lhs, const Vector<2,B> &rhs) {
 // horizontalvector * SU2 (vec can be complex or real)
 template <typename A, typename B>
 inline auto operator*(const RowVector<2,B> &lhs, const SU2<A> &rhs) {
-    return rhs * lhs.convert_to_2x2_matrix();
+    return lhs * rhs.convert_to_2x2_matrix();
 }
 
 
@@ -473,6 +473,7 @@ class Algebra<SU2<T>> {
         a = *(it++);
         b = *(it++);
         c = *(it);
+        return *this;
     }
 #pragma hila loop_function
     /// assign from zero
@@ -639,6 +640,12 @@ inline Algebra<SU2<T>> left_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &
     res.b = E.b * t3 + U.b * t2 + t1 * (E.c * U.a - E.a * U.c);
     res.c = E.c * t3 + U.c * t2 + t1 * (E.a * U.b - E.b * U.a);
     return res;
+}
+
+/// dot product for SU2 algebra: A dot B = A^a B^a = -2 Tr( A^a T^a B^b T^b )
+template<typename T>
+inline T su2_algebra_dot(const Algebra<SU2<T>> &A, const Algebra<SU2<T>> &B) {
+    return A.a * B.a + A.b * B.b + A.c*B.c;
 }
 
 template <typename T>

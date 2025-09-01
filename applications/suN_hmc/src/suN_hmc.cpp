@@ -1,314 +1,178 @@
 #include "hila.h"
-#include "gauge/staples.h"
 #include "gauge/polyakov.h"
+#include "gauge/wilson_plaquette_action.h"
+
+#ifndef NCOLOR
+#define NCOLOR 3
+#endif
+
+#ifdef HMCACTION
+#define HMCS HMCACTION
+#else
+#define HMCS 1
+#endif
+
+#if HMCS == 1
+#include "gauge/bulk_prevention_action.h"
+#elif HMCS > 1
+#include "gauge/wilson_line_and_force.h"
+#if HMCS < 5
+#include "gauge/improved_action.h"
+#elif HMCS == 5
+#include "gauge/log_plaquette_action.h"
+#endif
+#endif
+
+
+#include "gauge/gradient_flow.h"
+#include "tools/string_format.h"
+#include "tools/floating_point_epsilon.h"
+
+#ifdef STOUTSMEAR
 #include "gauge/stout_smear.h"
+#define STOUTSTEPS STOUTSMEAR
+#else
+#define STOUTSTEPS 0
+#endif
 
-#include <fftw3.h>
 
-using mygroup = SU<4, double>;
+using ftype = double;
+using mygroup = SU<NCOLOR, ftype>;
+
+ftype stoutc = 0.15;
+int stout_nsteps = STOUTSTEPS;
+
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
-    double beta;
-    double deltab;
-    double dt;
-    int trajlen;
-    int n_traj;
-    int n_save;
-    int n_profile;
+    ftype beta;         // inverse gauge coupling
+    ftype dt;           // HMC time step
+    int trajlen;        // number of HMC time steps per trajectory
+    int n_traj;         // number of trajectories to generate
+    int n_therm;        // number of thermalization trajectories (counts only accepted traj.)
+    int gflow_freq;     // number of trajectories between gflow measurements
+    ftype gflow_max_l;  // flow scale at which gradient flow stops
+    ftype gflow_l_step; // flow scale interval between flow measurements
+    ftype gflow_a_accu; // desired absolute accuracy of gradient flow integration steps
+    ftype gflow_r_accu; // desired relative accuracy of gradient flow integration steps
+    int n_save;         // number of trajectories between config. check point
     std::string config_file;
-    double time_offset;
-    bool poly_range_on;
-    double poly_probability_coeff;
-    Vector<2, double> poly_range;
-    int n_smear;
-    double smear_coeff;
-    int z_smear;
-    int n_surface;
-    int n_dump_polyakov;
+    ftype time_offset;
 };
 
-template <typename T>
-T get_ch_inv(const T &U) {
-    T tB[2];
-    Complex<hila::arithmetic_type<T>> tc;
-    int ip, iip;
-    ip = 0;
-    iip = 1;
-    tB[ip] = 1.;
-    tc = trace(U);
-    for (int k = 2; k <= T::size(); ++k) {
-        tB[iip] = U * tB[ip];
-        tB[iip] -= tc;
-        tc = trace(U * tB[iip]) / k;
-        ip = iip;
-        iip = (iip + 1) % 2;
-    }
-    return tB[ip] / tc;
+
+///////////////////////////////////////////////////////////////////////////////////
+// HMC functions
+
+template <typename group, typename atype = hila::arithmetic_type<group>>
+double measure_s(const GaugeField<group> &U) {
+    // compute the value of the chosen gauge action (without beta/N factor)
+#if STOUTSTEPS > 0
+
+    GaugeField<group> tU;
+    stout_smear(U, tU, stoutc, stout_nsteps);
+
+#else
+
+    const GaugeField<group> &tU = U;
+
+#endif
+
+#if HMCS == 1 // BP
+    double res = measure_s_bp(tU);
+#elif HMCS == 2 // LW
+    atype c12 = -1.0 / 12.0; // rectangle weight
+    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+    double res = measure_s_impr(tU, c11, c12);
+#elif HMCS == 3 // IWASAKI
+    atype c12 = -0.331;          // rectangle weight
+    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+    double res = measure_s_impr(tU, c11, c12);
+#elif HMCS == 4 // DBW2
+    atype c12 = -1.4088;         // rectangle weight
+    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+    double res = measure_s_impr(tU, c11, c12);
+#elif HMCS == 5 // LOG-PLAQUETTE
+    double res = measure_s_log_plaq(tU);
+#else           // WILSON
+    double res = measure_s_wplaq(tU);
+#endif // END HMCS
+
+    return res;
 }
 
-template <typename T>
-T get_bp_Amat(const T &U) {
-    T tA1;
-    T tA2;
-    tA1 = 0.5 * U;
-    tA1 += 0.5;
-    tA2 = get_ch_inv(tA1);
-    tA1 = tA2 * tA2.dagger();
-    return tA1 * tA1 * tA2;
-}
+template <typename group, typename atype = hila::arithmetic_type<group>>
+void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, atype delta) {
+    // compute the force for the chosen action and use it to evolve E
+    atype eps = delta / group::size();
 
-template <typename T>
-T get_bp_iOsqmat(const T &U) {
-    T tA1;
-    T tA2;
-    tA1 = 0.5 * U;
-    tA1 += 0.5;
-    tA2 = tA1.dagger() * tA1;
-    tA1 = get_ch_inv(tA2);
-    tA2 = tA1 * tA1;
-    tA2 -= 1.;
-    return tA2;
-}
+#if STOUTSTEPS > 0
 
-template <typename T>
-void plaqpm(const GaugeField<T> &U, Field<T> &plaqp, Direction d1, Direction d2) {
+    std::vector<GaugeField<group>> tUl(stout_nsteps + 1);
+    std::vector<VectorField<group>> tUKl(stout_nsteps);
+    std::vector<VectorField<group>> tstapl(stout_nsteps);
+    stout_smeark(U, tUl, tstapl, tUKl, stoutc);
 
-    Field<T> lower;
+    VectorField<Algebra<group>> tE;
 
-    if (d2 != d1) {
+    foralldir(d1) onsites(ALL) tE[d1][X] = 0;
 
-        // anticipate that these are needed
-        // not really necessary, but may be faster
-        U[d2].start_gather(d1, ALL);
-        U[d1].start_gather(d2, ALL);
+    GaugeField<group> &tU = tUl[stout_nsteps];
 
-        // calculate first lower 'U' of the staple sum
-        // do it on opp parity
-        onsites(ALL) {
-            lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
-        }
+#else // STOUTSTEPS==0
 
-        // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop
-        onsites(ALL) {
-            auto p1 = U[d1][X] * U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
-            auto p2 = U[d1][X] * lower[X - d2].dagger();
-            plaqp[X] = p1 * get_bp_Amat(p1) + p2 * get_bp_Amat(p2);
-        }
-    }
-}
+    const GaugeField<group> &tU = U;
+    VectorField<Algebra<group>> &tE = E;
 
-template <typename T>
-void plaqpm_db(const GaugeField<T> &U, Field<T> &plaqp, Direction d1, Direction d2, double deltab) {
+#endif // END STOUTSTEPS
 
-    Field<T> lower;
+#if HMCS == 1 // BP
+    get_force_bp_add(tU, tE, eps);
+#elif HMCS == 2 // LW
+    atype c12 = -1.0 / 12.0;     // rectangle weight
+    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+    get_force_impr_add(tU, tE, eps * c11, eps * c12);
+#elif HMCS == 3 // IWASAKI
+    atype c12 = -0.331;          // rectangle weight
+    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+    get_force_impr_add(tU, tE, eps * c11, eps * c12);
+#elif HMCS == 4 // DBW2
+    atype c12 = -1.4088;         // rectangle weight
+    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+    get_force_impr_add(tU, tE, eps * c11, eps * c12);
+#elif HMCS == 5 // LOG-PLAQUETTE
+    get_force_log_plaq_add(tU, tE, eps);
+#else           // WILSON
+    get_force_wplaq_add(tU, tE, eps);
+#endif          // END HMCS
 
-    if (d2 != d1) {
+#if STOUTSTEPS > 0
 
-        // anticipate that these are needed
-        // not really necessary, but may be faster
-        U[d2].start_gather(d1, ALL);
-        U[d1].start_gather(d2, ALL);
-
-        // calculate first lower 'U' of the staple sum
-        // do it on opp parity
-        onsites(ALL) {
-            double m;
-            if (2 * X.z() < lattice.size(e_z))
-                m = 1.0 - deltab;
-            else
-                m = 1.0 + deltab;
-
-            auto p2 = U[d1][X + d2] * (U[d2][X].dagger() * U[d1][X] * U[d2][X + d1]).dagger();
-            lower[X] = m * p2 * get_bp_Amat(p2);
-        }
-
-        // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop
-        onsites(ALL) {
-            double m;
-            if (2 * X.z() < lattice.size(e_z))
-                m = 1.0 - deltab;
-            else
-                m = 1.0 + deltab;
-
-            auto p1 = U[d1][X] * U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
-            plaqp[X] = m * p1 * get_bp_Amat(p1) + lower[X - d2];
-        }
-    }
-}
-
-
-template <typename group>
-void update_E_bp(const GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p,
-                 double delta) {
-
-    Field<group> plaqp;
-    hila::arithmetic_type<group> eps = delta * 2.0 * p.beta / group::size();
+    VectorField<Algebra<group>> KS;
+    stout_smeark_force(tUl, tstapl, tUKl, tE, KS, stoutc);
 
     foralldir(d1) {
-        foralldir(d2) if (d2 != d1) {
-            if (p.deltab == 0) {
-                plaqpm(U, plaqp, d1, d2);
-            } else {
-                plaqpm_db(U, plaqp, d1, d2, p.deltab);
-            }
-
-            onsites(ALL) {
-                E[d1][X] -= eps * plaqp[X].project_to_algebra();
-            }
-        }
+        onsites(ALL) E[d1][X] += KS[d1][X];
     }
+
+#endif // END STOUTSTEPS
+
 }
 
-template <typename T>
-void staplesum_db(const GaugeField<T> &U, Field<T> &staples, Direction d1, double deltab) {
-
-    Field<T> lower;
-
-    // zero staples just inc case
-    staples = 0;
-    foralldir(d2) if (d2 != d1) {
-
-        // anticipate that these are needed
-        // not really necessary, but may be faster
-        U[d2].start_gather(d1, ALL);
-        U[d1].start_gather(d2, ALL);
-
-        // calculate first lower 'U' of the staple sum
-        // do it on opp parity
-        onsites(ALL) {
-            double m;
-            if (2 * X.z() < lattice.size(e_z))
-                m = 1.0 - deltab;
-            else
-                m = 1.0 + deltab;
-
-            lower[X] = m * U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
-        }
-
-        // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop
-        onsites(ALL) {
-            double m;
-            if (2 * X.z() < lattice.size(e_z))
-                m = 1.0 - deltab;
-            else
-                m = 1.0 + deltab;
-
-            staples[X] += m * U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
-        }
-    }
-}
-
-template <typename group>
-void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p,
-              double delta) {
-
-    Field<group> staple;
-    hila::arithmetic_type<group> eps = delta * p.beta / group::size();
-
+template <typename group, typename atype = hila::arithmetic_type<group>>
+void update_U(GaugeField<group> &U, const VectorField<Algebra<group>> &E, atype delta) {
+    // evolve U with momentum E over time step delta
     foralldir(d) {
-        if (p.deltab != 0)
-            staplesum_db(U, staple, d, p.deltab);
-        else
-            staplesum(U, staple, d);
-
-        onsites(ALL) {
-            E[d][X] -= eps * (U[d][X] * staple[X].dagger()).project_to_algebra();
-        }
+        onsites(ALL) U[d][X] = chexp(E[d][X].expand_scaled(delta)) * U[d][X];
     }
-}
-
-
-template <typename group>
-void update_U(GaugeField<group> &U, const VectorField<Algebra<group>> &E, double delta) {
-
-    foralldir(d) {
-        onsites(ALL) U[d][X] = exp(E[d][X] * delta) * U[d][X];
-    }
-}
-
-template <typename group>
-void regroup_gauge(GaugeField<group> &U) {
-    foralldir(d) {
-        onsites(ALL) U[d][X].reunitarize();
-    }
-}
-
-template <typename group>
-double measure_plaq_bp(const GaugeField<group> &U, double db = 0.0) {
-
-    Reduction<double> plaq;
-    plaq.allreduce(false).delayed(true);
-
-    foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-        if (db == 0.0) {
-
-            onsites(ALL) {
-                plaq += real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
-                                                  (U[dir2][X] * U[dir1][X + dir2]).dagger()))) /
-                        group::size();
-            }
-        } else {
-
-            onsites(ALL) {
-
-                double c;
-                if (2 * X.z() < lattice.size(e_z))
-                    c = 1 - db;
-                else
-                    c = 1 + db;
-
-                plaq += c *
-                        real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
-                                                  (U[dir2][X] * U[dir1][X + dir2]).dagger()))) /
-                        group::size();
-            }
-        }
-    }
-    return plaq.value();
-}
-
-
-template <typename group>
-double measure_plaq(const GaugeField<group> &U, double db = 0.0) {
-
-    Reduction<double> plaq;
-    plaq.allreduce(false);
-
-    foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-        if (db == 0.0) {
-            onsites(ALL) {
-                plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
-                                         U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
-                                  group::size();
-            }
-        } else {
-            onsites(ALL) {
-                double c;
-                if (2 * X.z() < lattice.size(e_z))
-                    c = 1 - db;
-                else
-                    c = 1 + db;
-
-                plaq += c * (1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
-                                              U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
-                                       group::size());
-            }
-        }
-    }
-    return plaq.value();
 }
 
 template <typename group>
 double measure_e2(const VectorField<Algebra<group>> &E) {
-
+    // compute gauge kinetic energy from momentum field E
     Reduction<double> e2 = 0;
     e2.allreduce(false).delayed(true);
-
     foralldir(d) {
         onsites(ALL) e2 += E[d][X].squarenorm();
     }
@@ -317,265 +181,76 @@ double measure_e2(const VectorField<Algebra<group>> &E) {
 
 template <typename group>
 double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
-                      const parameters &p) {
-
-    auto plaq = measure_plaq_bp(U, p.deltab);
-    auto e2 = measure_e2(E);
-
-    return p.beta * plaq + e2 / 2;
+                     const parameters &p, double &plaq) {
+    // measure the total action, consisting of plaquette and momentum term
+    plaq = p.beta * measure_s(U);
+    double e2 = measure_e2(E);
+    return plaq + e2 / 2;
 }
 
-/////////////////////////////////////////////////////////////////////////////
-/// Measure polyakov "field"
-///
-
-template <typename T>
-void measure_polyakov_field(const GaugeField<T> &U, Field<float> &pl) {
-    Field<T> polyakov = U[e_t];
-
-    // mult links so that polyakov[X.dir == 0] contains the polyakov loop
-    for (int plane = lattice.size(e_t) - 2; plane >= 0; plane--) {
-
-        // safe_access(polyakov) pragma allows the expression below, otherwise
-        // hilapp would reject it because X and X+dir can refer to the same
-        // site on different "iterations" of the loop.  However, here this
-        // is restricted on single dir-plane so it works but we must tell it to hilapp.
-
-#pragma hila safe_access(polyakov)
-        onsites(ALL) {
-            if (X.coordinate(e_t) == plane) {
-                polyakov[X] = U[e_t][X] * polyakov[X + e_t];
-            }
-        }
-    }
-
-    onsites(ALL) if (X.coordinate(e_t) == 0) {
-        pl[X] = real(trace(polyakov[X]));
-    }
-}
-
-////////////////////////////////////////////////////////////////////
-
-void smear_polyakov_field(Field<float> &pl, int nsmear, float smear_coeff) {
-
-    if (nsmear > 0) {
-        Field<float> pl2 = 0;
-
-        for (int i = 0; i < nsmear; i++) {
-            onsites(ALL) if (X.coordinate(e_t) == 0) {
-                pl2[X] = pl[X] + smear_coeff * (pl[X + e_x] + pl[X - e_x] + pl[X + e_y] +
-                                                pl[X - e_y] + pl[X + e_z] + pl[X - e_z]);
-            }
-
-            onsites(ALL) if (X.coordinate(e_t) == 0) {
-                pl[X] = pl2[X] / (1 + 6 * smear_coeff);
-            }
-        }
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-std::vector<float> measure_polyakov_profile(Field<float> &pl, std::vector<float> &pro1) {
-    ReductionVector<float> p(lattice.size(e_z)), p1(lattice.size(e_z));
-    p.allreduce(false);
-    p1.allreduce(false);
-    onsites(ALL) if (X.coordinate(e_t) == 0) {
-        p[X.z()] += pl[X];
-        if (X.x() == 0 && X.y() == 0)
-            p1[X.z()] += pl[X];
-    }
-    pro1 = p1.vector();
-    return p.vector();
+template <typename group>
+double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
+                     const parameters &p) {
+    // measure the total action, consisting of plaquette and momentum term
+    double plaq = 0;
+    return measure_action(U, E, p, plaq);
 }
 
 
+template <typename group, typename atype = hila::arithmetic_type<group>>
+void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p) {
+    // leap frog integration for normal action
+
+    // start trajectory: advance U by half a time step
+    update_U(U, E, p.dt / 2);
+    // main trajectory integration:
+    for (int n = 0; n < p.trajlen - 1; ++n) {
+        update_E(U, E, p.beta * p.dt);
+        update_U(U, E, p.dt);
+    }
+    // end trajectory: bring U and E to the same time
+    update_E(U, E, p.beta * p.dt);
+    update_U(U, E, p.dt / 2);
+
+    U.reunitarize_gauge();
+}
+
+// end HMC functions
 ///////////////////////////////////////////////////////////////////////////////////
+// measurement functions
 
 template <typename group>
 void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>> &E) {
-
+    // perform measurements on current gauge and momentum pair (U, E) and
+    // print results in formatted form to standard output
     static bool first = true;
-
     if (first) {
-        hila::out0 << "Legend MEAS: plaq  E^2  P.real  P.imag\n";
+        // print legend for measurement output
+        hila::out0
+            << "LMEAS:     s-local          plaq           E^2        P.real        P.imag\n";
         first = false;
     }
-
-    auto plaq = measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
-
-    auto plaqbp = measure_plaq_bp(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
-
+    auto slocal = measure_s(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+    auto plaq = measure_s_wplaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
     auto e2 = measure_e2(E) / (lattice.volume() * NDIM);
-
-
-    std::vector<Complex<double>> profile;
-
     auto poly = measure_polyakov(U, e_t);
-
-    hila::out0 << "MEAS " << std::setprecision(8) << plaqbp << ' ' << plaq << ' ' << e2 << ' '
-               << poly << '\n';
+    hila::out0 << string_format("MEAS % 0.6e % 0.6e % 0.6e % 0.6e % 0.6e", slocal, plaq, e2,
+                                poly.real(), poly.imag())
+               << '\n';
 }
 
+// end measurement functions
 ///////////////////////////////////////////////////////////////////////////////////
-
-// helper function to get valid z-coordinate index
-
-int z_ind(int z) {
-    return (z + lattice.size(e_z)) % lattice.size(e_z);
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-
-template <typename group>
-void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, int traj) {
-
-    Field<float> pl;
-    measure_polyakov_field(U, pl);
-
-    std::vector<float> profile, profile_unsmear, prof1;
-    profile_unsmear = measure_polyakov_profile(pl, prof1);
-
-    smear_polyakov_field(pl, p.n_smear, p.smear_coeff);
-
-    if (p.z_smear > 0) {
-        Field<float> pl2 = 0;
-        for (int i = 0; i < p.z_smear; i++) {
-            onsites(ALL) if (X.coordinate(e_t) == 0) {
-                pl2[X] = pl[X] + p.smear_coeff * (pl[X + e_z] + pl[X - e_z]);
-            }
-            onsites(ALL) if (X.coordinate(e_t) == 0) {
-                pl[X] = pl2[X] / (1 + 2 * p.smear_coeff);
-            }
-        }
-    }
-
-    profile = measure_polyakov_profile(pl, prof1);
-
-    hila::out0 << std::setprecision(5);
-    double m = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
-    for (int i = 0; i < profile.size(); i++) {
-        profile[i] *= m;
-        hila::out0 << "PRO " << i << ' ' << profile[i] << ' ' << prof1[i] << ' '
-                   << profile_unsmear[i] * m << '\n';
-    }
-
-    float min = 1e8, max = 0;
-    int minloc, maxloc;
-    for (int i = 0; i < profile.size(); i++) {
-        if (min > profile[i]) {
-            min = profile[i];
-            minloc = i;
-        }
-        if (max < profile[i]) {
-            max = profile[i];
-            maxloc = i;
-        }
-    }
-
-    // find the surface between minloc and maxloc
-    float surface_level = max * 0.5; // assume min is really 0
-    int area = lattice.size(e_x) * lattice.size(e_y);
-
-    hila::out0 << "Surface level " << surface_level << '\n';
-
-    int startloc;
-    if (maxloc > minloc)
-        startloc = (maxloc + minloc) / 2;
-    else
-        startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
-
-    std::vector<float> surf;
-    if (hila::myrank() == 0)
-        surf.resize(area);
-
-    hila::out0 << std::setprecision(6);
-
-    for (int y = 0; y < lattice.size(e_y); y++)
-        for (int x = 0; x < lattice.size(e_x); x++) {
-            auto line = pl.get_slice({x, y, -1, 0});
-            if (hila::myrank() == 0) {
-                // start search of the surface from the center between min and max
-                int z = startloc;
-                if (line[z] > surface_level) {
-                    while (line[z_ind(z)] > surface_level && startloc - z < lattice.size(e_z) * 0.8)
-                        z--;
-                } else {
-                    while (line[z_ind(z + 1)] <= surface_level &&
-                           z - startloc < lattice.size(e_z) * 0.8)
-                        z++;
-                }
-
-
-                // do linear interpolation
-                surf[x + y * lattice.size(e_x)] =
-                    z + (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
-
-                if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
-                    hila::out0 << "SURF " << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)]
-                               << '\n';
-                }
-            }
-        }
-
-    if (hila::myrank() == 0) {
-        // do fft for the surface
-        static bool first = true;
-        static Complex<double> *buf;
-        static fftw_plan fftwplan;
-
-        if (first) {
-            first = false;
-
-            buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
-
-            // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
-            // the "fast" one. thus, first y, then x.
-            fftwplan = fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
-                                        (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
-        }
-
-        for (int i = 0; i < area; i++) {
-            buf[i] = surf[i];
-        }
-
-        fftw_execute(fftwplan);
-
-        constexpr int pow_size = 200;
-
-        std::vector<double> npow(pow_size);
-        std::vector<int> hits(pow_size);
-
-        for (int i = 0; i < area; i++) {
-            int x = i % lattice.size(e_x);
-            int y = i / lattice.size(e_x);
-            x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
-            y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
-
-            int k = x * x + y * y;
-            if (k < pow_size) {
-                npow[k] += buf[i].squarenorm() / (area * area);
-                hits[k]++;
-            }
-        }
-
-        for (int i = 0; i < pow_size; i++) {
-            if (hits[i] > 0)
-                hila::out0 << "POW " << i << ' ' << npow[i] / hits[i] << ' ' << hits[i] << '\n';
-        }
-    }
-}
-
-
-////////////////////////////////////////////////////////////////
+// load/save config functions
 
 template <typename group>
 void checkpoint(const GaugeField<group> &U, int trajectory, const parameters &p) {
-
     double t = hila::gettime();
+    // name of config with extra suffix
+    std::string config_file =
+        p.config_file + "_" + std::to_string(abs((trajectory + 1) / p.n_save) % 2);
     // save config
-    U.config_write(p.config_file);
-
+    U.config_write(config_file);
     // write run_status file
     if (hila::myrank() == 0) {
         std::ofstream outf;
@@ -583,77 +258,49 @@ void checkpoint(const GaugeField<group> &U, int trajectory, const parameters &p)
         outf << "trajectory  " << trajectory + 1 << '\n';
         outf << "seed        " << static_cast<uint64_t>(hila::random() * (1UL << 61)) << '\n';
         outf << "time        " << hila::gettime() << '\n';
+        // write config name to status file:
+        outf << "config name  " << config_file << '\n';
         outf.close();
     }
-
     std::stringstream msg;
     msg << "Checkpointing, time " << hila::gettime() - t;
     hila::timestamp(msg.str().c_str());
 }
 
-////////////////////////////////////////////////////////////////
-
 template <typename group>
 bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
-
     uint64_t seed;
     bool ok = true;
     p.time_offset = 0;
-
     hila::input status;
     if (status.open("run_status", false, false)) {
-
         hila::out0 << "RESTORING FROM CHECKPOINT:\n";
-
         trajectory = status.get("trajectory");
         seed = status.get("seed");
         p.time_offset = status.get("time");
+        // get config name with suffix from status file:
+        std::string config_file = status.get("config name");
         status.close();
-
         hila::seed_random(seed);
-
-        U.config_read(p.config_file);
-
+        U.config_read(config_file);
         ok = true;
     } else {
-
         std::ifstream in;
         in.open(p.config_file, std::ios::in | std::ios::binary);
-
         if (in.is_open()) {
             in.close();
-
             hila::out0 << "READING initial config\n";
-
             U.config_read(p.config_file);
-
             ok = true;
         } else {
-
             ok = false;
         }
     }
-
     return ok;
 }
 
-////////////////////////////////////////////////////////////////
-
-template <typename group>
-void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p) {
-
-    update_U(U, E, p.dt / 2);
-    for (int n = 0; n < p.trajlen - 1; n++) {
-        update_E_bp(U, E, p, p.dt);
-        update_U(U, E, p.dt);
-    }
-    // and bring U and E to the same time value
-    update_E_bp(U, E, p, p.dt);
-    update_U(U, E, p.dt / 2);
-    regroup_gauge(U);
-}
-
-/////////////////////////////////////////////////////////////////
+// end load/save config functions
+///////////////////////////////////////////////////////////////////////////////////
 
 
 int main(int argc, char **argv) {
@@ -672,21 +319,51 @@ int main(int argc, char **argv) {
     // .get() -method can read many different input types,
     // see file "input.h" for documentation
 
+#if HMCS == 1
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with bulk-prevention gauge action\n";
+#elif HMCS == 2
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with Luscher-Weisz gauge action\n";
+#elif HMCS == 3
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with Iwasaki gauge action\n";
+#elif HMCS == 4
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with DBW2 gauge action\n";
+#elif HMCS == 5
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with log-plaquette gauge action\n";
+#elif HMCS == 6
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with topology suppressing gauge action\n";
+#else
+    hila::out0 << "SU(" << mygroup::size() << ") HMC with Wilson's plaquette gauge action\n";
+#endif
+
+    hila::out0 << "Using floating point epsilon: " << fp<ftype>::epsilon << "\n";
+
     parameters p;
 
     hila::input par("parameters");
 
     CoordinateVector lsize;
-    lsize = par.get("lattice size"); // reads NDIM numbers
-
+    // reads NDIM numbers
+    lsize = par.get("lattice size");
+    // inverse gauge coupling
     p.beta = par.get("beta");
-    // deltab sets system to different beta on different sides, by beta*(1 +- deltab)
-    // use for initial config generation only
-    p.deltab = par.get("delta beta fraction");
+    // HMC step size
     p.dt = par.get("dt");
     // trajectory length in steps
     p.trajlen = par.get("trajectory length");
+    // number of trajectories
     p.n_traj = par.get("number of trajectories");
+    // number of thermalization trajectories
+    p.n_therm = par.get("thermalization trajs");
+    // wilson flow frequency (number of traj. between w. flow measurement)
+    p.gflow_freq = par.get("gflow freq");
+    // wilson flow max. flow-distance
+    p.gflow_max_l = par.get("gflow max lambda");
+    // wilson flow flow-distance step size
+    p.gflow_l_step = par.get("gflow lambda step");
+    // wilson flow absolute accuracy (per integration step)
+    p.gflow_a_accu = par.get("gflow abs. accuracy");
+    // wilson flow relative accuracy (per integration step)
+    p.gflow_r_accu = par.get("gflow rel. accuracy");
     // random seed = 0 -> get seed from time
     long seed = par.get("random seed");
     // save config and checkpoint
@@ -694,32 +371,9 @@ int main(int argc, char **argv) {
     // measure surface properties and print "profile"
     p.config_file = par.get("config name");
 
-    // if polyakov range is off, do nothing with
-    if (par.get_item("polyakov range", {"off", "%f"}) == 1) {
-        p.poly_range = par.get();
-        p.poly_range_on = true;
-        p.poly_probability_coeff = par.get("polyakov probability coeff");
-
-    } else {
-        p.poly_range = 0;
-        p.poly_range_on = false;
-    }
-
-    p.n_profile = par.get("trajs/profile meas");
-
-    if (p.n_profile) {
-        p.n_smear = par.get("smearing steps");
-        p.smear_coeff = par.get("smear coefficient");
-        p.z_smear = par.get("z smearing steps");
-        p.n_surface = par.get("trajs/surface");
-        p.n_dump_polyakov = par.get("trajs/polyakov dump");
-    }
-
-
     par.close(); // file is closed also when par goes out of scope
 
-    // setting up the lattice is convenient to do after reading
-    // the parameter
+    // set up the lattice
     lattice.setup(lsize);
 
     // We need random number here
@@ -729,124 +383,188 @@ int main(int argc, char **argv) {
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
 
-    U = 1;
+    if (0 && hila::myrank() == 0) {
+        // test matrix exponential and corresponding differential computations
+        Alg_gen<NCOLOR, ftype> genlist[NCOLOR * NCOLOR - 1];
+        Algebra<mygroup>::generator_list(genlist);
+        if(false) {
+            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
+                hila::out0 << hila::prettyprint(genlist[i].to_matrix()) << "\n\n";
+            }
+        }
+        Matrix<NCOLOR * NCOLOR - 1, NCOLOR * NCOLOR - 1, ftype> omat;
+        Matrix<NCOLOR, NCOLOR, Complex<ftype>> V;
+        Matrix<NCOLOR, NCOLOR, Complex<ftype>> dV[NCOLOR][NCOLOR];
+        chexp(2.0*genlist[NCOLOR+1].to_matrix()+1.5*genlist[1].to_matrix(), V, dV);
+        hila::out0 << "exp(A):\n" << hila::prettyprint(V) << "\n";
+        for (int i = 0; i < NCOLOR; ++i) {
+            for (int j = 0; j < NCOLOR; ++j) {
+                dV[i][j] = dV[i][j] * V.dagger();
+                hila::out0 << "dexp(A)/dA[" << i << "][" << j << "]*exp(-A):\n"
+                           << hila::prettyprint(dV[i][j]) << "\n";
+            }
+        }
+        project_to_algebra_bilinear(dV, omat, genlist);
+        hila::out0 << "dexp(A)^i/dA^j*exp(-A):\n" << hila::prettyprint(omat) << "\n";
+
+        if (false) {
+            Alg_gen<NCOLOR, ftype> genprodlist[NCOLOR * NCOLOR - 1][NCOLOR * NCOLOR - 1];
+            Algebra<mygroup>::generator_product_list(genlist, genprodlist);
+
+            for (int i = 0; i < NCOLOR * NCOLOR - 1; ++i) {
+                for (int j = 0; j < NCOLOR * NCOLOR - 1; ++j) {
+                    hila::out0 << hila::prettyprint(genprodlist[i][j].to_matrix()) << "\n\n";
+                }
+            }
+            project_to_algebra_bilinear(V, omat, genprodlist);
+            hila::out0 << "algebra_bilinear omat[][]=2*ReTr(t[].dagger()*V*t[]):\n"
+                    << hila::prettyprint(omat) << "\n";
+        }
+    }
 
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
-        if (p.n_profile > 0) {
-            foralldir(d) onsites(ALL) {
-                double mag;
-                // mag =
-                //     0.4 +
-                //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) /
-                //     lattice.size(e_z)));
-                if (X.z() <= lattice.size(e_z) / 2) {
-                    mag = 1;
-                } else {
-                    mag = 0.2;
-                }
-                mygroup u;
-                u.gaussian_random(mag);
-                U[d][X] += u * 0.01;
-                U[d][X].reunitarize();
-            }
-        }
+        hila::out0 << "cold start: initial link variables set to identity\n";
     }
 
-    double p_now = measure_polyakov(U, e_t).real();
-    bool searching = true;
+    hila::timer update_timer("Updates");
+    hila::timer measure_timer("Measurements");
+    hila::timer gf_timer("Gradient Flow");
 
+    auto orig_dt = p.dt;
+    auto orig_trajlen = p.trajlen;
     GaugeField<mygroup> U_old;
-    for (int trajectory = start_traj; trajectory < p.n_traj; trajectory++) {
+    int nreject = 0;
+    ftype t_step0 = 0.0;
+    double g_act_old, act_old, g_act_new, act_new;
+    g_act_old = p.beta * measure_s(U);
+
+    for (int trajectory = start_traj; trajectory < p.n_traj; ++trajectory) {
+        if (trajectory < p.n_therm) {
+            // during thermalization: start with 10% of normal step size (and trajectory length)
+            // and increse linearly with number of accepted thermalization trajectories. normal
+            // step size is reached after 3/4*p.n_therm accepted thermalization trajectories.
+            if (trajectory < p.n_therm * 3.0 / 4.0) {
+                p.dt = orig_dt * (0.1 + 0.9 * 4.0 / 3.0 * trajectory / p.n_therm);
+                p.trajlen = orig_trajlen;
+            } else {
+                p.dt = orig_dt;
+                p.trajlen = orig_trajlen;
+            }
+            if (nreject > 1) {
+                // if two consecutive thermalization trajectories are rejected, decrese the
+                // step size by factor 0.5 (but keeping trajectory length constant, since
+                // thermalization becomes inefficient if trajectory length decreases)
+                for (int irej = 0; irej < nreject - 1; ++irej) {
+                    p.dt *= 0.5;
+                    p.trajlen *= 2;
+                }
+                hila::out0 << " thermalization step size(reduzed due to multiple reject) dt="
+                           << std::setprecision(8) << p.dt << '\n';
+            } else {
+                hila::out0 << " thermalization step size dt=" << std::setprecision(8) << p.dt
+                           << '\n';
+            }
+        } else if (trajectory == p.n_therm) {
+            p.dt = orig_dt;
+            p.trajlen = orig_trajlen;
+            hila::out0 << " normal stepsize dt=" << std::setprecision(8) << p.dt << '\n';
+        }
+
+        update_timer.start();
 
         U_old = U;
-        double ttime = hila::gettime();
+        ftype ttime = hila::gettime();
 
-        double p_old = p_now;
+        foralldir(d) onsites(ALL) E[d][X].gaussian_random();
 
-        foralldir(d) onsites(ALL) E[d][X].gaussian_random(sqrt(2.0));
-
-        double act_old = measure_action(U, E, p);
+        act_old = g_act_old + measure_e2(E) / 2;
 
         do_trajectory(U, E, p);
 
-        double act_new = measure_action(U, E, p);
+        act_new = measure_action(U, E, p, g_act_new);
 
-        bool poly_ok = true;
-        if (p.poly_range_on) {
-            p_now = measure_polyakov(U, e_t).real();
 
-            double db = 0;
-            if (p_now > p.poly_range[1]) {
-                if (p_old > p.poly_range[1])
-                    db = p_now - p_old;
-                else
-                    db = p_now - p.poly_range[1];
-            } else if (p_now < p.poly_range[0]) {
-                if (p_old < p.poly_range[0])
-                    db = p_old - p_now;
-                else
-                    db = p.poly_range[0] - p_now;
+        bool reject = hila::broadcast(exp(act_old - act_new) < hila::random());
+
+        if (trajectory < p.n_therm) {
+            // during thermalization: keep track of number of rejected trajectories
+            if (reject) {
+                ++nreject;
+                --trajectory;
+            } else {
+                if (nreject > 0) {
+                    --nreject;
+                }
             }
-
-            poly_ok = (hila::random() < exp(-p.poly_probability_coeff * db));
-            //   poly_ok = hila::broadcast(poly_ok);
-
-            // if (p_now > p.poly_range[0] && p_now < p.poly_range[1]) {
-            //     poly_ok = true;    // normal, nice branch
-            //     searching = false; // turn off search
-            // } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now <
-            // p.poly_range[1])
-            // ||
-            //            (p_old > p.poly_range[1] && p_now < p_old && p_now >
-            //            p.poly_range[0]))
-            //            {
-            //     poly_ok = true; // this is when we "search" for the range
-            // } else {
-            //     poly_ok = false;
-            // }
         }
-        // if (!poly_ok && searching) {
-        //     poly_ok = (hila::random() < 0.2);
-        // }
-        bool reject = hila::broadcast(!poly_ok || (exp(act_old - act_new) < hila::random()));
 
-        hila::out0 << std::setprecision(12) << "HMC " << trajectory
-                   << (reject ? " REJECT" : " ACCEPT") << " start " << act_old << " ds "
-                   << std::setprecision(6) << act_new - act_old;
-        if (p.poly_range_on)
-            hila::out0 << " ploop " << p_now;
-
-        hila::out0 << " time " << std::setprecision(3) << hila::gettime() - ttime << '\n';
-
+        hila::out0 << std::setprecision(12) << "HMC " << trajectory << " S_TOT_start " << act_old
+                   << " dS_TOT " << std::setprecision(6) << act_new - act_old
+                   << std::setprecision(12);
         if (reject) {
+            hila::out0 << " REJECT" << " --> S_GAUGE " << g_act_old;
             U = U_old;
-            p_now = p_old;
+        } else {
+            hila::out0 << " ACCEPT" << " --> S_GAUGE " << g_act_new;
+            g_act_old = g_act_new;
         }
+        update_timer.stop();
+
+        hila::out0 << "  time " << std::setprecision(3) << hila::gettime() - ttime << '\n';
+
 
         hila::out0 << "Measure_start " << trajectory << '\n';
 
+        measure_timer.start();
+
         measure_stuff(U, E);
 
-        if (p.n_profile && (trajectory + 1) % p.n_profile == 0) {
-            measure_polyakov_surface(U, p, trajectory);
-        }
+        measure_timer.stop();
 
-        if (p.n_dump_polyakov && (trajectory + 1) % p.n_dump_polyakov == 0) {
-            Field<float> pl;
-            std::ofstream poly;
-            if (hila::myrank() == 0) {
-                poly.open("polyakov", std::ios::out | std::ios::app);
+        hila::out0 << "Measure_end " << trajectory << '\n';
+
+        if (trajectory >= p.n_therm) {
+
+            if (p.gflow_freq > 0 && trajectory % p.gflow_freq == 0) {
+                int gtrajectory = trajectory / p.gflow_freq;
+                if (p.gflow_l_step > 0) {
+
+                    gf_timer.start();
+
+                    int nflow_steps = (int)(p.gflow_max_l / p.gflow_l_step);
+
+                    ftype gftime = hila::gettime();
+                    hila::out0 << "Gflow_start " << gtrajectory << '\n';
+
+                    GaugeField<mygroup> V = U;
+
+                    ftype t_step = t_step0;
+                    measure_gradient_flow_stuff(V, (ftype)0.0, t_step);
+                    t_step = do_gradient_flow_adapt(V, (ftype)0.0, p.gflow_l_step, p.gflow_a_accu,
+                                                    p.gflow_r_accu, t_step);
+                    measure_gradient_flow_stuff(V, p.gflow_l_step, t_step);
+                    t_step0 = t_step;
+
+                    for (int i = 1; i < nflow_steps; ++i) {
+
+                        t_step =
+                            do_gradient_flow_adapt(V, i * p.gflow_l_step, (i + 1) * p.gflow_l_step,
+                                                   p.gflow_a_accu, p.gflow_r_accu, t_step);
+
+                        measure_gradient_flow_stuff(V, (i + 1) * p.gflow_l_step, t_step);
+                    }
+
+                    gf_timer.stop();
+
+                    hila::out0 << "Gflow_end " << gtrajectory << "    time " << std::setprecision(3)
+                               << hila::gettime() - gftime << '\n';
+                }
             }
-            measure_polyakov_field(U, pl);
-            pl.write_slice(poly, {-1, -1, -1, 0});
         }
 
-
-        hila::out0 << "Measure_end " << trajectory << std::endl;
-
-        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
+        if (p.n_save > 0 && trajectory>=0 && (trajectory + 1) % p.n_save == 0) {
             checkpoint(U, trajectory, p);
         }
     }

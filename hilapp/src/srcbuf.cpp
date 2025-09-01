@@ -10,7 +10,7 @@
 // #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
+// #include "llvm/Support/raw_ostream.h"
 
 /// See comments in srcbuf.h
 
@@ -208,8 +208,7 @@ std::string srcBuf::get_next_original_word(int idx, int *idxp) {
             // it's a word, go ahead
             do {
                 idx++;
-            } while (idx < original_size &&
-                     (std::isalnum(buf[idx]) || buf[idx] == '_'));
+            } while (idx < original_size && (std::isalnum(buf[idx]) || buf[idx] == '_'));
         } else
             idx++; // else just 1 char
     }
@@ -257,6 +256,19 @@ int srcBuf::find_original(SourceLocation start, const char c) {
     return find_original(get_index(start), c);
 }
 
+int srcBuf::find_original_reverse(int idx, const char c) {
+    std::string::size_type i = buf.rfind(c, idx);
+    if (i == std::string::npos)
+        return -1;
+    else
+        return i;
+}
+
+int srcBuf::find_original_reverse(SourceLocation start, const char c) {
+    return find_original_reverse(get_index(start), c);
+}
+
+
 int srcBuf::find_original(int idx, const std::string &s) {
     std::string::size_type i = buf.find(s, idx);
     if (i == std::string::npos)
@@ -269,9 +281,12 @@ int srcBuf::find_original(SourceLocation start, const std::string &c) {
     return find_original(get_index(start), c);
 }
 
-bool srcBuf::is_edited(SourceLocation sl) {
-    int idx = get_index(sl);
+bool srcBuf::is_edited(int idx) {
     return (ext_ind[idx] != 1);
+}
+
+bool srcBuf::is_edited(SourceLocation sl) {
+    return is_edited(get_index(sl));
 }
 
 bool srcBuf::is_extent(int i) {
@@ -370,17 +385,18 @@ int srcBuf::remove_semicolon_after(const SourceRange &s) {
     assert(is_in_range(s));
     size_t i = myRewriter->getRangeSize(s);
     SourceLocation e = s.getBegin().getLocWithOffset(i);
-    
+
     int loc = find_original(e, ';');
-    if (loc < 0) return -1;
+    if (loc < 0)
+        return -1;
 
     assert(loc < true_size);
 
-    remove(loc,loc);
+    remove(loc, loc);
     return loc;
 }
 
-int srcBuf::remove_semicolon_after(const Expr * E) {
+int srcBuf::remove_semicolon_after(const Expr *E) {
     return remove_semicolon_after(E->getSourceRange());
 }
 
@@ -457,10 +473,8 @@ int srcBuf::insert(int i, const std::string &s_in, bool incl_before, bool do_ind
     return i + 1;
 }
 
-int srcBuf::insert(SourceLocation sl, const std::string &s, bool incl_before,
-                   bool do_indent) {
-    assert(is_in_range(sl) &&
-           "srcBuf::insert range error with SourceLocation argument");
+int srcBuf::insert(SourceLocation sl, const std::string &s, bool incl_before, bool do_indent) {
+    assert(is_in_range(sl) && "srcBuf::insert range error with SourceLocation argument");
     return insert(get_index(sl), s, incl_before, do_indent);
 }
 
@@ -471,14 +485,12 @@ int srcBuf::insert(Expr *e, const std::string &s, bool incl_before, bool do_inde
 
 int srcBuf::insert_after(SourceLocation sl, const std::string &s, bool incl_before,
                          bool do_indent) {
-    assert(is_in_range(sl) &&
-           "srcBuf::insert range error with SourceLocation argument");
+    assert(is_in_range(sl) && "srcBuf::insert range error with SourceLocation argument");
     return insert(get_index(sl) + 1, s, incl_before, do_indent);
 }
 
 // Insert a new line above the location i
-int srcBuf::insert_above(int i, const std::string &s, bool incl_before,
-                         bool do_indent) {
+int srcBuf::insert_above(int i, const std::string &s, bool incl_before, bool do_indent) {
     assert(i >= 0 && i < original_size);
     while (i > 0 && buf[i] != '\n')
         i--;
@@ -494,15 +506,13 @@ int srcBuf::insert_above(SourceLocation sl, const std::string &s, bool incl_befo
     return insert_above(get_index(sl), s, incl_before, do_indent);
 }
 
-int srcBuf::insert_above(Expr *e, const std::string &s, bool incl_before,
-                         bool do_indent) {
+int srcBuf::insert_above(Expr *e, const std::string &s, bool incl_before, bool do_indent) {
     assert(is_in_range(e->getSourceRange()));
     return insert_above(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
 
 // Find the end of previous statement and add after it
-int srcBuf::insert_before_stmt(int i, const std::string &s, bool incl_before,
-                               bool do_indent) {
+int srcBuf::insert_before_stmt(int i, const std::string &s, bool incl_before, bool do_indent) {
     while (i > 0) {
         if (buf[i] == ';' || buf[i] == '}' || buf[i] == '{') {
             i++;
@@ -516,17 +526,15 @@ int srcBuf::insert_before_stmt(int i, const std::string &s, bool incl_before,
     return insert(i, new_line, incl_before, do_indent);
 }
 
-int srcBuf::insert_before_stmt(SourceLocation sl, const std::string &s,
-                               bool incl_before, bool do_indent) {
+int srcBuf::insert_before_stmt(SourceLocation sl, const std::string &s, bool incl_before,
+                               bool do_indent) {
     assert(is_in_range(sl));
     return insert_before_stmt(get_index(sl), s, incl_before, do_indent);
 }
 
-int srcBuf::insert_before_stmt(Expr *e, const std::string &s, bool incl_before,
-                               bool do_indent) {
+int srcBuf::insert_before_stmt(Expr *e, const std::string &s, bool incl_before, bool do_indent) {
     assert(is_in_range(e->getSourceRange()));
-    return insert_before_stmt(e->getSourceRange().getBegin(), s, incl_before,
-                              do_indent);
+    return insert_before_stmt(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
 
 int srcBuf::comment_line(int i) {
@@ -543,6 +551,19 @@ int srcBuf::comment_line(SourceLocation sl) {
 
 int srcBuf::comment_line(Expr *e) {
     return comment_line(e->getSourceRange().getBegin());
+}
+
+// comment out a sourcerange. Splits it to a new line and inserts //
+// if it contains \n insert // before it. Returns the newline at the end of the range
+int srcBuf::comment_range(int a, int b) {
+    assert(a > 0 && b < original_size);
+
+    for (int i = a; i <= b; i++)
+        if (buf[i] == '\n')
+            insert(i + 1, "// ", true, false);
+    insert(a, "\n// ", true, false);
+    insert(b + 1,"\n", true, false);
+    return b + 1;
 }
 
 // replace is a remove + insert pair, should write with a single operation
@@ -625,13 +646,15 @@ int srcBuf::replace_tokens(int start, int end, const std::vector<std::string> &a
                 }
             }
         } else {
-            if (i > 0 && buf[i] == '/' && buf[i - 1] == '/') {
+            if (i + 1 <= end && buf[i] == '/' && buf[i + 1] == '/') {
                 // skip commented lines
                 for (i++; i <= end && buf[i] != '\n'; i++)
                     ;
-            } else if (i > 0 && buf[i - 1] == '/' && buf[i] == '*') {
-                // c-stype comment
-                i = buf.find("*/", i + 1) + 2;
+            } else if (i + 1 <= end && buf[i] == '/' && buf[i + 1] == '*') {
+                // c-style comment
+                i = buf.find("*/", i + 1);
+                assert(i != std::string::npos && "Did not find '*/'. Unclosed c-style comment."); // TODO: better error message
+                i += 2; // skip over '*/'
             } else if (buf[i] == '#') {
                 // skip preproc lines #
                 for (i++; i <= end && buf[i] != '\n'; i++)
@@ -664,8 +687,7 @@ int srcBuf::replace_tokens(SourceRange r, const std::vector<std::string> &a,
     return replace_tokens(start, end, a, b);
 }
 
-int srcBuf::replace_token(int start, int end, const std::string &a,
-                          const std::string &b) {
+int srcBuf::replace_token(int start, int end, const std::string &a, const std::string &b) {
     std::vector<std::string> va = {}, vb = {};
     va.push_back(a);
     vb.push_back(b);
@@ -673,7 +695,6 @@ int srcBuf::replace_token(int start, int end, const std::string &a,
     return replace_tokens(start, end, va, vb);
 }
 
-int srcBuf::replace_tokens(const std::vector<std::string> &a,
-                           const std::vector<std::string> &b) {
+int srcBuf::replace_tokens(const std::vector<std::string> &a, const std::vector<std::string> &b) {
     return replace_tokens(0, true_size - 1, a, b);
 }

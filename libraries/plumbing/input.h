@@ -1,6 +1,7 @@
+#ifndef HILA_PARAM_INPUT_H
+#define HILA_PARAM_INPUT_H
+
 /** @file input.h */
-#ifndef PARAM_INPUT_H
-#define PARAM_INPUT_H
 
 #include <string>
 #include "defs.h"
@@ -56,11 +57,14 @@ class input {
     bool is_initialized = false;
     std::string filename;
     bool use_cin;
+    int file_number;   // running file index
 
     std::string linebuffer;
     size_t lb_start = 0; // linebuffer start index
     bool is_line_printed;
     bool speaking = true; // false does not print information
+
+    std::vector<std::string> cmdline_p;
 
   public:
     input() {}
@@ -476,6 +480,8 @@ class input {
     bool peek_token(std::string &tok);
     bool get_token(std::string &tok);
     bool match_token(const std::string &tok);
+
+    void scan_cmdline(const std::string &key, int &end_of_key);
 
     bool scan_string(std::string &val);
 

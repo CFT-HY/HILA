@@ -1,25 +1,43 @@
-#ifndef COM_MPI_H
-#define COM_MPI_H
+#ifndef HILA_COM_MPI_H_
+#define HILA_COM_MPI_H_
 
 #include "plumbing/defs.h"
 
 #include "plumbing/lattice.h"
 
-/// let us house the partitions-struct here
+#include "datatypes/extended.h"
+
+
+// let us house the partitions-struct here
 namespace hila {
 class partitions_struct {
-  public:
+  private:
     unsigned _number, _mylattice;
     bool _sync;
 
-    unsigned number() {
+  public:
+    unsigned number() const {
         return _number;
     }
-    unsigned mylattice() {
+
+    void set_number(const unsigned u) {
+        _number = u;
+    }
+
+    unsigned mylattice() const {
         return _mylattice;
     }
-    bool sync() {
+
+    void set_mylattice(const unsigned l) {
+        _mylattice = l;
+    }
+
+    bool sync() const {
         return _sync;
+    }
+
+    void set_sync(bool s) {
+        _sync = s;
     }
 };
 
@@ -39,8 +57,7 @@ extern hila::timer
         reduction_wait_timer,
         broadcast_timer,
         send_timer,
-        cancel_send_timer,
-        cancel_receive_timer,
+        drop_comms_timer,
         partition_sync_timer;
 // clang-format on
 
@@ -133,7 +150,7 @@ namespace hila {
  * NOTE: the function must be called by all MPI ranks, otherwise the program will deadlock.
  *
  * The type of the variable _var_ can be any standard plain datatype (trivial type),
- * std::string or std::vector.
+ * std::string, std::vector or std::array
  *
  * For trivial types, the input _var_ can be non-modifiable value.  In this case
  * the broadcast value is obtained from the broadcast return value.
@@ -158,7 +175,7 @@ T broadcast(T &var, int rank = 0) {
     assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
-    MPI_Bcast(&var, sizeof(T), MPI_BYTE, rank, lattice.mpi_comm_lat);
+    MPI_Bcast(&var, sizeof(T), MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
     return var;
 }
@@ -174,24 +191,44 @@ T broadcast(const T &var, int rank = 0) {
 template <typename T>
 void broadcast(std::vector<T> &list, int rank = 0) {
 
-    static_assert(std::is_trivial<T>::value, "broadcast(vector<T>) must have trivial T");
+    static_assert(std::is_trivial<T>::value, "broadcast(std::vector<T>) must have trivial T");
 
     if (hila::check_input)
         return;
 
     broadcast_timer.start();
 
-    int size = list.size();
-    MPI_Bcast(&size, sizeof(int), MPI_BYTE, rank, lattice.mpi_comm_lat);
+    size_t size = list.size();
+    MPI_Bcast(&size, sizeof(size_t), MPI_BYTE, rank, lattice->mpi_comm_lat);
     if (hila::myrank() != rank) {
         list.resize(size);
     }
 
-    // move vectors directly to the storage
-    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice.mpi_comm_lat);
+    if (size > 0) {
+        // move vectors directly to the storage
+        MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice->mpi_comm_lat);
+    }
 
     broadcast_timer.stop();
 }
+
+/// And broadcast for std::array
+template <typename T, int n>
+void broadcast(std::array<T, n> &arr, int rank = 0) {
+
+    static_assert(std::is_trivial<T>::value, "broadcast(std::array<T>) must have trivial T");
+
+    if (hila::check_input || n <= 0)
+        return;
+
+    broadcast_timer.start();
+
+    // move vectors directly to the storage
+    MPI_Bcast((void *)arr.data(), sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
+
+    broadcast_timer.stop();
+}
+
 
 ///
 /// Bare pointers cannot be broadcast
@@ -209,11 +246,11 @@ void broadcast(T *var, int rank = 0) {
 template <typename T>
 void broadcast_array(T *var, int n, int rank = 0) {
 
-    if (hila::check_input)
+    if (hila::check_input || n <= 0)
         return;
 
     broadcast_timer.start();
-    MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice.mpi_comm_lat);
+    MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
 }
 
@@ -245,7 +282,7 @@ void send_to(int to_rank, const T &data) {
         return;
 
     send_timer.start();
-    MPI_Send(&data, sizeof(T), MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+    MPI_Send(&data, sizeof(T), MPI_BYTE, to_rank, hila::myrank(), lattice->mpi_comm_lat);
     send_timer.stop();
 }
 
@@ -255,7 +292,7 @@ void receive_from(int from_rank, T &data) {
         return;
 
     send_timer.start();
-    MPI_Recv(&data, sizeof(T), MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
+    MPI_Recv(&data, sizeof(T), MPI_BYTE, from_rank, from_rank, lattice->mpi_comm_lat,
              MPI_STATUS_IGNORE);
     send_timer.stop();
 }
@@ -267,9 +304,11 @@ void send_to(int to_rank, const std::vector<T> &data) {
 
     send_timer.start();
     size_t s = data.size();
-    MPI_Send(&s, sizeof(size_t), MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+    MPI_Send(&s, sizeof(size_t), MPI_BYTE, to_rank, hila::myrank(), lattice->mpi_comm_lat);
 
-    MPI_Send(data.data(), sizeof(T) * s, MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+    if (s > 0)
+        MPI_Send(data.data(), sizeof(T) * s, MPI_BYTE, to_rank, hila::myrank(),
+                 lattice->mpi_comm_lat);
     send_timer.stop();
 }
 
@@ -280,12 +319,13 @@ void receive_from(int from_rank, std::vector<T> &data) {
 
     send_timer.start();
     size_t s;
-    MPI_Recv(&s, sizeof(size_t), MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
+    MPI_Recv(&s, sizeof(size_t), MPI_BYTE, from_rank, from_rank, lattice->mpi_comm_lat,
              MPI_STATUS_IGNORE);
     data.resize(s);
 
-    MPI_Recv(data.data(), sizeof(T) * s, MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
-             MPI_STATUS_IGNORE);
+    if (s > 0)
+        MPI_Recv(data.data(), sizeof(T) * s, MPI_BYTE, from_rank, from_rank, lattice->mpi_comm_lat,
+                 MPI_STATUS_IGNORE);
     send_timer.stop();
 }
 
@@ -295,25 +335,24 @@ void receive_from(int from_rank, std::vector<T> &data) {
 
 template <typename T>
 void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
-    T recv_data[send_count];
-    MPI_Datatype dtype;
 
-    if (hila::check_input)
+    if (hila::check_input || send_count == 0)
         return;
 
+    std::vector<T> recv_data(send_count);
+    MPI_Datatype dtype;
     dtype = get_MPI_number_type<T>();
-
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)value, (void *)recv_data,
-                      send_count * sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype, MPI_SUM,
-                      lattice.mpi_comm_lat);
+        MPI_Allreduce((void *)value, (void *)recv_data.data(),
+                      send_count * (sizeof(T) / sizeof(hila::arithmetic_type<T>)), dtype, MPI_SUM,
+                      lattice->mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
-        MPI_Reduce((void *)value, (void *)recv_data,
-                   send_count * sizeof(T) / sizeof(hila::arithmetic_type<T>), dtype, MPI_SUM, 0,
-                   lattice.mpi_comm_lat);
+        MPI_Reduce((void *)value, (void *)recv_data.data(),
+                   send_count * (sizeof(T) / sizeof(hila::arithmetic_type<T>)), dtype, MPI_SUM, 0,
+                   lattice->mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];
@@ -323,6 +362,7 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
 
 ///
 /// Reduce single variable across nodes.
+/// A bit suboptimal, because uses std::vector
 
 template <typename T>
 T reduce_node_sum(T &var, bool allreduce = true) {
@@ -334,7 +374,7 @@ T reduce_node_sum(T &var, bool allreduce = true) {
 
 template <typename T>
 void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
-    T recv_data[send_count];
+    std::vector<T> recv_data(send_count);
     MPI_Datatype dtype;
 
     if (hila::check_input)
@@ -344,13 +384,13 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
 
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)send_data, (void *)recv_data, send_count, dtype, MPI_PROD,
-                      lattice.mpi_comm_lat);
+        MPI_Allreduce((void *)send_data, (void *)recv_data.data(), send_count, dtype, MPI_PROD,
+                      lattice->mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             send_data[i] = recv_data[i];
     } else {
-        MPI_Reduce((void *)send_data, (void *)recv_data, send_count, dtype, MPI_PROD, 0,
-                   lattice.mpi_comm_lat);
+        MPI_Reduce((void *)send_data, (void *)recv_data.data(), send_count, dtype, MPI_PROD, 0,
+                   lattice->mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
                 send_data[i] = recv_data[i];
@@ -374,13 +414,24 @@ bool get_allreduce();
 void hila_reduce_double_setup(double *d, int n);
 void hila_reduce_float_setup(float *d, int n);
 void hila_reduce_sums();
+void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool allreduce = true);
+
+extern MPI_Datatype MPI_ExtendedPrecision_type;
+extern MPI_Op MPI_ExtendedPrecision_sum_op;
+
+void create_extended_MPI_type();
+void create_extended_MPI_operation();
+void extended_sum_op(void *in, void *inout, int *len, MPI_Datatype *datatype);
 
 
 template <typename T>
 void hila_reduce_sum_setup(T *value) {
 
     using b_t = hila::arithmetic_type<T>;
-    if (std::is_same<b_t, double>::value) {
+    if constexpr (std::is_same<b_t, ExtendedPrecision>::value) {
+        reduce_node_sum_extended((ExtendedPrecision *)value, sizeof(T) / sizeof(ExtendedPrecision),
+                                 hila::get_allreduce());
+    } else if (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
     } else if (std::is_same<b_t, float>::value) {
         hila_reduce_float_setup((float *)value, sizeof(T) / sizeof(float));
@@ -388,6 +439,5 @@ void hila_reduce_sum_setup(T *value) {
         hila::reduce_node_sum(value, 1, hila::get_allreduce());
     }
 }
-
 
 #endif // COMM_MPI_H

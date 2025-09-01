@@ -13,7 +13,7 @@
 // For vectorized code generation, include loops without and with coordinate dependent if
 //
 // These can be called only by hilapp, so insert calls within #ifdef HILAPP .. #endif
-// 
+//
 // call these as e.g. "ensure_unary_minus_is_loop_function<T>();"
 
 
@@ -28,9 +28,11 @@ void ensure_unary_minus_is_loop_function() {
 
 template <typename T>
 void ensure_assign_zero_is_loop_function() {
-    Field<T> f;
-    onsites(ALL) f[X] = 0;
-    onsites(ALL) if (X.coordinate(e_x) == 0) f[X] = 0;
+    if constexpr (hila::has_assign_zero<T>::value) {
+        Field<T> f;
+        onsites(ALL) f[X] = 0;
+        onsites(ALL) if (X.coordinate(e_x) == 0) f[X] = 0;
+    }
 }
 
 #endif

@@ -332,11 +332,12 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size_, std::s
         // and still, check the special functions
         if (is_vectorizable) {
             for (auto const &sfc : special_function_call_list) {
-                if (sfc.name == "coordinates" || sfc.name == "coordinate") {
+                if (sfc.name == "coordinates" || sfc.name == "coordinate" || 
+                    sfc.name == "x" || sfc.name == "y" || sfc.name == "z" || sfc.name == "t") {
                     is_vectorizable = false;
 
                     reason.push_back(
-                        "X.coordinates() and X.coordinate() make expression site dependent");
+                        "X.coordinates() and related calls are not AVX vectorizable");
 
                     // // returning int vector
                     // if (vector_size == 0) {
@@ -463,7 +464,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
     // if no field in loop
 
     code << "const auto & loop_lattice = "
-            "* lattice.backend_lattice->get_vectorized_lattice<"
+            "* lattice->backend_lattice->get_vectorized_lattice<"
          << vector_size << ">();\n";
 
     // Set the start and end points
@@ -518,11 +519,11 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                 // code << l.vecinfo.vectorized_type << ' ' << loop_array_name
                 //      << "[NDIRS];\n";
 
-                // code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                //         "++_HILAdir_) {\n"
-                //      << loop_array_name << "[_HILAdir_] = " << l.new_name
+                // code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                //         "++HILA_dir_) {\n"
+                //      << loop_array_name << "[HILA_dir_] = " << l.new_name
                 //      << ".get_vector_at<" << l.vecinfo.vectorized_type
-                //      << ">(loop_lattice->neighbours[_HILAdir_][" << looping_var
+                //      << ">(loop_lattice->neighbours[HILA_dir_][" << looping_var
                 //      << "]);\n}\n";
 
 
@@ -695,9 +696,9 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                     }
 
             } else {
-                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                        "++_HILAdir_) {\n"
-                     << "  " << l.new_name << ".wait_gather(_HILAdir_, " << loop_info.parity_str
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << "  " << l.new_name << ".wait_gather(HILA_dir_, " << loop_info.parity_str
                      << ");\n}\n";
             }
         }

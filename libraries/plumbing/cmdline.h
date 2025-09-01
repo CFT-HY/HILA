@@ -1,5 +1,5 @@
-#ifndef CMDLINE_H
-#define CMDLINE_H
+#ifndef HILA_CMDLINE_H_
+#define HILA_CMDLINE_H_
 
 #include <map>
 #include <vector>
@@ -22,18 +22,18 @@ class cmdlinearguments {
   public:
     cmdlinearguments();
     void initialise_args(int argc0, char **argv0);
-    std::vector<std::string> values(std::string);
-    void add_flag(std::string flag, std::string help_text);
+    std::vector<std::string> values(const std::string &);
+    void add_flag(const std::string &flag, const std::string &help_text,
+                  const std::string aux = "", int number = -1);
     void print_help();
     int flag_set(const char *flag);
     bool flag_present(const char *flag);
     long get_int(const char *flag, int i = 0);
     double get_double(const char *flag, int i = 0);
-    std::string get_string(const char *flag, int i = 0);
-
+    std::string get_string(const char *flag, int i = 0, bool clear = false);
 };
 
-namespace hila{
+namespace hila {
 extern cmdlinearguments cmdline;
 }
 

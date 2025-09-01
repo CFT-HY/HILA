@@ -1,5 +1,5 @@
-#ifndef _BACKEND_LATTICE_H_
-#define _BACKEND_LATTICE_H_
+#ifndef HILA_BACKEND_LATTICE_VECTOR_H_
+#define HILA_BACKEND_LATTICE_VECTOR_H_
 
 #include "../lattice.h"
 #include "vector_types.h"
@@ -91,20 +91,20 @@ struct vectorized_lattice_struct {
         /// Initialize
 
         /// sites on vector
-        v_sites = lattice.mynode.volume() / vector_size;
-        subdivisions = lattice.mynode.subnodes.divisions;
-        subnode_size = lattice.mynode.subnodes.size;
-        subnode_origin = lattice.mynode.min;
+        v_sites = lattice->mynode.volume / vector_size;
+        subdivisions = lattice->mynode.subnodes.divisions;
+        subnode_size = lattice->mynode.subnodes.size;
+        subnode_origin = lattice->mynode.min;
 
         // hila::out0 << "Subdivisions " << subdivisions << '\n';
 
         // the basic division is done using "float" vectors -
         // for "double" vectors the vector_size and number of subnodes
-        // is halved to direction lattice.mynode.subnodes.lastype_divided.dir
+        // is halved to direction lattice->mynode.subnodes.lastype_divided.dir
 
         if (vector_size == VECTOR_SIZE / sizeof(double)) {
-            subdivisions[lattice.mynode.subnodes.merged_subnodes_dir] /= 2;
-            subnode_size[lattice.mynode.subnodes.merged_subnodes_dir] *= 2;
+            subdivisions[lattice->mynode.subnodes.merged_subnodes_dir] /= 2;
+            subnode_size[lattice->mynode.subnodes.merged_subnodes_dir] *= 2;
         }
 
         hila::out0 << "Setting up lattice struct with vector of size " << vector_size
@@ -144,19 +144,19 @@ struct vectorized_lattice_struct {
             here = subnode_origin + subnode_size;
             here.asArray() -= 1;
 
-            unsigned idx = lattice.site_index(here);
+            unsigned idx = lattice->site_index(here);
             assert(idx % vector_size == 0); // is it really on 1st subnode
 
             // loop over subnodes
             for (int i = 0; i < vector_size; i++) {
 
                 // get the site index of the neighbouring site
-                CoordinateVector h = lattice.coordinates(idx + i) + d;
+                CoordinateVector h = lattice->coordinates(idx + i) + d;
 
                 // remember to mod the coordinate on lattice
                 h = h.mod(lattice.size());
-                int rank = lattice.node_rank(h);
-                unsigned nn = lattice.site_index(h, rank);
+                int rank = lattice->node_rank(h);
+                unsigned nn = lattice->site_index(h, rank);
                 boundary_permutation[d][i] = nn % vector_size;
             }
 
@@ -186,7 +186,7 @@ struct vectorized_lattice_struct {
         // make no difference
 
         foralldir (d) {
-            if (lattice.nodes.n_divisions[d] == 1 && !is_boundary_permutation[d]) {
+            if (lattice->nodes.n_divisions[d] == 1 && !is_boundary_permutation[d]) {
                 only_local_boundary_copy[d] = only_local_boundary_copy[-d] = true;
             } else {
                 only_local_boundary_copy[d] = only_local_boundary_copy[-d] = false;
@@ -200,12 +200,12 @@ struct vectorized_lattice_struct {
             halo_offset[d] = c_offset;
             for (int i = 0; i < v_sites; i++) {
                 int j = vector_size * i; // the "original lattice" index for the 1st site of vector
-                CoordinateVector here = lattice.coordinates(j);
+                CoordinateVector here = lattice->coordinates(j);
                 // std::cout << here << '\n';
 
                 if (is_on_first_subnode(here + d)) {
 
-                    assert(lattice.neighb[d][j] % vector_size == 0); // consistency check
+                    assert(lattice->neighb[d][j] % vector_size == 0); // consistency check
                     Direction ad = abs(d);
 
                     if (only_local_boundary_copy[d] &&
@@ -214,7 +214,7 @@ struct vectorized_lattice_struct {
                         neighbours[d][i] = c_offset++;
                     } else {
                         // standard branch, within the subnode
-                        neighbours[d][i] = lattice.neighb[d][j] / vector_size;
+                        neighbours[d][i] = lattice->neighb[d][j] / vector_size;
                     }
                 } else {
                     neighbours[d][i] = c_offset++; // now points beyond the lattice
@@ -238,13 +238,13 @@ struct vectorized_lattice_struct {
                         int k, n = -1;
                         bool found = false;
                         for (k = 0; k < vector_size; k++) {
-                            if (lattice.neighb[d][i * vector_size + k] < lattice.mynode.sites) {
+                            if (lattice->neighb[d][i * vector_size + k] < lattice->mynode.volume) {
                                 if (!found) {
-                                    n = lattice.neighb[d][i * vector_size + k] / vector_size;
+                                    n = lattice->neighb[d][i * vector_size + k] / vector_size;
                                     found = true;
                                 } else
                                     assert(n ==
-                                           lattice.neighb[d][i * vector_size + k] / vector_size);
+                                           lattice->neighb[d][i * vector_size + k] / vector_size);
                             }
                         }
                         assert(n >= 0);
@@ -260,8 +260,8 @@ struct vectorized_lattice_struct {
                 int j = 0;
                 for (int i = 0; i < v_sites; i++) {
                     if (neighbours[d][i] >= v_sites) {
-                        halo_index[d][j++] = lattice.neighb[d][i * vector_size] / vector_size;
-                        assert(lattice.neighb[d][i * vector_size] % vector_size == 0);
+                        halo_index[d][j++] = lattice->neighb[d][i * vector_size] / vector_size;
+                        assert(lattice->neighb[d][i * vector_size] % vector_size == 0);
                     }
                 }
 
@@ -283,19 +283,19 @@ struct vectorized_lattice_struct {
     void get_receive_lists() {
 
         for (Direction d = (Direction)0; d < NDIRS; d++) {
-            if (is_boundary_permutation[abs(d)] && lattice.nodes.n_divisions[abs(d)] > 1) {
+            if (is_boundary_permutation[abs(d)] && lattice->nodes.n_divisions[abs(d)] > 1) {
 
                 // now need to receive and copy - note: now this is in terms of
                 // non-vector sites.   Set the recv_list to point to where to move the
                 // stuff Note: now the stuff has to be moved to boundary_halo, not to
                 // lattice n!
 
-                recv_list_size[d] = lattice.mynode.sites / lattice.mynode.size[abs(d)];
+                recv_list_size[d] = lattice->mynode.volume / lattice->mynode.size[abs(d)];
                 recv_list[d] = (unsigned *)memalloc(recv_list_size[d] * sizeof(unsigned));
 
                 int j = 0;
-                for (int i = 0; i < lattice.mynode.sites; i++) {
-                    if (lattice.neighb[d][i] >= lattice.mynode.sites) {
+                for (int i = 0; i < lattice->mynode.volume; i++) {
+                    if (lattice->neighb[d][i] >= lattice->mynode.volume) {
 
                         // i/vector_size is the "vector index" of site, and
                         // i % vector_size the index within the vector.
@@ -322,9 +322,9 @@ struct vectorized_lattice_struct {
     void set_coordinates() {
 
         /// first vector_size elements should give the coordinates of vector offsets
-        CoordinateVector base = lattice.coordinates(0);
+        CoordinateVector base = lattice->coordinates(0);
         for (int i = 0; i < vector_size; i++) {
-            CoordinateVector diff = lattice.coordinates(i) - base;
+            CoordinateVector diff = lattice->coordinates(i) - base;
             foralldir (d)
                 coordinate_offset[d].insert(i, diff[d]);
         }
@@ -332,7 +332,7 @@ struct vectorized_lattice_struct {
         // and then set the coordinate_base with the original coords
         coordinate_base = (CoordinateVector *)memalloc(v_sites * sizeof(CoordinateVector));
         for (int i = 0; i < v_sites; i++) {
-            coordinate_base[i] = lattice.coordinates(vector_size * i);
+            coordinate_base[i] = lattice->coordinates(vector_size * i);
         }
     }
 
@@ -347,7 +347,7 @@ struct vectorized_lattice_struct {
             vec_wait_arr_[i] = 0; /* basic, no wait */
             foralldir (dir) {
                 Direction odir = -dir;
-                if (lattice.nodes.n_divisions[dir] > 1) {
+                if (lattice->nodes.n_divisions[dir] > 1) {
                     if (neighbours[dir][i] >= v_sites)
                         vec_wait_arr_[i] = vec_wait_arr_[i] | (1 << dir);
                     if (neighbours[odir][i] >= v_sites)
@@ -355,12 +355,6 @@ struct vectorized_lattice_struct {
                 }
             }
         }
-    }
-
-    /////////////////////////////////////////////////////////////////////////
-    /// Return the communication info
-    lattice_struct::nn_comminfo_struct get_comminfo(int d) {
-        return lattice.get_comminfo(d);
     }
 
     /////////////////////////////////////////////////////////////////////////
@@ -436,7 +430,7 @@ struct backend_lattice_struct {
     vectorized_lattice_struct<vector_size> *get_vectorized_lattice() {
         // Create one if not already created
 
-        assert(lattice.id() == 0 &&
+        assert(lattice.ptr() == defined_lattices.at(0) &&
                "Vectorized lattice layout only possible with main (original) lattice");
 
 

@@ -1,3 +1,6 @@
+#ifndef HILA_CMPLX_H_
+#define HILA_CMPLX_H_
+
 /**
  * @file cmplx.h
  * @brief Definition of Complex types
@@ -9,31 +12,36 @@
  *
  */
 
-#ifndef CMPLX_H_
-#define CMPLX_H_
 
 // let's not include the std::complex
 // #include <complex>
 // #include <cmath>
 
 #include "plumbing/defs.h"
+#include "extended.h"
 
 // TEMPORARY location for vector intrinsic analogues -- result obvious
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 inline T mul_add(T a, T b, T c) {
     return a * b + c;
 }
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 inline T mul_sub(T a, T b, T c) {
     return a * b - c;
 }
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 inline T nmul_add(T a, T b, T c) {
     return c - a * b;
 }
+
+
+// forward define Imaginary
+template <typename T>
+class Imaginary_t;
+
 
 /**
  * @brief Complex definition
@@ -49,7 +57,7 @@ inline T nmul_add(T a, T b, T c) {
 template <typename T>
 class Complex {
 
-    static_assert((hila::is_arithmetic<T>::value && !std::is_integral<T>::value),
+    static_assert((hila::is_arithmetic_or_extended<T>::value && !std::is_integral<T>::value),
                   "Complex can be used only with floating point type");
     // This incantation is needed to make Field<Complex<>> vectorized
 
@@ -89,23 +97,8 @@ class Complex {
      * \endcode
      *
      * Equivalent initializing is `Complex<MyType> B(C)`
-     * @param a
-     */
-    Complex<T>(const Complex<T> &a) = default;
-
-    // constructor from single complex --IS THIS NEEDED?
-    // template <typename A,
-    //           std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0 >
-    // constexpr Complex<T>(const Complex<A> a) : re(static_cast<T>(a.re)),
-    // im(static_cast<T>(a.im)) {}
-
-    // constructor from single scalar value
-    // Remember to mark this explicit, we do not want this to be invoked
-    // in automatic conversions (there should be methods)
-
-    //#pragma hila loop_function
-    /**
-     * @brief Real constructor
+     *
+     * __Real constructor:__
      *
      * Initialize only real element and sets imaginary to 0
      *
@@ -115,13 +108,8 @@ class Complex {
      * \endcode
      *
      * Not equivalent to `Complex<MyType> C = a`
-     * @tparam S Type for value val
-     */
-    template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    explicit constexpr Complex<T>(const S val) : re(val), im(0) {}
-
-    /**
-     * @brief Zero constructor
+     *
+     * __Zero constructor:__
      *
      * Initialize to zero with nullpointer trick
      *
@@ -130,28 +118,31 @@ class Complex {
      * \endcode
      *
      * Equivalent to `Complex<MyType> C` and `Complex<MyType> C(0)`
-     * @internal
+     *
      */
+    Complex<T>() = default;
+    ~Complex<T>() = default;
+    Complex<T>(const Complex<T> &a) = default;
+
+    // constructor from single complex --IS THIS NEEDED?
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
+    constexpr Complex<T>(const Complex<A> a) : re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
+
+    // constructor from single scalar value
+    // Remember to mark this explicit, we do not want this to be invoked
+    // in automatic conversions (there should be methods) WHY NOT?
+
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    explicit constexpr Complex<T>(const S val) : re(val), im(0) {}
+
+    // allow construction from 0 (nullptr)
     constexpr Complex<T>(const std::nullptr_t n) : re(0), im(0) {}
 
     // constructor c(a,b)
-    /**
-     * @brief Complex constructor
-     *
-     * Initialize both real and imaginary element
-     *
-     * \code{.cpp}
-     * MyType a,b;
-     * a = hila::random();
-     * b = hila::random();
-     * Complex<MyType> C(a,b); // C.re = a, C.im = b
-     * \endcode
-     *
-     * @tparam A Type for value a
-     * @tparam B Type for value b
-     */
-    template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
-              std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
+    template <
+        typename A, typename B,
+        std::enable_if_t<hila::is_assignable<T &, A>::value && hila::is_assignable<T &, B>::value,
+                         int> = 0>
     explicit constexpr Complex<T>(const A &a, const B &b) : re(a), im(b) {}
 
     // make also std accessors real() and imag() - don't return reference, because
@@ -164,6 +155,7 @@ class Complex {
      *
      * @return T Real part
      */
+
     inline T real() const {
         return re;
     }
@@ -172,6 +164,7 @@ class Complex {
      * @details Pass by value if Complex number is defined as const
      * @return T Imaginary part
      */
+
     inline T imag() const {
         return im;
     }
@@ -196,11 +189,10 @@ class Complex {
     }
     // automatic casting from Complex<T> -> Complex<A>
     // TODO: ensure this works if A is vector type!
-    template <typename A>
-#pragma hila loop_function // TODO
-    operator Complex<A>() const {
-        return Complex<A>(re, im);
-    }
+    // template <typename A>
+    // operator Complex<A>() const {
+    //     return Complex<A>(re, im);
+    // }
 
     /**
      * @brief Assignment operator
@@ -227,49 +219,27 @@ class Complex {
      * @param s
      * @return Complex<T>&
      */
-    inline Complex<T> &operator=(const Complex<T> &s) = default;
+    // inline Complex<T> &operator=(Complex<T> & rhs) = default;
+    inline Complex<T> &operator=(const Complex<T> &s) & = default;
 
-    /**
-     * @brief Assignment from complex
-     *
-     * \code {.cpp}
-     * Complex<MyType> C(hila::random(),hila::random());
-     * Complex<MyType> B;
-     * B = C; // B.re = C.re, B.im = C.im
-     * \endcode
-     *
-     * @tparam A Type for Complex value s
-     * @param s Value to assign
-     * @return Complex<T>&
-     */
-    template <typename A>
-    inline Complex<T> &operator=(const Complex<A> &s) {
+    // Assignment from Complex<A>
+    template <typename A, std::enable_if_t<hila::is_assignable<T&,A>::value, int> = 0>
+    inline Complex<T> &operator=(const Complex<A> &s) & {
         re = s.re;
         im = s.im;
         return *this;
     }
 
-    /**
-     * @brief Assignment from real
-     *
-     * Assigns real part and imaginary part to zero
-     *
-     * \code {.cpp}
-     * Complex<MyType> B;
-     * MyType a = hila::random;
-     * B = a; // B.re = a, B.im = 0
-     * \endcode
-     *
-     * @tparam S Type for real value s
-     * @param s Value to assign
-     * @return Complex<T>&
-     */
-    template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    inline Complex<T> &operator=(S s) {
+    template <typename S, std::enable_if_t<hila::is_assignable<T&,S>::value, int> = 0>
+    inline Complex<T> &operator=(S s) & {
         re = s;
         im = 0;
         return *this;
     }
+
+    // delete the assign to rvalue
+    template <typename S>
+    Complex<T> &operator=(const S &s) && = delete;
 
     /**
      * @brief Compute square norm of Complex number
@@ -439,12 +409,17 @@ class Complex {
      * z += 1; // z.re = 1, z.im = 0
      * \endcode
      *
-     * @tparam A Type for real value a
-     * @param a Real value to add
-     * @return Complex<T>&
+     *
      */
-    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator+=(const A &a) {
+    template <typename A>
+    inline Complex<T> &operator+=(const Complex<A> &lhs) & {
+        re += lhs.re;
+        im += lhs.im;
+        return *this;
+    }
+
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
+    inline Complex<T> &operator+=(const A &a) & {
         re += a;
         return *this;
     }
@@ -464,27 +439,18 @@ class Complex {
      * @return Complex<T>&
      */
     template <typename A>
-    inline Complex<T> &operator-=(const Complex<A> &lhs) {
+    inline Complex<T> &operator-=(const Complex<A> &lhs) & {
+        static_assert(!(hila::is_arithmetic<T>::value && hila::is_extended<A>::value),
+                      "Cannot assign ExtendedPrecision value to non-EP variable without casting");
         re -= lhs.re;
         im -= lhs.im;
         return *this;
     }
 
-    /**
-     * @brief Real subtraction assignment operator
-     * Subtract assign only to real part of Complex number
-     *
-     * \code {.cpp}
-     * Complex<double> z(0,0);
-     * z -= 1; // z.re = -1, z.im = 0
-     * \endcode
-     *
-     * @tparam A Type for real value a
-     * @param a Real value to subtract
-     * @return Complex<T>&
-     */
-    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator-=(const A &a) {
+    template <typename A, std::enable_if_t<hila::is_arithmetic_or_extended<A>::value, int> = 0>
+    inline Complex<T> &operator-=(const A &a) & {
+        static_assert(!(hila::is_arithmetic<T>::value && hila::is_extended<A>::value),
+                      "Cannot assign ExtendedPrecision value to non-EP variable without casting");
         re -= a;
         return *this;
     }
@@ -515,10 +481,8 @@ class Complex {
      * @param lhs Complex number to multiply
      * @return Complex<T>&
      */
-    //#pragma hila loop_function
-
     template <typename A>
-    inline Complex<T> &operator*=(const Complex<A> &lhs) {
+    inline Complex<T> &operator*=(const Complex<A> &lhs) & {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
         im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
         re = r;
@@ -538,7 +502,7 @@ class Complex {
      * @return Complex<T>&
      */
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator*=(const A a) {
+    inline Complex<T> &operator*=(const A a) & {
         re *= a;
         im *= a;
         return *this;
@@ -574,7 +538,7 @@ class Complex {
      * @return Complex<T>&
      */
     template <typename A>
-    inline Complex<T> &operator/=(const Complex<A> &lhs) {
+    inline Complex<T> &operator/=(const Complex<A> &lhs) & {
         T n = lhs.squarenorm();
         T r = mul_add(re, lhs.re, im * lhs.im) / n; // a*b+c
         im = mul_sub(im, lhs.re, re * lhs.im) / n;  // a*b-c
@@ -595,7 +559,7 @@ class Complex {
      * @return Complex<T>&
      */
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-    inline Complex<T> &operator/=(const A &a) {
+    inline Complex<T> &operator/=(const A &a) & {
         re /= a;
         im /= a;
         return *this;
@@ -715,14 +679,14 @@ class Complex {
         return Complex<T>(re * b.re + im * b.im, im * b.re - re * b.im);
     }
 
-    // cast to another number type (IS THIS NEEDED FOR COMPLEX?)
-    template <typename Ntype>
-    Complex<Ntype> cast_to() const {
-        Complex<Ntype> res;
-        res.re = re;
-        res.im = im;
-        return res;
-    }
+    // // cast to another number type (IS THIS NEEDED FOR COMPLEX?)
+    // template <typename Ntype>
+    // Complex<Ntype> cast_to() const {
+    //     Complex<Ntype> res;
+    //     res.re = static_cast<Ntype>(re);
+    //     res.im = static_cast<Ntype>(im);
+    //     return res;
+    // }
 };
 
 
@@ -735,7 +699,6 @@ namespace hila {
 // hila::ntype_op<A,B>        returns the conventionally upgraded complex or scalar number type
 // hila::complex_x_scalar_type<A,B>  type of operation Complex<A> * scalar<B>
 
-
 ////////////////////////////////////////////////////////////////////////
 // Define hila::is_complex<T>::value -template, using specialization
 template <typename T>
@@ -743,6 +706,9 @@ struct is_complex : std::integral_constant<bool, false> {};
 
 template <typename T>
 struct is_complex<Complex<T>> : std::integral_constant<bool, true> {};
+
+template <typename T>
+struct is_complex<Imaginary_t<T>> : std::integral_constant<bool, true> {};
 
 /// hila::is_complex_or_arithmetic<T>::value
 template <typename T>
@@ -829,13 +795,11 @@ using complex_x_scalar_type = typename complex_x_scalar_s<A, B>::type;
 // comment out as hilapp gets confused at the moment
 ////////////////////////////////////////////////////////////////////////
 
-// #pragma hila loop_function
 // template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 // inline const Complex<hila::arithmetic_type<T>> * as_complex_array(const T &var) {
 //     return (const Complex<hila::arithmetic_type<T>> *)(void *)&var;
 // }
 
-// #pragma hila loop_function
 // template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 // inline Complex<hila::arithmetic_type<T>> * as_complex_array(T &var) {
 //     return (Complex<hila::arithmetic_type<T>> *)(void *)&var;
@@ -1295,18 +1259,6 @@ inline bool operator!=(const A a, const Complex<B> &b) {
 }
 
 
-// Cast operators to different number or Complex type
-// cast_to<double>(a);
-// cast_to<float>(b);
-// Cast from number->number, number->Complex, Complex->Complex OK,
-//     Complex->number not.
-
-template <typename Ntype, typename T, std::enable_if_t<hila::is_arithmetic<Ntype>::value, int> = 0>
-Complex<Ntype> cast_to(const Complex<T> &m) {
-    Complex<Ntype> res;
-    res = m;
-    return res;
-}
 
 //////////////////////////////////////////////////////////////////////////////////
 // Some operations in function form.  Useful in templates when the arg type is not known
@@ -1362,8 +1314,8 @@ inline Complex<T> dagger(const Complex<T> &val) {
 /**
  * @brief Return Squarenorm of Complex number
  * @details Wrapper around Complex::squarenorm
- * @tparam T Arithmetic type of a
- * @param a Complex number to compute squarenorm of
+ * @tparam T Arithmetic type of val
+ * @param val Complex number to compute squarenorm of
  * @return T
  */
 template <typename T>
@@ -1389,10 +1341,25 @@ std::ostream &operator<<(std::ostream &strm, const Complex<T> &A) {
     return strm << A.real() << ' ' << A.imag();
 }
 
-/// //////////////////////////////////////////////////////////////////////////////
-/// Function hila::to_string
+/////////////////////////////////////////////////////////////////////////////////
+// Function hila::to_string
 
 namespace hila {
+
+/**
+ * @brief Cast to different basic number type
+ * 
+ * hila::cast_to<double>(a);   - cast complex a to Complex<double>
+ */
+
+template <typename Ntype, typename T>
+inline Complex<Ntype> cast_to(const Complex<T> &m) {
+    Complex<Ntype> res;
+    res.re = static_cast<Ntype>(m.re);
+    res.im = static_cast<Ntype>(m.im);
+    return res;
+}
+
 /**
  * @brief Return Complex number as std::string
  *
@@ -1424,6 +1391,9 @@ std::string prettyprint(const Complex<T> &A, int prec = 8) {
     return ss.str();
 }
 
+
+
+
 } // namespace hila
 
 
@@ -1434,7 +1404,7 @@ std::string prettyprint(const Complex<T> &A, int prec = 8) {
  * Derived from Complex class, so generic complex ops should remain valid
  * Defines only operators * and /, others go via Complex class
  *
- * Note: Imaginary_t should be used in Field variables
+ * Note: Imaginary_t should NOT be used in Field variables
  *
  * @tparam T  type of imaginary (float/double)
  */
@@ -1446,7 +1416,6 @@ class Imaginary_t : public Complex<T> {
     constexpr Imaginary_t(const Imaginary_t &i) = default;
 
     // construct from scalar
-#pragma hila loop_function
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     explicit constexpr Imaginary_t(const A v) : Complex<T>(0, v) {}
 
@@ -1462,23 +1431,21 @@ class Imaginary_t : public Complex<T> {
 ///////////////////////////////////////////////////////////////////////////////////////
 /// @brief Imaginary unit I - global variable
 ///
-/// Don't use #define'd I : this will conflict with some headers in rocm
 ///
-/// For some reason it is sufficient to use only __device__
-#if defined(CUDA) || defined(HIP)
-__device__
-#endif
-    constexpr Imaginary_t<double>
-        I(1.0);
+// separate definition for GPU kernel code and host (and generic) code
 
-// constexpr Complex<double> I(0,1);
-// #define I Imaginary_t<double>(1.0)
+#if defined(_GPU_DEVICE_COMPILE_)
+__device__ constexpr Imaginary_t<double> I(1.0);
+#else
+constexpr Imaginary_t<double> I(1.0);
+#endif
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
 // Imaginary * object containing complex
-template <typename A, typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline auto operator*(const Imaginary_t<A> &i, const T &c) {
+template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
+inline auto operator*(const Imaginary_t<double> &i, const T &c) {
     Complex<hila::arithmetic_type<T>> ca, cb;
     T res;
     constexpr int n_cmplx = sizeof(T) / sizeof(Complex<hila::arithmetic_type<T>>);
@@ -1492,11 +1459,10 @@ inline auto operator*(const Imaginary_t<A> &i, const T &c) {
 }
 
 // object containing complex * imaginary
-template <typename A, typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline auto operator*(const T &c, const Imaginary_t<A> &i) {
+template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
+inline auto operator*(const T &c, const Imaginary_t<double> &i) {
     return i * c;
 }
-
 
 // Imag * scalar, returns imag
 // note: using std::is_arithmetic, not done for vector types

@@ -1,5 +1,5 @@
-#ifndef SPECTRALDENSITY_H
-#define SPECTRALDENSITY_H
+#ifndef HILA_SPECTRALDENSITY_H
+#define HILA_SPECTRALDENSITY_H
 
 #include "hila.h"
 
@@ -26,7 +26,7 @@ struct sd_k_bin_parameters {
 
 inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p) {
 
-    double kr = convert_to_k(cv).norm();
+    double kr = cv.convert_to_k().norm();
 
     kr = kr / p.max;
     int b = pow(kr, p.power) * p.bins;
@@ -287,7 +287,7 @@ class k_binning {
 
         onsites(ALL) {
 
-            double kr = convert_to_k(X.coordinates()).norm();
+            double kr = X.coordinates().convert_to_k().norm();
             int b = sd_get_k_bin(X.coordinates(), par);
 
             if (b >= 0 && b < par.bins) {

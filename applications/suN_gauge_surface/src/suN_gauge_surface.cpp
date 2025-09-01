@@ -5,8 +5,13 @@
 
 #include "gauge/sun_heatbath.h"
 #include "gauge/sun_overrelax.h"
+#include "checkpoint.h"
 
 #include <fftw3.h>
+
+#ifndef NCOLOR
+#define NCOLOR 3
+#endif
 
 using mygroup = SU<NCOLOR, float>;
 
@@ -222,7 +227,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     auto plaq = measure_plaq_db(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
-    hila::out0 << "MEAS " << std::setprecision(8);
+    hila::out0 << "MEAS " << std::setprecision(14);
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
     if (p.polyakov_pot == poly_limit::PARABOLIC) {
@@ -312,7 +317,7 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         measure_polyakov_field(U[e_t], pl);
     }
 
-    hila::out0 << std::setprecision(5);
+    hila::out0 << std::setprecision(7);
 
     std::vector<float> profile, prof1;
 
@@ -464,83 +469,11 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 ////////////////////////////////////////////////////////////////
 
 template <typename group>
-void checkpoint(const GaugeField<group> &U, int iteration, const parameters &p) {
-
-    double t = hila::gettime();
-    // save config
-    U.config_write(p.config_file);
-
-    // write run_status file
-    if (hila::myrank() == 0) {
-        std::ofstream outf;
-        outf.open("run_status", std::ios::out | std::ios::trunc);
-        outf << "iteration   " << iteration + 1 << '\n';
-        outf << "seed        " << static_cast<uint64_t>(hila::random() * (1UL << 61)) << '\n';
-        outf << "time        " << hila::gettime() << '\n';
-        outf.close();
-    }
-
-    std::stringstream msg;
-    msg << "Checkpointing, time " << hila::gettime() - t;
-    hila::timestamp(msg.str().c_str());
-}
-
-////////////////////////////////////////////////////////////////
-
-template <typename group>
-bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
-
-    uint64_t seed;
-    bool ok = true;
-    p.time_offset = 0;
-
-    hila::input status;
-    if (status.open("run_status", false, false)) {
-
-        hila::out0 << "RESTORING FROM CHECKPOINT:\n";
-
-        trajectory = status.get("iteration");
-        seed = status.get("seed");
-        p.time_offset = status.get("time");
-        status.close();
-
-        hila::seed_random(seed);
-
-        U.config_read(p.config_file);
-
-        ok = true;
-    } else {
-
-        std::ifstream in;
-        in.open(p.config_file, std::ios::in | std::ios::binary);
-
-        if (in.is_open()) {
-            in.close();
-
-            hila::out0 << "READING initial config\n";
-
-            U.config_read(p.config_file);
-
-            ok = true;
-        } else {
-
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
-////////////////////////////////////////////////////////////////
-
-template <typename group>
 void update(GaugeField<group> &U, const parameters &p, bool relax) {
 
-    foralldir(d) {
-        for (Parity par : {EVEN, ODD}) {
+    for (const auto &dp : hila::shuffle_directions_and_parities()) {
 
-            update_parity_dir(U, p, par, d, relax);
-        }
+        update_parity_dir(U, p, dp.parity, dp.direction, relax);
     }
 }
 
@@ -792,7 +725,7 @@ int main(int argc, char **argv) {
     hila::timer update_timer("Updates");
     hila::timer measure_timer("Measurements");
 
-    restore_checkpoint(U, start_traj, p);
+    restore_checkpoint(U, p.config_file, p.n_trajectories, start_traj);
 
     // We need random number here
     if (!hila::is_rng_seeded())
@@ -800,7 +733,8 @@ int main(int argc, char **argv) {
 
     double p_now = measure_polyakov(U).real();
 
-    for (int trajectory = start_traj; trajectory < p.n_trajectories; trajectory++) {
+    bool run = true;
+    for (int trajectory = start_traj; run && trajectory < p.n_trajectories; trajectory++) {
 
         double ttime = hila::gettime();
 
@@ -844,13 +778,14 @@ int main(int argc, char **argv) {
                 hila::out0 << "ACCP " << acc << '\n';
             }
 
-            hila::out0 << "Measure_end " << trajectory << std::endl;
+            hila::out0 << "Measure_end " << trajectory << " time " << hila::gettime() << std::endl;
 
             measure_timer.stop();
         }
 
-        if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
-            checkpoint(U, trajectory, p);
+        run = !hila::time_to_finish();
+        if (!run || (p.n_save > 0 && (trajectory + 1) % p.n_save == 0)) {
+            checkpoint(U, p.config_file, p.n_trajectories, trajectory);
         }
     }
 

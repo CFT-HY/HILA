@@ -68,8 +68,8 @@ class TestLattice : public SnapshotStruct {
     std::string snapshot_dir = "./snapshots/test_lattice";
 
     TestLattice() {
-        MPI_Comm_size(lattice.mpi_comm_lat, &num_nodes);
-        MPI_Comm_rank(lattice.mpi_comm_lat, &my_rank);
+        MPI_Comm_size(lattice->mpi_comm_lat, &num_nodes);
+        MPI_Comm_rank(lattice->mpi_comm_lat, &my_rank);
 
         if (num_nodes != 2 && num_nodes != 4 && num_nodes != 8) {
             hila::out0 << "Incorrect number of ranks exiting \n";
@@ -145,7 +145,7 @@ TEST_CASE_METHOD(TestLattice, "Lattice routines", "[MPI][.]") {
         REQUIRE(lattice.coordinate(0,e_y)==first_coordinate[e_y]);
         REQUIRE(lattice.coordinate(0,e_z)==first_coordinate[e_z]);
         REQUIRE(lattice.site_parity(0) == Parity(EVEN));
-        REQUIRE(lattice.site_parity(lattice.mynode.sites/2) == Parity(ODD));
+        REQUIRE(lattice.site_parity(lattice.mynode.volume/2) == Parity(ODD));
         REQUIRE(lattice.loop_begin(ODD) == std::round(total_lattice_size / num_nodes / 2));
         REQUIRE(lattice.loop_begin(EVEN) == 0);
         REQUIRE(lattice.loop_end(ODD) == std::round(total_lattice_size / num_nodes));
@@ -168,16 +168,16 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
         GIVEN("Total lattice size " << total_lattice_size) {
             THEN("Each node should have a site total of total_lattice_size/number_of_nodes "
                 "and even/odd site total of total_lattice_size/number_of_nodes/2")
-            REQUIRE(lattice.mynode.sites == lattice.mynode.volume());
+            REQUIRE(lattice.mynode.volume == lattice.mynode.volume());
 
-            REQUIRE(lattice.mynode.sites == std::round(total_lattice_size / num_nodes));
+            REQUIRE(lattice.mynode.volume == std::round(total_lattice_size / num_nodes));
             REQUIRE(lattice.mynode.evensites == std::round(total_lattice_size / num_nodes / 2));
             REQUIRE(lattice.mynode.oddsites == std::round(total_lattice_size / num_nodes / 2));
         }
     }
     SECTION("Shared node information: struct allnodes") {
 
-        REQUIRE(lattice.nodes.number == num_nodes);
+        REQUIRE(lattice->nodes.number == num_nodes);
 
         std::map<int, CoordinateVector> n_division_for_nodes = {
             { 1, CoordinateVector({1,1,1}) },
@@ -192,8 +192,8 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
             { 8, CoordinateVector({ls/2,ls/2,ls/2}) }
         };
 
-        REQUIRE(lattice.nodes.n_divisions == n_division_for_nodes[num_nodes]);
-        REQUIRE(lattice.nodes.max_size == max_size_for_node[num_nodes]);
+        REQUIRE(lattice->nodes.n_divisions == n_division_for_nodes[num_nodes]);
+        REQUIRE(lattice->nodes.max_size == max_size_for_node[num_nodes]);
 
     }
     SECTION("Communication node information: struct comm_node_struct") {

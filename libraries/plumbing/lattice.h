@@ -1,5 +1,5 @@
-#ifndef LATTICE_H
-#define LATTICE_H
+#ifndef HILA_LATTICE_H
+#define HILA_LATTICE_H
 
 #include <sstream>
 #include <iostream>
@@ -50,6 +50,10 @@ struct node_info {
     unsigned evensites, oddsites;
 };
 
+namespace hila {
+extern int64_t n_gather_done, n_gather_avoided;
+}
+
 /// Some backends need specialized lattice data
 /// in loops. Forward declaration here and
 /// implementations in backend headers.
@@ -60,21 +64,25 @@ struct backend_lattice_struct;
 /// The lattice struct defines the lattice geometry ans sets up MPI communication
 /// patterns
 class lattice_struct {
-  private:
+  public:
     CoordinateVector l_size;
     size_t l_volume = 0; // use this to flag initialization
 
     int l_label; // running number, identification of the lattice (TODO)
 
-  public:
+    // Guarantee 64 bits for these - 32 can overflow!
+    MPI_Comm mpi_comm_lat;
+
+    // is this lattice derived from another, through e.g. .block()?  Pointer to parent lattice
+    lattice_struct *parent;
+
     /// Information about the node stored on this process
     struct node_struct {
-        lattice_struct *parent = nullptr; // parent lattice, in order to access methods
-        int rank;                         // rank of this node
-        size_t sites, evensites, oddsites;
+        lattice_struct *parent; // parent lattice, for methods
+        size_t volume, evensites, oddsites;
         size_t field_alloc_size;    // how many sites/node in allocations
         CoordinateVector min, size; // node local coordinate ranges
-        unsigned nn[NDIRS];         // nn-node of node down/up to dirs
+        int rank;                   // rank of this node
         bool first_site_even;       // is location min even or odd?
 
 #ifdef EVEN_SITES_FIRST
@@ -98,13 +106,9 @@ class lattice_struct {
         } subnodes;
 #endif
 
-        unsigned volume() const {
-            return sites;
-        }
-
         /// true if this node is on the edge of the lattice to dir d
         bool is_on_edge(Direction d) const {
-            return (is_up_dir(d) && min[d] + size[d] == parent->size(d)) ||
+            return (is_up_dir(d) && min[d] + size[d] == parent->l_size[d]) ||
                    (!is_up_dir(d) && min[-d] == 0);
         }
 
@@ -114,19 +118,18 @@ class lattice_struct {
     struct allnodes {
         int number;                   // number of nodes
         CoordinateVector n_divisions; // number of node divisions to dir
-        // lattice division: div[d] will have num_dir[d]+1 elements, last size
-        // TODO: is this needed at all?
+        // lattice division: divisors[d] will have n_divisions[d]+1 elements, last size to d
         std::vector<unsigned> divisors[NDIM];
         CoordinateVector max_size; // size of largest node
 
-        std::vector<node_info> nodelist;
+        // std::vector<node_info> nodelist;
+        node_info nodeinfo(int i) const;
 
-        unsigned *RESTRICT map_array;   // mapping (optional)
-        unsigned *RESTRICT map_inverse; // inv of it
-
-        void create_remap();                      // create remap_node
-        unsigned remap(unsigned i) const;         // use remap
-        unsigned inverse_remap(unsigned i) const; // inverse remap
+        int *RESTRICT map_array;        // mapping (optional)
+        int *RESTRICT map_inverse;      // inv of it
+        void create_remap();            // create remap_node
+        int remap(int i) const;         // use remap
+        int inverse_remap(int i) const; // inverse remap
 
     } nodes;
 
@@ -179,6 +182,13 @@ class lattice_struct {
                 return buffer;
             }
         }
+
+        void init() {
+            sites = evensites = oddsites = 0;
+            buffer = 0;
+            sitelist = nullptr;
+            rank = hila::myrank();
+        }
     };
 
     /// nn-communication has only 1 node to talk to
@@ -223,33 +233,12 @@ class lattice_struct {
     backend_lattice_struct *backend_lattice;
 #endif
 
-    void setup(const CoordinateVector &siz);
+    void setup_base_lattice(const CoordinateVector &siz);
+
     void setup_layout();
     void setup_nodes();
+    void setup_node_divisors();
 
-    // Std accessors:
-    // volume
-    int64_t volume() const {
-        return l_volume;
-    }
-
-    // size routines
-    int size(Direction d) const {
-        return l_size[d];
-    }
-    int size(int d) const {
-        return l_size[d];
-    }
-    CoordinateVector size() const {
-        return l_size;
-    }
-
-    int node_rank() const {
-        return mynode.rank;
-    }
-    int n_nodes() const {
-        return nodes.number;
-    }
     // std::vector<node_info> nodelist() { return nodes.nodelist; }
     // CoordinateVector min_coordinate() const { return mynode.min; }
     // int min_coordinate(Direction d) const { return mynode.min[d]; }
@@ -258,9 +247,6 @@ class lattice_struct {
     int node_rank(const CoordinateVector &c) const;
     unsigned site_index(const CoordinateVector &c) const;
     unsigned site_index(const CoordinateVector &c, const unsigned node) const;
-    unsigned field_alloc_size() const {
-        return mynode.field_alloc_size;
-    }
 
     void create_std_gathers();
     gen_comminfo_struct create_general_gather(const CoordinateVector &r);
@@ -282,7 +268,6 @@ class lattice_struct {
     }
 #endif
 
-    unsigned remap_node(const unsigned i);
 
 #ifdef EVEN_SITES_FIRST
     unsigned loop_begin(Parity P) const {
@@ -296,7 +281,7 @@ class lattice_struct {
         if (P == EVEN) {
             return mynode.evensites;
         } else {
-            return mynode.sites;
+            return mynode.volume;
         }
     }
 
@@ -322,7 +307,7 @@ class lattice_struct {
         return 0;
     }
     unsigned loop_end(Parity P) const {
-        return mynode.sites;
+        return mynode.volume;
     }
 
     // Use computation to get coordinates: from fastest
@@ -359,18 +344,8 @@ class lattice_struct {
         return coordinates(idx) - mynode.min;
     }
 
-    lattice_struct::nn_comminfo_struct get_comminfo(int d) {
-        return nn_comminfo[d];
-    }
-
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();
-
-
-    MPI_Comm mpi_comm_lat;
-
-    // Guarantee 64 bits for these - 32 can overflow!
-    int64_t n_gather_done = 0, n_gather_avoided = 0;
 
 
     /// Return the coordinates of a site, where 1st dim (x) runs fastest etc.
@@ -381,8 +356,8 @@ class lattice_struct {
     CoordinateVector global_coordinates(size_t index) const {
         CoordinateVector site;
         foralldir(dir) {
-            site[dir] = index % size(dir);
-            index /= size(dir);
+            site[dir] = index % l_size[dir];
+            index /= l_size[dir];
         }
         return site;
     }
@@ -390,22 +365,262 @@ class lattice_struct {
     int id() const {
         return l_label;
     }
+
+
+    bool is_this_odd_boundary(Direction d) const;
+
+    lattice_struct *block_by_factor(const CoordinateVector &blocking_factor);
+
+    bool can_block_by_factor(const CoordinateVector &blocking_factor) const;
+
+    void setup_blocked_lattice(const CoordinateVector &vol, int label,
+                               lattice_struct &orig_lattice);
+
+    void set_lattice_globals() const;
 };
 
-/// global handle to lattice
-extern lattice_struct lattice;
 
-// Keep track of defined lattices
-extern std::vector<lattice_struct *> lattices;
+/**
+ * @brief global vector of defined lattice pointers
+ */
+
+extern std::vector<lattice_struct *> defined_lattices;
 
 
-#if defined(CUDA) || defined(HIP)
-__device__ __host__ int loop_lattice_size(Direction d);
-#else
-inline int loop_lattice_size(Direction d) {
-    return lattice.size(d);
-}
-#endif
+/**
+ * @brief main interface class to lattices.  
+ * @details Lightweight class, contains only pointer to lattice_struct so
+ * can be returned as such from functions.
+ */
+
+class Lattice {
+
+  private:
+    // ptr to current lattice_struct
+    lattice_struct *lat_ptr = nullptr;
+
+  public:
+    /**
+     * @internal Set the lattice_struct pointer only. Don't use this in normal code!
+     */
+
+    void set_lattice_pointer(lattice_struct *lat) {
+        lat_ptr = lat;
+    }
+
+    /**
+     * @internal check if the base lattice has been set
+     */
+
+    bool is_initialized() const {
+        return lat_ptr != nullptr;
+    }
+
+    /**
+     * @brief lattice.volume() returns lattice volume
+     * Can be used inside onsites()-loops
+     * @return lattice volume
+     */
+    inline int64_t volume() const {
+        return lat_ptr->l_volume;
+    }
+
+    /**
+     * @brief lattice.size() -> CoordinateVector  or lattice.size(d) -> int returns the
+     * dimensions of the lattice, in latter case to direction d
+     * Can be used inside onsites()-loops
+     */
+    inline int size(Direction d) const {
+        return lat_ptr->l_size[d];
+    }
+    inline int size(int d) const {
+        return lat_ptr->l_size[d];
+    }
+    const CoordinateVector &size() const {
+        return lat_ptr->l_size;
+    }
+
+    /**
+     * @brief lattice.setup(CoordinateVector size) - set up the base lattice. Called at the
+     * beginning of the program. Can be called only once during the program run
+     */
+    void setup(const CoordinateVector &siz) {
+        assert(lat_ptr != nullptr);
+        lat_ptr->setup_base_lattice(siz);
+    }
+
+    /**
+     * @brief lattice-> defines an operator with which detailed lattice_struct fields
+     * can be accessed.
+     *
+     * @details For example:
+     *  lattice->mynode.min: CoordinateVector of the min-corner managed by this MPI rank
+     *  lattice->mynode.size: CV of the local node dimensions.
+     *
+     *  For further info, check the class lattice_struct.  This cannot be used
+     *  within onsites(), copy the relevant field to local variable first.
+     */
+    inline const lattice_struct *operator->() const noexcept {
+        return lat_ptr;
+    }
+
+    /**
+     * @brief get non-const pointer to lattice_struct (cf. operator ->)
+     *
+     * @details This can be used to access fields of lattice_struct, this time
+     * returning non-const. reference.  NOTE! you should not
+     */
+
+    inline lattice_struct *ptr() const {
+        return lat_ptr;
+    }
+
+    /**
+     * @brief get const ref to lattice_struct, lattice.ref(). is equivalent to lattice->
+     */
+    inline const lattice_struct &ref() const {
+        return *lat_ptr;
+    }
+
+    /**
+     * @brief Equality operator == is true if the two Lattices are the same, i.e. point
+     * to the same lattice
+     *
+     * @param rhs
+     */
+
+    bool operator==(const Lattice &rhs) {
+        return (this->lat_ptr == rhs.ptr());
+    }
+
+    bool operator!=(const Lattice &rhs) {
+        return (this->lat_ptr != rhs.ptr());
+    }
+
+    /**
+     * @brief With a valid lattice_struct pointer, switch this lattice to be active.
+     */
+    Lattice switch_to(lattice_struct *lat) {
+        if (lat_ptr != lat) {
+            lat_ptr = lat;
+            lat->set_lattice_globals();
+        }
+        return *this;
+    }
+
+    /**
+     * @brief With a valid Lattice, switch this lattice to be active.
+     * @details useful e.g. in switching to lattice where field a belongs to:
+     *    lattice.switch_to(a.mylattice());
+     *
+     */
+    Lattice switch_to(Lattice &lat) {
+        if (lat_ptr != lat.ptr()) {
+            lat_ptr = lat.ptr();
+            lat_ptr->set_lattice_globals();
+        }
+        return *this;
+    }
+
+    /**
+     * @brief Test if lattice can be blocked by factor given in argument.
+     * @details lattice.size() must be element-by-element divisible by factor
+     *
+     * Example: lattice.can_block({2,2,2}) returns true if (3-dim) lattice dimensions are even
+     */
+    bool can_block(const CoordinateVector &factor) const {
+        return lat_ptr->can_block_by_factor(factor);
+    }
+
+    /**
+     * @brief block the lattice by factor, switching to smaller lattice.
+     * @details lattice.size() must be element-by-element divisible by factor
+     *
+     * @example lattice.block({2,2,2}) reduces current lattice size by 2 to each direction.
+     *
+     * @note Previously used Field variables cannot be used in onsites(). However,
+     * their content can be blocked to new Field with Field<T>::block_from(),
+     * which copies the content from the blocked (sparse) set of sites;
+     *
+     * @code{.cpp}
+     * Field<double> a;
+     * a[ALL] = X.x() + X.y() + X.z();   // in 3d
+     *
+     * CoordinateVector factor{2,2,2};
+     *
+     * lattice.block(factor);
+     * Field<double> b;
+     *
+     * b.block_from(a);               // Now b contains 0+0+0, 2+0+0 ...
+     * b[ALL] = -b[X];                // Do operations, here flip sign
+     * // onsites(ALL) a[X] = 1;      // ERROR, a belongs to original lattice
+     * b.unblock_to(a);               // copy content of b back to a on blocked sites,
+     *                                // leaving other sites of a
+     * lattice.unblock();             // return to original lattice
+     *
+     * // Now a can be used, it contains -(0+0+0), 1+0+0, -(2+0+0), ...
+     * @endcode
+     *
+     * @note Fields which were not used previously can be used in blocked levels, or
+     * their association (and content) can be deleted with .clear():
+     *
+     * @code{.cpp}
+     * Field<double> a,b;
+     * a = 1;
+     * lattice.block({2,2,1});
+     * b = 2;       // OK, b was not used before blocking
+     * a = 3;       // ERROR; a belongs to non-blocked lattice
+     * a.clear();
+     * a = 3;       // OK, now a belongs to blocked lattice
+     * @endcode
+     *
+     *
+     * @returns lattice_struct * to blocked lattice
+     */
+    Lattice block(const CoordinateVector &cv) {
+        lat_ptr->block_by_factor(cv);
+        return *this;
+    }
+
+    /**
+     * @brief Unblock lattice, returning to parent. Current lattice must be a blocked lattice
+     * @returns lattice_struct * to new lattice
+     */
+    Lattice unblock() {
+        if (lat_ptr->parent != nullptr) {
+            return switch_to(lat_ptr->parent);
+        } else {
+            hila::out0 << "ERROR : cannot unblock lattice, no parent\n";
+            hila::terminate(0);
+            return *this;
+        }
+    }
+
+    /**
+     * @brief lattice.is_base() is used to check if the current lattice is the original one,
+     * i.e. not a blocked one
+     * @returns true if current lattice is the base lattice, otherwise false
+     */
+
+    bool is_base() const {
+        return lat_ptr == defined_lattices.front();
+    }
+
+    /**
+     * @brief lattice.switch_to_base() switches the base lattice active (if not already)
+     * @returns The Lattice for the base lattice (i.e. the first lattice)
+     */
+
+    Lattice switch_to_base() {
+        return switch_to(defined_lattices.front());
+    }
+};
+
+
+/**
+ * @brief global handle to lattice. For methods, see classes Lattice and lattice_struct
+ */
+extern Lattice lattice;
 
 
 #ifdef VANILLA

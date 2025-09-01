@@ -238,6 +238,8 @@ class GeneralVisitor {
 
     bool is_loop_constant(Expr *e);
 
+    bool contains_field_ref(Expr *e);
+
     bool class_has_base_type(CXXRecordDecl *d);
 
     bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> *vi);
@@ -301,6 +303,13 @@ class GeneralVisitor {
     void handle_constructor_in_loop(Stmt *s);
 
     bool handle_loop_function_if_needed(call_info_struct &ci);
+
+    bool handle_global_var_method_call(CallExpr *call);
+    bool handle_global_var_ref(DeclRefExpr *e);
+
+    std::string generate_constant_var_name(const std::string &varname, bool isnamespace,
+                                           const std::string &nspace);
+    std::string generate_constant_var_name(DeclRefExpr *DRE);
 
     call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep,
                                                bool is_assignment = false);

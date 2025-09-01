@@ -1,8 +1,7 @@
+#ifndef HILA_SUN_HEATBATH_H
+#define HILA_SUN_HEATBATH_H
+
 /** @file sun_heatbath.h */
-
-#ifndef SUN_HEATBATH_H
-#define SUN_HEATBATH_H
-
 
 /* Kennedy-Pendleton quasi heat bath on SU(2) subgroups */
 

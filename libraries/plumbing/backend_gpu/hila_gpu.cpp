@@ -1,4 +1,7 @@
 
+// Define below to deactivate "extern" in global var defs
+#define IN_HILA_GPU
+
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
@@ -16,7 +19,6 @@
 using gpurandState = curandState_t;
 #define gpurand_init curand_init
 #define gpurand_uniform curand_uniform
-#define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 #define gpuGetDeviceCount(a) GPU_CHECK(cudaGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(cudaSetDevice(dev))
 #define gpuGetLastError cudaGetLastError
@@ -25,13 +27,11 @@ using gpurandState = curandState_t;
 #elif defined(HIP)
 
 #include <hip/hip_runtime.h>
-#include <hiprand_kernel.h>
+#include <hiprand/hiprand_kernel.h>
 
 using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
 #define gpurand_uniform hiprand_uniform
-#define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
-    GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
 #define gpuGetDeviceCount(a) GPU_CHECK(hipGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(hipSetDevice(dev))
 #define gpuGetLastError hipGetLastError
@@ -39,14 +39,15 @@ using gpurandState = hiprandState_t;
 
 #endif
 
-// Save "constants" lattice size and volume here
-__constant__ int64_t _d_volume;
-__constant__ int _d_size[NDIM];
-#ifndef EVEN_SITES_FIRST
-__constant__ int _d_nodesize[NDIM];
-__constant__ int _d_nodemin[NDIM];
-__constant__ int _d_nodefactor[NDIM];
-#endif
+// // Save "constants" lattice size and volume here
+// __constant__ int64_t _d_volume;
+// // __constant__ int _d_size[NDIM];
+// __constant__ CoordinateVector _d_size;
+// #ifndef EVEN_SITES_FIRST
+// __constant__ int _d_nodesize[NDIM];
+// __constant__ int _d_nodemin[NDIM];
+// __constant__ int _d_nodefactor[NDIM];
+// #endif
 
 /* Random number generator */
 static gpurandState *gpurandstateptr;
@@ -68,7 +69,7 @@ __global__ void seed_random_kernel(unsigned long long seed) {
 
 /* Set seed on device and host */
 void hila::initialize_device_rng(uint64_t seed) {
-    unsigned long n_blocks = (lattice.mynode.volume() + N_threads - 1) / N_threads;
+    unsigned long n_blocks = (lattice->mynode.volume + N_threads - 1) / N_threads;
 
 #if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS > 0
     // If we have limited rng block number
@@ -118,7 +119,7 @@ void hila::free_device_rng() {
 
 /* Generate random numbers on device or host */
 __device__ __host__ double hila::random() {
-#ifdef __GPU_DEVICE_COMPILE__
+#ifdef _GPU_DEVICE_COMPILE_
     unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
     return gpurand_uniform(&d_gpurandstateptr[x]);
 #else
@@ -126,75 +127,32 @@ __device__ __host__ double hila::random() {
 #endif
 }
 
-// Then, define global functions loop_lattice_size() and _volume()
-__device__ __host__ int loop_lattice_size(Direction dir) {
-#ifdef __GPU_DEVICE_COMPILE__
-    return _d_size[dir];
-#else
-    return lattice.size(dir);
-#endif
-}
-__device__ __host__ CoordinateVector loop_lattice_size(void) {
-#ifdef __GPU_DEVICE_COMPILE__
-    CoordinateVector v;
-    foralldir(d) v[d] = _d_size[d];
-    return v;
-#else
-    return lattice.size();
-#endif
-}
-__device__ __host__ int64_t loop_lattice_volume(void) {
-#ifdef __GPU_DEVICE_COMPILE__
-    return _d_volume;
-#else
-    return lattice.volume();
-#endif
-}
 
-#ifndef EVEN_SITES_FIRST
+///////////////////////////////////////////////////////////////////////////////////////
+// Setup the lattice struct on GPUs:
+// allocate neighbour and coordinate arrays
+// setup global variables in __constant__ memory
 
-__device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
-    CoordinateVector c;
-    unsigned vdiv, ndiv;
-
-    vdiv = idx;
-    for (int d = 0; d < NDIM - 1; ++d) {
-        ndiv = vdiv / _d_nodesize[d];
-        c[d] = vdiv - ndiv * _d_nodesize[d] + _d_nodemin[d];
-        vdiv = ndiv;
-    }
-    c[NDIM - 1] = vdiv + _d_nodemin[NDIM - 1];
-
-    return c;
-}
-
-__device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
-    return (idx / _d_nodefactor[dir]) % _d_nodesize[dir] + _d_nodemin[dir];
-}
-
-#endif
-
-
-void backend_lattice_struct::setup(lattice_struct &lattice) {
+void backend_lattice_struct::setup(lattice_struct &lat) {
     CoordinateVector *tmp;
 
     /* Setup neighbour fields in all directions */
     for (int d = 0; d < NDIRS; d++) {
         // For normal boundaries
-        gpuMalloc(&(d_neighb[d]), lattice.mynode.volume() * sizeof(unsigned));
-        gpuMemcpy(d_neighb[d], lattice.neighb[d], lattice.mynode.volume() * sizeof(unsigned),
+        gpuMalloc(&(d_neighb[d]), lat.mynode.volume * sizeof(unsigned));
+        gpuMemcpy(d_neighb[d], lat.neighb[d], lat.mynode.volume * sizeof(unsigned),
                   gpuMemcpyHostToDevice);
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // For special boundaries
         // TODO: check this really works now!
         const unsigned *special_neighb =
-            lattice.get_neighbour_array((Direction)d, hila::bc::ANTIPERIODIC);
+            lat.get_neighbour_array((Direction)d, hila::bc::ANTIPERIODIC);
 
-        if (special_neighb != lattice.neighb[d]) {
-            gpuMalloc(&(d_neighb_special[d]), lattice.mynode.volume() * sizeof(unsigned));
+        if (special_neighb != lat.neighb[d]) {
+            gpuMalloc(&(d_neighb_special[d]), lat.mynode.volume * sizeof(unsigned));
             gpuMemcpy(d_neighb_special[d], special_neighb,
-                      lattice.mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
+                      lat.mynode.volume * sizeof(unsigned), gpuMemcpyHostToDevice);
         } else {
             d_neighb_special[d] = d_neighb[d];
         }
@@ -203,37 +161,64 @@ void backend_lattice_struct::setup(lattice_struct &lattice) {
 
 #ifdef EVEN_SITES_FIRST
     /* Setup the location field */
-    gpuMalloc(&(d_coordinates), lattice.mynode.volume() * sizeof(CoordinateVector));
-    tmp = (CoordinateVector *)memalloc(lattice.mynode.volume() * sizeof(CoordinateVector));
-    for (unsigned i = 0; i < lattice.mynode.volume(); i++)
-        tmp[i] = lattice.coordinates(i);
+    gpuMalloc(&(d_coordinates), lat.mynode.volume * sizeof(CoordinateVector));
+    tmp = (CoordinateVector *)memalloc(lat.mynode.volume * sizeof(CoordinateVector));
+    for (unsigned i = 0; i < lat.mynode.volume; i++)
+        tmp[i] = lat.coordinates(i);
 
-    gpuMemcpy(d_coordinates, tmp, lattice.mynode.volume() * sizeof(CoordinateVector),
+    gpuMemcpy(d_coordinates, tmp, lat.mynode.volume * sizeof(CoordinateVector),
               gpuMemcpyHostToDevice);
     free(tmp);
+
+
 #endif
 
     // Other backend_lattice parameters
-    field_alloc_size = lattice.field_alloc_size();
+    field_alloc_size = lat.mynode.field_alloc_size;
 
-    int64_t v = lattice.volume();
-    gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
-    int s[NDIM];
-    foralldir(d) s[d] = lattice.size(d);
-    gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+    set_device_globals(lat);
+}
+
+#endif // not HILAPP
+
+// set some gobal variables, visible on GPUs
+// thus, hilapp needs to see this definition
+
+void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
+
+    
+#ifdef EVEN_SITES_FIRST
+
+    gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
+                      gpuMemcpyHostToDevice);
+#endif
+    
+    gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
+                      gpuMemcpyHostToDevice);
+
+    _d_volume = lat.l_volume;
+    _d_size = lat.l_size;
 
 #ifndef EVEN_SITES_FIRST
-    foralldir(d) s[d] = lattice.mynode.size[d];
-    gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
-    foralldir(d) s[d] = lattice.mynode.min[d];
-    gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+    _d_nodesize = lat.mynode.size;
+    _d_nodemin = lat.mynode.min;
+    _d_nodefactor = lat.mynode.size_factor;
 
-    foralldir(d) s[d] = lattice.mynode.size_factor[d];
-    gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+    // foralldir(d) s[d] = lat.mynode.size[d];
+    // gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+
+    // foralldir(d) s[d] = lat.mynode.min[d];
+    // gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+
+    // foralldir(d) s[d] = lat.mynode.size_factor[d];
+    // gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
 #endif
 }
+
+#ifndef HILAPP
+// again, hilapp can skip this part
 
 void initialize_gpu(int rank, int device) {
     int n_devices, my_device;
@@ -326,7 +311,7 @@ void gpu_device_info() {
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
 
-        hila::out << "Threads in use: " << N_threads << '\n';
+        hila::out << "Thread block size used: " << N_threads << '\n';
 
 // Following should be OK in open MPI
 #ifdef OPEN_MPI
@@ -381,7 +366,7 @@ void gpu_device_info() {
                   << props.maxThreadsDim[1] << ", " << props.maxThreadsDim[2] << " ]" << '\n';
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
-        hila::out << "Threads in use: " << N_threads << '\n';
+        hila::out << "Thread block size used: " << N_threads << '\n';
     }
 }
 
@@ -408,4 +393,4 @@ void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int lin
     }
 }
 
-#endif
+#endif // not HILAPP
