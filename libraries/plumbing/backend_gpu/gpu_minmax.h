@@ -16,7 +16,7 @@ using keyvalueindexT = int;
 #if defined(HIP)
 #include <hipcub/hipcub.hpp>
 namespace gpucub = hipcub;
-#if defined(HIPCUB_VERSION) && HIPCUB_VERSION >= 300300
+#if defined(HIPCUB_VERSION) && HIPCUB_VERSION >= 300200
 // For some strange reason hipcub 3.3 used long in KeyValuePair ?? bug in library?
 using keyvalueindexT = long;
 #else
