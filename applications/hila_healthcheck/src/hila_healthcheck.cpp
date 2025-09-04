@@ -486,117 +486,160 @@ void test_subvolumes() {
 void test_fft() {
 
 
-    using T = Complex<double>;
+    {
+        Field<Complex<double>> f, p, p2;
 
-    Field<T> f, p, p2;
+        // Start with unit field
+        f = 1;
 
-    // Start with unit field
-    f = 1;
+        // After one FFT the field is 0 except at coord 0
+        p2 = 0;
 
-    // After one FFT the field is 0 except at coord 0
-    p2 = 0;
-
-    p2[{0, 0, 0}] = lattice.volume();
-
-    FFT_field(f, p);
-
-    double eps = squarenorm_relative(p, p2);
-
-    report_pass("FFT constant field", eps, 1e-13 * sqrt(lattice.volume()));
-
-    //-----------------------------------------------------------------
-    // After two applications the field should be back to a constant * volume
-
-    FFT_field(p, f, fft_direction::back);
-
-    double sum = 0;
-    double tnorm = 0;
-    onsites(ALL) {
-        sum += (f[X] - lattice.volume()).squarenorm();
-        tnorm += f[X].squarenorm();
-    }
-
-    eps = fabs(sum / tnorm);
-
-    report_pass("FFT inverse transform", eps, 1e-10);
-
-    //-----------------------------------------------------------------
-    for (int iter = 0; iter < 5; iter++) {
-        Vector<NDIM, double> kv;
-        CoordinateVector kx;
-        foralldir(d) {
-            kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
-        }
-
-        kv = kx.convert_to_k();
-
-
-        onsites(ALL) {
-            double d = kv.dot(X.coordinates());
-            f[X] = expi(d);
-        }
+        p2[{0, 0, 0}] = lattice.volume();
 
         FFT_field(f, p);
 
-        p2 = 0;
-        p2[kx] = lattice.volume();
+        double eps = squarenorm_relative(p, p2);
 
-        eps = squarenorm_relative(p, p2);
+        report_pass("FFT Complex<double> constant field", eps, 1e-13 * sqrt(lattice.volume()));
 
-        report_pass("FFT of wave vector " + hila::prettyprint(kx.transpose()), eps,
-                    1e-13 * sqrt(lattice.volume()));
+        //-----------------------------------------------------------------
+        // After two applications the field should be back to a constant * volume
+
+        FFT_field(p, f, fft_direction::back);
+
+        double sum = 0;
+        double tnorm = 0;
+        onsites(ALL) {
+            sum += (f[X] - lattice.volume()).squarenorm();
+            tnorm += f[X].squarenorm();
+        }
+
+        eps = fabs(sum / tnorm);
+
+        report_pass("FFT Complex<double> inverse transform", eps, 1e-10);
     }
+
+    {
+        Field<Complex<float>> f, p, p2;
+
+        // Start with unit field
+        f = 1;
+
+        // After one FFT the field is 0 except at coord 0
+        p2 = 0;
+
+        p2[{0, 0, 0}] = lattice.volume();
+
+        FFT_field(f, p);
+
+        double eps = squarenorm_relative(p, p2);
+
+        report_pass("FFT Complex<float> constant field", eps, 1e-13 * sqrt(lattice.volume()));
+
+        //-----------------------------------------------------------------
+        // After two applications the field should be back to a constant * volume
+
+        FFT_field(p, f, fft_direction::back);
+
+        double sum = 0;
+        double tnorm = 0;
+        onsites(ALL) {
+            sum += (f[X] - lattice.volume()).squarenorm();
+            tnorm += f[X].squarenorm();
+        }
+
+        eps = fabs(sum / tnorm);
+
+        report_pass("FFT Complex<float> inverse transform", eps, 1e-10);
+    }
+
 
     //-----------------------------------------------------------------
 
     {
-        Field<double> r;
-        onsites(ALL) r[X] = hila::gaussrand();
 
-        f = r.FFT_real_to_complex();
-        p = f.FFT(fft_direction::back) / lattice.volume();
-        eps = squarenorm_relative(r, p);
+        Field<Complex<double>> f, p, p2;
+        double eps;
 
-        report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
+        for (int iter = 0; iter < 5; iter++) {
+            Vector<NDIM, double> kv;
+            CoordinateVector kx;
+            foralldir(d) {
+                kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
+            }
 
-        bool odd = false;
-        foralldir(d) odd = odd || (lattice.size(d) % 2 > 0);
-        if (!odd) {
-            auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
-            eps = squarenorm_relative(r, r2);
+            kv = kx.convert_to_k();
 
-            report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
-        } else {
-            hila::out0 << " ...  Skipping FFT complex to real because lattice size is odd\n";
+
+            onsites(ALL) {
+                double d = kv.dot(X.coordinates());
+                f[X] = expi(d);
+            }
+
+            FFT_field(f, p);
+
+            p2 = 0;
+            p2[kx] = lattice.volume();
+
+            eps = squarenorm_relative(p, p2);
+
+            report_pass("FFT of wave vector " + hila::prettyprint(kx.transpose()), eps,
+                        1e-13 * sqrt(lattice.volume()));
         }
+
+        //-----------------------------------------------------------------
+
+        {
+            Field<double> r;
+            onsites(ALL) r[X] = hila::gaussrand();
+
+            f = r.FFT_real_to_complex();
+            p = f.FFT(fft_direction::back) / lattice.volume();
+            eps = squarenorm_relative(r, p);
+
+            report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
+
+            bool odd = false;
+            foralldir(d) odd = odd || (lattice.size(d) % 2 > 0);
+            if (!odd) {
+                auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
+                eps = squarenorm_relative(r, r2);
+
+                report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
+            } else {
+                hila::out0 << " ...  Skipping FFT complex to real because lattice size is odd\n";
+            }
+        }
+
+        //-----------------------------------------------------------------
+        // Check fft norm
+
+
+        onsites(ALL) {
+            p[X] = hila::random() * exp(-X.coordinates().convert_to_k().squarenorm());
+        }
+        f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
+
+        double nf = f.squarenorm();
+        double np = p.squarenorm();
+        report_pass("Norm of field = " + hila::prettyprint(nf) +
+                        " and FFT = " + hila::prettyprint(np),
+                    (nf - np) / nf, 1e-10);
+
+        hila::k_binning b;
+        b.k_max(M_PI * sqrt(3.0));
+
+        auto bf = b.bin_k_field(p.conj() * p);
+
+        double s = 0;
+        for (auto b : bf) {
+            s += abs(b);
+        }
+        hila::broadcast(s);
+
+        report_pass("Norm of binned FFT = " + hila::prettyprint(s), (s - np) / np, 1e-10);
     }
-
-    //-----------------------------------------------------------------
-    // Check fft norm
-
-
-    onsites(ALL) {
-        p[X] = hila::random() * exp(-X.coordinates().convert_to_k().squarenorm());
-    }
-    f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
-
-    double nf = f.squarenorm();
-    double np = p.squarenorm();
-    report_pass("Norm of field = " + hila::prettyprint(nf) + " and FFT = " + hila::prettyprint(np),
-                (nf - np) / nf, 1e-10);
-
-    hila::k_binning b;
-    b.k_max(M_PI * sqrt(3.0));
-
-    auto bf = b.bin_k_field(p.conj() * p);
-
-    double s = 0;
-    for (auto b : bf) {
-        s += abs(b);
-    }
-    hila::broadcast(s);
-
-    report_pass("Norm of binned FFT = " + hila::prettyprint(s), (s - np) / np, 1e-10);
 }
 
 /**
@@ -924,11 +967,11 @@ void test_blocking() {
         cvfb.block_from(cvf);
         double sum = 0;
         onsites(ALL) {
-            sum += (cvfb[X] - 2*X.coordinates()).squarenorm();
+            sum += (cvfb[X] - 2 * X.coordinates()).squarenorm();
             cvfb[X] *= -1;
         }
 
-        report_pass("Field blocking test",sum,1e-5);
+        report_pass("Field blocking test", sum, 1e-5);
 
         test_site_access();
         test_set_elements_and_select();
@@ -942,12 +985,12 @@ void test_blocking() {
 
         sum = 0;
         onsites(ALL) {
-            if (X.coordinates().is_divisible({2,2,2})) {
+            if (X.coordinates().is_divisible({2, 2, 2})) {
                 sum += (X.coordinates() + cvf[X]).squarenorm();
             }
         }
 
-        report_pass("Field unblocking test",sum,1e-5);
+        report_pass("Field unblocking test", sum, 1e-5);
 
         test_site_access();
         test_set_elements_and_select();
