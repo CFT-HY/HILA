@@ -46,7 +46,11 @@ HILA_INCLUDE_DIR := $(HILA_DIR)/libraries
 
 ifneq ($(MAKECMDGOALS),help)
 ifneq ($(MAKECMDGOALS),list-archs)
-  $(info -------------- HILA make system -- for help, type "make help" --------------)
+  $(info *------------------------ HILA make system --------------------------------*)
+  $(info |   "make help"        : general help message                              |)
+  $(info |   "make ARCH=<arch>" : compile using 'arch'                              |)
+  $(info |   "make list-archs"  : show ARCH= options                                |)
+  $(info *--------------------------------------------------------------------------*)
 endif
 endif
 

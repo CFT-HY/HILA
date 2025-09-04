@@ -533,13 +533,14 @@ class Lattice {
     }
 
     /**
-     * @brief block the lattice by factor, switching to smaller lattice.
-     * @details lattice.size() must be element-by-element divisible by factor
+     * @brief block the lattice by the given factor, switching to smaller lattice.
+     * 
+     * @details lattice.size() must be divisible by the factors to each dimension
      *
-     * @example lattice.block({2,2,2}) reduces current lattice size by 2 to each direction.
+     * Example: lattice.block({2,2,2}) reduces current lattice size by 2 to each direction.
      *
-     * @note Previously used Field variables cannot be used in onsites(). However,
-     * their content can be blocked to new Field with Field<T>::block_from(),
+     * @note Field variables belonging to previous lattices cannot be used while this lattice
+     * is active. However, their content can be blocked to new Field with Field<T>::block_from(),
      * which copies the content from the blocked (sparse) set of sites;
      *
      * @code{.cpp}
@@ -575,7 +576,7 @@ class Lattice {
      * @endcode
      *
      *
-     * @returns lattice_struct * to blocked lattice
+     * @returns blocked Lattice
      */
     Lattice block(const CoordinateVector &cv) {
         lat_ptr->block_by_factor(cv);
