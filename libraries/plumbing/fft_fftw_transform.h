@@ -8,30 +8,47 @@
 /// fft.h .
 
 /// transform does the actual fft.
+// template <typename cmplx_t>
+// void hila_fft<cmplx_t>::transform() {
+//     assert(0 && "Don't call this!");
+// }
+
 template <typename cmplx_t>
-void hila_fft<cmplx_t>::transform() {
-    assert(0 && "Don't call this!");
-}
+inline void hila_fft<cmplx_t>::transform() {
 
-template <>
-inline void hila_fft<Complex<double>>::transform() {
+    static_assert(std::is_same<cmplx_t, Complex<double>>::value ||
+                      std::is_same<cmplx_t, Complex<float>>::value,
+                  "Only double or float fields in FFT");
+
+    constexpr bool is_double = std::is_same<cmplx_t, Complex<double>>::value;
+
+    // define fftw types for double and float
+    using my_fftw_complex = typename std::conditional<is_double, fftw_complex, fftwf_complex>::type;
+    using my_fftw_plan = typename std::conditional<is_double, fftw_plan, fftwf_plan>::type;
+
     extern unsigned hila_fft_my_columns[NDIM];
     extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
 
     size_t n_fft = hila_fft_my_columns[dir] * elements;
 
-    int transform_dir =
-        (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
+    int transform_dir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
 
     fft_plan_timer.start();
 
     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time?
     // Timer will tell the proportional timing
 
-    fftw_complex *fftwbuf =
-        (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * lattice.size(dir));
-    fftw_plan fftwplan = fftw_plan_dft_1d(lattice.size(dir), fftwbuf, fftwbuf,
-                                          transform_dir, FFTW_ESTIMATE);
+    my_fftw_complex *fftwbuf;
+    my_fftw_plan fftwplan;
+    if constexpr (is_double) {
+        fftwbuf = (my_fftw_complex *)fftw_malloc(sizeof(my_fftw_complex) * lattice.size(dir));
+        fftwplan =
+            fftw_plan_dft_1d(lattice.size(dir), fftwbuf, fftwbuf, transform_dir, FFTW_ESTIMATE);
+    } else {
+        fftwbuf = (my_fftw_complex *)fftwf_malloc(sizeof(my_fftw_complex) * lattice.size(dir));
+        fftwplan =
+            fftwf_plan_dft_1d(lattice.size(dir), fftwbuf, fftwbuf, transform_dir, FFTW_ESTIMATE);
+    }
 
     fft_plan_timer.stop();
 
@@ -40,9 +57,9 @@ inline void hila_fft<Complex<double>>::transform() {
 
         fft_buffer_timer.start();
 
-        fftw_complex *cp = fftwbuf;
+        my_fftw_complex *cp = fftwbuf;
         for (int j = 0; j < rec_p.size(); j++) {
-            memcpy(cp, rec_p[j] + i * rec_size[j], sizeof(fftw_complex) * rec_size[j]);
+            memcpy(cp, rec_p[j] + i * rec_size[j], sizeof(my_fftw_complex) * rec_size[j]);
             cp += rec_size[j];
         }
 
@@ -51,7 +68,11 @@ inline void hila_fft<Complex<double>>::transform() {
         // do the fft
         fft_execute_timer.start();
 
-        fftw_execute(fftwplan);
+        if constexpr (is_double) {
+            fftw_execute(fftwplan);
+        } else {
+            fftwf_execute(fftwplan);
+        }
 
         fft_execute_timer.stop();
 
@@ -59,74 +80,78 @@ inline void hila_fft<Complex<double>>::transform() {
 
         cp = fftwbuf;
         for (int j = 0; j < rec_p.size(); j++) {
-            memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(fftw_complex) * rec_size[j]);
+            memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(my_fftw_complex) * rec_size[j]);
             cp += rec_size[j];
         }
 
         fft_buffer_timer.stop();
     }
 
-    fftw_destroy_plan(fftwplan);
-    fftw_free(fftwbuf);
-}
-
-template <>
-inline void hila_fft<Complex<float>>::transform() {
-
-    extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
-    extern unsigned hila_fft_my_columns[NDIM];
-
-    size_t n_fft = hila_fft_my_columns[dir] * elements;
-
-    int transform_dir =
-        (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
-
-    fft_plan_timer.start();
-
-    // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time?
-    // Timer will tell the proportional timing
-
-    fftwf_complex *fftwbuf =
-        (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * lattice.size(dir));
-    fftwf_plan fftwplan = fftwf_plan_dft_1d(lattice.size(dir), fftwbuf, fftwbuf,
-                                            transform_dir, FFTW_ESTIMATE);
-
-    fft_plan_timer.stop();
-
-    for (size_t i = 0; i < n_fft; i++) {
-        // collect stuff from buffers
-
-        fft_buffer_timer.start();
-
-        fftwf_complex *cp = fftwbuf;
-        for (int j = 0; j < rec_p.size(); j++) {
-            memcpy(cp, rec_p[j] + i * rec_size[j], sizeof(fftwf_complex) * rec_size[j]);
-            cp += rec_size[j];
-        }
-
-        fft_buffer_timer.stop();
-
-        // do the fft
-        fft_execute_timer.start();
-
-        fftwf_execute(fftwplan);
-
-        fft_execute_timer.stop();
-
-        fft_buffer_timer.start();
-
-        cp = fftwbuf;
-        for (int j = 0; j < rec_p.size(); j++) {
-            memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(fftwf_complex) * rec_size[j]);
-            cp += rec_size[j];
-        }
-
-        fft_buffer_timer.stop();
+    if constexpr (is_double) {
+        fftw_destroy_plan(fftwplan);
+        fftw_free(fftwbuf);
+    } else {
+        fftwf_destroy_plan(fftwplan);
+        fftwf_free(fftwbuf);
     }
-
-    fftwf_destroy_plan(fftwplan);
-    fftwf_free(fftwbuf);
 }
+
+// template <>
+// inline void hila_fft<Complex<float>>::transform() {
+
+//     extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
+//     extern unsigned hila_fft_my_columns[NDIM];
+
+//     size_t n_fft = hila_fft_my_columns[dir] * elements;
+
+//     int transform_dir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
+
+//     fft_plan_timer.start();
+
+//     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time?
+//     // Timer will tell the proportional timing
+
+//     fftwf_complex *fftwbuf =
+//         (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * lattice.size(dir));
+//     fftwf_plan fftwplan =
+//         fftwf_plan_dft_1d(lattice.size(dir), fftwbuf, fftwbuf, transform_dir, FFTW_ESTIMATE);
+
+//     fft_plan_timer.stop();
+
+//     for (size_t i = 0; i < n_fft; i++) {
+//         // collect stuff from buffers
+
+//         fft_buffer_timer.start();
+
+//         fftwf_complex *cp = fftwbuf;
+//         for (int j = 0; j < rec_p.size(); j++) {
+//             memcpy(cp, rec_p[j] + i * rec_size[j], sizeof(fftwf_complex) * rec_size[j]);
+//             cp += rec_size[j];
+//         }
+
+//         fft_buffer_timer.stop();
+
+//         // do the fft
+//         fft_execute_timer.start();
+
+//         fftwf_execute(fftwplan);
+
+//         fft_execute_timer.stop();
+
+//         fft_buffer_timer.start();
+
+//         cp = fftwbuf;
+//         for (int j = 0; j < rec_p.size(); j++) {
+//             memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(fftwf_complex) * rec_size[j]);
+//             cp += rec_size[j];
+//         }
+
+//         fft_buffer_timer.stop();
+//     }
+
+//     fftwf_destroy_plan(fftwplan);
+//     fftwf_free(fftwbuf);
+// }
 
 ////////////////////////////////////////////////////////////////////
 /// send column data to nodes
@@ -151,13 +176,12 @@ void hila_fft<cmplx_t>::gather_data() {
 
             size_t siz = fn.recv_buf_size * elements * sizeof(cmplx_t);
             if (siz >= (1ULL << 31)) {
-                hila::out << "Too large MPI message in pencils! Size " << siz
-                             << " bytes\n";
+                hila::out << "Too large MPI message in pencils! Size " << siz << " bytes\n";
                 hila::terminate(1);
             }
 
-            MPI_Irecv(rec_p[j], (int)siz, MPI_BYTE, fn.node, WRK_GATHER_TAG,
-                      lattice->mpi_comm_lat, &recreq[i]);
+            MPI_Irecv(rec_p[j], (int)siz, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
+                      &recreq[i]);
 
             i++;
         }
@@ -169,11 +193,9 @@ void hila_fft<cmplx_t>::gather_data() {
         if (fn.node != hila::myrank()) {
 
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice->mynode.size[dir] *
-                    sizeof(cmplx_t);
+            int n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
-            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
-                      &sendreq[i]);
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat, &sendreq[i]);
             i++;
         }
     }
@@ -185,7 +207,6 @@ void hila_fft<cmplx_t>::gather_data() {
     }
 
     pencil_MPI_timer.stop();
-
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -210,8 +231,7 @@ void hila_fft<cmplx_t>::scatter_data() {
             cmplx_t *p = send_buf + fn.column_offset * elements;
             int n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
-            MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG,
-                      lattice->mpi_comm_lat, &recreq[i]);
+            MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat, &recreq[i]);
 
             i++;
         }
@@ -222,8 +242,8 @@ void hila_fft<cmplx_t>::scatter_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            MPI_Isend(rec_p[j], (int)(fn.recv_buf_size * elements * sizeof(cmplx_t)), MPI_BYTE, fn.node,
-                      WRK_SCATTER_TAG, lattice->mpi_comm_lat, &sendreq[i]);
+            MPI_Isend(rec_p[j], (int)(fn.recv_buf_size * elements * sizeof(cmplx_t)), MPI_BYTE,
+                      fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat, &sendreq[i]);
 
             i++;
         }
@@ -237,7 +257,6 @@ void hila_fft<cmplx_t>::scatter_data() {
     }
 
     pencil_MPI_timer.stop();
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
