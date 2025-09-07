@@ -960,6 +960,9 @@ void test_blocking() {
         Field<CoordinateVector> cvf, cvfb;
         cvf[ALL] = X.coordinates();
 
+        GaugeField<SU<2, float>> gf, gfb;
+        gf = -1;
+
         hila::print_dashed_line();
         lattice.block(blocking);
         hila::out0 << "Testing blocked lattice of size " << lattice.size() << '\n';
@@ -972,6 +975,18 @@ void test_blocking() {
         }
 
         report_pass("Field blocking test", sum, 1e-5);
+
+        gfb.block_gauge(gf);
+
+        Complex<float> one(1,0);
+        sum = 0;
+        foralldir(d) {
+            onsites(ALL) {
+                sum += (gfb[d][X] - one).squarenorm();
+            }
+        }
+
+        report_pass("GaugeField blocking test", sum, 1e-5);
 
         test_site_access();
         test_set_elements_and_select();

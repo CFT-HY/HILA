@@ -222,7 +222,8 @@ class GaugeField {
                 ok = ok && (lattice.size(d) % insize[d] == 0);
                 if (!ok)
                     hila::out0 << conferr << "incorrect lattice dimension " << hila::prettyprint(d)
-                               << " is " << f << " should be (or divide)" << lattice.size(d) << '\n';
+                               << " is " << f << " should be (or divide)" << lattice.size(d)
+                               << '\n';
             }
         }
 
@@ -235,6 +236,84 @@ class GaugeField {
         read(inputfile, insize);
         hila::close_file(filename, inputfile);
     }
+
+    /**
+     * @brief Block the gauge field from parent gauge - form "long links" to connect blocked sites
+     */
+
+    void block_gauge(const GaugeField<T> &parent) {
+        foralldir(d) {
+            assert(parent[d].is_initialized(ALL));
+            (*this)[d].check_alloc();
+        }
+        lattice_struct *blocklat = (*this)[e_x].fs->mylattice.ptr();
+        lattice_struct *parentlat = parent[e_x].fs->mylattice.ptr();
+        lattice_struct *currentlat = lattice.ptr();
+
+        assert(blocklat->parent == parentlat && "blocking must happen from parent lattice Field");
+
+        // alloc temp array, size of the blocked lattice
+        size_t bufsize = blocklat->mynode.volume;
+        T *buf = (T *)d_malloc(bufsize * sizeof(T));
+
+        CoordinateVector blockfactor = parentlat->l_size.element_div(blocklat->l_size);
+        CoordinateVector cvmin = blocklat->mynode.min;
+        auto size_factor = blocklat->mynode.size_factor;
+
+        foralldir(d) {
+            assert(blockfactor[d] <= 2 &&
+                   "block_gauge() can be used only with blocking factors 1 or 2");
+        }
+
+        foralldir(d) {
+            // switch to parent
+            lattice.switch_to(parentlat);
+
+            // if no blocking to d, just copy the field
+            if (blockfactor[d] == 1) {
+#pragma hila direct_access(buf)
+                onsites(ALL) {
+                    if (X.coordinates().is_divisible(blockfactor)) {
+                        // get blocked coords logically on this
+                        Vector<NDIM, unsigned> cv =
+                            X.coordinates().element_div(blockfactor) - cvmin;
+                        buf[cv.dot(size_factor)] = parent[d][X];
+                    }
+                }
+            } else {
+                // Now there is blocking by factor of 2, multiply long link
+#pragma hila direct_access(buf)
+                onsites(ALL) {
+                    if (X.coordinates().is_divisible(blockfactor)) {
+                        // get blocked coords logically on this
+                        Vector<NDIM, unsigned> cv =
+                            X.coordinates().element_div(blockfactor) - cvmin;
+                        buf[cv.dot(size_factor)] = parent[d][X] * parent[d][X + d];
+                    }
+                }
+            }
+
+            lattice.switch_to(blocklat);
+
+#pragma hila direct_access(buf)
+            onsites(ALL) {
+                // get blocked coords logically on this node
+                Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
+                (*this)[d][X] = buf[cv.dot(size_factor)];
+            }
+        } // directions
+
+        lattice.switch_to(currentlat);
+
+        d_free(buf);
+    }
+
+
+    void unblock_gauge(GaugeField<T> &target) const {
+        foralldir(d) {
+            (*this)[d].unblock_to(target[d]);
+        }
+    }
 };
 
 
@@ -244,7 +323,7 @@ template <typename T>
 void swap(GaugeField<T> &A, GaugeField<T> &B) {
     foralldir(d) hila::swap(A[d], B[d]);
 }
-} // namespace std
+} // namespace hila
 
 
 ///////////////////////////////////////////////////////
