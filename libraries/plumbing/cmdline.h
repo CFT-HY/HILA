@@ -7,8 +7,8 @@
 
 class cmdlinearguments {
   private:
-    int argc;
-    const char **argv;
+    int myargc;
+    const char **myargv;
 
     // map to hold the flag-sorted command line arguments
     // argmap_val is defined in cmdline.cpp
