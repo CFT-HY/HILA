@@ -214,6 +214,17 @@ endif
 # And close group
 CLANG_LIBS += -Wl,--end-group
 
+# On arch-linux distro clang libraries are all packaged to single libclang-cpp.so
+# Arch-linux does not include static libs in the packages, for static build you 
+# are on your own. An option is to build static version of LLVM yourself, 
+# and libxml2, and ncurses (ln -s libncursesw.a libtinfo.a), and zstd for static libraries.
+# then build:
+#  $  LIBRARY_PATH="/.../static-build-ncurses/lib/:/.../static-build-libxml2/.libs/:/../static-build-zstd/lib/" make -B -j16 static LLVM_BIN_PATH="your-static-build/llvm/bin"
+ifeq ($(DISTRO), arch)
+ifeq ($(STATIC),)
+	CLANG_LIBS = -lclang-cpp
+endif
+endif
 
 # Sources for this project
 
