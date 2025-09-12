@@ -56,10 +56,10 @@ cmdlinearguments::cmdlinearguments() {}
 /// @param argv   array of pointers to command-line arguments
 ////////////////////////////////////////////////////////////////////////////////
 void cmdlinearguments::initialise_args(int argc0, char **argv0) {
-    argc = argc0;
-    argv = (const char **)malloc(argc * sizeof(const char *));
-    for (int i = 0; i < argc; i++)
-        argv[i] = argv0[i];
+    myargc = argc0;
+    myargv = (const char **)malloc(myargc * sizeof(const char *));
+    for (int i = 0; i < myargc; i++)
+        myargv[i] = argv0[i];
 
     // Proceed to parse argv
     fill_argmap();
@@ -124,16 +124,16 @@ void cmdlinearguments::add_flag(const std::string &flag, const std::string &help
 strvec cmdlinearguments::read_arg_vector(const char *flag) {
     strvec uargs;
 
-    std::vector<int> u_ind(argc);
-    for (int i = 0; i < argc; i++)
+    std::vector<int> u_ind(myargc);
+    for (int i = 0; i < myargc; i++)
         u_ind[i] = -1;
     int *p_ind = u_ind.data();
 
     // Anything of the format "-[a letter][whatever]" is parsed as a flag
     const std::regex forbidden_user_input("^-[a-zA-Z].*");
 
-    for (int i = 0; i < argc; i++) {
-        const char *p = argv[i];
+    for (int i = 0; i < myargc; i++) {
+        const char *p = myargv[i];
         // check if its the flag
         int n = 0;
         bool match = false;
@@ -145,8 +145,8 @@ strvec cmdlinearguments::read_arg_vector(const char *flag) {
             // options
             *(p_ind++) = 1;
             i++;
-            if (i < argc)
-                p = argv[i];
+            if (i < myargc)
+                p = myargv[i];
             else {
                 break;
             }
@@ -158,8 +158,8 @@ strvec cmdlinearguments::read_arg_vector(const char *flag) {
                 uargs.push_back(std::string(p));
                 i++;
                 n++;
-                if (i < argc)
-                    p = argv[i];
+                if (i < myargc)
+                    p = myargv[i];
                 else
                     break;
             }
@@ -189,10 +189,10 @@ strvec cmdlinearguments::read_arg_vector(const char *flag) {
     }
     // Effectively remove user arguments from argv
     int j = 0;
-    for (int i = 0; i < argc; i++)
+    for (int i = 0; i < myargc; i++)
         if (u_ind[i] < 0)
-            argv[j++] = argv[i];
-    argc = j;
+            myargv[j++] = myargv[i];
+    myargc = j;
 
     return uargs;
 }
@@ -207,10 +207,10 @@ void cmdlinearguments::fill_argmap() {
         std::vector<std::string> arg_vec = read_arg_vector(p.first.c_str());
         argmap[std::string(p.first)].val_strings = arg_vec;
     }
-    if (argc > 1) {
+    if (myargc > 1) {
         hila::out0 << "There remain unprocessed command-line arguments:\n";
-        for (int i = 1; i < argc; i++)
-            hila::out0 << "'" << argv[i] << "', ";
+        for (int i = 1; i < myargc; i++)
+            hila::out0 << "'" << myargv[i] << "', ";
         hila::out0 << "\n";
         hila::out0 << "Terminating.\n";
         quit_with_help();
