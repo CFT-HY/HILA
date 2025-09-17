@@ -1582,6 +1582,14 @@ class Field {
      */
     void block_from(Field<T> &orig);
 
+
+    /**
+     * @brief Block the Field to the currently active lattice
+     * @details This Field has to be defined on the current active lattice's parent lattice. Useful
+     * when blocking in a loop.
+     */
+    void block_to_current_lattice();
+
     /**
      * @brief Copy content to the argument Field on blocked (sparse) sites.
      * a.unblock_to(b) is the inverse of a.block_from(b)

@@ -88,6 +88,10 @@ class GaugeField {
         return *this;
     }
 
+    void clear() {
+        foralldir(d) fdir[d].clear();
+    }
+
     /**
      * @brief Reunitarize Gauge Field consisting of \f$ SU(N)\f$ matrices
      * @details Only defined for \f$ SU(N) \f$ matrices and Fields
@@ -308,6 +312,88 @@ class GaugeField {
         d_free(buf);
     }
 
+    /**
+     * @brief Block the gauge field to the currently active lattice - form "long links" to connect
+     * blocked sites
+     * @details This Gaugefield has to be defined on the current active lattice's parent lattice and
+     * the blocking factor has to be 1 or 2. Useful when blocking in a loop.
+     */
+    void block_gauge_to_current_lattice() {
+        foralldir(d) {
+            (*this)[d].check_alloc();
+        }
+        lattice_struct *thislat = (*this)[e_x].fs->mylattice.ptr();
+        lattice_struct *currentlat = lattice.ptr();
+        if (thislat == currentlat)
+            return; // nothing to do
+
+        // TODO: is this a necesary assumption?
+        assert(currentlat->parent == thislat &&
+               "blocking must happen to the next lattice blocked from thislat");
+
+        // TODO: we can save this one alloc and one onsites(ALL) loop by constructing the
+        // blocked field straight to the new field. This requires some hilapp magic to get the
+        // indices right on each different platform. WIP.
+
+        // alloc temp array, size of the blocked lattice
+        size_t bufsize = currentlat->mynode.volume;
+        T *buf = (T *)d_malloc(bufsize * sizeof(T));
+
+        CoordinateVector blockfactor = thislat->l_size.element_div(currentlat->l_size);
+        CoordinateVector cvmin = currentlat->mynode.min;
+        auto size_factor = currentlat->mynode.size_factor;
+
+        foralldir(d) {
+            assert(blockfactor[d] <= 2 &&
+                   "block_gauge() can be used only with blocking factors 1 or 2");
+        }
+
+        GaugeField<T> this_blocked;
+
+        foralldir(d) {
+            // switch to this fields lattice
+            lattice.switch_to(thislat);
+
+            // if no blocking to d, just copy the field
+            if (blockfactor[d] == 1) {
+#pragma hila direct_access(buf)
+                onsites(ALL) {
+                    if (X.coordinates().is_divisible(blockfactor)) {
+                        // get blocked coords logically on this
+                        Vector<NDIM, unsigned> cv =
+                            X.coordinates().element_div(blockfactor) - cvmin;
+                        buf[cv.dot(size_factor)] = (*this)[d][X];
+                    }
+                }
+            } else {
+                // Now there is blocking by factor of 2, multiply long link
+#pragma hila direct_access(buf)
+                onsites(ALL) {
+                    if (X.coordinates().is_divisible(blockfactor)) {
+                        // get blocked coords logically on this
+                        Vector<NDIM, unsigned> cv =
+                            X.coordinates().element_div(blockfactor) - cvmin;
+                        buf[cv.dot(size_factor)] = (*this)[d][X] * (*this)[d][X + d];
+                    }
+                }
+            }
+
+            lattice.switch_to(currentlat);
+            this_blocked[d].check_alloc();
+
+#pragma hila direct_access(buf)
+            onsites(ALL) {
+                // get blocked coords logically on this node
+                Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
+                this_blocked[d][X] = buf[cv.dot(size_factor)];
+            }
+        } // directions
+
+        this->clear();
+        foralldir(d)(*this)[d] = std::move(this_blocked[d]);
+
+        d_free(buf);
+    }
 
     void unblock_gauge(GaugeField<T> &target) const {
         foralldir(d) {
