@@ -348,8 +348,6 @@ class GaugeField {
                    "block_gauge() can be used only with blocking factors 1 or 2");
         }
 
-        GaugeField<T> this_blocked;
-
         foralldir(d) {
             // switch to this fields lattice
             lattice.switch_to(thislat);
@@ -379,21 +377,20 @@ class GaugeField {
             }
 
             lattice.switch_to(currentlat);
-            this_blocked[d].check_alloc();
+            (*this)[d].clear();
 
 #pragma hila direct_access(buf)
             onsites(ALL) {
                 // get blocked coords logically on this node
                 Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
-                this_blocked[d][X] = buf[cv.dot(size_factor)];
+                (*this)[d][X] = buf[cv.dot(size_factor)];
             }
         } // directions
 
-        this->clear();
-        foralldir(d)(*this)[d] = std::move(this_blocked[d]);
-
         d_free(buf);
     }
+
+    /////////////////////////////////////////////////////////////////////////////////////////
 
     void unblock_gauge(GaugeField<T> &target) const {
         foralldir(d) {

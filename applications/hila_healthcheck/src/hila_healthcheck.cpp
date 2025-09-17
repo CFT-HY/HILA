@@ -960,7 +960,7 @@ void test_blocking() {
         Field<CoordinateVector> cvf, cvfb;
         cvf[ALL] = X.coordinates();
 
-        GaugeField<SU<2, float>> gf, gfb;
+        GaugeField<SU<2, float>> gf;
         gf = -1;
 
         hila::print_dashed_line();
@@ -976,13 +976,13 @@ void test_blocking() {
 
         report_pass("Field blocking test", sum, 1e-5);
 
-        gfb.block_gauge(gf);
+        gf.block_gauge_to_current_lattice();
 
         Complex<float> one(1,0);
         sum = 0;
         foralldir(d) {
             onsites(ALL) {
-                sum += (gfb[d][X] - one).squarenorm();
+                sum += (gf[d][X] - one).squarenorm();
             }
         }
 
