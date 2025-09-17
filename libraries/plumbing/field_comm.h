@@ -916,6 +916,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 #endif
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
 
 template <typename T>
 void Field<T>::block_from(Field<T> &orig) {
@@ -967,59 +969,8 @@ void Field<T>::block_from(Field<T> &orig) {
     d_free(buf);
 }
 
-template <typename T>
-void Field<T>::block_to_current_lattice() {
+/////////////////////////////////////////////////////////////////////////////////////////
 
-    this->check_alloc();
-    lattice_struct *thislat = this->fs->mylattice.ptr();
-    lattice_struct *currentlat = lattice.ptr();
-    if (thislat == currentlat)
-        return; // nothing to do
-
-    // TODO: is this a necesary assumption?
-    assert(currentlat->parent == thislat &&
-           "blocking must happen to the next lattice blocked from thislat");
-
-    // If no sites on this node there's nothing to do
-    if (currentlat->mynode.volume == 0)
-        return;
-
-    // alloc temp array, size of the blocked lattice
-    size_t bufsize = currentlat->mynode.volume;
-    T *buf = (T *)d_malloc(bufsize * sizeof(T));
-
-    // switch to this fields lattice
-    lattice.switch_to(thislat);
-
-    CoordinateVector blockfactor = thislat->l_size.element_div(currentlat->l_size);
-    CoordinateVector cvmin = currentlat->mynode.min;
-    auto size_factor = currentlat->mynode.size_factor;
-
-#pragma hila direct_access(buf)
-    onsites(ALL) {
-        if (X.coordinates().is_divisible(blockfactor)) {
-            // get blocked coords logically on this
-            Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
-            buf[cv.dot(size_factor)] = (*this)[X];
-        }
-    }
-
-    lattice.switch_to(currentlat);
-
-    Field<T> this_blocked;
-
-#pragma hila direct_access(buf)
-    onsites(ALL) {
-        // get blocked coords logically on this node
-        Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
-        this_blocked[X] = buf[cv.dot(size_factor)];
-    }
-
-    this->clear();
-    (*this) = std::move(this_blocked);
-
-    d_free(buf);
-}
 
 template <typename T>
 void Field<T>::unblock_to(Field<T> &target) const {
@@ -1068,5 +1019,58 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     d_free(buf);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+void Field<T>::block_to_current_lattice() {
+
+    this->check_alloc();
+    lattice_struct *thislat = this->fs->mylattice.ptr();
+    lattice_struct *currentlat = lattice.ptr();
+    if (thislat == currentlat)
+        return; // nothing to do
+
+    // TODO: is this a necesary assumption?
+    assert(currentlat->parent == thislat &&
+           "blocking must happen to the next lattice blocked from thislat");
+
+    // If no sites on this node there's nothing to do
+    if (currentlat->mynode.volume == 0)
+        return;
+
+    // alloc temp array, size of the blocked lattice
+    size_t bufsize = currentlat->mynode.volume;
+    T *buf = (T *)d_malloc(bufsize * sizeof(T));
+
+    // switch to this fields lattice
+    lattice.switch_to(thislat);
+
+    CoordinateVector blockfactor = thislat->l_size.element_div(currentlat->l_size);
+    CoordinateVector cvmin = currentlat->mynode.min;
+    auto size_factor = currentlat->mynode.size_factor;
+
+#pragma hila direct_access(buf)
+    onsites(ALL) {
+        if (X.coordinates().is_divisible(blockfactor)) {
+            // get blocked coords logically on this
+            Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
+            buf[cv.dot(size_factor)] = (*this)[X];
+        }
+    }
+
+    lattice.switch_to(currentlat);
+    (*this).clear();
+    
+#pragma hila direct_access(buf)
+    onsites(ALL) {
+        // get blocked coords logically on this node
+        Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
+        (*this)[X] = buf[cv.dot(size_factor)];
+    }
+
+    d_free(buf);
+}
+
 
 #endif
