@@ -339,9 +339,11 @@ double cmdlinearguments::get_double(const char *flag, int i) {
         }
 
         double val;
+        char* endptr = nullptr;
+
         // We're not going to manually check the format for this
-        auto [p, ec] = std::from_chars(opt.data(), opt.data() + opt.size(), val);
-        if (p == opt.data()) {
+        val = std::strtod(opt.data(), &endptr);
+        if (endptr == opt.data()) {
             hila::out0 << "Expected a number (double) after command line parameter '" << flag
                        << "'\n";
             quit_with_help();
