@@ -88,6 +88,23 @@ class GaugeField {
         return *this;
     }
 
+    // This is now explicitly needed since it is implicitly deleted when move constructor is defined
+    GaugeField &operator=(const GaugeField &rhs) {
+        foralldir(d) fdir[d] = rhs[d];
+        return *this;
+    }
+
+    GaugeField(GaugeField &&rhs) {
+        foralldir(d)(*this)[d] = std::move(rhs[d]);
+    }
+
+    GaugeField &operator=(GaugeField &&rhs) {
+        if (this != &rhs) {
+            foralldir(d)(*this)[d] = std::move(rhs[d]);
+        }
+        return *this;
+    }
+
     void clear() {
         foralldir(d) fdir[d].clear();
     }
