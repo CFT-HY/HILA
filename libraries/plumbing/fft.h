@@ -509,7 +509,8 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 }
 
 //////////////////////////////////////////////////////////////////////////////////
-/// @internal Helper function for complex to real FFT, used by FFT_complex_to_real()
+/// Helper function for complex to real FFTs
+/// See documentation for Field<T>::FFT_complex_to_real()
 //////////////////////////////////////////////////////////////////////////////////
 namespace hila {
 inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
@@ -530,21 +531,27 @@ inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
 
 
 //////////////////////////////////////////////////////////////////////////////////
-/// FFT_complex_to_real;
+/// FFT_complex_to_real:
 /// Field must be a complex-valued field, result is a real field of the same number type
 /// Not optimized, should not be used on a hot path
 ///
 /// Because the complex field must have the property f(-x) = f(L-x) = f(x)^*, only
-/// half of the values in input field are significant, the routine does the appropriate
-/// symmetrization.
+/// half of the values in input field are significant. 
+/// NOTE: the input need not obey the symmetry, the FFT routine ignores half of the input 
+/// Field values, using (mostly!) only the range of coordinates 0 .. lattice.size(e_x)/2 
+/// 
+/// In more than 1 dimensions the implementation of the symmetry requirements are complicated.
+/// More precisely, the function hila::FFT_complex_to_real_site(CoordinateVector cv) 
+/// can be used to identify lattice sites (CoordinateVector cv) where Field value is 
+/// significant for FFT:
 ///
-/// Routine hila::FFT_complex_to_real_site(CoordinateVector cv) gives the significant values at
-/// location cv:
+/// if hila::FFT_complex_to_real_site(cv) returns
 ///   = +1  significant complex value,
-///   =  0  significant real part, imag ignored
+///   =  0  significant real part, imaginary ignored
 ///   = -1  value ignored here
-/// Example: in 2d 8x8 lattice the sites are:  (* = (0,0), value 0)
 ///
+/// Example: in 2-dim. 8x8 lattice the sites are classified as (here * = origin (0,0), class 0)
+/// ~~~~
 ///   - + + + - - - -                          - - - 0 + + + 0
 ///   - + + + - - - -                          - - - + + + + +
 ///   - + + + - - - -    after centering       - - - + + + + +
@@ -553,7 +560,7 @@ inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
 ///   + + + + + - - -                          - - - - + + + -
 ///   + + + + + - - -                          - - - - + + + -
 ///   * + + + 0 - - -                          - - - - + + + -
-///
+/// ~~~~
 //////////////////////////////////////////////////////////////////////////////////
 
 

@@ -116,7 +116,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
         lfe.nameExpr = OC->getArg(0)->IgnoreImplicit();
         lfe.parityExpr = OC->getArg(1)->IgnoreImplicit();
     } else if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(e)) {
-        // In template definition TODO: should be removed?
+        // In template definition TODO: should be removed?  This never happens
 
         lfe.fullExpr = ASE;
         lfe.nameExpr = ASE->getLHS();
@@ -315,8 +315,11 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     FieldRefChecker frc(*this);
     frc.TraverseStmt(lfe.nameExpr);
     if (frc.isLoopLocal()) {
+
+        llvm::errs() << "Loop local var type is " << frc.getLocalVarInfo()->type << '\n';
+
         reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
-                   "Field reference cannot depend on loop-local variable '%0'",
+                   "Field reference cannot depend on variable '%0' defined inside onsites-loop",
                    frc.getLocalVarInfo()->name.c_str());
     }
 

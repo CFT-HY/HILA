@@ -62,7 +62,7 @@ extern int64_t n_gather_done, n_gather_avoided;
 struct backend_lattice_struct;
 
 /// The lattice struct defines the lattice geometry ans sets up MPI communication
-/// patterns
+/// patterns.
 class lattice_struct {
   public:
     CoordinateVector l_size;
@@ -83,15 +83,25 @@ class lattice_struct {
         size_t field_alloc_size;    // how many sites/node in allocations
         CoordinateVector min, size; // node local coordinate ranges
         int rank;                   // rank of this node
-        bool first_site_even;       // is location min even or odd?
+        // bool first_site_even;       // is location min even or odd?
+
+        Vector<NDIM, unsigned> size_factor; // components: 1, size[0], size[0]*size[1], ...
 
 #ifdef EVEN_SITES_FIRST
         std::vector<CoordinateVector> coordinates;
 #endif
 
-        Vector<NDIM, unsigned> size_factor; // components: 1, size[0], size[0]*size[1], ...
+#ifdef BOUNDARY_LAYER_LAYOUT
+        std::vector<unsigned> map_site_index;
+        size_t boundary_start_even = 0, boundary_start_odd = 0;
+        void construct_index_map();
+#endif
 
         void setup(node_info &ni, lattice_struct &lattice);
+
+        void advance_local_coordinate(CoordinateVector & cv) const;
+
+        unsigned get_logical_index(const CoordinateVector & cv) const;
 
 #ifdef SUBNODE_LAYOUT
         /// If we have vectorized-style layout, we introduce "subnodes"
