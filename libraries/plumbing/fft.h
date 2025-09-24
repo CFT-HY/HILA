@@ -366,15 +366,24 @@ void FFT_delete_plans();
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Complex-to-complex FFT transform of a field input, result in result.
 /// input and result can be same, "in-place".
-/// Both input and output are of type Field<T>, where T must contain complex type,
-/// Complex<float> or Complex<double>.
+///
+/// Both input and output are of type Field<T>, where T must contain complex type, 
+/// either Complex<float> or Complex<double>. 
+/// As an example, if T is Vector<Complex<double>,3> the result has the same type
+/// and the 3 components of the vector will contain FFTs of the input components.
+/// 
 /// directions: if directions[dir] == false (or 0), transform is not done to
-/// direction dir. fftdir: direction of the transform itself:
+/// coordinate direction dir. 
+/// 
+/// fftdir: direction of the transform itself:
 ///     fft_direction::forward (default)  x -> k
 ///     fft_direction::inverse  k-> x
+///
 /// FFT is unnormalized: transform + inverse transform yields source multiplied
 ///     by the product of the size of the lattice to active directions
-///     If all directions are active, result = source * lattice.volume():
+///     If all directions are active, result = source * lattice.volume()
+///
+/// See also Field<T>::FFT()
 /////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
@@ -404,6 +413,7 @@ inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateV
 /// Same as FFT_field(input,result,directions,fftdir)
 /// with all directions active.
 ///
+/// See also Field<T>::FFT() 
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
@@ -420,13 +430,30 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
 /**
  * @brief Field method for performing FFT
  * @details
- * By default calling without arguments will execute FFT in all directions.
+ * Used as 
+ *   res = f.FFT(<args>);
+ * where f and res are of type Field<T>, where T must contain complex type, either 
+ * Complex<float> or Complex<double>. 
+ * 
+ * As an example, if T is Vector<Complex<double>,3> the result has the same type
+ * and the 3 components of the vector will contain FFTs of the input components.
+ * 
+ * parameter dirs: if dirs[dir] == false (or 0), transform is not done to coordinate 
+ * direction dir. By default calling without arguments will execute FFT in all directions.
+ * 
+ * parameter fftdir: direction of the transform itself:
+ *      fft_direction::forward (default)  x -> k 
+ *      fft_direction::inverse  k-> x
+ * 
+ * NOTE: the transform is unnormalized, i.e. forward + inverse transform yields
+ * the original Field multiplied by the product of the size of the lattice to active directions.
+ *
  * @code{.cpp}
  * .
  * . // Field f is defined
  * .
  * auto res = f.FFT() //Forward transform
- * auto res_2 = res.FFT(fft_direction::back) // res_2 is same as f
+ * auto res_2 = res.FFT(fft_direction::back) // res_2 == f * lattice.volume()
  * @endcode
  *
  * One can also specify the direction of the FFT with a coordinate vector:
@@ -435,7 +462,7 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
  * . // Field f is defined
  * .
  * auto res = f.FFT(e_x) //Forward transform in x-direction
- * auto res_2 = res.FFT(e_X,fft_direction::back) // res_2 is same as f
+ * auto res_2 = res.FFT(e_X,fft_direction::back) // res_2 == f * lattice.size(e_x)
  * @endcode
  *
  * With this in mind `f.FFT(e_x+e_y+e_z) = f.FFT()`
@@ -482,6 +509,27 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 }
 
 //////////////////////////////////////////////////////////////////////////////////
+/// @internal Helper function for complex to real FFT, used by FFT_complex_to_real()
+//////////////////////////////////////////////////////////////////////////////////
+namespace hila {
+inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
+
+    // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
+    foralldir(d) {
+        if (cv[d] > 0 && cv[d] < lattice.size(d) / 2)
+            return 1;
+        if (cv[d] > lattice.size(d) / 2)
+            return -1;
+    }
+    // we get here only if all coords are 0 or size(d)/2
+    return 0;
+}
+
+} // namespace hila
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
 /// FFT_complex_to_real;
 /// Field must be a complex-valued field, result is a real field of the same number type
 /// Not optimized, should not be used on a hot path
@@ -508,21 +556,6 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 ///
 //////////////////////////////////////////////////////////////////////////////////
 
-namespace hila {
-inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
-
-    // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
-    foralldir(d) {
-        if (cv[d] > 0 && cv[d] < lattice.size(d) / 2)
-            return 1;
-        if (cv[d] > lattice.size(d) / 2)
-            return -1;
-    }
-    // we get here only if all coords are 0 or size(d)/2
-    return 0;
-}
-
-} // namespace hila
 
 template <typename T>
 Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
