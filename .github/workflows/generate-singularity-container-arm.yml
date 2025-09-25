@@ -1,4 +1,4 @@
-name: Deploy singularity container to github release page under nightly release
+name: Deploy apptainer container to github release page under nightly release
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       build:
-        description: 'Build the singularity container'
+        description: 'Build the apptainer container'
 
 jobs:
   build_release:
@@ -15,23 +15,21 @@ jobs:
     name: build_nightly_release
     runs-on: ubuntu-22.04-arm
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-
-      # Install singularity from cached deb or download if missing
-      - name: Install Singularity
+      - name: Install Apptainer
         run: |
-          sudo apt-get install singularity-container
-          singularity --version
+          sudo apt-get update
+          sudo apt-get install -y apptainer
+          apptainer --version
 
-      # Build the container separately
-      - name: Build singularity container
+      - name: Build Apptainer container
         run: |
           cd singularity
-          sudo singularity build hilapp-arm.sif hilapp_local.def
+          sudo apptainer build hilapp-arm.sif hilapp_local.def
           cd ..
           ls -lh ./singularity/hilapp-arm.sif
 
@@ -48,3 +46,4 @@ jobs:
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ./singularity/hilapp-arm.sif
+
