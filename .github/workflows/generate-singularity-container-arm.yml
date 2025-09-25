@@ -20,20 +20,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Cache the deb so it's not downloaded every run
-      - name: Cache singularity deb
-        uses: actions/cache@v3
-        with:
-          path: singularity-ce_3.11.3-jammy_arm64.deb
-          key: singularity-deb-3.11.3-arm64
 
       # Install singularity from cached deb or download if missing
       - name: Install Singularity
         run: |
-          if [ ! -f singularity-ce_3.11.3-jammy_arm64.deb ]; then
-            wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_arm64.deb
-          fi
-          sudo dpkg -i singularity-ce_3.11.3-jammy_arm64.deb
+          sudo apt-get install singularity-container
           singularity --version
 
       # Build the container separately
