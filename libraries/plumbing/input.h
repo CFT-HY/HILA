@@ -5,7 +5,7 @@
 
 #include <string>
 #include "defs.h"
-#include "lattice.h"
+// #include "lattice.h"
 #include "plumbing/com_mpi.h"
 
 namespace hila {
