@@ -1,0 +1,59 @@
+name: Deploy singularity container to github release page under nightly release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build the singularity container'
+
+jobs:
+  build_release:
+    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
+    name: build_nightly_release
+    runs-on: ubuntu-22.04-arm64
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Cache the deb so it's not downloaded every run
+      - name: Cache singularity deb
+        uses: actions/cache@v3
+        with:
+          path: singularity-ce_3.11.3-jammy_arm64.deb
+          key: singularity-deb-3.11.3-arm64
+
+      # Install singularity from cached deb or download if missing
+      - name: Install Singularity
+        run: |
+          if [ ! -f singularity-ce_3.11.3-jammy_arm64.deb ]; then
+            wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_arm64.deb
+          fi
+          sudo dpkg -i singularity-ce_3.11.3-jammy_arm64.deb
+          singularity --version
+
+      # Build the container separately
+      - name: Build singularity container
+        run: |
+          cd singularity
+          sudo singularity build hilapp-arm.sif hilapp_local.def
+          cd ..
+          ls -lh ./singularity/hilapp-arm.sif
+
+      - name: Upload SIF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hilapp-arm-sif
+          path: ./singularity/hilapp-arm.sif
+
+      - name: Update nightly release
+        uses: pyTooling/Actions/releaser@main
+        with:
+          tag: Nightly
+          rm: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./singularity/hilapp-arm.sif
