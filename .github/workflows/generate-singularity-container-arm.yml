@@ -24,6 +24,7 @@ jobs:
         run: |
           sudo apt-get update
           wget http://ftp.de.debian.org/debian/pool/main/a/apptainer/apptainer_1.4.2-1_arm64.deb
+          sudo apt-get install -y containernetworking-plugins
           sudo dpkg -i apptainer_1.4.2-1_arm64.deb
           apptainer --version
 
