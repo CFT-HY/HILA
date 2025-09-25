@@ -48,4 +48,8 @@ jobs:
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ./singularity/hilapp-arm.sif
+          snapshots: true
+        # Force the Docker container to run in amd64 emulation
+        env:
+          DOCKER_DEFAULT_PLATFORM: linux/amd64
 
