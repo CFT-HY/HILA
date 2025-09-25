@@ -173,7 +173,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 
     // now i contains the `running index' for site
 #if defined(EVEN_SITES_FIRST)
-    if (loc.parity() % 2 == 0)
+    if (loc.parity() == EVEN)
         return (i / 2); /* even site index */
     else
         return (i / 2 + mynode.evensites); /* odd site */

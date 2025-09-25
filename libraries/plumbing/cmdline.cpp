@@ -5,7 +5,9 @@
 #include <vector>
 #include <regex>
 #include <charconv>
-#include "hila.h"
+#include <cstring>
+#include "defs.h"
+#include "cmdline.h"
 
 using strvec = std::vector<std::string>;
 

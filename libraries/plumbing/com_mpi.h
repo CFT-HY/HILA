@@ -431,9 +431,9 @@ void hila_reduce_sum_setup(T *value) {
     if constexpr (std::is_same<b_t, ExtendedPrecision>::value) {
         reduce_node_sum_extended((ExtendedPrecision *)value, sizeof(T) / sizeof(ExtendedPrecision),
                                  hila::get_allreduce());
-    } else if (std::is_same<b_t, double>::value) {
+    } else if constexpr (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
-    } else if (std::is_same<b_t, float>::value) {
+    } else if constexpr (std::is_same<b_t, float>::value) {
         hila_reduce_float_setup((float *)value, sizeof(T) / sizeof(float));
     } else {
         hila::reduce_node_sum(value, 1, hila::get_allreduce());

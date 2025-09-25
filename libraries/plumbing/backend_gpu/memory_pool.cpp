@@ -2,8 +2,6 @@
 /// gpu_malloc.cpp - simple list-based alloc program for cuda/hip
 
 #include "plumbing/defs.h"
-#include "plumbing/lattice.h"
-#include "plumbing/field.h"
 #include "plumbing/backend_gpu/defs.h"
 #include <list>
 #include <iomanip>
