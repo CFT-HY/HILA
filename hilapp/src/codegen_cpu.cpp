@@ -21,23 +21,23 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // Set loop lattice
     // if (field_info_list.size() > 0) {
     //     std::string fieldname = field_info_list.front().new_name;
-    //     code << "const lattice_struct * RESTRICT loop_lattice = " << fieldname
+    //     code << "const lattice_struct * RESTRICT _hila_loop_lattice = " << fieldname
     //          << ".fs->lattice;\n";
     // } else {
     //     // if there is no field in loop at all
-    //     code << "const lattice_struct * RESTRICT loop_lattice = lattice;\n";
+    //     code << "const lattice_struct * RESTRICT _hila_loop_lattice = lattice;\n";
     // }
 
-    code << "const lattice_struct & loop_lattice = lattice.ref();\n";
+    code << "const lattice_struct & _hila_loop_lattice = lattice.ref();\n";
 
     // Set the start and end points
-    code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "const int loop_end   = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
+    code << "const int _hila_loop_begin = _hila_loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "const int _hila_loop_end   = _hila_loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     // are there
 
     if (generate_wait_loops) {
-        code << "for (int _wait_i_ = 0; _wait_i_ < 2; ++_wait_i_) {\n";
+        code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
     }
 
     // and the openacc loop header
@@ -75,12 +75,12 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
 
     // Start the loop
-    code << "for(int " << looping_var << " = loop_begin; " << looping_var << " < loop_end; ++"
+    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var << " < _hila_loop_end; ++"
          << looping_var << ") {\n";
 
     if (generate_wait_loops) {
-        code << "if (((loop_lattice.wait_arr_[" << looping_var
-             << "] & _dir_mask_) != 0) == _wait_i_) {\n";
+        code << "if (((_hila_loop_lattice.wait_arr_[" << looping_var
+             << "] & _dir_mask_) != 0) == _hila_wait_i) {\n";
     }
 
     // replace reduction variables in the loop
@@ -94,13 +94,13 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     for (selection_info &si : selection_info_list) {
         if (si.assign_expr == nullptr) {
             loopBuf.replace(si.MCE, si.new_name +
-                                        ".select_site(SiteIndex(loop_lattice.coordinates(" +
+                                        ".select_site(SiteIndex(_hila_loop_lattice.coordinates(" +
                                         looping_var + ")))");
         } else {
             SourceRange r(si.MCE->getSourceRange().getBegin(),
                           si.assign_expr->getSourceRange().getBegin().getLocWithOffset(-1));
             loopBuf.replace(r, si.new_name +
-                                   ".select_site_value(SiteIndex(loop_lattice.coordinates(" +
+                                   ".select_site_value(SiteIndex(_hila_loop_lattice.coordinates(" +
                                    looping_var + ")), ");
         }
     }
