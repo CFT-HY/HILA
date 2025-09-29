@@ -498,32 +498,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     /// @return wave number vector k
     inline Vector<NDIM, double> convert_to_k() const;
 
-    /// Return site index of the coordinate vector -- assumes a valid lattice vector
-
-    // inline SiteIndex index() const;
-
-    /**
-     * @brief Element-by-element multiplication of CoordinateVectors
-     * @code{.cpp}
-     *  res = a.element_mul(b);
-     * @endcode
-     */
-
-    CoordinateVector_t element_mul(const CoordinateVector_t &m) const {
-        CoordinateVector_t<T> res;
-        foralldir(d) res[d] = (*this)[d] * m[d];
-        return res;
-    }
-
-    /**
-     * @brief Element-by-element division
-     * See also .mod(), which does element-by-element positive mod
-     */
-    CoordinateVector_t element_div(const CoordinateVector_t &m) const {
-        CoordinateVector_t<T> res;
-        foralldir(d) res[d] = (*this)[d] / m[d];
-        return res;
-    }
 
     /**
      * @brief Returns true if vector is integer multiple of arg vector
