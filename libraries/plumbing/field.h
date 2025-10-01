@@ -1221,6 +1221,8 @@ class Field {
 
     // Communication routines. These are all internal.
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
+    std::tuple<dir_mask_t,hila::MpiSendParams> start_gather_test(Direction d, Parity p) const;
+    void send_buffers(hila::MpiSendParams) const;
     void wait_gather(Direction d, Parity p) const;
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;

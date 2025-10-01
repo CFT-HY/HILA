@@ -383,6 +383,144 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
+template <typename T>
+std::tuple<dir_mask_t,hila::MpiSendParams> Field<T>::start_gather_test(Direction d, Parity p) const {
+
+    // get the mpi message tag right away, to ensure that we are always synchronized
+    // with the mpi calls -- some nodes might not need comms, but the tags must be in
+    // sync
+
+    int tag = get_next_msg_tag();
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &from_node = ci.from_node;
+    const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
+    // check if this is done - either gathered or no comm to be done in the 1st place
+    hila::MpiSendParams send_params;
+    if (is_gathered(d, p)) {
+        hila::n_gather_avoided++;
+        return {0,send_params}; // nothing to wait for
+    }
+
+    // No comms to do, nothing to wait for -- we'll use the is_gathered
+    // status to keep track of vector boundary shuffle anyway
+
+    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
+        fs->set_local_boundary_elements(d, p);
+        mark_gathered(d, p);
+        return {0,send_params};
+    }
+
+    // if this parity or ALL-type gather is going on nothing to be done
+    if (!gather_not_done(d, p) || !gather_not_done(d, ALL)) {
+        hila::n_gather_avoided++;
+        return {get_dir_mask(d),send_params}; // nothing to do, but still need to wait
+    }
+
+    Parity par = p;
+    // if p is ALL but ODD or EVEN is going on/done, turn off parity which is not needed
+    // corresponding wait must do the same thing
+    if (p == ALL) {
+        if (!gather_not_done(d, EVEN) && !gather_not_done(d, ODD)) {
+            // even and odd are going on or ready, nothing to be done
+            hila::n_gather_avoided++;
+            return {get_dir_mask(d),send_params};
+        }
+        if (!gather_not_done(d, EVEN))
+            par = ODD;
+        else if (!gather_not_done(d, ODD))
+            par = EVEN;
+        // if neither is the case par = ALL
+    }
+
+    mark_gather_started(d, par);
+
+    // Communication hasn't been started yet, do it now
+
+    int par_i = static_cast<int>(par) - 1; // index to dim-3 arrays
+
+    constexpr size_t size = sizeof(T);
+
+    T *receive_buffer;
+    T *send_buffer;
+
+    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+
+        // HANDLE RECEIVES: get node which will send here
+
+        // buffer can be separate or in Field buffer
+        receive_buffer = fs->get_receive_buffer(d, par, from_node);
+
+        size_t n = from_node.n_sites(par) * size;
+
+        if (n >= (1ULL << 31)) {
+            hila::out << "Too large MPI message!  Size " << n << '\n';
+            hila::terminate(1);
+        }
+
+        post_receive_timer.start();
+
+        // c++ version does not return errors
+        MPI_Irecv(receive_buffer, (int)n, MPI_BYTE, from_node.rank, tag, lattice->mpi_comm_lat,
+                  &fs->receive_request[par_i][d]);
+
+        post_receive_timer.stop();
+    }
+
+    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
+        // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
+
+        unsigned sites = to_node.n_sites(par);
+
+        if (fs->send_buffer[d] == nullptr)
+            fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+
+        send_buffer = fs->send_buffer[d] + to_node.offset(par);
+
+#ifndef MPI_BENCHMARK_TEST
+        fs->gather_comm_elements(d, par, send_buffer, to_node);
+#endif
+
+        size_t n = sites * size;
+
+
+        send_params.do_send   = true;
+        send_params.buffer    = send_buffer;
+        send_params.count     = static_cast<int>(n);
+        send_params.dtype     = MPI_BYTE;
+        send_params.dest_rank = to_node.rank;
+        send_params.tag       = tag;
+        send_params.comm      = lattice->mpi_comm_lat;
+        send_params.request   = &fs->send_request[par_i][d];
+    }
+
+    return {get_dir_mask(d),send_params};
+}
+
+/**
+ * @brief send MPI buffers
+ * 
+ * @tparam T 
+ * @param params 
+ */
+template<typename T>
+void Field<T>::send_buffers(const hila::MpiSendParams params) const {
+    if (params.do_send) {
+        start_send_timer.start();
+        MPI_Isend(params.buffer,
+                params.count,
+                params.dtype,
+                params.dest_rank,
+                params.tag,
+                params.comm,
+                params.request);
+        start_send_timer.stop();
+    }
+}
+
+
+
 /// @internal
 ///  wait_gather(): Wait for communication at parity par from
 ///  Direction d completes the communication in the function.

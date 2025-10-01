@@ -80,11 +80,14 @@ using gpuError = cudaError;
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
 #define gpuStreamCreate(a) GPU_CHECK(cudaStreamCreate(a))
+#define gpuStreamCreateWithFlags(a,b) GPU_CHECK(cudaStreamCreateWithFlags(a,b))
 #define gpuStreamDestroy(a) GPU_CHECK(cudaStreamDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(cudaMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 #define gpuFuncAttributes cudaFuncAttributes
 #define gpuFuncGetAttributes cudaFuncGetAttributes
+#define gpuStream_t cudaStream_t
+#define gpuStreamNonBlocking cudaStreamNonBlocking
 
 #define GPUTYPESTR "CUDA"
 
@@ -135,13 +138,15 @@ using gpuError = hipError_t;
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
 #define gpuStreamCreate(a) GPU_CHECK(hipStreamCreate(a))
+#define gpuStreamCreateWithFlags(a,b) GPU_CHECK(hipStreamCreateWithFlags(a,b))
 #define gpuStreamDestroy(a) GPU_CHECK(hipStreamDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(hipMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
     GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
 #define gpuFuncAttributes hipFuncAttributes
 #define gpuFuncGetAttributes hipFuncGetAttributes
-
+#define gpuStream_t hipStream_t
+#define gpuStreamNonBlocking hipStreamNonBlocking
 
 #define GPUTYPESTR "HIP"
 
@@ -171,6 +176,38 @@ inline void synchronize_threads() {
     gpuDeviceSynchronize();
 }
 } // namespace hila
+
+// Global streams
+
+class gpuStreamPool {
+public:
+    gpuStreamPool(int n) : streams(n), nth_stream{0} {
+        for (int i = 0; i < streams.size(); i++) {
+            gpuStreamCreateWithFlags(&streams[i], gpuStreamNonBlocking);
+        }
+    }
+    
+    ~gpuStreamPool() {
+        for (int i = 0; i < streams.size(); i++) {
+            gpuStreamDestroy(streams[i]);
+        }
+    }
+
+    gpuStream_t next() {
+        gpuStream_t s = streams[nth_stream];
+        nth_stream = (nth_stream + 1) % streams.size();
+        return s;
+    }
+
+private:
+    std::vector<gpuStream_t> streams;
+    int nth_stream;
+};
+
+// At most there are 8 directions to communicate to
+int constexpr max_directions = 8;
+inline gpuStreamPool halo_streams(max_directions);
+inline gpuStream_t bulk_stream;
 
 #else // NOW HILAPP
 

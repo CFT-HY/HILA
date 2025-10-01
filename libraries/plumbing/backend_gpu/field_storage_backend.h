@@ -270,16 +270,16 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     if (antiperiodic) {
 
         if constexpr (hila::has_unary_minus<T>::value) {
-            gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(
+            gather_comm_elements_negated_kernel<<<N_blocks, N_threads, 0, halo_streams.next()>>>(
                 *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
         }
 
     } else {
-        gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+        gather_comm_elements_kernel<<<N_blocks, N_threads, 0, halo_streams.next()>>>(*this, d_buffer, d_site_index, n,
                                                              lattice->mynode.field_alloc_size);
     }
 #else
-    gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+    gather_comm_elements_kernel<<<N_blocks, N_threads, 0, halo_streams.next()>>>(*this, d_buffer, d_site_index, n,
                                                          lattice->mynode.field_alloc_size);
 #endif
 
@@ -317,7 +317,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 
     // Call the kernel to place the elements
     int N_blocks = n / N_threads + 1;
-    place_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+    place_elements_kernel<<<N_blocks, N_threads, 0, halo_streams.next()>>>(*this, d_buffer, d_site_index, n,
                                                    lattice->mynode.field_alloc_size);
 
     gpuFree(d_buffer);
