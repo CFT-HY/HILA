@@ -13,6 +13,7 @@
 #include "plumbing/defs.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/timing.h"
+#include "plumbing/fft_structs.h"
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
@@ -253,6 +254,10 @@ class lattice_struct {
     backend_lattice_struct *backend_lattice;
 #endif
 
+    // pointer to fft data associated with lattice
+    hila::fftdata_struct *fftdata = nullptr;
+
+    
     void setup_base_lattice(const CoordinateVector &siz);
 
     void setup_layout();

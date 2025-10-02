@@ -951,6 +951,8 @@ void test_clusters() {
     }
 }
 
+//--------------------------------------------------------------------------------
+
 void test_blocking() {
 
     CoordinateVector blocking;
@@ -990,6 +992,7 @@ void test_blocking() {
 
         test_site_access();
         test_set_elements_and_select();
+        test_fft();
 
         lattice.unblock();
         cvfb.unblock_to(cvf);
