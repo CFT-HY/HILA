@@ -102,19 +102,19 @@ HILA_GPU_EXTERN hila::global<CoordinateVector> _d_nodefactor;
 #endif
 
 
-// Then, define global functions loop_lattice_size() and _volume()
+// Then, define global functions hila_loop_lattice_size() and _volume()
 #pragma hila loop_function
-inline int loop_lattice_size(Direction dir) {
+inline int hila_loop_lattice_size(Direction dir) {
     return _d_size()[dir];
 }
 
 #pragma hila loop_function
-inline CoordinateVector loop_lattice_size(void) {
+inline CoordinateVector hila_loop_lattice_size(void) {
     return _d_size();
 }
 
 #pragma hila loop_function
-inline int64_t loop_lattice_volume(void) {
+inline int64_t hila_loop_lattice_volume(void) {
     return _d_volume();
 }
 

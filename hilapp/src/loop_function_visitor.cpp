@@ -385,11 +385,11 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
 
                 bool replace_this = true; // for non-cuda code replace only cases which are needed
                 if (name == "size") {
-                    sfc.replace_expression = "loop_lattice_size(";
+                    sfc.replace_expression = "hila_loop_lattice_size(";
                     sfc.add_loop_var = false;
                     replace_this = target.kernelize;
                 } else if (name == "volume") {
-                    sfc.replace_expression = "loop_lattice_volume(";
+                    sfc.replace_expression = "hila_loop_lattice_volume(";
                     sfc.add_loop_var = false;
                     replace_this = target.kernelize;
                 } else {

@@ -458,30 +458,30 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
     // Set loop lattice for neighbour arrays
     // if (field_info_list.size() > 0) {
     //     std::string fieldname = field_info_list.front().new_name;
-    //     code << "const auto & loop_lattice = " << fieldname
+    //     code << "const auto & hila_loop_lattice = " << fieldname
     //          << ".fs->vector_lattice;\n";
     // } else {
     // if no field in loop
 
-    code << "const auto & loop_lattice = "
+    code << "const auto & hila_loop_lattice = "
             "* lattice->backend_lattice->get_vectorized_lattice<"
          << vector_size << ">();\n";
 
     // Set the start and end points
-    code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "const int loop_end   = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
+    code << "const int _hila_loop_begin = hila_loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     if (generate_wait_loops) {
-        code << "for (int _wait_i_ = 0; _wait_i_ < 2; ++_wait_i_) {\n";
+        code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
     }
 
     // Start the loop
-    code << "for(int " << looping_var << " = loop_begin; " << looping_var << " < loop_end; ++"
+    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var << " < _hila_loop_end; ++"
          << looping_var << ") {\n";
 
     if (generate_wait_loops) {
-        code << "if (((loop_lattice.vec_wait_arr_[" << looping_var
-             << "] & _dir_mask_) != 0) == _wait_i_) {\n";
+        code << "if (((hila_loop_lattice.vec_wait_arr_[" << looping_var
+             << "] & _dir_mask_) != 0) == _hila_wait_i) {\n";
     }
 
 
@@ -504,7 +504,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
 
                         code << "const " << l.vecinfo.vectorized_type << " " << d.name_with_dir
                              << " = " << l.new_name << ".get_vector_at<"
-                             << l.vecinfo.vectorized_type << ">(loop_lattice.neighbours[" << dirname
+                             << l.vecinfo.vectorized_type << ">(hila_loop_lattice.neighbours[" << dirname
                              << "][" << looping_var << "]);\n";
 
                         // and replace references in loop body
@@ -523,7 +523,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                 //         "++HILA_dir_) {\n"
                 //      << loop_array_name << "[HILA_dir_] = " << l.new_name
                 //      << ".get_vector_at<" << l.vecinfo.vectorized_type
-                //      << ">(loop_lattice->neighbours[HILA_dir_][" << looping_var
+                //      << ">(hila_loop_lattice->neighbours[HILA_dir_][" << looping_var
                 //      << "]);\n}\n";
 
 
@@ -554,7 +554,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                     for (field_ref *ref : d.ref_list) {
                         loopBuf.replace(ref->fullExpr, l.new_name + ".get_vector_at<" +
                                                            l.vecinfo.vectorized_type +
-                                                           ">(loop_lattice.neighbours[" + dirname +
+                                                           ">(hila_loop_lattice.neighbours[" + dirname +
                                                            "][" + looping_var + "])");
                     }
                 }

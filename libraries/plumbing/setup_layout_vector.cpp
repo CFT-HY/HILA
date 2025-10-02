@@ -32,7 +32,7 @@ void lattice_struct::setup_layout() {
     }
     hila::out0 << "  =  " << l_volume << " sites\n";
     hila::out0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
-    hila::out0 << "Layout using vector of " << number_of_subnodes << " elements\n";
+    hila::out0 << "Layout using vector of " << hila::number_of_subnodes << " elements\n";
 
     foralldir(d) if (l_size[d] % 2 != 0) {
         hila::out0 << "Lattice must be even to all directions for vector/AVX layout.\n"
@@ -49,7 +49,7 @@ void lattice_struct::setup_layout() {
     // These factors must be used in slicing the lattice!
 
     // number of virtual nodes
-    int nn = hila::number_of_nodes() * number_of_subnodes;
+    int nn = hila::number_of_nodes() * hila::number_of_subnodes;
 
     int i = nn;
     for (int n = 0; n < NPRIMES; n++) {
@@ -179,16 +179,16 @@ void lattice_struct::setup_layout() {
 
                     int sd = subdiv[dir] * 2;
                     if (dir != gdir && nodesiz[dir] % 2 == 0 && divisions[dir] % sd == 0 &&
-                        n_subn < number_of_subnodes) {
+                        n_subn < hila::number_of_subnodes) {
                         subdiv[dir] = sd;
                         n_subn *= 2;
                         div_done = true;
                         mynode.subnodes.merged_subnodes_dir = dir;
                     }
                 }
-            } while (div_done && n_subn < number_of_subnodes);
+            } while (div_done && n_subn < hila::number_of_subnodes);
 
-            if (n_subn != number_of_subnodes)
+            if (n_subn != hila::number_of_subnodes)
                 fail = true;
         }
 
@@ -208,7 +208,7 @@ void lattice_struct::setup_layout() {
             hila::out0 << " lattice using " << hila::number_of_nodes()
                        << " nodes with vector layout can be done\n";
             hila::out0 << "  if the lattice can be divided into ";
-            hila::out0 << hila::number_of_nodes() << '*' << number_of_subnodes
+            hila::out0 << hila::number_of_nodes() << '*' << hila::number_of_subnodes
                        << " virtual nodes so that the virtual node size is\n";
             hila::out0 << "  even to directions where the extra divisions are done, "
                           "and the node size is > 2.\n";
@@ -298,7 +298,7 @@ void lattice_struct::setup_layout() {
                 hila::out0 << " x ";
             hila::out0 << subdiv[dir];
         }
-        hila::out0 << "  =  " << number_of_subnodes << " subnodes\n";
+        hila::out0 << "  =  " << hila::number_of_subnodes << " subnodes\n";
 
         hila::out0 << "Sites on subnodes: ";
         foralldir(dir) {
@@ -319,7 +319,7 @@ void lattice_struct::setup_layout() {
                 hila::out0 << " x ";
             hila::out0 << ((dir == dmerge) ? subdiv[dir] / 2 : subdiv[dir]);
         }
-        hila::out0 << "  =  " << number_of_subnodes / 2 << " subnodes\n";
+        hila::out0 << "  =  " << hila::number_of_subnodes / 2 << " subnodes\n";
 
         hila::out0 << "Sites on subnodes: ";
         foralldir(dir) {

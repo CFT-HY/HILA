@@ -16,19 +16,24 @@
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
-#if defined(CUDA) || defined(HIP)
-#define VECTOR_SIZE 8 // Size of float, length 1 vectors
-#else
 #define VECTOR_SIZE (256 / 8) // this is for AVX2
 #endif
-#endif
 // This is the vector size used to determine the layout
+namespace hila {
 constexpr unsigned number_of_subnodes = VECTOR_SIZE / sizeof(float);
+}
 #endif
+
+// #define BOUNDARY_LAYER_LAYOUT
 
 namespace hila {
 /// list of field boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
 enum class bc { PERIODIC, ANTIPERIODIC, DIRICHLET };
+
+// Struct to pass the iteration ranges for loop traversal
+struct iter_range_t {
+    unsigned min[2],max[2];
+};
 
 /// False if we have b.c. which does not require communication
 inline bool bc_need_communication(hila::bc bc) {
@@ -93,15 +98,20 @@ class lattice_struct {
 
 #ifdef BOUNDARY_LAYER_LAYOUT
         std::vector<unsigned> map_site_index;
-        size_t boundary_start_even = 0, boundary_start_odd = 0;
+        // in physical layout, sites are (if EVEN_SITES_FIRST)
+        // inner_even + inner_odd + boundary_even + boundary_odd
+        // if not  EVEN_SITES_FIRST the _odd variables are unused
+        unsigned inner_start_odd = 0, boundary_start_even = 0, boundary_start_odd = 0;
+        unsigned inner_vol = 0, boundary_vol = 0;
+
         void construct_index_map();
 #endif
 
         void setup(node_info &ni, lattice_struct &lattice);
 
-        void advance_local_coordinate(CoordinateVector & cv) const;
+        void advance_local_coordinate(CoordinateVector &cv) const;
 
-        unsigned get_logical_index(const CoordinateVector & cv) const;
+        unsigned get_logical_index(const CoordinateVector &cv) const;
 
 #ifdef SUBNODE_LAYOUT
         /// If we have vectorized-style layout, we introduce "subnodes"
@@ -278,22 +288,28 @@ class lattice_struct {
     }
 #endif
 
+#if defined(EVEN_SITES_FIRST)
+#ifdef BOUNDARY_LAYER_LAYOUT
 
-#ifdef EVEN_SITES_FIRST
+    int loop_ranges(Parity P, bool fetch_on, hila::iter_range_t &ranges) const;
+
+#else
+
     unsigned loop_begin(Parity P) const {
-        if (P == ODD) {
-            return mynode.evensites;
-        } else {
+        if (P != ODD)
             return 0;
-        }
-    }
-    unsigned loop_end(Parity P) const {
-        if (P == EVEN) {
+        else
             return mynode.evensites;
-        } else {
-            return mynode.volume;
-        }
     }
+
+    unsigned loop_end(Parity P) const {
+        if (P == EVEN)
+            return mynode.oddsites;
+        else
+            return mynode.volume;
+    }
+
+#endif
 
     inline const CoordinateVector &coordinates(unsigned idx) const {
         return mynode.coordinates[idx];
@@ -304,10 +320,7 @@ class lattice_struct {
     }
 
     inline Parity site_parity(unsigned idx) const {
-        if (idx < mynode.evensites)
-            return EVEN;
-        else
-            return ODD;
+        return coordinates(idx).parity();
     }
 
 #else // Now not EVEN_SITES_FIRST
@@ -350,10 +363,6 @@ class lattice_struct {
 
 #endif
 
-    CoordinateVector local_coordinates(unsigned idx) const {
-        return coordinates(idx) - mynode.min;
-    }
-
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();
 
@@ -365,7 +374,7 @@ class lattice_struct {
 
     CoordinateVector global_coordinates(size_t index) const {
         CoordinateVector site;
-        foralldir(dir) {
+        foralldir (dir) {
             site[dir] = index % l_size[dir];
             index /= l_size[dir];
         }
@@ -398,7 +407,7 @@ extern std::vector<lattice_struct *> defined_lattices;
 
 
 /**
- * @brief main interface class to lattices.  
+ * @brief main interface class to lattices.
  * @details Lightweight class, contains only pointer to lattice_struct so
  * can be returned as such from functions.
  */
@@ -544,7 +553,7 @@ class Lattice {
 
     /**
      * @brief block the lattice by the given factor, switching to smaller lattice.
-     * 
+     *
      * @details lattice.size() must be divisible by the factors to each dimension
      *
      * Example: lattice.block({2,2,2}) reduces current lattice size by 2 to each direction.
