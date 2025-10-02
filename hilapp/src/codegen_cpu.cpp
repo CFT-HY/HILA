@@ -21,23 +21,37 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // Set loop lattice
     // if (field_info_list.size() > 0) {
     //     std::string fieldname = field_info_list.front().new_name;
-    //     code << "const lattice_struct * RESTRICT _hila_loop_lattice = " << fieldname
+    //     code << "const lattice_struct * RESTRICT hila_loop_lattice = " << fieldname
     //          << ".fs->lattice;\n";
     // } else {
     //     // if there is no field in loop at all
-    //     code << "const lattice_struct * RESTRICT _hila_loop_lattice = lattice;\n";
+    //     code << "const lattice_struct * RESTRICT hila_loop_lattice = lattice;\n";
     // }
 
-    code << "const lattice_struct & _hila_loop_lattice = lattice.ref();\n";
+    bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
+
+    code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
 
     // Set the start and end points
-    code << "const int _hila_loop_begin = _hila_loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "const int _hila_loop_end   = _hila_loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
+    if (!boundary_layer) {
+        code << "const int _hila_loop_begin = hila_loop_lattice.loop_begin(" << loop_info.parity_str
+             << ");\n";
+        code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << loop_info.parity_str
+             << ");\n";
 
-    // are there
+        if (generate_wait_loops) {
+            code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
+        }
 
-    if (generate_wait_loops) {
-        code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
+    } else {
+
+        code << "hila::iter_range_t _hila_ranges;\n";
+        code << "int _hila_loops = hila_loop_lattice.loop_ranges(" << loop_info.parity_str << ", "
+             << (generate_wait_loops ? "_dir_mask_ != 0" : "false") << ", _hila_ranges);\n";
+
+        code << "for (int _hila_wait_i = 0; _hila_wait_i < _hila_loops; ++_hila_wait_i) {\n";
+        code << "const int _hila_loop_begin = _hila_ranges.min[_hila_wait_i];\n";
+        code << "const int _hila_loop_end   = _hila_ranges.max[_hila_wait_i];\n";
     }
 
     // and the openacc loop header
@@ -75,11 +89,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
 
     // Start the loop
-    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var << " < _hila_loop_end; ++"
-         << looping_var << ") {\n";
+    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
+         << " < _hila_loop_end; ++" << looping_var << ") {\n";
 
-    if (generate_wait_loops) {
-        code << "if (((_hila_loop_lattice.wait_arr_[" << looping_var
+    if (generate_wait_loops && !boundary_layer) {
+        code << "if (((hila_loop_lattice.wait_arr_[" << looping_var
              << "] & _dir_mask_) != 0) == _hila_wait_i) {\n";
     }
 
@@ -94,13 +108,13 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     for (selection_info &si : selection_info_list) {
         if (si.assign_expr == nullptr) {
             loopBuf.replace(si.MCE, si.new_name +
-                                        ".select_site(SiteIndex(_hila_loop_lattice.coordinates(" +
+                                        ".select_site(SiteIndex(hila_loop_lattice.coordinates(" +
                                         looping_var + ")))");
         } else {
             SourceRange r(si.MCE->getSourceRange().getBegin(),
                           si.assign_expr->getSourceRange().getBegin().getLocWithOffset(-1));
             loopBuf.replace(r, si.new_name +
-                                   ".select_site_value(SiteIndex(_hila_loop_lattice.coordinates(" +
+                                   ".select_site_value(SiteIndex(hila_loop_lattice.coordinates(" +
                                    looping_var + ")), ");
         }
     }
@@ -238,9 +252,12 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     code << "}\n";
 
     if (generate_wait_loops) {
-        // add the code for 2nd round - also need one } to balance the if ()
-        code << "}\nif (_dir_mask_ == 0) break;    // No need for another round\n";
-
+        if (!boundary_layer) {
+            // add the code for 2nd round - also need one } to balance the if ()
+            code << "}\nif (_dir_mask_ == 0 || _hila_wait_i > 0) break;    // No need for another round\n";
+        } else {
+            code << "if (_dir_mask_ != 0 && _hila_wait_i == 0) {\n";
+        }
         for (field_info &l : field_info_list) {
             // If neighbour references exist, communicate them
             if (!l.is_loop_local_dir) {
@@ -256,8 +273,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                      << ");\n}\n";
             }
         }
+        // if (boundary_layer) code << "}\n";
         code << "}\n";
     }
+    if (boundary_layer)
+        code << "}\n";
 
     // Post-process ny site selections?
     for (selection_info &s : selection_info_list) {

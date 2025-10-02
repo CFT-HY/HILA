@@ -670,7 +670,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             if (target.kernelize)
                 l_lattice = "get_dev_";
             else
-                l_lattice = "loop_lattice.";
+                l_lattice = "hila_loop_lattice.";
 
             if (name == "coordinates") {
                 sfc.replace_expression = l_lattice + "coordinates(";
@@ -710,12 +710,12 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 //     sfc.add_loop_var = false;
 
             } else if (name == "size") {
-                sfc.replace_expression = "loop_lattice_size(";
+                sfc.replace_expression = "hila_loop_lattice_size(";
                 sfc.add_loop_var = false;
                 replace_this = target.kernelize;
 
             } else if (name == "volume") {
-                sfc.replace_expression = "loop_lattice_volume(";
+                sfc.replace_expression = "hila_loop_lattice_volume(";
                 sfc.add_loop_var = false;
                 replace_this = target.kernelize;
 

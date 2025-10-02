@@ -41,7 +41,7 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     parent = nullptr; // this has no parent lattice
 
     l_volume = 1;
-    foralldir(i) {
+    foralldir (i) {
         l_size[i] = siz[i];
         l_volume *= siz[i];
     }
@@ -122,7 +122,7 @@ int lattice_struct::node_rank(const CoordinateVector &loc) const {
 
 void lattice_struct::setup_node_divisors() {
 
-    foralldir(dir) {
+    foralldir (dir) {
         nodes.divisors[dir].resize(nodes.n_divisions[dir] + 1);
         // to be sure, we use naively the same method than in node_rank
         // last element will be size(dir), for convenience
@@ -182,7 +182,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 #endif
 }
 
-#else  // Now BOUNDARY_LAYER_LAYOUT
+#else // Now BOUNDARY_LAYER_LAYOUT
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 
@@ -303,10 +303,10 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned 
     if (s % 2 == 0)
         i = i / 2; /* even site index */
     else
-        i = i / 2 + ni.evensites / number_of_subnodes; /* odd site */
+        i = i / 2 + ni.evensites / hila::number_of_subnodes; /* odd site */
 #endif
 
-    return (subl + number_of_subnodes * i);
+    return (subl + hila::number_of_subnodes * i);
 }
 
 #endif // SUBNODE_LAYOUT
@@ -325,7 +325,7 @@ node_info lattice_struct::allnodes::nodeinfo(int nodeid) const {
     int64_t nodevol = 1;
     node_info ninfo;
 
-    foralldir(d) {
+    foralldir (d) {
         int nodecoord = nodeid % n_divisions[d];
         nodeid = nodeid / n_divisions[d];
 
@@ -373,7 +373,7 @@ void lattice_struct::setup_nodes() {
     // use nodes.divisors - vectors to fill in stuff
     for (int i = 0; i < nodes.number; i++) {
         auto ni = nodes.nodeinfo(i);
-        foralldir(d) {
+        foralldir (d) {
             if (ni.size[d] > nodes.max_size[d])
                 nodes.max_size[d] = ni.size[d];
         }
@@ -392,7 +392,7 @@ void lattice_struct::setup_nodes() {
 unsigned lattice_struct::node_struct::get_logical_index(const CoordinateVector &l) const {
 
     unsigned res = 0;
-    foralldir(d) {
+    foralldir (d) {
         res += static_cast<unsigned>(l[d] - min[d]) * size_factor[d];
     }
     return res;
@@ -405,11 +405,54 @@ unsigned lattice_struct::node_struct::get_logical_index(const CoordinateVector &
 ////////////////////////////////////////////////////////////////////////
 
 void lattice_struct::node_struct::advance_local_coordinate(CoordinateVector &l) const {
-    foralldir(d) {
+    foralldir (d) {
         if (++l[d] < (min[d] + size[d]))
             return;
         l[d] = min[d];
     }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+#ifdef BOUNDARY_LAYER_LAYOUT
+
+int lattice_struct::loop_ranges(Parity par, bool gather_on, hila::iter_range_t &ranges) const {
+
+    // can we do it in one sweep?
+    if (par == Parity::all && !gather_on) {
+        ranges.min[0] = 0;
+        ranges.max[0] = mynode.volume;
+        return 1;
+    }
+
+    if (par == Parity::even) {
+        ranges.min[0] = 0;
+        ranges.max[0] = mynode.inner_start_odd;
+        ranges.min[1] = mynode.boundary_start_even;
+        ranges.max[1] = mynode.boundary_start_odd;
+    } else if (par == Parity::odd) {
+        ranges.min[0] = mynode.inner_start_odd;
+        ranges.max[0] = mynode.boundary_start_even;
+        ranges.min[1] = mynode.boundary_start_odd;
+        ranges.max[1] = mynode.volume;
+    } else {
+        ranges.min[0] = 0;
+        ranges.max[0] = mynode.boundary_start_even;
+        ranges.min[1] = mynode.boundary_start_even;
+        ranges.max[1] = mynode.volume;
+    }
+    return 2;
+}
+
+static bool is_boundary_site(const CoordinateVector &cv, const CoordinateVector &min,
+                             const CoordinateVector &size) {
+    bool boundary_site = false;
+    foralldir (d) {
+        boundary_site = (cv[d] == min[d] || cv[d] == (min[d] + size[d] - 1));
+        if (boundary_site)
+            break;
+    }
+    return boundary_site;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -418,56 +461,78 @@ void lattice_struct::node_struct::advance_local_coordinate(CoordinateVector &l) 
 ///
 ////////////////////////////////////////////////////////////////////////
 
-#ifdef BOUNDARY_LAYER_LAYOUT
-
 void lattice_struct::node_struct::construct_index_map() {
 
+    // alloc resize map
     map_site_index.resize(volume);
 
-    size_t bulk_vol = 1;
-    foralldir(d) bulk_vol *= max(size[d] - 2, 0);
-    size_t bulk_count = 0, boundary_count = 0;
-    boundary_start_even = boundary_start_odd = std::numeric_limits<size_t>::max();
+    // scan the sites, accumulate as as classified by
+    // inner and boundary sites. For EVEN_SITES_FIRST
+    // also by parity
 
     CoordinateVector l = min;
-    for (size_t i = 0; i < volume; i++) {
-        bool boundary_site = false;
-        foralldir(d) {
-            boundary_site = l[d] == min[d] || l[d] == (min[d] + size[d] - 1);
-            if (boundary_site) break;
-        }
 
-        size_t logical_index = get_logical_index(l);
-        size_t real_index;
-        if (!boundary_site) {
-            real_index = bulk_count++;
+    unsigned inner_even = 0, inner_odd = 0, boundary_even = 0, boundary_odd = 0;
+    // scan through the sites first just to count
+    for (size_t i = 0; i < volume; ++i) {
+        bool boundary_site = is_boundary_site(l, min, size);
+
+        if (l.parity() == EVEN) {
+            if (boundary_site)
+                boundary_even++;
+            else
+                inner_even++;
         } else {
-            real_index = bulk_vol + boundary_count++;
+            if (boundary_site)
+                boundary_odd++;
+            else
+                inner_odd++;
         }
-
-#if defined(EVEN_SITES_FIRST)
-        if (l.parity() == EVEN)
-            real_index = real_index / 2;
-        else
-            real_index = real_index / 2 + evensites;
-#endif
-
-        if (boundary_site && l.parity() == EVEN &&
-            boundary_start_even == std::numeric_limits<size_t>::max()) {
-            boundary_start_even = real_index;
-        }
-
-        if (boundary_site && l.parity() == ODD &&
-            boundary_start_odd == std::numeric_limits<size_t>::max()) {
-            boundary_start_odd = real_index;
-        }
-
-        map_site_index.at(logical_index) = real_index;
 
         advance_local_coordinate(l);
     }
-    hila::out0 << "BULK  VOL " << bulk_vol << " count " << bulk_count << " boundary count " << boundary_count << '\n'; 
-    assert(bulk_count == bulk_vol && boundary_count + bulk_count == volume);
+
+    inner_start_odd = inner_even;
+    boundary_start_even = inner_start_odd + inner_odd;
+    boundary_start_odd = boundary_start_even + boundary_even;
+    inner_vol = inner_even + inner_odd;
+    boundary_vol = boundary_even + boundary_odd;
+
+    inner_even = 0;
+    inner_odd = inner_start_odd;
+    boundary_even = boundary_start_even;
+    boundary_odd = boundary_start_odd;
+
+    l = min;
+    for (size_t i = 0; i < volume; ++i) {
+        bool boundary_site = is_boundary_site(l, min, size);
+
+        // auto index = get_logical_index(l);
+        // i is the logical index
+
+#if defined(EVEN_SITES_FIRST)
+        if (l.parity() == EVEN) {
+            if (boundary_site)
+                map_site_index[i] = boundary_even++;
+            else
+                map_site_index[i] = inner_even++;
+        } else {
+            if (boundary_site)
+                map_site_index[i] = boundary_odd++;
+            else
+                map_site_index[i] = inner_odd++;
+        }
+#else
+        if (boundary_site)
+            map_site_index[i] = boundary_even++;
+        else
+            map_site_index[i] = inner_even++;
+#endif
+
+        advance_local_coordinate(l);
+    }
+
+    assert(boundary_odd == volume);
 }
 
 #endif
@@ -492,7 +557,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     // set up the auxiliary size_factor array
     // Now l.dot(size_factor) gives logical running index
     unsigned v = 1;
-    foralldir(d) {
+    foralldir (d) {
         size_factor[d] = v; // = size[d-1] * size[d-2] * ..
         v *= size[d];
     }
@@ -528,8 +593,8 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::subnode_struct::setup(const node_struct &tn) {
     size.asArray() = tn.size.asArray() / divisions.asArray();
-    evensites = tn.evensites / number_of_subnodes;
-    oddsites = tn.oddsites / number_of_subnodes;
+    evensites = tn.evensites / hila::number_of_subnodes;
+    oddsites = tn.oddsites / hila::number_of_subnodes;
     sites = evensites + oddsites;
 }
 
@@ -718,7 +783,7 @@ void lattice_struct::initialize_wait_arrays() {
 
     for (size_t i = 0; i < mynode.volume; i++) {
         wait_arr_[i] = 0; /* basic, no wait */
-        foralldir(dir) {
+        foralldir (dir) {
             Direction odir = -dir;
             if (neighb[dir][i] >= mynode.volume)
                 wait_arr_[i] = wait_arr_[i] | (1 << dir);
@@ -872,7 +937,7 @@ bool lattice_struct::can_block_by_factor(const CoordinateVector &blocking_factor
 #else
 
     bool ok = true;
-    foralldir(d) {
+    foralldir (d) {
         if (blocking_factor[d] <= 0) {
             hila::out0 << "ERROR: invalid blocking factor " << blocking_factor[d] << '\n';
             hila::terminate(0);
@@ -895,7 +960,8 @@ lattice_struct *lattice_struct::block_by_factor(const CoordinateVector &blocking
     }
 
     CoordinateVector blockvol;
-    foralldir(d) blockvol[d] = l_size[d] / blocking_factor[d];
+    foralldir (d)
+        blockvol[d] = l_size[d] / blocking_factor[d];
 
     hila::synchronize();
 
@@ -930,7 +996,7 @@ void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int labe
     l_label = label;
 
     l_volume = 1;
-    foralldir(i) {
+    foralldir (i) {
         l_size[i] = siz[i];
         l_volume *= siz[i];
     }

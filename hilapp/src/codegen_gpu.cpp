@@ -145,10 +145,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Set loop lattice
     // if (field_info_list.size() > 0) {
     //     std::string fieldname = field_info_list.front().old_name;
-    //     code << "const lattice_struct & loop_lattice = " << fieldname << ".fs->lattice;\n";
+    //     code << "const lattice_struct & hila_loop_lattice = " << fieldname << ".fs->lattice;\n";
     // } else {
     // now no fields in loop - default lattice
-    code << "const lattice_struct & loop_lattice = lattice.ref();\n";
+    code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
 
 
     kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
@@ -304,8 +304,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Add __launch_bounds__ directive here
     kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
            << "(int _hila_loop_begin, int _hila_loop_end";
-    code << "int _hila_loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "int _hila_loop_end = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
+    code << "int _hila_loop_begin = hila_loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "int _hila_loop_end = hila_loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
             "N_threads - 1)/N_threads;\n";
@@ -668,7 +668,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Begin the function
     kernel << ")\n{\n";
 
-    // kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
+    // kernel << "backend_lattice_struct *hila_loop_lattice = &d_lattice; \n";
 
     // Declare the shared reduction variable inside loop
     for (reduction_expr &r : reduction_list) {
@@ -844,15 +844,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         //   // Create the temp variable and call the getter
         //   kernel << l.element_type << " "  << l.loop_ref_name << "_" <<
         //   r->dirname
-        //          << "=" << l.new_name << ".get(loop_lattice->d_neighb["
+        //          << "=" << l.new_name << ".get(hila_loop_lattice->d_neighb["
         //          << dirname << "][" << looping_var
-        //          << "], loop_lattice->field_alloc_size);\n";
+        //          << "], hila_loop_lattice->field_alloc_size);\n";
         // }
         // // Check for references without a Direction. If found, add temp variable
         // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
         //   kernel << l.element_type << " "  << l.loop_ref_name << "="
         //          << l.new_name << ".get(" << looping_var
-        //          << ", loop_lattice->field_alloc_size)" << ";\n";
+        //          << ", hila_loop_lattice->field_alloc_size)" << ";\n";
         //   break;  // Only one needed
         // }
 
