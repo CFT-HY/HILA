@@ -3,6 +3,8 @@
 
 #ifndef HILAPP
 
+#include "plumbing/fft_structs.h"
+
 #if defined(CUDA)
 
 #include <cufft.h>
@@ -83,7 +85,7 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
 
 // Define datatype for saved plans
 
-#define N_PLANS NDIM // just for concreteness...
+#define N_PLANS 4 * NDIM // just for concreteness...
 
 class hila_saved_fftplan_t {
   public:
@@ -99,7 +101,6 @@ class hila_saved_fftplan_t {
     std::vector<plan_d> plans;
 
     hila_saved_fftplan_t() {
-        plans.reserve(N_PLANS);
         seq = 0;
     }
 
@@ -111,6 +112,7 @@ class hila_saved_fftplan_t {
         for (auto &p : plans) {
             gpufftDestroy(p.plan);
         }
+        hila::out0 << "GPU FFT Plans: " << plans.size() << " plans used\n";
         plans.clear();
         seq = 0;
     }
@@ -194,20 +196,21 @@ template <typename cmplx_t>
 void hila_fft<cmplx_t>::transform() {
 
     // these externs defined in fft.cpp
-    extern unsigned hila_fft_my_columns[NDIM];
     extern hila::timer fft_execute_timer, fft_buffer_timer;
     extern hila_saved_fftplan_t hila_saved_fftplan;
 
     constexpr bool is_float = (sizeof(cmplx_t) == sizeof(Complex<float>));
 
-    int n_columns = hila_fft_my_columns[dir] * elements;
+    const hila::fftdata_struct & fft = *(lattice->fftdata);
+
+    int n_columns = fft.hila_fft_my_columns[dir] * elements;
 
     int direction = (fftdir == fft_direction::forward) ? GPUFFT_FORWARD : GPUFFT_INVERSE;
 
     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time?
     // Timer will tell the proportional timing
 
-    int batch = hila_fft_my_columns[dir];
+    int batch = fft.hila_fft_my_columns[dir];
     int n_fft = elements;
     // reduce very large batch to smaller, avoid large buffer space
 
@@ -298,8 +301,10 @@ void hila_fft<cmplx_t>::gather_data() {
     extern hila::timer pencil_MPI_timer;
     pencil_MPI_timer.start();
 
+    const hila::fftdata_struct &fft = *(lattice->fftdata);
+
     // post receive and send
-    int n_comms = hila_pencil_comms[dir].size() - 1;
+    int n_comms = fft.hila_pencil_comms[dir].size() - 1;
 
     std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
     std::vector<MPI_Status> stat(n_comms);
@@ -318,7 +323,7 @@ void hila_fft<cmplx_t>::gather_data() {
     size_t mpi_type_size;
     MPI_Datatype mpi_type = get_MPI_complex_type<cmplx_t>(mpi_type_size);
 
-    for (auto &fn : hila_pencil_comms[dir]) {
+    for (auto &fn : fft.hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
             size_t siz = fn.recv_buf_size * elements * sizeof(cmplx_t);
@@ -343,7 +348,7 @@ void hila_fft<cmplx_t>::gather_data() {
     }
 
     i = 0;
-    for (auto &fn : hila_pencil_comms[dir]) {
+    for (auto &fn : fft.hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
             cmplx_t *p = send_buf + fn.column_offset * elements;
@@ -370,7 +375,7 @@ void hila_fft<cmplx_t>::gather_data() {
 #ifndef GPU_AWARE_MPI
         i = j = 0;
 
-        for (auto &fn : hila_pencil_comms[dir]) {
+        for (auto &fn : fft.hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {
 
                 size_t siz = fn.recv_buf_size * elements;
@@ -401,7 +406,9 @@ void hila_fft<cmplx_t>::scatter_data() {
     extern hila::timer pencil_MPI_timer;
     pencil_MPI_timer.start();
 
-    int n_comms = hila_pencil_comms[dir].size() - 1;
+    const hila::fftdata_struct &fft = *(lattice->fftdata);
+
+    int n_comms = fft.hila_pencil_comms[dir].size() - 1;
 
     std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
     std::vector<MPI_Status> stat(n_comms);
@@ -418,7 +425,7 @@ void hila_fft<cmplx_t>::scatter_data() {
 
     gpuStreamSynchronize(0);
 
-    for (auto &fn : hila_pencil_comms[dir]) {
+    for (auto &fn : fft.hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
@@ -437,7 +444,7 @@ void hila_fft<cmplx_t>::scatter_data() {
 
     i = 0;
     int j = 0;
-    for (auto &fn : hila_pencil_comms[dir]) {
+    for (auto &fn : fft.hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
             size_t n = fn.recv_buf_size * elements * sizeof(cmplx_t);
@@ -463,10 +470,11 @@ void hila_fft<cmplx_t>::scatter_data() {
 
 #ifndef GPU_AWARE_MPI
         i = 0;
-        for (auto &fn : hila_pencil_comms[dir]) {
+        for (auto &fn : fft.hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {
 
-                size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
+                size_t n =
+                    fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
                 cmplx_t *p = send_buf + fn.column_offset * elements;
 
                 gpuMemcpy(p, receive_p[i], n, gpuMemcpyHostToDevice);
@@ -515,12 +523,12 @@ __global__ void hila_reflect_dir_kernel(cmplx_t *RESTRICT data, const int colsiz
 template <typename cmplx_t>
 void hila_fft<cmplx_t>::reflect() {
 
-    // these externs defined in fft.cpp
-    extern unsigned hila_fft_my_columns[NDIM];
 
     constexpr bool is_float = (sizeof(cmplx_t) == sizeof(Complex<float>));
 
-    int n_columns = hila_fft_my_columns[dir] * elements;
+    const hila::fftdata_struct & fft = *(lattice->fftdata);
+
+    int n_columns = fft.hila_fft_my_columns[dir] * elements;
 
     // reduce very large batch to smaller, avoid large buffer space
 

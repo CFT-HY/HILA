@@ -13,6 +13,8 @@
 #include "plumbing/field.h"
 #include "plumbing/timing.h"
 
+#include "plumbing/fft_structs.h"
+
 #ifdef USE_FFTW
 #include <fftw3.h>
 #endif
@@ -49,18 +51,6 @@ inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     return cv.convert_to_k();
 }
 
-// hold static fft node data structures
-struct pencil_struct {
-    int node;               // node rank to send stuff for fft:ing
-    unsigned size_to_dir;   // size of "node" to fft-dir
-    unsigned column_offset; // first perp-plane column to be handled by "node"
-    unsigned column_number; // and number of columns to be sent
-    size_t recv_buf_size;   // size of my fft collect buffer (in units of sizeof(T)
-                            // for stuff received from / returned to "node"
-};
-
-//
-extern std::vector<pencil_struct> hila_pencil_comms[NDIM];
 
 /// Build offsets to buffer arrays:
 ///   Fastest Direction = dir, offset 1
@@ -104,7 +94,6 @@ class hila_fft {
 
     // initialize fft, allocate buffers
     hila_fft(int _elements, fft_direction _fftdir, bool _reflect = false) {
-        extern size_t pencil_recv_buf_size[NDIM];
 
         elements = _elements;
         fftdir = _fftdir;
@@ -115,10 +104,12 @@ class hila_fft {
         // init dirs here at one go
         foralldir(d) init_pencil_direction(d);
 
+        const hila::fftdata_struct &fft = *(lattice->fftdata);
+
         buf_size = 1;
         foralldir(d) {
-            if (pencil_recv_buf_size[d] > buf_size)
-                buf_size = pencil_recv_buf_size[d];
+            if (fft.pencil_recv_buf_size[d] > buf_size)
+                buf_size = fft.pencil_recv_buf_size[d];
         }
         if (buf_size < local_volume)
             buf_size = local_volume;
@@ -156,12 +147,14 @@ class hila_fft {
         // now in transform itself
         // make_fft_plan();
 
-        rec_p.resize(hila_pencil_comms[dir].size());
-        rec_size.resize(hila_pencil_comms[dir].size());
+        const hila::fftdata_struct &fft = *(lattice->fftdata);
+
+        rec_p.resize(fft.hila_pencil_comms[dir].size());
+        rec_size.resize(fft.hila_pencil_comms[dir].size());
 
         cmplx_t *p = receive_buf;
         int i = 0;
-        for (pencil_struct &fn : hila_pencil_comms[dir]) {
+        for (const hila::pencil_struct &fn : fft.hila_pencil_comms[dir]) {
 
             if (fn.node != hila::myrank()) {
 
