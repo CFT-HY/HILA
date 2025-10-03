@@ -384,7 +384,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 }
 
 template <typename T>
-std::tuple<dir_mask_t,hila::MpiSendParams> Field<T>::start_gather_test(Direction d, Parity p) const {
+std::tuple<dir_mask_t,hila::MpiSendParams> Field<T>::start_gather_split(Direction d, Parity p) const {
 
     // get the mpi message tag right away, to ensure that we are always synchronized
     // with the mpi calls -- some nodes might not need comms, but the tags must be in

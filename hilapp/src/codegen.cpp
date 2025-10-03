@@ -253,6 +253,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     else
         generate_wait_loops = true;
 
+    bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
+
+
     for (field_info &l : field_info_list) {
         // If neighbour references exist, communicate them
         if (!l.is_loop_local_dir) {
@@ -266,9 +269,15 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                         if (first)
                             code << "dir_mask_t  _dir_mask_ = 0;\n";
                         first = false;
-
-                        code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
-                             << ", " << loop_info.parity_str << ");\n";
+                        
+                        if (!boundary_layer) {
+                            code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
+                                << ", " << loop_info.parity_str << ");\n";
+                        } else {
+                            code << "auto [mask_" << d.name_with_dir <<  ",send_params_" << d.name_with_dir << "] = " << l.new_name << ".start_gather_split(" << d.direxpr_s
+                                << ", " << loop_info.parity_str << ");\n";
+                            code << "_dir_mask_ |= mask_" << d.name_with_dir << ";\n";
+                        }
                     }
                 }
         } else {

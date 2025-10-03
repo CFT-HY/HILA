@@ -30,6 +30,19 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
 
+    if (boundary_layer) {
+        for (field_info &l : field_info_list) {
+            // If neighbour references exist, communicate them
+            if (!l.is_loop_local_dir) {
+                // "normal" dir references only here
+                for (dir_ptr &d : l.dir_list)
+                    if (d.count > 0) {
+                        code << l.new_name << ".send_buffers(send_params_" << d.name_with_dir
+                             << ");\n";
+                }
+            }
+        }
+    }
     code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
 
     // Set the start and end points
