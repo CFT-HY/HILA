@@ -26,7 +26,7 @@
 
 /**
  * @brief Convert momentum space CoordinateVector to wave number k, where -pi/2 < k_i <= pi/2
- * 
+ *
  * CoordinateVector is (periodically) modded to valid lattice coordinate,
  * and folded so that if n_i > lattice.size(i), n_i = n_i - lattice.size(i)
  * now  k_i = 2 pi n_i / lattice.size(i)
@@ -37,7 +37,7 @@
 template <typename T>
 inline Vector<NDIM, double> CoordinateVector_t<T>::convert_to_k() const {
     Vector<NDIM, double> k;
-    foralldir(d) {
+    foralldir (d) {
         int n = pmod((*this).e(d), lattice.size(d));
         if (n > lattice.size(d) / 2)
             n -= lattice.size(d);
@@ -102,12 +102,13 @@ class hila_fft {
         local_volume = lattice->mynode.volume;
 
         // init dirs here at one go
-        foralldir(d) init_pencil_direction(d);
+        foralldir (d)
+            init_pencil_direction(d);
 
         const hila::fftdata_struct &fft = *(lattice->fftdata);
 
         buf_size = 1;
-        foralldir(d) {
+        foralldir (d) {
             if (fft.pencil_recv_buf_size[d] > buf_size)
                 buf_size = fft.pencil_recv_buf_size[d];
         }
@@ -196,8 +197,8 @@ class hila_fft {
         cmplx_t *sb = send_buf;
 
         // and collect the data
-#pragma hila novector direct_access(sb)
-        onsites(ALL) {
+        #pragma hila novector direct_access(sb)
+        onsites (ALL) {
 
             T_union<T, cmplx_t> v;
             v.val = f[X];
@@ -227,9 +228,9 @@ class hila_fft {
 
         cmplx_t *rb = receive_buf;
 
-// and collect the data from buffers
-#pragma hila novector direct_access(rb)
-        onsites(ALL) {
+        // and collect the data from buffers
+        #pragma hila novector direct_access(rb)
+        onsites (ALL) {
 
             T_union<T, cmplx_t> v;
 
@@ -263,8 +264,8 @@ class hila_fft {
         cmplx_t *sb = send_buf;
         cmplx_t *rb = receive_buf;
 
-#pragma hila novector direct_access(sb, rb)
-        onsites(ALL) {
+        #pragma hila novector direct_access(sb, rb)
+        onsites (ALL) {
             CoordinateVector v = X.coordinates() - nmin;
             size_t off_in = offset_in.dot(v);
             size_t off_out = offset_out.dot(v);
@@ -301,7 +302,7 @@ class hila_fft {
         bool first_dir = true;
         Direction prev_dir;
 
-        foralldir(dir) {
+        foralldir (dir) {
             if (directions[dir]) {
 
                 setup_direction(dir);
@@ -360,14 +361,14 @@ void FFT_delete_plans();
 /// Complex-to-complex FFT transform of a field input, result in result.
 /// input and result can be same, "in-place".
 ///
-/// Both input and output are of type Field<T>, where T must contain complex type, 
-/// either Complex<float> or Complex<double>. 
+/// Both input and output are of type Field<T>, where T must contain complex type,
+/// either Complex<float> or Complex<double>.
 /// As an example, if T is Vector<Complex<double>,3> the result has the same type
 /// and the 3 components of the vector will contain FFTs of the input components.
-/// 
+///
 /// directions: if directions[dir] == false (or 0), transform is not done to
-/// coordinate direction dir. 
-/// 
+/// coordinate direction dir.
+///
 /// fftdir: direction of the transform itself:
 ///     fft_direction::forward (default)  x -> k
 ///     fft_direction::inverse  k-> x
@@ -406,7 +407,7 @@ inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateV
 /// Same as FFT_field(input,result,directions,fftdir)
 /// with all directions active.
 ///
-/// See also Field<T>::FFT() 
+/// See also Field<T>::FFT()
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
@@ -423,21 +424,21 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
 /**
  * @brief Field method for performing FFT
  * @details
- * Used as 
+ * Used as
  *   res = f.FFT(<args>);
- * where f and res are of type Field<T>, where T must contain complex type, either 
- * Complex<float> or Complex<double>. 
- * 
+ * where f and res are of type Field<T>, where T must contain complex type, either
+ * Complex<float> or Complex<double>.
+ *
  * As an example, if T is Vector<Complex<double>,3> the result has the same type
  * and the 3 components of the vector will contain FFTs of the input components.
- * 
- * parameter dirs: if dirs[dir] == false (or 0), transform is not done to coordinate 
+ *
+ * parameter dirs: if dirs[dir] == false (or 0), transform is not done to coordinate
  * direction dir. By default calling without arguments will execute FFT in all directions.
- * 
+ *
  * parameter fftdir: direction of the transform itself:
- *      fft_direction::forward (default)  x -> k 
+ *      fft_direction::forward (default)  x -> k
  *      fft_direction::inverse  k-> x
- * 
+ *
  * NOTE: the transform is unnormalized, i.e. forward + inverse transform yields
  * the original Field multiplied by the product of the size of the lattice to active directions.
  *
@@ -509,7 +510,7 @@ namespace hila {
 inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
 
     // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
-    foralldir(d) {
+    foralldir (d) {
         if (cv[d] > 0 && cv[d] < lattice.size(d) / 2)
             return 1;
         if (cv[d] > lattice.size(d) / 2)
@@ -522,20 +523,19 @@ inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
 } // namespace hila
 
 
-
 //////////////////////////////////////////////////////////////////////////////////
 /// FFT_complex_to_real:
 /// Field must be a complex-valued field, result is a real field of the same number type
 /// Not optimized, should not be used on a hot path
 ///
 /// Because the complex field must have the property f(-x) = f(L-x) = f(x)^*, only
-/// half of the values in input field are significant. 
-/// NOTE: the input need not obey the symmetry, the FFT routine ignores half of the input 
-/// Field values, using (mostly!) only the range of coordinates 0 .. lattice.size(e_x)/2 
-/// 
+/// half of the values in input field are significant.
+/// NOTE: the input need not obey the symmetry, the FFT routine ignores half of the input
+/// Field values, using (mostly!) only the range of coordinates 0 .. lattice.size(e_x)/2
+///
 /// In more than 1 dimensions the implementation of the symmetry requirements are complicated.
-/// More precisely, the function hila::FFT_complex_to_real_site(CoordinateVector cv) 
-/// can be used to identify lattice sites (CoordinateVector cv) where Field value is 
+/// More precisely, the function hila::FFT_complex_to_real_site(CoordinateVector cv)
+/// can be used to identify lattice sites (CoordinateVector cv) where Field value is
 /// significant for FFT:
 ///
 /// if hila::FFT_complex_to_real_site(cv) returns
@@ -563,7 +563,7 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
 
-    foralldir(d) {
+    foralldir (d) {
         assert(lattice.size(d) % 2 == 0 &&
                "FFT_complex_to_real works only with even lattice size to all directions");
     }
@@ -571,7 +571,7 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
     // first, do a full reflection of the field, giving rf(x) = f(L-x) = "f(-x)"
     auto rf = this->reflect();
     // And symmetrize the field appropriately - can use rf
-    onsites(ALL) {
+    onsites (ALL) {
         int type = hila::FFT_complex_to_real_site(X.coordinates());
         if (type == 1) {
             rf[X] = (*this)[X];
@@ -587,13 +587,14 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
 
     double ims = 0;
     double rss = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         ims += ::squarenorm(rf[X].imag());
         rss += ::squarenorm(rf[X].real());
     }
 
     Field<hila::arithmetic_type<T>> res;
-    onsites(ALL) res[X] = rf[X].real();
+    onsites (ALL)
+        res[X] = rf[X].real();
     return res;
 }
 

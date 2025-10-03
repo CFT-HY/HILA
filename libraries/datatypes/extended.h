@@ -52,15 +52,16 @@ class ExtendedPrecision {
 
     ExtendedPrecision() = default;
     ~ExtendedPrecision() = default;
-#pragma hila loop_function
+    
+    #pragma hila loop_function
     ExtendedPrecision(const ExtendedPrecision &rhs)
         : value(rhs.value), compensation(rhs.compensation), compensation2(rhs.compensation2) {}
     ExtendedPrecision(double v) : value(v), compensation(0), compensation2(0) {}
     ExtendedPrecision(double v, double c, double c2)
         : value(v), compensation(c), compensation2(c2) {}
 
-// Assignments are used in generated code, mark as loop functions
-#pragma hila loop_function
+    // Assignments are used in generated code, mark as loop functions
+    #pragma hila loop_function
     ExtendedPrecision &operator=(const ExtendedPrecision &rhs) {
         if (this != &rhs) {
             value = rhs.value;
@@ -69,7 +70,7 @@ class ExtendedPrecision {
         }
         return *this;
     }
-#pragma hila loop_function
+    #pragma hila loop_function
     template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
     ExtendedPrecision &operator=(const T &v) {
         value = v;
@@ -102,7 +103,7 @@ class ExtendedPrecision {
      * @return ExtendedPrecision&
      */
 
-#pragma hila loop_function
+    #pragma hila loop_function
     template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
     inline const ExtendedPrecision &operator+=(const T &rhs_) {
         double rhs = rhs_;
@@ -131,7 +132,7 @@ class ExtendedPrecision {
      * @brief += addition assignment operator for two EPs
      */
 
-#pragma hila loop_function
+    #pragma hila loop_function
     // need to take a copy to avoid problems with a += a
     inline const ExtendedPrecision &operator+=(ExtendedPrecision rhs) {
         *this += rhs.compensation2;

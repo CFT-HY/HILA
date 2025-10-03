@@ -18,7 +18,6 @@ struct fftdata_struct {
     std::vector<pencil_struct> hila_pencil_comms[NDIM];
     unsigned hila_fft_my_columns[NDIM]; // how many columns does this node take care of
     size_t pencil_recv_buf_size[NDIM];
-
 };
 
 } // namespace hila
