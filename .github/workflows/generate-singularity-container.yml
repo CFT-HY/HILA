@@ -1,34 +1,30 @@
-name: Deploy singularity container to github release page under nightly release
+name: Deploy Apptainer container to GitHub release page under nightly release
 
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
     inputs:
       build:
-        description: 'Build the singularity container'
+        description: 'Build the Apptainer containers'
 
 jobs:
-  build_release:
-    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')" 
-    name: build_nightly_release
+  build_x86:
+    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')"
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Cache the deb so it's not downloaded every run
-      - name: Cache singularity deb
+      - name: Cache Singularity deb
         uses: actions/cache@v3
         with:
           path: singularity-ce_3.11.3-jammy_amd64.deb
           key: singularity-deb-3.11.3
 
-      # Install singularity from cached deb or download if missing
-      - name: Install Singularity
+      - name: Install Singularity (x86)
         run: |
           if [ ! -f singularity-ce_3.11.3-jammy_amd64.deb ]; then
             wget https://github.com/sylabs/singularity/releases/download/v3.11.3/singularity-ce_3.11.3-jammy_amd64.deb
@@ -36,24 +32,71 @@ jobs:
           sudo dpkg -i singularity-ce_3.11.3-jammy_amd64.deb
           singularity --version
 
-      # Build the container separately
-      - name: Build singularity container
+      - name: Build x86 container
         run: |
           cd singularity
-          sudo singularity build hilapp.sif hilapp_local.def
+          sudo singularity build hilapp-x86.sif hilapp_local.def
           cd ..
-          ls -lh ./singularity/hilapp.sif
+          ls -lh ./singularity/hilapp-x86.sif
 
-      - name: Upload SIF as artifact
+      - name: Upload x86 SIF artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hilapp-sif
-          path: ./singularity/hilapp.sif
+          name: hilapp-x86-sif
+          path: ./singularity/hilapp-x86.sif
 
-      - name: Update nightly release
+  build_arm:
+    if: "github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'GENERATE SINGULARITY')"
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Apptainer (ARM)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y containernetworking-plugins wget
+          wget http://ftp.de.debian.org/debian/pool/main/a/apptainer/apptainer_1.4.2-1_arm64.deb
+          sudo dpkg -i apptainer_1.4.2-1_arm64.deb
+          apptainer --version
+
+      - name: Build ARM container
+        run: |
+          cd singularity
+          sudo apptainer build hilapp-arm.sif hilapp_local.def
+          cd ..
+          ls -lh ./singularity/hilapp-arm.sif
+
+      - name: Upload ARM SIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hilapp-arm-sif
+          path: ./singularity/hilapp-arm.sif
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build_x86, build_arm]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x86 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hilapp-x86-sif
+          path: ./singularity/
+
+      - name: Download ARM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hilapp-arm-sif
+          path: ./singularity/
+
+      - name: Publish Nightly Release
         uses: pyTooling/Actions/releaser@main
         with:
           tag: Nightly
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./singularity/hilapp.sif
+          files: |
+            ./singularity/hilapp-x86.sif
+            ./singularity/hilapp-arm.sif
+          snapshots: true
