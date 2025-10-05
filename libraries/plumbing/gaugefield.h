@@ -37,18 +37,21 @@ class GaugeField {
     // copy constructor - from fields which can be assigned
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
     GaugeField(const GaugeField<A> &other) {
-        foralldir(d) fdir[d] = other[d];
+        foralldir (d)
+            fdir[d] = other[d];
     }
 
     // constructor with compatible scalar
     template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
     GaugeField(const A &val) {
-        foralldir(d) fdir[d] = val;
+        foralldir (d)
+            fdir[d] = val;
     }
 
     // constructor from 0 - nullptr trick in use
     GaugeField(const std::nullptr_t z) {
-        foralldir(d) fdir[d] = 0;
+        foralldir (d)
+            fdir[d] = 0;
     }
 
 
@@ -72,41 +75,48 @@ class GaugeField {
     /// Assign from anything the field allows
     template <typename A>
     GaugeField &operator=(const A &val) {
-        foralldir(d) fdir[d] = val;
+        foralldir (d)
+            fdir[d] = val;
         return *this;
     }
 
     /// Separate 0 assignment
     GaugeField &operator=(std::nullptr_t np) {
-        foralldir(d) fdir[d] = 0;
+        foralldir (d)
+            fdir[d] = 0;
         return *this;
     }
 
     template <typename A>
     GaugeField &operator=(const GaugeField<A> &rhs) {
-        foralldir(d) fdir[d] = rhs[d];
+        foralldir (d)
+            fdir[d] = rhs[d];
         return *this;
     }
 
     // This is now explicitly needed since it is implicitly deleted when move constructor is defined
     GaugeField &operator=(const GaugeField &rhs) {
-        foralldir(d) fdir[d] = rhs[d];
+        foralldir (d)
+            fdir[d] = rhs[d];
         return *this;
     }
 
     GaugeField(GaugeField &&rhs) {
-        foralldir(d)(*this)[d] = std::move(rhs[d]);
+        foralldir (d)
+            (*this)[d] = std::move(rhs[d]);
     }
 
     GaugeField &operator=(GaugeField &&rhs) {
         if (this != &rhs) {
-            foralldir(d)(*this)[d] = std::move(rhs[d]);
+            foralldir (d)
+                (*this)[d] = std::move(rhs[d]);
         }
         return *this;
     }
 
     void clear() {
-        foralldir(d) fdir[d].clear();
+        foralldir (d)
+            fdir[d].clear();
     }
 
     /**
@@ -114,8 +124,9 @@ class GaugeField {
      * @details Only defined for \f$ SU(N) \f$ matrices and Fields
      */
     void reunitarize_gauge() {
-        foralldir(d) {
-            onsites(ALL)(*this)[d][X].reunitarize();
+        foralldir (d) {
+            onsites (ALL)
+                (*this)[d][X].reunitarize();
         }
     }
 
@@ -131,15 +142,17 @@ class GaugeField {
         Reduction<double> plaq;
         plaq.allreduce(false);
 
-        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+        foralldir (dir1)
+            foralldir (dir2)
+                if (dir1 < dir2) {
 
-            onsites(ALL) {
-                plaq += 1.0 -
-                        real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
-                                   (*this)[dir1][X + dir2].dagger() * (*this)[dir2][X].dagger())) /
-                            T::size();
-            }
-        }
+                    onsites (ALL) {
+                        plaq += 1.0 - real(trace((*this)[dir1][X] * (*this)[dir2][X + dir1] *
+                                                 (*this)[dir1][X + dir2].dagger() *
+                                                 (*this)[dir2][X].dagger())) /
+                                          T::size();
+                    }
+                }
 
         return plaq.value();
     }
@@ -147,7 +160,7 @@ class GaugeField {
     // I/O operations for gauge fields (here only binary)
 
     void write(std::ofstream &outputfile) const {
-        foralldir(d) {
+        foralldir (d) {
             fdir[d].write(outputfile);
         }
     }
@@ -160,13 +173,13 @@ class GaugeField {
     }
 
     void read(std::ifstream &inputfile) {
-        foralldir(d) {
+        foralldir (d) {
             fdir[d].read(inputfile);
         }
     }
 
     void read(std::ifstream &inputfile, CoordinateVector &insize) {
-        foralldir(d) {
+        foralldir (d) {
             fdir[d].read(inputfile, insize);
         }
     }
@@ -193,7 +206,7 @@ class GaugeField {
             f = sizeof(T);
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
 
-            foralldir(d) {
+            foralldir (d) {
                 f = lattice.size(d);
                 outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
             }
@@ -237,7 +250,7 @@ class GaugeField {
 
         CoordinateVector insize = lattice.size();
         if (ok && hila::myrank() == 0) {
-            foralldir(d) {
+            foralldir (d) {
                 inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
                 insize[d] = f;
                 ok = ok && (lattice.size(d) % insize[d] == 0);
@@ -263,7 +276,7 @@ class GaugeField {
      */
 
     void block_gauge(const GaugeField<T> &parent) {
-        foralldir(d) {
+        foralldir (d) {
             assert(parent[d].is_initialized(ALL));
             (*this)[d].check_alloc();
         }
@@ -281,19 +294,19 @@ class GaugeField {
         CoordinateVector cvmin = blocklat->mynode.min;
         auto size_factor = blocklat->mynode.size_factor;
 
-        foralldir(d) {
+        foralldir (d) {
             assert(blockfactor[d] <= 2 &&
                    "block_gauge() can be used only with blocking factors 1 or 2");
         }
 
-        foralldir(d) {
+        foralldir (d) {
             // switch to parent
             lattice.switch_to(parentlat);
 
             // if no blocking to d, just copy the field
             if (blockfactor[d] == 1) {
-#pragma hila direct_access(buf)
-                onsites(ALL) {
+                #pragma hila direct_access(buf)
+                onsites (ALL) {
                     if (X.coordinates().is_divisible(blockfactor)) {
                         // get blocked coords logically on this
                         Vector<NDIM, unsigned> cv =
@@ -303,8 +316,8 @@ class GaugeField {
                 }
             } else {
                 // Now there is blocking by factor of 2, multiply long link
-#pragma hila direct_access(buf)
-                onsites(ALL) {
+                #pragma hila direct_access(buf)
+                onsites (ALL) {
                     if (X.coordinates().is_divisible(blockfactor)) {
                         // get blocked coords logically on this
                         Vector<NDIM, unsigned> cv =
@@ -316,8 +329,8 @@ class GaugeField {
 
             lattice.switch_to(blocklat);
 
-#pragma hila direct_access(buf)
-            onsites(ALL) {
+            #pragma hila direct_access(buf)
+            onsites (ALL) {
                 // get blocked coords logically on this node
                 Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
                 (*this)[d][X] = buf[cv.dot(size_factor)];
@@ -336,7 +349,7 @@ class GaugeField {
      * the blocking factor has to be 1 or 2. Useful when blocking in a loop.
      */
     void block_gauge_to_current_lattice() {
-        foralldir(d) {
+        foralldir (d) {
             (*this)[d].check_alloc();
         }
         lattice_struct *thislat = (*this)[e_x].fs->mylattice.ptr();
@@ -360,19 +373,19 @@ class GaugeField {
         CoordinateVector cvmin = currentlat->mynode.min;
         auto size_factor = currentlat->mynode.size_factor;
 
-        foralldir(d) {
+        foralldir (d) {
             assert(blockfactor[d] <= 2 &&
                    "block_gauge() can be used only with blocking factors 1 or 2");
         }
 
-        foralldir(d) {
+        foralldir (d) {
             // switch to this fields lattice
             lattice.switch_to(thislat);
 
             // if no blocking to d, just copy the field
             if (blockfactor[d] == 1) {
-#pragma hila direct_access(buf)
-                onsites(ALL) {
+                #pragma hila direct_access(buf)
+                onsites (ALL) {
                     if (X.coordinates().is_divisible(blockfactor)) {
                         // get blocked coords logically on this
                         Vector<NDIM, unsigned> cv =
@@ -382,8 +395,8 @@ class GaugeField {
                 }
             } else {
                 // Now there is blocking by factor of 2, multiply long link
-#pragma hila direct_access(buf)
-                onsites(ALL) {
+                #pragma hila direct_access(buf)
+                onsites (ALL) {
                     if (X.coordinates().is_divisible(blockfactor)) {
                         // get blocked coords logically on this
                         Vector<NDIM, unsigned> cv =
@@ -396,8 +409,8 @@ class GaugeField {
             lattice.switch_to(currentlat);
             (*this)[d].clear();
 
-#pragma hila direct_access(buf)
-            onsites(ALL) {
+            #pragma hila direct_access(buf)
+            onsites (ALL) {
                 // get blocked coords logically on this node
                 Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
                 (*this)[d][X] = buf[cv.dot(size_factor)];
@@ -410,7 +423,7 @@ class GaugeField {
     /////////////////////////////////////////////////////////////////////////////////////////
 
     void unblock_gauge(GaugeField<T> &target) const {
-        foralldir(d) {
+        foralldir (d) {
             (*this)[d].unblock_to(target[d]);
         }
     }
@@ -421,7 +434,8 @@ class GaugeField {
 namespace hila {
 template <typename T>
 void swap(GaugeField<T> &A, GaugeField<T> &B) {
-    foralldir(d) hila::swap(A[d], B[d]);
+    foralldir (d)
+        hila::swap(A[d], B[d]);
 }
 } // namespace hila
 

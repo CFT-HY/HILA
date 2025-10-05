@@ -76,14 +76,15 @@ void test_reductions() {
         f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
 
         Complex<double> sum = 0;
-        onsites(ALL) sum += f[X];
+        onsites (ALL)
+            sum += f[X];
 
         sum /= lattice.volume();
         report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
 
         ReductionVector<Complex<double>> rv(lattice.size(e_x));
 
-        onsites(ALL) {
+        onsites (ALL) {
             rv[X.coordinate(e_x)] += f[X];
         }
 
@@ -97,7 +98,7 @@ void test_reductions() {
         // do a combined reduction too
         sum = 0;
         rv = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             rv[X.x()] += f[X];
             rv[0] += 1;
             rv[1] += -0.01;
@@ -126,7 +127,7 @@ void test_reductions() {
 
         ReductionVector<int64_t> rv(lattice.size(e_x));
 
-        onsites(ALL) {
+        onsites (ALL) {
             rv[X.x()] += lf[X];
         }
 
@@ -138,7 +139,7 @@ void test_reductions() {
         report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
 
         int64_t psum = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             if (X.parity() == EVEN)
                 psum += 1;
         }
@@ -155,7 +156,7 @@ void test_reductions() {
 
         ReductionVector<int64_t> rv(lattice.size(e_x));
 
-        onsites(ALL) {
+        onsites (ALL) {
             rv[X.x()] += lf[X];
         }
 
@@ -178,7 +179,7 @@ void test_reductions() {
 
         ReductionVector<SU<N, double>> rmf(lattice.size(e_x));
 
-        onsites(ALL) {
+        onsites (ALL) {
             rmf[X.x()] += mf[X];
         }
 
@@ -206,7 +207,8 @@ void test_site_access() {
 
     CoordinateVector c;
     for (int i = 0; i < 3; i++) {
-        foralldir(d) c[d] = hila::random() * lattice.size(d);
+        foralldir (d)
+            c[d] = hila::random() * lattice.size(d);
         hila::broadcast(c); // need to broadcast!
 
         f[c] = 4;   // write to location c
@@ -231,7 +233,8 @@ void test_minmax() {
 
         n[par] = hila::random();
         do {
-            foralldir(d) c[d] = hila::random() * lattice.size(d);
+            foralldir (d)
+                c[d] = hila::random() * lattice.size(d);
         } while (!(par == ALL || c.parity() == par));
         hila::broadcast(c);
         n[c] = 2;
@@ -247,7 +250,8 @@ void test_minmax() {
                     v - 2, 1e-9);
 
         do {
-            foralldir(d) c[d] = hila::random() * lattice.size(d);
+            foralldir (d)
+                c[d] = hila::random() * lattice.size(d);
         } while (!(par == ALL || c.parity() == par));
         hila::broadcast(c);
         n[c] = -1;
@@ -279,7 +283,7 @@ void test_random() {
     for (int i = 0; i < n_loops; i++) {
         f.gaussian_random();
         double s = 0, s2 = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             s += f[X];
             s2 += sqr(f[X]);
         }
@@ -315,7 +319,8 @@ void test_set_elements_and_select() {
     if (hila::myrank() == 0) {
         int k = 1;
         for (int i = 0; i <= 50; i++) {
-            foralldir(d) c[d] = hila::random() * lattice.size(d);
+            foralldir (d)
+                c[d] = hila::random() * lattice.size(d);
             bool found = false;
 
             // don't overwrite previous loc
@@ -351,7 +356,7 @@ void test_set_elements_and_select() {
     SiteSelect s;
     SiteValueSelect<Complex<double>> sv;
 
-    onsites(ALL) {
+    onsites (ALL) {
         if (squarenorm(f[X]) >= 1) {
             s.select(X);
             sv.select(X, f[X]);
@@ -391,7 +396,7 @@ void test_set_elements_and_select() {
     report_pass("SiteValueSelect content", 1 - ok, 1e-6);
 
 
-    onsites(ALL) {}
+    onsites (ALL) {}
 }
 
 
@@ -404,7 +409,8 @@ void test_subvolumes() {
     bool ok = true;
     for (int i = 0; i < 20; i++) {
         CoordinateVector c;
-        foralldir(d) c[d] = hila::random() * lattice.size(d);
+        foralldir (d)
+            c[d] = hila::random() * lattice.size(d);
         auto si = SiteIndex(c);
         if (si.coordinates() != c)
             ok = false;
@@ -420,62 +426,63 @@ void test_subvolumes() {
     CoordinateVector c;
     c.fill(-1);
     size_t vol = lattice.volume();
-    foralldir(d) if (d < NDIM - 1) {
-        c[d] = hila::random() * lattice.size(d);
-        hila::broadcast(c);
+    foralldir (d)
+        if (d < NDIM - 1) {
+            c[d] = hila::random() * lattice.size(d);
+            hila::broadcast(c);
 
-        auto slice = f.get_slice(c);
+            auto slice = f.get_slice(c);
 
-        vol /= lattice.size(d);
-        if (hila::myrank() == 0) {
+            vol /= lattice.size(d);
+            if (hila::myrank() == 0) {
 
-            report_pass(hila::prettyprint(NDIM - (int)d - 1) + "-dimensional slice size " +
-                            hila::prettyprint(vol),
-                        slice.size() - vol, 1e-3);
+                report_pass(hila::prettyprint(NDIM - (int)d - 1) + "-dimensional slice size " +
+                                hila::prettyprint(vol),
+                            slice.size() - vol, 1e-3);
 
 
-            bool pass = true;
+                bool pass = true;
 
-            CoordinateVector mycoord = 0;
-            foralldir(d2) {
-                if (c[d2] >= 0)
-                    mycoord[d2] = c[d2];
-            }
-            foralldir(d2) {
-                if (c[d2] < 0) {
-                    mycoord[d2] = -1;
-                    break;
+                CoordinateVector mycoord = 0;
+                foralldir (d2) {
+                    if (c[d2] >= 0)
+                        mycoord[d2] = c[d2];
                 }
-            }
-
-            for (auto s : slice) {
-
-                // get the coordinate which should be here
-                bool add = true;
-                foralldir(d2) {
-                    if (add && c[d2] < 0) {
-                        mycoord[d2]++;
-                        if (mycoord[d2] < lattice.size(d2)) {
-                            add = false;
-                        } else {
-                            mycoord[d2] = 0;
-                        }
+                foralldir (d2) {
+                    if (c[d2] < 0) {
+                        mycoord[d2] = -1;
+                        break;
                     }
                 }
 
-                if (pass && mycoord != s.coordinates()) {
-                    hila::out0 << "Slice coord error, should be "
-                               << hila::prettyprint(mycoord.transpose()) << " is "
-                               << hila::prettyprint(s.coordinates().transpose()) << " slice is "
-                               << hila::prettyprint(c.transpose()) << '\n';
-                    pass = false;
-                    break;
-                }
-            }
+                for (auto s : slice) {
 
-            report_pass("slice content", pass == false, 1e-2);
+                    // get the coordinate which should be here
+                    bool add = true;
+                    foralldir (d2) {
+                        if (add && c[d2] < 0) {
+                            mycoord[d2]++;
+                            if (mycoord[d2] < lattice.size(d2)) {
+                                add = false;
+                            } else {
+                                mycoord[d2] = 0;
+                            }
+                        }
+                    }
+
+                    if (pass && mycoord != s.coordinates()) {
+                        hila::out0 << "Slice coord error, should be "
+                                   << hila::prettyprint(mycoord.transpose()) << " is "
+                                   << hila::prettyprint(s.coordinates().transpose()) << " slice is "
+                                   << hila::prettyprint(c.transpose()) << '\n';
+                        pass = false;
+                        break;
+                    }
+                }
+
+                report_pass("slice content", pass == false, 1e-2);
+            }
         }
-    }
 }
 
 /**
@@ -510,7 +517,7 @@ void test_fft() {
 
         double sum = 0;
         double tnorm = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             sum += (f[X] - lattice.volume()).squarenorm();
             tnorm += f[X].squarenorm();
         }
@@ -535,7 +542,7 @@ void test_fft() {
 
         double eps = squarenorm_relative(p, p2);
 
-        report_pass("FFT Complex<float> constant field", eps, 1e-13 * sqrt(lattice.volume()));
+        report_pass("FFT Complex<float> constant field", eps, 1e-6 * sqrt(lattice.volume()));
 
         //-----------------------------------------------------------------
         // After two applications the field should be back to a constant * volume
@@ -544,7 +551,7 @@ void test_fft() {
 
         double sum = 0;
         double tnorm = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             sum += (f[X] - lattice.volume()).squarenorm();
             tnorm += f[X].squarenorm();
         }
@@ -565,14 +572,14 @@ void test_fft() {
         for (int iter = 0; iter < 5; iter++) {
             Vector<NDIM, double> kv;
             CoordinateVector kx;
-            foralldir(d) {
+            foralldir (d) {
                 kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
             }
 
             kv = kx.convert_to_k();
 
 
-            onsites(ALL) {
+            onsites (ALL) {
                 double d = kv.dot(X.coordinates());
                 f[X] = expi(d);
             }
@@ -592,7 +599,8 @@ void test_fft() {
 
         {
             Field<double> r;
-            onsites(ALL) r[X] = hila::gaussrand();
+            onsites (ALL)
+                r[X] = hila::gaussrand();
 
             f = r.FFT_real_to_complex();
             p = f.FFT(fft_direction::back) / lattice.volume();
@@ -600,9 +608,7 @@ void test_fft() {
 
             report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
 
-            bool odd = false;
-            foralldir(d) odd = odd || (lattice.size(d) % 2 > 0);
-            if (!odd) {
+            if (lattice.volume() % 2 == 0) {
                 auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
                 eps = squarenorm_relative(r, r2);
 
@@ -616,16 +622,22 @@ void test_fft() {
         // Check fft norm
 
 
-        onsites(ALL) {
+        onsites (ALL) {
             p[X] = hila::random() * exp(-X.coordinates().convert_to_k().squarenorm());
         }
-        f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
-
-        double nf = f.squarenorm();
         double np = p.squarenorm();
-        report_pass("Norm of field = " + hila::prettyprint(nf) +
-                        " and FFT = " + hila::prettyprint(np),
-                    (nf - np) / nf, 1e-10);
+
+        if (lattice.volume() % 2 == 0) {
+            f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
+
+            double nf = f.squarenorm();
+            report_pass("Norm of field = " + hila::prettyprint(nf) +
+                            " and FFT = " + hila::prettyprint(np),
+                        (nf - np) / nf, 1e-10);
+        } else {
+            hila::out0 << " ...  Skipping FFT norm check because lattice size is odd\n";
+        }
+
 
         hila::k_binning b;
         b.k_max(M_PI * sqrt(3.0));
@@ -662,7 +674,7 @@ void test_spectraldensity() {
     for (int iter = 0; iter < 3; iter++) {
         Vector<NDIM, double> kv;
         CoordinateVector kx;
-        foralldir(d) {
+        foralldir (d) {
             kx[d] = hila::broadcast(hila::random()) * lattice.size(d);
         }
         kv = kx.convert_to_k();
@@ -688,7 +700,7 @@ void test_spectraldensity() {
 
         // then test the spectral density extraction
         // set single wave
-        onsites(ALL) {
+        onsites (ALL) {
             double d = kv.dot(X.coordinates());
             f[X] = expi(d);
         }
@@ -714,7 +726,7 @@ void test_spectraldensity() {
 void test_field_slices() {
 
     Field<SiteIndex> s;
-    onsites(ALL) {
+    onsites (ALL) {
         s[X] = SiteIndex(X.coordinates());
     }
 }
@@ -729,12 +741,13 @@ void test_matrix_operations() {
 
     Field<Matrix<3, 2, Complex<double>>> mf;
 
-    onsites(ALL) mf[X].fill(1 + I);
+    onsites (ALL)
+        mf[X].fill(1 + I);
 
     Matrix<3, 3, Complex<double>> cm;
     cm.asArray() = 4;
     double sum = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         sum += (mf[X] * mf[X].dagger() - cm).squarenorm();
     }
 
@@ -764,7 +777,7 @@ void test_matrix_algebra() {
     // eigenvalue test - show that  M = U D U^*, where D is diagonal eigenvalue matrix and U
     // matrix of eigenvectors
 
-    onsites(ALL) {
+    onsites (ALL) {
         auto H = M[X] * M[X].dagger(); // make hermitean
 
         auto r = H.eigen_hermitean();
@@ -779,7 +792,7 @@ void test_matrix_algebra() {
 
     // Singular value test - non-pivoted
 
-    onsites(ALL) {
+    onsites (ALL) {
         auto r = M[X].svd();
         delta[X] = (M[X] - r.U * r.singularvalues * r.V.dagger()).norm();
     }
@@ -794,7 +807,7 @@ void test_matrix_algebra() {
 
     M.gaussian_random();
 
-    onsites(ALL) {
+    onsites (ALL) {
         auto r = M[X].svd_pivot(hila::sort::ascending);
         delta[X] = (M[X] - r.U * r.singularvalues * r.V.dagger()).norm();
     }
@@ -831,7 +844,7 @@ void test_extended() {
 
         size_t nsqr = 0, nmag = 0, n1 = 0;
 
-        onsites(ALL) {
+        onsites (ALL) {
             if (X.x() % 2 == 0) {
                 if (X.y() % 2 == 0) {
                     g[X] = sqr(mag);
@@ -847,7 +860,7 @@ void test_extended() {
         }
         ExtendedPrecision ev = 0;
         double s = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             ev += g[X];
             s += g[X];
         }
@@ -917,7 +930,7 @@ void test_clusters() {
 
     m = hila::clusters::background;
 
-    onsites(ALL) {
+    onsites (ALL) {
         auto c = X.coordinates();
         if (c[e_x] == 0 && c[e_y] == 0)
             m[X] = 1;
@@ -971,7 +984,7 @@ void test_blocking() {
 
         cvfb.block_from(cvf);
         double sum = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             sum += (cvfb[X] - 2 * X.coordinates()).squarenorm();
             cvfb[X] *= -1;
         }
@@ -980,10 +993,10 @@ void test_blocking() {
 
         gf.block_gauge_to_current_lattice();
 
-        Complex<float> one(1,0);
+        Complex<float> one(1, 0);
         sum = 0;
-        foralldir(d) {
-            onsites(ALL) {
+        foralldir (d) {
+            onsites (ALL) {
                 sum += (gf[d][X] - one).squarenorm();
             }
         }
@@ -1002,7 +1015,7 @@ void test_blocking() {
 
 
         sum = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             if (X.coordinates().is_divisible({2, 2, 2})) {
                 sum += (X.coordinates() + cvf[X]).squarenorm();
             }

@@ -233,7 +233,7 @@ class Array {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
 
-//#pragma hila loop_function
+    //#pragma hila loop_function
     const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -249,7 +249,7 @@ class Array {
         return *reinterpret_cast<Vector<n, T> *>(this);
     }
 
-//#pragma hila loop_function
+    //#pragma hila loop_function
     const Vector<n, T> &asVector() const {
         static_assert(1 == m, "asVector() only for column arrays");
         return *reinterpret_cast<const Vector<n, T> *>(this);
@@ -260,7 +260,7 @@ class Array {
         return *reinterpret_cast<DiagonalMatrix<n, T> *>(this);
     }
 
-//#pragma hila loop_function
+    //#pragma hila loop_function
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         static_assert(1 == m, "asDiagonalMatrix() only for column arrays");
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
@@ -648,14 +648,14 @@ class Array {
     }
 
     /// implement sort as casting to array
-#pragma hila novector
+    #pragma hila novector
     template <int N>
     Array<n, m, T> sort(Vector<N, int> &permutation,
                         hila::sort order = hila::sort::ascending) const {
         return this->asMatrix().sort(permutation, order).asArray();
     }
 
-#pragma hila novector
+    #pragma hila novector
     Array<n, m, T> sort(hila::sort order = hila::sort::ascending) const {
         return this->asMatrix().sort(order).asArray();
     }
