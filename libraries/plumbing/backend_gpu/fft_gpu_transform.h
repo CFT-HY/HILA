@@ -22,6 +22,7 @@ using gpufftResult = cufftResult;
 #define gpufftSetWorkArea cufftSetWorkArea
 #define gpufftMakePlan1d cufftMakePlan1d
 #define gpufftGetSize1d cufftGetSize1d
+#define gpufftEstimate1d cufftEstimate1d
 
 #define GPUFFT_FORWARD CUFFT_FORWARD
 #define GPUFFT_INVERSE CUFFT_INVERSE
@@ -46,6 +47,7 @@ using gpufftHandle = hipfftHandle;
 #define gpufftSetWorkArea hipfftSetWorkArea
 #define gpufftMakePlan1d hipfftMakePlan1d
 #define gpufftGetSize1d hipfftGetSize1d
+#define gpufftEstimate1d hipfftEstimate1d
 
 #define GPUFFT_FORWARD HIPFFT_FORWARD
 #define GPUFFT_INVERSE HIPFFT_BACKWARD
@@ -98,14 +100,10 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
 
 #define GPUFFT_SHARE_PLAN_MEMORY
 
-
-#define HILA_GPUFFT_N_PLANS NDIM // just for concreteness...
-
 class hila_saved_fftplan_t {
   public:
     struct plan_d {
         gpufftHandle plan;
-        unsigned long seq; // plan use sequence - for clearing up
         int size;
         int batch;
         bool is_float;
@@ -121,9 +119,7 @@ class hila_saved_fftplan_t {
     unsigned long seq = 0;
 
 
-    hila_saved_fftplan_t() {
-        seq = 0;
-    }
+    hila_saved_fftplan_t() {}
 
     ~hila_saved_fftplan_t() {
         delete_plans();
@@ -132,7 +128,8 @@ class hila_saved_fftplan_t {
     void delete_plans() {
         static bool deleted = false;
 
-        if (deleted) return;
+        if (deleted)
+            return;
         deleted = true;
 
         for (auto &p : plans) {
@@ -145,7 +142,6 @@ class hila_saved_fftplan_t {
 #endif
         hila::out0 << "GPU FFT Plans: " << plans.size() << " plans used\n";
         plans.clear();
-        seq = 0;
     }
 
     // get cached plan or create new.  If the saved plan is incompatible with
@@ -161,35 +157,31 @@ class hila_saved_fftplan_t {
         for (auto &p : plans) {
             if (p.size == size && p.batch == batch && p.is_float == is_float) {
                 // Now we got it!
-                p.seq = seq;
                 return p.plan;
             }
         }
 
-        // not cached, make new if there's room
+        // not cached, make new
 
         fft_plan_timer.start();
 
-        plan_d *pp;
-
-#if defined(GPUFFT_SHARE_PLAN_MEMORY)
-
-        hila::out0 << "CREATE FFT PLAN\n";
-
-        // create new plan stub
+        // new plan hook
         plans.emplace_back();
-        pp = &plans.back();
+        plan_d *pp = &plans.back();
 
         pp->size = size;
         pp->batch = batch;
         pp->is_float = is_float;
 
+#if defined(GPUFFT_SHARE_PLAN_MEMORY)
+        
         gpufftCreate(&pp->plan);
         // turn off auto allocate
         gpufftSetAutoAllocation(pp->plan, 0);
         // and get the required scratch size
         size_t worksize;
-        gpufftGetSize1d(pp->plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch, &worksize);
+        gpufftEstimate1d(size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch, &worksize);
+        // gpufftGetSize1d(pp->plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch, &worksize);
         check_device_error("FFT Plan size");
 
         if (work_area_size >= worksize) {
@@ -197,15 +189,13 @@ class hila_saved_fftplan_t {
             gpufftSetWorkArea(pp->plan, work_area);
             check_device_error("FFT Plan work area set");
 
-            hila::out0 << "FFT: size " << worksize << ", allocated " << work_area_size << '\n';
-
         } else {
             // (re-)allocate the work area
             if (work_area != nullptr) {
                 d_free(work_area);
             }
 
-            hila::out0 << "FFT: alloc work area of size " << worksize << '\n';
+            hila::out0 << "FFT: allocate new work area of size " << worksize << '\n';
 
             work_area_size = worksize;
             work_area = (void *)d_malloc(work_area_size);
@@ -224,29 +214,7 @@ class hila_saved_fftplan_t {
 
 #else
 
-        if (plans.size() == HILA_GPUFFT_N_PLANS) {
-            // find and destroy oldest used plan
-            pp = &plans[0];
-            for (int i = 1; i < plans.size(); i++) {
-                if (pp->seq > plans[i].seq)
-                    pp = &plans[i];
-            }
-            gpufftDestroy(pp->plan);
-            check_device_error("Plan Destroy");
-        } else {
-            plan_d empty;
-            plans.push_back(empty);
-            pp = &plans.back();
-        }
-
-        // If we got here we need to make a plan
-
-        pp->size = size;
-        pp->batch = batch;
-        pp->is_float = is_float;
-        pp->seq = seq;
-
-        // HIPFFT_C2C for float transform, Z2Z for double
+        // _C2C for float transform, Z2Z for double
 
         gpufftPlan1d(&(pp->plan), size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch);
         check_device_error("FFT plan");

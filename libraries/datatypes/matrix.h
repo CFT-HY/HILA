@@ -481,12 +481,12 @@ class Matrix_t {
         return *reinterpret_cast<Array<n, m, T> *>(this);
     }
 
-/**
- * @brief Cast Vector to DiagonalMatrix
- *
- * @return DiagonalMatrix<n,T>
- */
-#pragma hila loop_function
+    /**
+     * @brief Cast Vector to DiagonalMatrix
+     *
+     * @return DiagonalMatrix<n,T>
+     */
+    #pragma hila loop_function
     template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
@@ -1514,7 +1514,7 @@ class Matrix_t {
      * @param order
      * @return Mtype
      */
-#pragma hila novector
+    #pragma hila novector
     template <int N>
     Mtype sort(Vector<N, int> &permutation, hila::sort order = hila::sort::ascending) const {
 
@@ -1563,7 +1563,7 @@ class Matrix_t {
      * @param order Order to sort in
      * @return Mtype
      */
-#pragma hila novector
+    #pragma hila novector
     Mtype sort(hila::sort order = hila::sort::ascending) const {
         static_assert(n == 1 || m == 1, "Sorting possible only for vectors");
 
@@ -1646,11 +1646,11 @@ class Matrix_t {
      * det() is the generic interface, using laplace for small matrices and LU for large
      */
 
-#pragma hila novector
+    #pragma hila novector
     T det_lu() const;
-#pragma hila novector
+    #pragma hila novector
     T det_laplace() const;
-#pragma hila novector
+    #pragma hila novector
     T det() const;
 
     /**
@@ -1663,7 +1663,7 @@ class Matrix_t {
      *
      */
 
-#pragma hila novector
+    #pragma hila novector
     template <typename Et, typename Mt, typename MT>
     int eigen_hermitean(out_only DiagonalMatrix<n, Et> &eigenvalues,
                         out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
@@ -1684,7 +1684,7 @@ class Matrix_t {
     }
 
 
-#pragma hila novector
+    #pragma hila novector
     template <typename Et, typename Mt, typename MT>
     int svd(out_only Matrix_t<n, n, Mt, MT> &_U, out_only DiagonalMatrix<n, Et> &_D,
             out_only Matrix_t<n, n, Mt, MT> &_V,
@@ -1693,7 +1693,7 @@ class Matrix_t {
     svd_result<Mtype> svd(enum hila::sort sorted = hila::sort::unsorted) const;
 
 
-#pragma hila novector
+    #pragma hila novector
     template <typename Et, typename Mt, typename MT>
     int svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U, out_only DiagonalMatrix<n, Et> &_D,
                   out_only Matrix_t<n, n, Mt, MT> &_V,
@@ -1725,7 +1725,8 @@ class Matrix_t {
      */
     template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
     auto element_mul(const Mt &arg) const {
-        static_assert(Mt::rows() == n && Mt::columns() == m, "element_mul: matrix sizes do not match");
+        static_assert(Mt::rows() == n && Mt::columns() == m,
+                      "element_mul: matrix sizes do not match");
         return ((*this).asArray() * arg.asArray()).asMatrix();
     }
 
@@ -1734,7 +1735,8 @@ class Matrix_t {
      */
     template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
     auto element_div(const Mt &arg) const {
-        static_assert(Mt::rows() == n && Mt::columns() == m, "element_div: matrix sizes do not match");
+        static_assert(Mt::rows() == n && Mt::columns() == m,
+                      "element_div: matrix sizes do not match");
         return ((*this).asArray() / arg.asArray()).asMatrix();
     }
 

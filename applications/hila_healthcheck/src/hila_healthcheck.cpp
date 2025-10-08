@@ -608,7 +608,10 @@ void test_fft() {
 
             report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
 
-            if (lattice.volume() % 2 == 0) {
+            bool is_odd = false;
+            foralldir (d)
+                is_odd |= (lattice.size(d) % 2 > 0);
+            if (!is_odd) {
                 auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
                 eps = squarenorm_relative(r, r2);
 
@@ -627,7 +630,10 @@ void test_fft() {
         }
         double np = p.squarenorm();
 
-        if (lattice.volume() % 2 == 0) {
+        bool is_odd = false;
+        foralldir (d)
+            is_odd |= (lattice.size(d) % 2 > 0);
+        if (!is_odd) {
             f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
 
             double nf = f.squarenorm();

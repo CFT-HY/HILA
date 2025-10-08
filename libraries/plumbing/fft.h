@@ -564,8 +564,10 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
 
     foralldir (d) {
-        assert(lattice.size(d) % 2 == 0 &&
-               "FFT_complex_to_real works only with even lattice size to all directions");
+        if (lattice.size(d) % 2 > 0) {
+            hila::out0 << "ERROR: FFT_complex_to_real works only with even lattice size to all directions");
+            hila::terminate();
+        }
     }
 
     // first, do a full reflection of the field, giving rf(x) = f(L-x) = "f(-x)"
