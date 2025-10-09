@@ -5,7 +5,7 @@
 /**
  * @file cmplx_utilities.h
  * @brief defines complex template utilities, in namespace hila::
- * 
+ *
  */
 
 namespace hila {

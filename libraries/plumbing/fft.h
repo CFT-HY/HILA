@@ -565,8 +565,8 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
 
     foralldir (d) {
         if (lattice.size(d) % 2 > 0) {
-            hila::out0 << "ERROR: FFT_complex_to_real works only with even lattice size to all directions");
-            hila::terminate();
+            hila::out0 << "ERROR: FFT_complex_to_real works only with even lattice size to all directions";
+            hila::terminate(0);
         }
     }
 
