@@ -3,7 +3,7 @@
 # This small script indents pragmas (BEWARE: very long pragma args wrap if clang-format 
 # reflows comments!)
 
-sed --expression='s/#pragma/\/\/ #pragma/g' | clang-format | sed --expression='s/\/\/ #pragma/#pragma/g'
+sed --expression='s/#pragma/\/\/ #pragma/' | clang-format | sed --expression='s/\/\/ #pragma/#pragma/'
 
 # This works by comments:  #pragma -> // #pragma -> #pragma
 # which works because comments are properly aligned.
