@@ -125,7 +125,7 @@ int suN_overrelax_dFJ(SU<N, T> &U, const SU<N, T> &S, Btype beta) {
     }
 
     // Do the Sherman-Morrison inverse - diag will contain the phase angles
-    diag.asVector() = hila::linalg::invert_diagonal_plus_constant_matrix(diag, smin) *
+    diag.asVector() = hila::invert_diagonal_plus_constant_matrix(diag, smin) *
            (tan(phiN) * (diag - smin).asVector());
 
     // and construct diagonal P - absorb e^{-i phi/N} to P
