@@ -548,6 +548,10 @@ class Algebra<SU2<T>> {
     inline T squarenorm() const {
         return a * a + b * b + c * c;
     }
+    /// sqrt(a^2 + b^2 + c^2)
+    inline T norm() const {
+        return ::sqrt(squarenorm());
+    }
     /// Expand algebra to SU2
     inline SU2<T> expand() const {
         SU2<T> ret;
@@ -682,6 +686,13 @@ inline T squarenorm(const Algebra<SU2<T>> &E) {
 template <typename T>
 inline SU2<T> exp(const Algebra<SU2<T>> &E) {
     return E.exp();
+}
+
+/// Rebranded exp for matrix.h compatibility
+/// (It's not actually Cayley-Hamilton)
+template <typename T>
+inline SU2<T> chexp(const Algebra<SU2<T>> &E) {
+    return exp(E);
 }
 
 /// std stream op <<
