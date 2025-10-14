@@ -52,6 +52,7 @@ using SquareMatrix = Matrix<n, n, T>;
 // Special case - m.column(), column of a matrix (not used now)
 // #include "matrix_column.h"
 
+namespace hila {
 
 /// @brief  type to store the return combo of svd:
 ///   {U, D, V} where U and V are nxn unitary / orthogonal,
@@ -76,6 +77,29 @@ struct eigen_result {
     DiagonalMatrix<M::size(), hila::arithmetic_type<M>> eigenvalues;
     M eigenvectors;
 };
+
+/// @brief  type to store the result of LU_decompose():
+///   {M, P} where M is nxn matrix containing L and U -components and P is
+/// an index vector containing permutations of rows
+/// Upgrade the type of internal matrix to double to minimize errors
+/// @tparam Mat  - type of input matrix
+template <typename Mat>
+struct LU_result {
+    static_assert(Mat::is_matrix() && Mat::rows() == Mat::columns(),
+                  "LU decomposition only for square matrix");
+    using Dtype = typename std::conditional<hila::contains_complex<Mat>::value, Complex<double>,
+                                            double>::type;
+    SquareMatrix<Mat::rows(), Dtype> LU;
+    Vector<Mat::rows(), int> P;
+
+    template <int n, typename Vt,
+              typename Rt = hila::type_mul<hila::number_type<Mat>, hila::number_type<Vt>>>
+    Vector<n, Rt> solve(const Vector<n, Vt> &rhs) const;
+    Mat invert() const;
+};
+
+} // namespace hila
+
 
 /**
  * @brief The main \f$ n \times m \f$ matrix type template Matrix_t. This is a base class type for
@@ -1669,7 +1693,7 @@ class Matrix_t {
                         out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
                         enum hila::sort sorted = hila::sort::unsorted) const;
 
-    eigen_result<Mtype> eigen_hermitean(enum hila::sort sorted = hila::sort::unsorted) const;
+    hila::eigen_result<Mtype> eigen_hermitean(enum hila::sort sorted = hila::sort::unsorted) const;
 
     // Temporary interface to eigenvalues, to be removed
     template <typename Et, typename Mt, typename MT>
@@ -1690,7 +1714,7 @@ class Matrix_t {
             out_only Matrix_t<n, n, Mt, MT> &_V,
             enum hila::sort sorted = hila::sort::unsorted) const;
 
-    svd_result<Mtype> svd(enum hila::sort sorted = hila::sort::unsorted) const;
+    hila::svd_result<Mtype> svd(enum hila::sort sorted = hila::sort::unsorted) const;
 
 
     #pragma hila novector
@@ -1699,7 +1723,76 @@ class Matrix_t {
                   out_only Matrix_t<n, n, Mt, MT> &_V,
                   enum hila::sort sorted = hila::sort::unsorted) const;
 
-    svd_result<Mtype> svd_pivot(enum hila::sort sorted = hila::sort::unsorted) const;
+    hila::svd_result<Mtype> svd_pivot(enum hila::sort sorted = hila::sort::unsorted) const;
+
+    /**
+     * @brief Make LU (LUP) decomposition of the square matrix.
+     *
+     * @details Pivoting is done by
+     * swapping rows of the matrix. Result is returned LU_result, which can be used to solve
+     * equations A x = b or finding the inverse A^{-1}.
+     *
+     * This routine is needed only if several solutions using the same matrix are needed.
+     *
+     * @returns LU_result, storing the LU matrix and permutation P
+     */
+    #pragma hila novector
+    hila::LU_result<Mtype> LU_decompose() const;
+
+    /**
+     * @brief Solve equation M x = b with vector b
+     * @details This returns x = M^{-1} b
+     * NOTE: if you need to use the inverse many times, use LU_result::solve()
+     * @code {.cpp}
+     * auto x = M.LU_solve(b);
+     * @endcode
+     */
+
+    #pragma hila novector
+    template <typename Vt>
+    auto LU_solve(const Vector<n, Vt> &b) const {
+        return (*this).LU_decompose().solve(b);
+    }
+
+    /**
+     * @brief Solve equation M x = B with "multiple right-hand sides"
+     * @details This returns x = M^{-1} B, where M is nxn and B is nxc -matrix
+     * For example, matrix product A^{-1} * B can be evaluated with
+     * A.LU_solve(B) more efficiently than calculating A{-1} directly.
+     * @code {.cpp}
+     * auto x = M.LU_solve(b);
+     * @endcode
+     */
+    #pragma hila novector
+    template <typename A, typename AT, int ncol, std::enable_if_t<(ncol > 1), int> = 0>
+    auto LU_solve(const Matrix_t<n, ncol, A, AT> &a) const {
+        auto lu = (*this).LU_decompose();
+        Matrix_t<n, ncol, A, AT> r;
+        for (int c = 0; c < ncol; c++) {
+            r.set_column(c, lu.solve(a.column(c)));
+        }
+        return r;
+    }
+
+    /**
+     * @brief An alias for LU_solve() with a more descriptive name:
+     * A.invert_mul(B)
+     */
+    template <typename M>
+    auto invert_mul(const M &mat) const {
+        return LU_solve(mat);
+    }
+
+    /**
+     * @brief Inverse of matrix
+     * NOTE: usually it is better to use LU_solve() or if the inverse is needed
+     * more than once LU_result::solve() than calculate the inverse and multiply with it.
+     */
+
+    #pragma hila novector
+    auto LU_invert() const {
+        return (*this).LU_decompose().invert();
+    }
 
 
     //////// matrix_linalg.h

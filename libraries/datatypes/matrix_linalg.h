@@ -6,7 +6,6 @@
 #include <limits>
 
 namespace hila {
-namespace linalg {
 
 
 /// @internal Find largest offdiag element of Hermitean matrix M
@@ -154,7 +153,6 @@ GivensMatrix<Dtype> diagonalize_2x2(const double mpp, const double mqq, const Dt
 }
 
 
-} // namespace linalg
 } // namespace hila
 
 /**
@@ -229,7 +227,7 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
 
         /* find the largest off-diag element */
         int p, q;
-        double abs_mpq = hila::linalg::find_largest_offdiag(M, p, q);
+        double abs_mpq = hila::find_largest_offdiag(M, p, q);
 
         // if off-diag elements are tiny return
 
@@ -238,7 +236,7 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
         }
 
         // Find diagonalizing matrix
-        auto P = hila::linalg::diagonalize_2x2(eigenvalues.e(p), eigenvalues.e(q), M.e(p, q));
+        auto P = hila::diagonalize_2x2(eigenvalues.e(p), eigenvalues.e(q), M.e(p, q));
 
         P.dagger().mult_by_Givens_left(M, p, q);
         P.mult_by_Givens_right(M, p, q);
@@ -303,9 +301,9 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
  *
  */
 template <int n, int m, typename T, typename Mtype>
-eigen_result<Mtype> Matrix_t<n, m, T, Mtype>::eigen_hermitean(enum hila::sort sorted) const {
+hila::eigen_result<Mtype> Matrix_t<n, m, T, Mtype>::eigen_hermitean(enum hila::sort sorted) const {
 
-    eigen_result<Mtype> res;
+    hila::eigen_result<Mtype> res;
     this->eigen_hermitean(res.eigenvalues, res.eigenvectors, sorted);
     return res;
 }
@@ -374,13 +372,13 @@ int Matrix_t<n, m, T, Mtype>::svd_pivot(out_only Matrix_t<n, n, Mt, MT> &_U,
 
         /* find the largest element */
         int p, q;
-        double abs_pq = hila::linalg::find_largest_offdiag(B, p, q);
+        double abs_pq = hila::find_largest_offdiag(B, p, q);
 
         // check if we're done - only very small off-diags
         if (abs_pq <= eps * sqrt(::abs(::real(B.e(p, p)) * ::real(B.e(q, q)))))
             break;
 
-        auto P = hila::linalg::diagonalize_2x2(::real(B.e(p, p)), ::real(B.e(q, q)), B.e(p, q));
+        auto P = hila::diagonalize_2x2(::real(B.e(p, p)), ::real(B.e(q, q)), B.e(p, q));
 
         // now do p,q rotation
         P.mult_by_Givens_right(M, p, q); // only columns p,q change
@@ -521,7 +519,7 @@ int Matrix_t<n, m, T, Mtype>::svd(out_only Matrix_t<n, n, Mt, MT> &_U,
                     cont = true;
                     need_pp = true;
 
-                    auto P = hila::linalg::diagonalize_2x2(Bpp, Bqq, Bpq);
+                    auto P = hila::diagonalize_2x2(Bpp, Bqq, Bpq);
 
                     // now do p,q rotation
                     P.mult_by_Givens_right(M, p, q); // only columns p,q change
@@ -574,24 +572,118 @@ int Matrix_t<n, m, T, Mtype>::svd(out_only Matrix_t<n, n, Mt, MT> &_U,
  * result satifies  M = res.U res.singularvalues res.V.dagger()
  */
 template <int n, int m, typename T, typename Mtype>
-svd_result<Mtype> Matrix_t<n, m, T, Mtype>::svd(enum hila::sort sorted) const {
+hila::svd_result<Mtype> Matrix_t<n, m, T, Mtype>::svd(enum hila::sort sorted) const {
 
-    svd_result<Mtype> res;
+    hila::svd_result<Mtype> res;
     this->svd(res.U, res.singularvalues, res.V, sorted);
     return res;
 }
 
 template <int n, int m, typename T, typename Mtype>
-svd_result<Mtype> Matrix_t<n, m, T, Mtype>::svd_pivot(enum hila::sort sorted) const {
+hila::svd_result<Mtype> Matrix_t<n, m, T, Mtype>::svd_pivot(enum hila::sort sorted) const {
 
-    svd_result<Mtype> res;
+    hila::svd_result<Mtype> res;
     this->svd_pivot(res.U, res.singularvalues, res.V, sorted);
     return res;
 }
 
 
+/**
+ * @brief LU decomposition
+ */
+template <int n, int m, typename T, typename Mtype>
+hila::LU_result<Mtype> Matrix_t<n, m, T, Mtype>::LU_decompose() const {
+    // we know matrix is square here, LU_result type demands it
+
+    hila::LU_result<Mtype> res;
+    // Work with res.LU matrix
+    res.LU = *this;
+    // numeric_limits does not work on cuda
+    constexpr double tol = 5 * 2.22e-16;
+
+
+    for (int i = 0; i < n; i++)
+        res.P[i] = i;
+    for (int i = 0; i < n; i++) {
+        double max = 0.0;
+        int imax = 0;
+
+        // find max row elem on column i
+        for (int k = i; k < n; k++) {
+            auto norm = ::squarenorm(res.LU.e(k, i));
+            if (max < norm) {
+                max = norm;
+                imax = k;
+            }
+        }
+        // if (max < tol)
+        //     return 0; // failure  this makes no sense here
+
+        if (imax != i) {
+            hila::swap(res.P[i], res.P[imax]);
+            for (int j = 0; j < n; j++)
+                hila::swap(res.LU.e(i, j), res.LU.e(imax, j));
+        }
+
+        for (int j = i + 1; j < n; j++) {
+            res.LU.e(j, i) /= res.LU.e(i, i);
+            for (int k = i + 1; k < n; k++)
+                res.LU.e(j, k) -= res.LU.e(j, i) * res.LU.e(i, k);
+        }
+    }
+    return res;
+}
+
+
+template <typename Mat>
+template <int n, typename Vt, typename Rt>
+Vector<n, Rt> hila::LU_result<Mat>::solve(const Vector<n, Vt> &rhs) const {
+
+    static_assert(n == Mat::rows(),
+                  "Vector size in LU_result::solve() must be the same as the matrix size");
+
+    Vector<n, Rt> res;
+    for (int i = 0; i < n; i++) {
+        res[i] = rhs[P[i]];
+
+        for (int k = 0; k < i; k++)
+            res[i] -= LU.e(i, k) * res[k];
+    }
+
+    for (int i = n - 1; i >= 0; i--) {
+        for (int k = i + 1; k < n; k++) {
+            res[i] -= LU.e(i, k) * res[k];
+        }
+        res[i] /= LU.e(i, i);
+    }
+
+    return res;
+}
+
+template <typename Mat>
+Mat hila::LU_result<Mat>::invert() const {
+    Mat r;
+    constexpr int n = Mat::rows();
+
+    for (int j = 0; j < n; j++) {
+        for (int i = 0; i < n; i++) {
+            r.e(i,j) = (P[i] == j) ? 1.0 : 0.0;
+
+            for (int k = 0; k < i; k++)
+                r.e(i,j) -= LU.e(i,k) * r.e(k,j);
+        }
+
+        for (int i = n - 1; i >= 0; i--) {
+            for (int k = i + 1; k < n; k++)
+                r.e(i,j) -= LU.e(i,k) * r.e(k,j);
+
+            r.e(i,j) /= LU.e(i,i);
+        }
+    }
+    return r;
+}
+
 namespace hila {
-namespace linalg {
 
 // templates needed for naive calculation of determinants
 template <
@@ -618,7 +710,6 @@ Rtype Minor(const Mtype &bigger, int row, int col) {
     return result;
 }
 
-} // namespace linalg
 } // namespace hila
 
 /**
@@ -631,6 +722,7 @@ Rtype Minor(const Mtype &bigger, int row, int col) {
  * @param mat matrix to compute determinant for
  * @return T result determinant
  */
+
 
 #pragma hila novector
 template <int n, int m, typename T, typename Mtype>
@@ -654,7 +746,7 @@ T Matrix_t<n, m, T, Mtype>::det_laplace() const {
         T result(0);
         hila::arithmetic_type<T> parity = 1, opposite = -1;
         for (int i = 0; i < n; i++) {
-            Matrix<n - 1, m - 1, T> minor = hila::linalg::Minor(*this, 0, i);
+            Matrix<n - 1, m - 1, T> minor = hila::Minor(*this, 0, i);
             result += parity * minor.det_laplace() * (*this).e(0, i);
             parity *= opposite;
         }
@@ -794,7 +886,6 @@ namespace hila {
 /**
  * @brief Inversed diagnal + const. matrix using Sherman-Morrison formula
  */
-namespace linalg {
 
 /**
  * @details Sherman-Morrison formula (generalized to complex) is
@@ -820,7 +911,6 @@ auto invert_diagonal_plus_constant_matrix(const DiagonalMatrix<N, T> &D, const C
     return B - tmul * B.asVector() * B.asVector().transpose();
 }
 
-} // namespace linalg
 } // namespace hila
 
 #endif // MATRIX_LINALG_H

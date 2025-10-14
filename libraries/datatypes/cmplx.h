@@ -499,7 +499,7 @@ class Complex {
     inline Complex<T> &operator/=(const A &lhs) & {
         if constexpr (hila::is_complex<A>::value) {
 
-            T m = 1.0 / max(abs(lhs.re), abs(lhs.im));
+            T m = 1.0 / max(::abs(lhs.re), ::abs(lhs.im));
             auto wn = lhs * m;
             T n = wn.squarenorm();
             T r = mul_add(re, wn.re, im * wn.im) / n * m; // a*b+c

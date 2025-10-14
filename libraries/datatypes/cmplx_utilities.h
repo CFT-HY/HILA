@@ -4,7 +4,11 @@
 // This header file is meant to be included from cmplx.h
 /**
  * @file cmplx_utilities.h
+<<<<<<< Updated upstream
  * @brief defines complex template utilities, in namespace hila::
+=======
+ * @brief defines complex template utilities, in namespace hila
+>>>>>>> Stashed changes
  *
  */
 
@@ -17,9 +21,11 @@ namespace hila {
 // hila::number_type<T>   returns Complex or arithmetic type
 // hila::ntype_op<A,B>        returns the conventionally upgraded complex or scalar number type
 // hila::complex_x_scalar_type<A,B>  type of operation Complex<A> * scalar<B>
+// hila::number_type_double<T>  returns double or Complex<double> (compare to number_type)
 
-////////////////////////////////////////////////////////////////////////
-// hila::is_complex<T>::value -template, using specialization
+/**
+ * @brief  hila::is_complex<T>::value is true if T is Complex<float> or Complex<double>
+ */
 template <typename T>
 struct is_complex : std::integral_constant<bool, false> {};
 
@@ -29,15 +35,18 @@ struct is_complex<Complex<T>> : std::integral_constant<bool, true> {};
 template <typename T>
 struct is_complex<Imaginary_t<T>> : std::integral_constant<bool, true> {};
 
-/// hila::is_complex_or_arithmetic<T>::value
+/***
+ * hila::is_complex_or_arithmetic<T>::value is true for complex or arithmetic types
+ */
 template <typename T>
 struct is_complex_or_arithmetic
     : std::integral_constant<bool, hila::is_arithmetic<T>::value || hila::is_complex<T>::value> {};
 
 /////////////////////////////////////////////////////////////////////////
-// Utility to check that the type contains complex numbers
-// Use as contains_complex<T>::value
-
+/**
+ * @brief Utility to check that the type contains complex numbers (only for hila types)
+ * Use as contains_complex<T>::value
+ */
 template <typename T, typename Enable = void>
 struct contains_complex : std::integral_constant<bool, false> {};
 
@@ -47,9 +56,6 @@ struct contains_complex<T, typename std::enable_if_t<hila::is_field_class_type<T
                              hila::contains_type<T, Complex<hila::arithmetic_type<T>>>::value> {};
 
 /////////////////////////////////////////////////////////////////////////
-// Utility hila::number_type<T>  returns complex or arithmetic type
-// depending on the type
-
 template <typename T, typename Enable = void, typename N = hila::arithmetic_type<T>>
 struct complex_or_arithmetic_type_struct {
     using type = N;
@@ -61,6 +67,10 @@ struct complex_or_arithmetic_type_struct<
     using type = Complex<hila::arithmetic_type<T>>;
 };
 
+/**
+ * @brief Utility hila::number_type<T>  returns the number type from which T is constructed,
+ * either arithmetic type or Complex
+ */
 template <typename T>
 using number_type = typename complex_or_arithmetic_type_struct<T>::type;
 
