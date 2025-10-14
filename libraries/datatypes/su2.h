@@ -78,7 +78,6 @@ class SU2 {
     inline T trace() const {
         return 2.0 * d;
     }
-
     inline T det() const {
         return a * a + b * b + c * c + d * d;
     }
@@ -224,6 +223,15 @@ class SU2 {
         ret.c = c;
         return 2.0 * ret; // factor of 2 from normalization, $\lambda_a = 1/2 \sigma_a$
     }
+    /// as above, but rescales the output vector by scf
+    /// exists to comply with functions in matrix.h
+    inline Algebra<SU2<T>> project_to_algebra_scaled(T scf) const {
+        Algebra<SU2<T>> ret;
+        ret.a = a;
+        ret.b = b;
+        ret.c = c;
+        return scf * 2.0 * ret;
+    }
     /// SU2 matrix exp
     #pragma hila novector
     inline SU2<T> exp() const {
@@ -335,6 +343,20 @@ inline SU2<R> operator*(const SU2<A> &x, const SU2<B> &y) {
     ret.d = (x.d * y.d - x.a * y.a - x.b * y.b - x.c * y.c);
     return ret;
 }
+/// multiply two SU2's and take the trace
+template <typename A, typename B, typename R = hila::type_mul<A, B>>
+inline R mul_trace(const SU2<A> &x, const SU2<B> &y) {
+    R ret = 2 * (x.d * y.d - x.a * y.a - x.b * y.b - x.c * y.c);
+    return ret;
+}
+/// multiply two SU2's and write the result to existing element
+template <typename A, typename B, typename R = hila::type_mul<A, B>>
+inline void mult(const SU2<A> &x, const SU2<B> &y, SU2<R> &ret) {
+    ret.a = (x.d * y.a + x.a * y.d - x.b * y.c + x.c * y.b);
+    ret.b = (x.d * y.b + x.b * y.d - x.c * y.a + x.a * y.c);
+    ret.c = (x.d * y.c + x.c * y.d - x.a * y.b + x.b * y.a);
+    ret.d = (x.d * y.d - x.a * y.a - x.b * y.b - x.c * y.c);
+}
 /// SU2 * scalar
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_mul<A, B>>::value, int> = 0>
@@ -408,7 +430,6 @@ inline SU2<T> project_from_matrix(const Matrix_t<N, N, Complex<T>, Mtype> &m, in
     u.b = (m.e(i, j).re - m.e(j, i).re) * 0.5;
     return u;
 }
-
 
 // SU2 * vector (vec can be complex or real)
 template <typename A, typename B>
@@ -527,6 +548,10 @@ class Algebra<SU2<T>> {
     inline T squarenorm() const {
         return a * a + b * b + c * c;
     }
+    /// sqrt(a^2 + b^2 + c^2)
+    inline T norm() const {
+        return ::sqrt(squarenorm());
+    }
     /// Expand algebra to SU2
     inline SU2<T> expand() const {
         SU2<T> ret;
@@ -563,6 +588,11 @@ class Algebra<SU2<T>> {
         b = width * two;
         c = width * hila::gaussrand();
         return *this;
+    }
+
+    /// same as su2_algebra_dot except as a class method
+    inline T dot(const Algebra<SU2<T>> &B) {
+        return a * B.a + b * B.b + c * B.c;
     }
 };
 
@@ -645,7 +675,7 @@ inline Algebra<SU2<T>> left_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &
 /// dot product for SU2 algebra: A dot B = A^a B^a = -2 Tr( A^a T^a B^b T^b )
 template<typename T>
 inline T su2_algebra_dot(const Algebra<SU2<T>> &A, const Algebra<SU2<T>> &B) {
-    return A.a * B.a + A.b * B.b + A.c*B.c;
+    return A.a * B.a + A.b * B.b + A.c * B.c;
 }
 
 template <typename T>
@@ -656,6 +686,13 @@ inline T squarenorm(const Algebra<SU2<T>> &E) {
 template <typename T>
 inline SU2<T> exp(const Algebra<SU2<T>> &E) {
     return E.exp();
+}
+
+/// Rebranded exp for matrix.h compatibility
+/// (It's not actually Cayley-Hamilton)
+template <typename T>
+inline SU2<T> chexp(const Algebra<SU2<T>> &E) {
+    return exp(E);
 }
 
 /// std stream op <<
