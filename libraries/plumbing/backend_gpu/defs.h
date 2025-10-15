@@ -6,6 +6,9 @@
 
 #include <sstream>
 #include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <memory>
 
 // Prototypes for memory pool ops
 void gpu_memory_pool_alloc(void **p, size_t req_size);
@@ -80,11 +83,21 @@ using gpuError = cudaError;
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
 #define gpuStreamCreate(a) GPU_CHECK(cudaStreamCreate(a))
+#define gpuStreamCreateWithFlags(a,b) GPU_CHECK(cudaStreamCreateWithFlags(a,b))
+#define gpuStreamQuery(a) cudaStreamQuery(a)
 #define gpuStreamDestroy(a) GPU_CHECK(cudaStreamDestroy(a))
+#define gpuEventCreate(a) GPU_CHECK(cudaEventCreate(a))
+#define gpuEventRecord(a,b) GPU_CHECK(cudaEventRecord(a,b))
+#define gpuEventQuery(a) cudaEventQuery(a)
+#define gpuEventSynchronize(a) GPU_CHECK(cudaEventSynchronize(a))
 #define gpuMemset(a, b, c) GPU_CHECK(cudaMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 #define gpuFuncAttributes cudaFuncAttributes
 #define gpuFuncGetAttributes cudaFuncGetAttributes
+#define gpuSuccess cudaSuccess
+#define gpuStream_t cudaStream_t
+#define gpuEvent_t cudaEvent_t
+#define gpuStreamNonBlocking cudaStreamNonBlocking
 
 #define GPUTYPESTR "CUDA"
 
@@ -135,13 +148,22 @@ using gpuError = hipError_t;
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
 #define gpuStreamCreate(a) GPU_CHECK(hipStreamCreate(a))
+#define gpuStreamCreateWithFlags(a,b) GPU_CHECK(hipStreamCreateWithFlags(a,b))
+#define gpuStreamQuery(a) hipStreamQuery(a)
 #define gpuStreamDestroy(a) GPU_CHECK(hipStreamDestroy(a))
+#define gpuEventCreate(a) GPU_CHECK(hipEventCreate(a))
+#define gpuEventRecord(a,b) GPU_CHECK(hipEventRecord(a,b))
+#define gpuEventQuery(a) hipEventQuery(a)
+#define gpuEventSynchronize(a) GPU_CHECK(hipEventSynchronize(a))
 #define gpuMemset(a, b, c) GPU_CHECK(hipMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
     GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
 #define gpuFuncAttributes hipFuncAttributes
 #define gpuFuncGetAttributes hipFuncGetAttributes
-
+#define gpuSuccess hipSuccess
+#define gpuStream_t hipStream_t
+#define gpuEvent_t hipEvent_t
+#define gpuStreamNonBlocking hipStreamNonBlocking
 
 #define GPUTYPESTR "HIP"
 
@@ -172,9 +194,94 @@ inline void synchronize_threads() {
 }
 } // namespace hila
 
+
+class gpuStreamPool {
+public:
+    /**
+     * @brief Construct a new gpu Stream Pool
+     * 
+     * @param n  Number of streams in the pool
+     */
+    explicit gpuStreamPool(int n) : streams(n), events(n) {
+        for (int i = 0; i < n; ++i) {
+            gpuStreamCreateWithFlags(&streams[i], gpuStreamNonBlocking);
+            gpuEventCreate(&events[i]);
+        }
+    }
+
+    ~gpuStreamPool() {
+        for (auto s : streams) gpuStreamDestroy(s);
+    }
+    /**
+     * @brief Test if streams are running and return the stream when it's done if no streams are running clear send_params
+     * 
+     * @return int 
+     */
+    int stream_query() {
+        if (active_events.size() == 0 ) {
+            directions.clear();
+            return -1;
+        }
+        for (int i = 0; i < active_events.size(); i++) {
+            int event_id = active_events[i];
+            if (gpuEventQuery(events[event_id]) == gpuSuccess) {
+                active_events.erase(std::remove(active_events.begin(), active_events.end(), event_id), active_events.end());
+                return event_id;
+            }
+        }
+        return -2;
+    }
+
+
+    gpuStream_t next_stream() {
+        gpuStream_t s = streams[active_stream];
+        active_stream = (active_stream + 1) % streams.size();
+        return s;
+    }
+
+    gpuStream_t current_stream() {
+        return (*this).stream(active_stream);
+    }
+
+
+    void start_halo_event(int d) {
+        active_events.push_back(active_stream);
+        directions.insert({active_stream, d});
+        gpuEventRecord(events[active_stream], streams[active_stream]);
+        return;
+    }
+
+    gpuStream_t stream(int i) {
+        return streams[i];
+    }
+
+    int get_direction(int event_id) {
+        return directions[event_id];
+    }
+
+    int get_current_active_stream() {
+        return active_stream;
+    }
+
+private:
+    std::vector<gpuStream_t> streams;
+    std::vector<gpuEvent_t> events;
+    std::vector<int> active_events;
+    std::unordered_map<int, int> directions;
+    int active_stream = 0;
+    
+};
+
+// At most there are 8 directions to communicate to
+int constexpr max_directions = 8;
+
+gpuStreamPool& halo_streams(); 
+gpuStream_t& bulk_stream();
+gpuEvent_t& bulk_event();
+
 #else // NOW HILAPP
 
-////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////
 // Now not cuda or hip - hilapp stage scans this section
 ///////////////////////////////////////////////////////////////////////////////////
 

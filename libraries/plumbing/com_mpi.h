@@ -407,6 +407,15 @@ T reduce_node_product(T &var, bool allreduce = true) {
 void set_allreduce(bool on = true);
 bool get_allreduce();
 
+struct SendParams {
+    bool send = false;
+    void *buffer = nullptr;         // send buffer pointer
+    int count = 0;                  // number of bytes
+    int dest_rank = -1;             // destination rank
+    int tag = -1;                   // message tag
+    int par_i = -1;
+    MPI_Request *request = nullptr;
+};
 
 } // namespace hila
 

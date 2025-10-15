@@ -1221,6 +1221,8 @@ class Field {
 
     // Communication routines. These are all internal.
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
+    dir_mask_t start_gather_split(Direction d, Parity p, hila::SendParams &send_params) const;
+    void send_buffers(hila::SendParams &send_params) const;
     void wait_gather(Direction d, Parity p) const;
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;

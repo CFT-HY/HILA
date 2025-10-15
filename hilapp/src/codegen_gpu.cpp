@@ -126,21 +126,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Get kernel name - use line number or file offset (must be deterministic)
     std::string kernel_name = TopLevelVisitor::make_kernel_name();
 
-    // Wait for the communication to finish
-    for (field_info &l : field_info_list) {
-        // If neighbour references exist, communicate them
-        if (!l.is_loop_local_dir) {
-            for (dir_ptr &d : l.dir_list)
-                if (d.count > 0) {
-                    code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
-                         << loop_info.parity_str << ");\n";
-                }
-        } else {
-            code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                    "++HILA_dir_) {\n"
-                 << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
-        }
-    }
+    bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
 
     // Set loop lattice
     // if (field_info_list.size() > 0) {
@@ -148,9 +134,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     //     code << "const lattice_struct & hila_loop_lattice = " << fieldname << ".fs->lattice;\n";
     // } else {
     // now no fields in loop - default lattice
-    code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
-
-
+    code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";                                      
     kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
 
 
@@ -304,8 +288,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Add __launch_bounds__ directive here
     kernel << "static __global__ void __launch_bounds__(N_threads) " << kernel_name
            << "(int _hila_loop_begin, int _hila_loop_end";
-    code << "int _hila_loop_begin = hila_loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
-    code << "int _hila_loop_end = hila_loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
+    code << "hila::iter_range_t _hila_ranges;\n";
+    code << "int _hila_loops = hila_loop_lattice.loop_ranges(" << loop_info.parity_str << ", _dir_mask_ != 0, _hila_ranges);\n";
+    code << "int _hila_loop_begin = _hila_ranges.min[0];\n";
+    code << "int _hila_loop_end = _hila_ranges.max[0];\n";
 
     code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
             "N_threads - 1)/N_threads;\n";
@@ -365,6 +351,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
+
+
     // and for selections
     for (selection_info &s : selection_info_list) {
         s.maskname = s.new_name + "_mask";
@@ -389,12 +377,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // start kernel building
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
+    std::string kernel_launch;
+    code << "auto& bulk_stream = ::bulk_stream();\n";
     if (target.cuda) {
-        code << kernel_name << "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
+        kernel_launch = kernel_name + "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
     } else if (target.hip) {
-        code << "hipLaunchKernelGGL(" << kernel_name
-             << ", dim3(N_blocks), dim3(N_threads), 0, 0, _hila_loop_begin, _hila_loop_end";
+        kernel_launch = "hipLaunchKernelGGL(" + kernel_name
+             + ", dim3(N_blocks), dim3(N_threads), 0, bulk_stream, _hila_loop_begin, _hila_loop_end";
     } else {
         llvm::errs() << "Internal bug - unknown kernelized target\n";
         exit(1);
@@ -405,12 +394,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     for (field_info &l : field_info_list) {
 
         kernel << ", ";
-        code << ", ";
+        kernel_launch += ", ";
 
         if (!l.is_written)
             kernel << "const ";
         kernel << "field_storage" << l.type_template << " " << l.new_name;
-        code << l.new_name + ".fs->payload";
+        kernel_launch += l.new_name + ".fs->payload";
         i++;
     }
 
@@ -422,7 +411,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // pass the raw ptr as is
 
             kernel << ", " << vi.type << ' ' << vi.name;
-            code << ", " << vi.name;
+            kernel_launch += ", " + vi.name;
 
         } else if (!vi.is_loop_local) {
 
@@ -435,7 +424,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 // code << ", dev_" << vi.reduction_name;
             } else {
                 kernel << ", const " << vi.type << " " << vi.new_name;
-                code << ", " << vi.name;
+                kernel_launch += ", " + vi.name;
                 // Replace references in the loop body
                 for (var_ref &vr : vi.refs) {
                     loopBuf.replace(vr.ref, vi.new_name);
@@ -449,7 +438,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     for (reduction_expr &r : reduction_list) {
         r.loop_name = name_prefix + "reduction_" + std::to_string(i++) + "_";
         kernel << ", " << r.type << " * " << r.loop_name;
-        code << ", dev_" << r.reduction_name;
+        kernel_launch += ", dev_" + r.reduction_name;
     }
 
     // Then loop constant expressions upgraded
@@ -461,7 +450,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // loop var is lcer.new_name
 
             kernel << ", const " << lcer.type << ' ' << lcer.new_name;
-            code << ", " << lcer.expression;
+            kernel_launch += ", " + lcer.expression;
         }
     }
 
@@ -470,7 +459,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         std::string looping("[" + looping_var + "]");
 
         if (s.previous_selection == nullptr) {
-            code << ", " << s.maskname << ", " << s.sitename;
+            kernel_launch += ", " + s.maskname + ", " + s.sitename;
             kernel << ", char * " << s.maskname << ", SiteIndex * " << s.sitename;
         }
 
@@ -489,7 +478,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
         } else {
             if (s.previous_selection == nullptr) {
-                code << ", " << s.valname;
+                kernel_launch += ", " + s.valname;
                 kernel << ", " << s.val_type << " * " << s.valname;
             }
 
@@ -514,7 +503,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             ar.new_name = var_name_prefix + std::to_string(i) + "_";
             i++;
             kernel << ", const " << ar.element_type << " " << ar.new_name;
-            code << ", " << get_stmt_str(ar.refs[0].E);
+            kernel_launch += ", " + get_stmt_str(ar.refs[0].E);
 
             loopBuf.replace(ar.refs[0].E, ar.new_name);
 
@@ -523,7 +512,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // Now we pass the full array to the kernel
             // ar was set already above
             // Cast the data directly
-            code << ", *(" << ar.wrapper_type << "*)(void *)" << ar.data_ptr;
+            kernel_launch += ", *(" + ar.wrapper_type + "*)(void *)" + ar.data_ptr;
 
             kernel << ", const " << ar.wrapper_type << ' ' << ar.new_name;
 
@@ -534,7 +523,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         } else if (ar.type != array_ref::REDUCTION) {
 
             // Now pass the array ptr
-            code << ", " << ar.new_name;
+            kernel_launch += ", " + ar.new_name;
             kernel << ", const " << ar.element_type << " * RESTRICT " << ar.new_name;
 
             for (bracket_ref_t &br : ar.refs) {
@@ -549,7 +538,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // with blocks, each thread adds to its own histogram
 
             // pass also size here
-            code << ", " << ar.new_name;
+            kernel_launch += ", " + ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
             // kernel variable name for size of array
@@ -558,7 +547,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 // in this case need to pass the size of the vector (original!) to the kernel
                 array_size_varname = ar.new_name + "_size";
 
-                code << ", " << ar.size_expr;
+                kernel_launch += ", " + ar.size_expr;
                 kernel << ", const int " << array_size_varname;
             }
 
@@ -641,7 +630,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
         }
     }
-
     // // change the references to field expressions in the body
     // for ( field_ref & le : field_ref_list ) {
     //   //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
@@ -962,11 +950,52 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     ////////////////////////////////////////////////////////////////////////////////////
     // Kernel is finished.  Write the end handling on call code
 
-    code << ");\n\n"; // finishes kernel call
+    kernel_launch += ");\n\n"; // finishes kernel call
+    code << kernel_launch;
     code << "check_device_error(\"" << kernel_name << "\");\n";
+    code << "auto& halo_streams = ::halo_streams();\n";
+    code << "while (_dir_mask_ != 0) {\n"
+            << "    int stream_id = halo_streams.stream_query();\n"
+            << "    if (stream_id == -1) break;\n"
+            << "    if (stream_id == -2) continue;\n"
+            << "    Direction send_params_dir = static_cast<Direction>(halo_streams.get_direction(stream_id));\n";
+    for (field_info &l : field_info_list) {
+        
+        for (dir_ptr &d : l.dir_list) {
+            if (d.count > 0) {
+                code << "    if (send_params_dir == " << d.direxpr_s << ") {\n"
+                     << "        " << l.new_name << ".send_buffers(" << "send_params_"  << d.name_with_dir << ");\n"
+                     << "    }\n";
+            }
+        }
+    }
+    code << "}\n";
 
+    // Wait for the communication to finish
+    for (field_info &l : field_info_list) {
+        // If neighbour references exist, communicate them
+        if (!l.is_loop_local_dir) {
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
+                         << loop_info.parity_str << ");\n";
+                }
+        } else {
+            code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                    "++HILA_dir_) {\n"
+                 << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+        }
+    }
 
-    // If arrays were copied free memory
+    code << "if (_dir_mask_ != 0) {\n"
+         << "    _hila_loop_begin = _hila_ranges.min[1];\n"
+         << "    _hila_loop_end = _hila_ranges.max[1];\n"
+         << "    N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n"
+         << "    " << kernel_launch << "}\n";
+
+    code << "auto& bulk_event = ::bulk_event();\n"
+         << "gpuEventRecord(bulk_event, bulk_stream);\n"
+         << "gpuEventSynchronize(bulk_event);\n";
 
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
@@ -1035,8 +1064,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 code << "gpuFree(" << s.maskname << ");\n";
             }
         }
-    }
-
+    } 
 
     return code.str();
 }
