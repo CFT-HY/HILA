@@ -157,8 +157,9 @@ endif
 
 
 # Use all headers inside libraries for dependencies
-HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h) $(wildcard $(HILA_DIR)/libraries/*/*/*.h)
+HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h $(HILA_DIR)/libraries/*/*/*.h)
 HILA_HEADERS += $(HILA_DIR)/libraries/hila_signatures.h
+HILA_HEADERS += $(wildcard src/*.h src/*/*.h)
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 
