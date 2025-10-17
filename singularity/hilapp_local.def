@@ -9,7 +9,7 @@ From: ubuntu:22.04
     apt-get -y install git make libfftw3-dev
 
     #installing clang devel tools
-    export LLVM_VERSION=18
+    export LLVM_VERSION=15
     apt-get -y install clang-$LLVM_VERSION \
                        libclang-$LLVM_VERSION-dev
 

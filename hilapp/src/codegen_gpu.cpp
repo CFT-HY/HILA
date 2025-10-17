@@ -380,7 +380,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     std::string kernel_launch;
     code << "auto& bulk_stream = ::bulk_stream();\n";
     if (target.cuda) {
-        kernel_launch = kernel_name + "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
+        kernel_launch = kernel_name + "<<< N_blocks, N_threads, 0, bulk_stream >>>( _hila_loop_begin, _hila_loop_end";
     } else if (target.hip) {
         kernel_launch = "hipLaunchKernelGGL(" + kernel_name
              + ", dim3(N_blocks), dim3(N_threads), 0, bulk_stream, _hila_loop_begin, _hila_loop_end";
@@ -955,15 +955,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     code << "check_device_error(\"" << kernel_name << "\");\n";
     code << "auto& halo_streams = ::halo_streams();\n";
     code << "while (_dir_mask_ != 0) {\n"
-            << "    int stream_id = halo_streams.stream_query();\n"
-            << "    if (stream_id == -1) break;\n"
-            << "    if (stream_id == -2) continue;\n"
-            << "    Direction send_params_dir = static_cast<Direction>(halo_streams.get_direction(stream_id));\n";
+            << "    int send_id = halo_streams.stream_query();\n"
+            << "    if (send_id == -1) break;\n"
+            << "    if (send_id == -2) continue;\n";
     for (field_info &l : field_info_list) {
         
         for (dir_ptr &d : l.dir_list) {
             if (d.count > 0) {
-                code << "    if (send_params_dir == " << d.direxpr_s << ") {\n"
+                code << "    if (send_params_"<< d.name_with_dir << ".tag ==  send_id) {\n"
                      << "        " << l.new_name << ".send_buffers(" << "send_params_"  << d.name_with_dir << ");\n"
                      << "    }\n";
             }
@@ -986,7 +985,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                  << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
         }
     }
-
+    code << "while(true) {\n"
+         << "    int stream_id = halo_streams.stream_query();\n"
+         << "    if (stream_id == -1) break;\n"
+         << "    if (stream_id == -2) continue;\n"
+         << "}\n";
     code << "if (_dir_mask_ != 0) {\n"
          << "    _hila_loop_begin = _hila_ranges.min[1];\n"
          << "    _hila_loop_end = _hila_ranges.max[1];\n"

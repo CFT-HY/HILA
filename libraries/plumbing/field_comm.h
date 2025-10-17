@@ -15,18 +15,18 @@
 template <typename T>
 void Field<T>::field_struct::gather_comm_elements(
     Direction d, Parity par, T *RESTRICT buffer,
-    const lattice_struct::comm_node_struct &to_node) const {
+    const lattice_struct::comm_node_struct &to_node, int mpi_tag) const {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // note: -d in is_on_edge, because we're about to send stuff to that
     // Direction (gathering from Direction +d)
     if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, true, d);
+        payload.gather_comm_elements(buffer, to_node, par, lattice, true, mpi_tag);
     } else {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, false, d);
+        payload.gather_comm_elements(buffer, to_node, par, lattice, false, mpi_tag);
     }
 #else
-    payload.gather_comm_elements(buffer, to_node, par, lattice, false, d);
+    payload.gather_comm_elements(buffer, to_node, par, lattice, false, mpi_tag);
 #endif
 
 #else
@@ -354,7 +354,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
         size_t n = sites * size;
 #ifndef MPI_BENCHMARK_TEST
-        fs->gather_comm_elements(d, par, send_buffer, to_node);
+        fs->gather_comm_elements(d, par, send_buffer, to_node, tag);
 #endif
 
         
@@ -488,7 +488,7 @@ dir_mask_t Field<T>::start_gather_split(Direction d, Parity p, hila::SendParams 
 
 
 #ifndef MPI_BENCHMARK_TEST
-        fs->gather_comm_elements(d, par, send_buffer, to_node);
+        fs->gather_comm_elements(d, par, send_buffer, to_node, tag);
 #endif
 
 

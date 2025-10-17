@@ -31,11 +31,13 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     // skip the cub/hipcub bits in hilapp, not needed
 
     const lattice_struct &mylat = fs->mylattice.ref();
-    int64_t num_items = mylat.loop_end(par) - mylat.loop_begin(par);
+    hila::iter_range_t lattice_ranges;
+    int loops = mylat.loop_ranges(Parity::even, false, lattice_ranges);
+    int64_t num_items = lattice_ranges.max[0] - lattice_ranges.min[0];
 
     // Declare, allocate, and initialize device-accessible pointers
     // for input and output
-    T *data_in = this->field_buffer() + mylat.loop_begin(par); // ptr to data
+    T *data_in = this->field_buffer() + lattice_ranges.min[0]; // ptr to data
     gpucub::KeyValuePair<keyvalueindexT, T> *result_p, result;
 
     gpuMalloc(&result_p, sizeof(gpucub::KeyValuePair<keyvalueindexT, T>));
@@ -72,7 +74,7 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     gpuFree(result_p);
 
-    loc = mylat.coordinates(result.key + mylat.loop_begin(par));
+    loc = mylat.coordinates(result.key + lattice_ranges.min[0]);
     return result.value;
 }
 

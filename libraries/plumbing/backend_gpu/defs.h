@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <utility>
 
 // Prototypes for memory pool ops
 void gpu_memory_pool_alloc(void **p, size_t req_size);
@@ -87,9 +88,11 @@ using gpuError = cudaError;
 #define gpuStreamQuery(a) cudaStreamQuery(a)
 #define gpuStreamDestroy(a) GPU_CHECK(cudaStreamDestroy(a))
 #define gpuEventCreate(a) GPU_CHECK(cudaEventCreate(a))
+#define gpuEventCreateWithFlags(a,b) GPU_CHECK(cudaEventCreateWithFlags(a,b))
 #define gpuEventRecord(a,b) GPU_CHECK(cudaEventRecord(a,b))
 #define gpuEventQuery(a) cudaEventQuery(a)
 #define gpuEventSynchronize(a) GPU_CHECK(cudaEventSynchronize(a))
+#define gpuEventDestroy(a) GPU_CHECK(cudaEventDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(cudaMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 #define gpuFuncAttributes cudaFuncAttributes
@@ -152,9 +155,11 @@ using gpuError = hipError_t;
 #define gpuStreamQuery(a) hipStreamQuery(a)
 #define gpuStreamDestroy(a) GPU_CHECK(hipStreamDestroy(a))
 #define gpuEventCreate(a) GPU_CHECK(hipEventCreate(a))
+#define gpuEventCreateWithFlags(a,b) GPU_CHECK(hipEventCreateWithFlags(a,b))
 #define gpuEventRecord(a,b) GPU_CHECK(hipEventRecord(a,b))
 #define gpuEventQuery(a) hipEventQuery(a)
 #define gpuEventSynchronize(a) GPU_CHECK(hipEventSynchronize(a))
+#define gpuEventDestroy(a) GPU_CHECK(hipEventDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(hipMemset(a, b, c))
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
     GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
@@ -202,15 +207,26 @@ public:
      * 
      * @param n  Number of streams in the pool
      */
-    explicit gpuStreamPool(int n) : streams(n), events(n) {
+    explicit gpuStreamPool(int n) : streams(n), event_queues(n) {
+
         for (int i = 0; i < n; ++i) {
             gpuStreamCreateWithFlags(&streams[i], gpuStreamNonBlocking);
-            gpuEventCreate(&events[i]);
+            for (int j = 0; j < EVEN_POOL_PER_STREAM; ++j) {
+                gpuEvent_t event;
+                gpuEventCreate(&event);
+                event_queues[i].push(event);
+            }
         }
     }
 
     ~gpuStreamPool() {
-        for (auto s : streams) gpuStreamDestroy(s);
+        for (auto &s : streams) gpuStreamDestroy(s);
+        for (auto &q : event_queues) {
+            while(!q.empty()) {
+                gpuEventDestroy(q.front());
+                q.pop();
+            }
+        }
     }
     /**
      * @brief Test if streams are running and return the stream when it's done if no streams are running clear send_params
@@ -218,66 +234,62 @@ public:
      * @return int 
      */
     int stream_query() {
-        if (active_events.size() == 0 ) {
-            directions.clear();
-            return -1;
-        }
-        for (int i = 0; i < active_events.size(); i++) {
-            int event_id = active_events[i];
-            if (gpuEventQuery(events[event_id]) == gpuSuccess) {
-                active_events.erase(std::remove(active_events.begin(), active_events.end(), event_id), active_events.end());
-                return event_id;
+        if (active_events.empty()) return -1;
+        for (auto it = active_events.begin(); it != active_events.end();) {
+            auto [stream_event_id, event] = *it;
+            if (gpuEventQuery(event) == gpuSuccess) {
+                it = active_events.erase(it);
+                event_queues[stream_event_id].push(event);
+                int send_id = send_ids[event];
+                send_ids.erase(event);
+                return send_id;
+            } else {
+                ++it;
             }
         }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
         return -2;
     }
 
-
-    gpuStream_t next_stream() {
-        gpuStream_t s = streams[active_stream];
+    std::pair<int,gpuStream_t> next_stream() {
+        int id = active_stream;
         active_stream = (active_stream + 1) % streams.size();
-        return s;
+        return {id,streams[id]};
     }
 
-    gpuStream_t current_stream() {
-        return (*this).stream(active_stream);
-    }
-
-
-    void start_halo_event(int d) {
-        active_events.push_back(active_stream);
-        directions.insert({active_stream, d});
-        gpuEventRecord(events[active_stream], streams[active_stream]);
-        return;
+    void start_event(int stream_event_id, int send_id) {
+        gpuEvent_t event;
+        if (event_queues[stream_event_id].empty()) {
+            gpuEventCreate(&event);
+        } else {
+            event = event_queues[stream_event_id].front();
+            event_queues[stream_event_id].pop();
+        }
+        active_events.push_back({stream_event_id,event});
+        send_ids[event] = send_id;
+        gpuEventRecord(event, streams[stream_event_id]);
     }
 
     gpuStream_t stream(int i) {
         return streams[i];
     }
 
-    int get_direction(int event_id) {
-        return directions[event_id];
-    }
-
-    int get_current_active_stream() {
-        return active_stream;
-    }
-
 private:
+    static constexpr int EVEN_POOL_PER_STREAM=4;
     std::vector<gpuStream_t> streams;
-    std::vector<gpuEvent_t> events;
-    std::vector<int> active_events;
-    std::unordered_map<int, int> directions;
+    std::vector<std::queue<gpuEvent_t>> event_queues;
+    std::vector<std::pair<int, gpuEvent_t>> active_events;
+    std::unordered_map<gpuEvent_t, int> send_ids;
     int active_stream = 0;
-    
 };
 
 // At most there are 8 directions to communicate to
-int constexpr max_directions = 8;
+int constexpr max_directions = 16;
 
 gpuStreamPool& halo_streams(); 
 gpuStream_t& bulk_stream();
 gpuEvent_t& bulk_event();
+
 
 #else // NOW HILAPP
 

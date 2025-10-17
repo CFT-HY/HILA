@@ -267,7 +267,29 @@ void initialize_gpu(int rank, int device) {
     cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
 
 #endif
+
+    
 }
+
+gpuStreamPool& halo_streams() {
+    static gpuStreamPool instance(max_directions);
+    return instance;
+}
+
+gpuStream_t& bulk_stream() {
+    static gpuStream_t instance; 
+    return instance;
+}
+
+gpuEvent_t& bulk_event() {
+    static gpuEvent_t instance = []{
+        gpuEvent_t e;
+        gpuEventCreate(&e);
+        return e;
+    }(); 
+    return instance;
+}
+
 
 #ifdef CUDA
 

@@ -72,7 +72,7 @@ class field_storage {
 #endif
 
     void gather_comm_elements(T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node,
-                              Parity par, const Lattice lattice, bool antiperiodic) const;
+                              Parity par, const Lattice lattice, bool antiperiodic, int mpi_tag) const;
 
     void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
                          const Lattice lattice) const;

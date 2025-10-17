@@ -196,7 +196,7 @@ class Field {
          * @brief Gather boundary elements for communication
          */
         void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                  const lattice_struct::comm_node_struct &to_node) const;
+                                  const lattice_struct::comm_node_struct &to_node, int mpi_tag) const;
 
         /**
          * @internal
