@@ -599,11 +599,13 @@ hila::LU_result<Mtype> Matrix_t<n, m, T, Mtype>::LU_decompose() const {
     // Work with res.LU matrix
     res.LU = *this;
     // numeric_limits does not work on cuda
-    constexpr double tol = 5 * 2.22e-16;
+    // constexpr double tol = 5 * 2.22e-16;
 
 
     for (int i = 0; i < n; i++)
         res.P[i] = i;
+
+    // loop over each column
     for (int i = 0; i < n; i++) {
         double max = 0.0;
         int imax = 0;
@@ -667,17 +669,17 @@ Mat hila::LU_result<Mat>::invert() const {
 
     for (int j = 0; j < n; j++) {
         for (int i = 0; i < n; i++) {
-            r.e(i,j) = (P[i] == j) ? 1.0 : 0.0;
+            r.e(i, j) = (P[i] == j) ? 1.0 : 0.0;
 
             for (int k = 0; k < i; k++)
-                r.e(i,j) -= LU.e(i,k) * r.e(k,j);
+                r.e(i, j) -= LU.e(i, k) * r.e(k, j);
         }
 
         for (int i = n - 1; i >= 0; i--) {
             for (int k = i + 1; k < n; k++)
-                r.e(i,j) -= LU.e(i,k) * r.e(k,j);
+                r.e(i, j) -= LU.e(i, k) * r.e(k, j);
 
-            r.e(i,j) /= LU.e(i,i);
+            r.e(i, j) /= LU.e(i, i);
         }
     }
     return r;

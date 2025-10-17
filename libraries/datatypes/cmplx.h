@@ -461,13 +461,20 @@ class Complex {
     template <typename A, std::enable_if_t<hila::is_assignable<Complex<T> &, A>::value, int> = 0>
     inline Complex<T> &operator*=(const A lhs) & {
         if constexpr (hila::is_complex<A>::value) {
-            T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
-            im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
+            T r = re * lhs.re - im * lhs.im;
+            im = im * lhs.re + re * lhs.im;
             re = r;
         } else {
             re *= lhs;
             im *= lhs;
         }
+        return *this;
+    }
+
+    inline Complex<T> &operator*=(const Complex<T> &lhs) & {
+        T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
+        im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
+        re = r;
         return *this;
     }
 
@@ -500,10 +507,10 @@ class Complex {
         if constexpr (hila::is_complex<A>::value) {
 
             T m = 1.0 / max(::abs(lhs.re), ::abs(lhs.im));
-            auto wn = lhs * m;
-            T n = wn.squarenorm();
-            T r = mul_add(re, wn.re, im * wn.im) / n * m; // a*b+c
-            im = mul_sub(im, wn.re, re * wn.im) / n * m;  // a*b-c
+            Complex<T> wn = lhs * m;
+            m /= wn.squarenorm();
+            T r = mul_add(re, wn.re, im * wn.im) * m; // a*b+c
+            im = mul_sub(im, wn.re, re * wn.im) * m;  // a*b-c
             re = r;
 
         } else {
@@ -866,30 +873,6 @@ inline auto operator/(const A &a, const Complex<T> &c) {
     return hila::complex_x_scalar_type<T, A>((a * c.re) / n, -(a * c.im) / n);
 }
 
-/**
- * @brief Multiply add with Complex numbers
- * @memberof Complex
- * @details Defined as
- *
- * \code{.cpp}
- * mul_add(a,b,c) = a*b + c;
- * \endcode
- * @tparam T Arithmetic type of a,b and c
- * @param a Complex number to multiply
- * @param b Complex number to multiply
- * @param c Complex number to add to result of multiplication
- * @return Complex<T>
- */
-template <typename T>
-inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Complex<T> &c) {
-    // a*b + c
-    Complex<T> r;
-    T t1 = mul_add(a.re, b.re, c.re);
-    T t2 = mul_add(a.re, b.im, c.im);
-    r.re = mul_add(a.im, b.im, t1); // -a.im*b.im + a.re*b.re + c.re
-    r.im = mul_add(a.im, b.re, t2); // a.im*b.re + a.re*b.im + c.im
-    return r;
-}
 
 /**
  * @brief Compare equality of two complex numbers
