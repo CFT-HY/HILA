@@ -655,7 +655,7 @@ class Matrix_t {
      * @param z 0
      * @return Mtype&
      */
-    inline Mtype &operator=(const std::nullptr_t &z) out_only {
+    inline auto &operator=(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
         }
