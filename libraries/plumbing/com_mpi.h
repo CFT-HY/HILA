@@ -407,18 +407,9 @@ T reduce_node_product(T &var, bool allreduce = true) {
 void set_allreduce(bool on = true);
 bool get_allreduce();
 
-struct SendParams {
-    bool send = false;
-    void *buffer = nullptr;         // send buffer pointer
-    int count = 0;                  // number of bytes
-    int dest_rank = -1;             // destination rank
-    int tag = -1;                   // message tag
-    int par_i = -1;
-    MPI_Request *request = nullptr;
-};
+enum class gather_status_t : unsigned { NOT_STARTED = 0, STARTED, DONE };
 
 } // namespace hila
-
 
 void hila_reduce_double_setup(double *d, int n);
 void hila_reduce_float_setup(float *d, int n);

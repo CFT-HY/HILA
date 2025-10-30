@@ -128,6 +128,7 @@ inline dir_mask_t get_dir_mask(const Direction d) {
     return (dir_mask_t)(1 << d);
 }
 
+
 namespace hila {
 
 

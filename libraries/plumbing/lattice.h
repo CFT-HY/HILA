@@ -160,6 +160,7 @@ class lattice_struct {
         size_t sites, evensites, oddsites;
         size_t buffer; // offset from the start of field array
         unsigned *sitelist;
+        int tag; // tag for MPI communication
 
         // Get a vector containing the sites of parity par and number of elements
         const unsigned *RESTRICT get_sitelist(Parity par, int &size) const {

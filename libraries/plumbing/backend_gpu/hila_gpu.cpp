@@ -272,7 +272,7 @@ void initialize_gpu(int rank, int device) {
 }
 
 gpuStreamPool& halo_streams() {
-    static gpuStreamPool instance(max_directions);
+    static gpuStreamPool instance;
     return instance;
 }
 

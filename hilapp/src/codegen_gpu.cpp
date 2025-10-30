@@ -128,6 +128,28 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
 
+    code << "dir_mask_t  _dir_mask_ = 0;\n";
+
+    for (field_info &l : field_info_list) {
+        // If neighbour references exist, communicate them
+        if (!l.is_loop_local_dir) {
+            // "normal" dir references only here
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+
+                    code << l.new_name << ".pack_buffers(" << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                
+                }
+        } else {
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                        "++HILA_dir_) {\n"
+                    << l.new_name << ".pack_buffers(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+        }
+    }
+    
+    code << "auto &halo_streams = ::halo_streams();\n"
+         << "halo_streams.synchronize_all();\n";
+
     // Set loop lattice
     // if (field_info_list.size() > 0) {
     //     std::string fieldname = field_info_list.front().old_name;
@@ -952,25 +974,30 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     kernel_launch += ");\n\n"; // finishes kernel call
     code << kernel_launch;
-    code << "check_device_error(\"" << kernel_name << "\");\n";
-    code << "auto& halo_streams = ::halo_streams();\n";
-    code << "while (_dir_mask_ != 0) {\n"
-            << "    int send_id = halo_streams.stream_query();\n"
-            << "    if (send_id == -1) break;\n"
-            << "    if (send_id == -2) continue;\n";
+    bool first = true;
     for (field_info &l : field_info_list) {
-        
-        for (dir_ptr &d : l.dir_list) {
-            if (d.count > 0) {
-                code << "    if (send_params_"<< d.name_with_dir << ".tag ==  send_id) {\n"
-                     << "        " << l.new_name << ".send_buffers(" << "send_params_"  << d.name_with_dir << ");\n"
-                     << "    }\n";
-            }
+        // If neighbour references exist, communicate them
+        if (!l.is_loop_local_dir) {
+            // "normal" dir references only here
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    first = false;
+
+                    code << "_dir_mask_ |= " << l.new_name << ".start_communication(" << d.direxpr_s
+                            << ", " << loop_info.parity_str << ");\n";
+                }
+        } else {
+
+            first = false;
+            code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                    "++HILA_dir_) {\n"
+                    << "_dir_mask_ |= " << l.new_name << ".start_communication(HILA_dir_,"
+                    << loop_info.parity_str << ");\n}\n";
+            
         }
     }
-    code << "}\n";
 
-    // Wait for the communication to finish
+    // write wait gathers here also
     for (field_info &l : field_info_list) {
         // If neighbour references exist, communicate them
         if (!l.is_loop_local_dir) {
@@ -985,20 +1012,35 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                  << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
         }
     }
-    code << "while(true) {\n"
-         << "    int stream_id = halo_streams.stream_query();\n"
-         << "    if (stream_id == -1) break;\n"
-         << "    if (stream_id == -2) continue;\n"
-         << "}\n";
-    code << "if (_dir_mask_ != 0) {\n"
-         << "    _hila_loop_begin = _hila_ranges.min[1];\n"
-         << "    _hila_loop_end = _hila_ranges.max[1];\n"
-         << "    N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n"
-         << "    " << kernel_launch << "}\n";
 
     code << "auto& bulk_event = ::bulk_event();\n"
          << "gpuEventRecord(bulk_event, bulk_stream);\n"
          << "gpuEventSynchronize(bulk_event);\n";
+
+    // Wait for the communication to finish
+    for (field_info &l : field_info_list) {
+        // If neighbour references exist, communicate them
+        if (!l.is_loop_local_dir) {
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    code << l.new_name << ".unpack_buffers(" << d.direxpr_s << ", "
+                         << loop_info.parity_str << ");\n";
+                }
+        } else {
+            code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                    "++HILA_dir_) {\n"
+                 << l.new_name << ".unpack_buffers(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+        }
+    }
+    code << "halo_streams.synchronize_all();\n";
+
+    code << "if (_dir_mask_ != 0) {\n"
+         << "    _hila_loop_begin = _hila_ranges.min[1];\n"
+         << "    _hila_loop_end = _hila_ranges.max[1];\n"
+         << "    N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n"
+         << "    " << kernel_launch
+         << "    gpuEventRecord(bulk_event, bulk_stream);\n"
+         << "    gpuEventSynchronize(bulk_event);\n}\n";
 
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
@@ -1050,7 +1092,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 
     // and the selection vars
-    bool first = true;
     for (selection_info &s : selection_info_list) {
         if (s.previous_selection == nullptr) {
             // "reduce" the flagged arrays using cub functi

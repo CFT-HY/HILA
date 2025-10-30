@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <memory>
 #include <utility>
+#include <queue>
 
 // Prototypes for memory pool ops
 void gpu_memory_pool_alloc(void **p, size_t req_size);
@@ -200,95 +201,74 @@ inline void synchronize_threads() {
 } // namespace hila
 
 
+
 class gpuStreamPool {
 public:
-    /**
-     * @brief Construct a new gpu Stream Pool
-     * 
-     * @param n  Number of streams in the pool
-     */
-    explicit gpuStreamPool(int n) : streams(n), event_queues(n) {
 
-        for (int i = 0; i < n; ++i) {
-            gpuStreamCreateWithFlags(&streams[i], gpuStreamNonBlocking);
-            for (int j = 0; j < EVEN_POOL_PER_STREAM; ++j) {
-                gpuEvent_t event;
-                gpuEventCreate(&event);
-                event_queues[i].push(event);
-            }
-        }
+    explicit gpuStreamPool() : stream_queue(), active_streams() {
+        gpuStream_t stream;
+        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        stream_queue.push(stream);
     }
 
     ~gpuStreamPool() {
-        for (auto &s : streams) gpuStreamDestroy(s);
-        for (auto &q : event_queues) {
-            while(!q.empty()) {
-                gpuEventDestroy(q.front());
-                q.pop();
+        while(!stream_queue.empty()) {
+            gpuStream_t s = stream_queue.front();
+            gpuStreamDestroy(s);
+            stream_queue.pop();
+        }
+
+        while(!active_streams.empty()) {
+            for (auto it = active_streams.begin(); it != active_streams.end(); ) {
+                gpuStreamDestroy(*it);
+                it = active_streams.erase(it);
             }
         }
-    }
-    /**
-     * @brief Test if streams are running and return the stream when it's done if no streams are running clear send_params
-     * 
-     * @return int 
-     */
-    int stream_query() {
-        if (active_events.empty()) return -1;
-        for (auto it = active_events.begin(); it != active_events.end();) {
-            auto [stream_event_id, event] = *it;
-            if (gpuEventQuery(event) == gpuSuccess) {
-                it = active_events.erase(it);
-                event_queues[stream_event_id].push(event);
-                int send_id = send_ids[event];
-                send_ids.erase(event);
-                return send_id;
-            } else {
-                ++it;
-            }
-        }
-        std::this_thread::sleep_for(std::chrono::microseconds(10));
-        return -2;
+        
     }
 
-    std::pair<int,gpuStream_t> next_stream() {
-        int id = active_stream;
-        active_stream = (active_stream + 1) % streams.size();
-        return {id,streams[id]};
-    }
-
-    void start_event(int stream_event_id, int send_id) {
-        gpuEvent_t event;
-        if (event_queues[stream_event_id].empty()) {
-            gpuEventCreate(&event);
+    gpuStream_t next_stream() {
+        if (stream_queue.empty()) {
+            gpuStream_t stream;
+            gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+            active_streams.push_back(stream);
+            return stream;
         } else {
-            event = event_queues[stream_event_id].front();
-            event_queues[stream_event_id].pop();
+            gpuStream_t stream = stream_queue.front();
+            active_streams.push_back(stream);
+            stream_queue.pop();
+            return stream ;
         }
-        active_events.push_back({stream_event_id,event});
-        send_ids[event] = send_id;
-        gpuEventRecord(event, streams[stream_event_id]);
     }
 
-    gpuStream_t stream(int i) {
-        return streams[i];
+    void synchronize_all() {
+        while (!active_streams.empty()) {
+            for (auto it = active_streams.begin(); it != active_streams.end(); ) {
+                if (gpuStreamQuery(*it) == gpuSuccess) {
+                    stream_queue.push(*it);
+                    it = active_streams.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+    }
+
+    bool has_active_streams() const {
+        return !active_streams.empty();
     }
 
 private:
-    static constexpr int EVEN_POOL_PER_STREAM=4;
-    std::vector<gpuStream_t> streams;
-    std::vector<std::queue<gpuEvent_t>> event_queues;
-    std::vector<std::pair<int, gpuEvent_t>> active_events;
-    std::unordered_map<gpuEvent_t, int> send_ids;
-    int active_stream = 0;
+    static constexpr int DEFAULT_STREAM_POOL_SIZE = 1;
+    std::queue<gpuStream_t> stream_queue;
+    std::vector<gpuStream_t> active_streams;
 };
 
-// At most there are 8 directions to communicate to
-int constexpr max_directions = 16;
 
 gpuStreamPool& halo_streams(); 
 gpuStream_t& bulk_stream();
 gpuEvent_t& bulk_event();
+gpuEvent_t& malloc_event();
 
 
 #else // NOW HILAPP
