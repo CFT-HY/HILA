@@ -15,6 +15,9 @@
 // Furthermore, the repository will contain a short example program that
 // elucidates the use of the various muca methods.
 
+#include <vector>
+#include <string>
+
 namespace hila
 {
 // Multicanonical methods are separated to their own namespace
