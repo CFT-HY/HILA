@@ -929,19 +929,19 @@ static bool iterate_weight_function_direct(double OP) {
                 }
 
                 g_WParam.DIP.C /= 1.5;
-                hila::out0 << "Decreasing update size...\n";
-                hila::out0 << "New update size C = " << g_WParam.DIP.C << "\n\n";
+                hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
+                           << "\n";
             }
-            write_weight_function("intermediate_weight.dat");
-            hila::out0 << "Update size C = " << g_WParam.DIP.C << "\n\n";
         }
 
         continue_iteration = true;
         if (g_WParam.DIP.C < g_WParam.DIP.C_min) {
-            hila::out0 << "Reached minimum update size.\n";
-            hila::out0 << "Weight iteration complete.\n";
+            hila::out0 << "Muca: Reached minimum update size C = " << g_WParam.DIP.C
+                       << " Weight iteration complete.\n";
             continue_iteration = false;
         }
+
+        write_weight_function("intermediate_weight.dat");
     }
     hila::broadcast(continue_iteration);
     return continue_iteration;
@@ -995,19 +995,18 @@ static bool iterate_weight_function_direct_single(double OP) {
                 }
 
                 g_WParam.DIP.C /= 1.5;
-                hila::out0 << "Decreasing update size...\n";
-                hila::out0 << "New update size C = " << g_WParam.DIP.C << "\n\n";
+                hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
+                           << "\n";
             }
 
             continue_iteration = true;
             if (g_WParam.DIP.C < g_WParam.DIP.C_min) {
-                hila::out0 << "Reached minimum update size.\n";
-                hila::out0 << "Weight iteration complete.\n";
+                hila::out0 << "Muca: Reached minimum update size C = " << g_WParam.DIP.C
+                           << " Weight iteration complete.\n";
                 continue_iteration = false;
             }
 
             write_weight_function("intermediate_weight.dat");
-            hila::out0 << "Update size C = " << g_WParam.DIP.C << "\n\n";
         }
     }
     hila::broadcast(continue_iteration);
