@@ -407,7 +407,6 @@ void write_weight_function(string W_function_filename) {
     if (hila::myrank() == 0) {
         std::ofstream W_file;
         // string filename = generate_outfile_name(RP);
-        printf("Writing the current weight function into a file...\n");
         W_file.open(W_function_filename.c_str());
         // write_weight_file_header(W_file, FP, RP, g_WParam);
 
@@ -421,8 +420,6 @@ void write_weight_function(string W_function_filename) {
         // Remember to write the last bin upper limit
         to_file(W_file, "%e\n", g_OPBinLimits[i]);
         W_file.close();
-        printf("Succesfully saved the weight function into file\n%s\n",
-               W_function_filename.c_str());
     }
 }
 
@@ -527,7 +524,7 @@ bool accept_reject(const double OP_old, const double OP_new) {
         // (just like -delta(S) in Metropolis-Hastings)
         double log_P = -(W_new - W_old);
 
-        // Get a random uniform from [0,1] and return a boolean indicating
+        // Get a random uniform from [0,1) and return a boolean indicating
         // whether the update is to be accepted.
         double rval = hila::random();
         if (::log(rval) < log_P) {
@@ -547,10 +544,8 @@ bool accept_reject(const double OP_old, const double OP_new) {
 
     // Check if iteration is enabled
     if (AR_iterate) {
-        if (update)
-            set_weight_iter_flag(iterate_weights(OP_new));
-        else
-            set_weight_iter_flag(iterate_weights(OP_old));
+        bool continue_iter = iterate_weights(update ? OP_new : OP_old);
+        set_weight_iter_flag(continue_iter);
     }
 
     return update;
@@ -932,6 +927,7 @@ static bool iterate_weight_function_direct(double OP) {
                 hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
                            << "\n";
             }
+            write_weight_function("intermediate_weight.dat");
         }
 
         continue_iteration = true;
@@ -940,8 +936,6 @@ static bool iterate_weight_function_direct(double OP) {
                        << " Weight iteration complete.\n";
             continue_iteration = false;
         }
-
-        write_weight_function("intermediate_weight.dat");
     }
     hila::broadcast(continue_iteration);
     return continue_iteration;
