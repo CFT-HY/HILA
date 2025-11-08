@@ -12,152 +12,8 @@
 #include "hila.h"
 #include "tools/multicanonical.h"
 
-using string = std::string;
-using int_vector = std::vector<int>;
-using vector = std::vector<double>;
-
-struct canonical_iteration;
-struct direct_iteration;
-struct weight_iteration_parameters;
-
-typedef bool (*finish_condition_pointer)(std::vector<int> &visits);
-
-// Structs to encompass the various options related to
-// iteration of the multicanonical weights.
-////////////////////////////////////////////////////////////////////////////////
-/// @struct canonical_iteration
-/// @brief An internal struct parametrising the canonical weight
-/// iteration method.
-///
-/// @var int canonical_iteration::sample_size
-/// @brief Number of samples before weight function update
-///
-/// @var int canonical_iteration::initial_bin_hits
-/// @brief Initial number of entries in the bin totals
-/// @details Larger number makes the weight less susceptible to changes in the
-/// following iterations.
-///
-/// @var int canonical_iteration::OC_max_iter
-/// @brief Up to which iteration the overcorrection updates can be used
-///
-/// @var int canonical_iteration::OC_frequency
-/// @brief How often the overcorrection update is used
-/// @details If the value is n, every n:th update will be an overcorrection.
-///////////////////////////////////////////////////////////////////////////////
-struct canonical_iteration {
-    int sample_size;
-    int initial_bin_hits;
-    int OC_max_iter;
-    int OC_frequency;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-/// @struct direct_iteration
-/// @brief An internal struct parametrising the direct weight iteration method.
-///
-/// @var string direct_iteration::finish_condition
-/// @brief Determines the iteration condition for the iteration method.
-/// @details Current options: "all_visited", "ends_visited". The weight
-/// modification factor \f$C\f$ is decreased after set bins are visited. These
-/// can include e.g. all bins, or just the ends (the two preset options).
-/// Finishing conditions can also be determined by the user and passed to the
-/// methods through muca::direct_iteration_finish_condition(&func_pointer)
-///
-/// @var int direct_iteration::sample_size
-/// @brief Number of samples before weight function update
-///
-/// @var int direct_iteration::single_check_interval
-/// @brief Determines how often the update condition is checked for the case
-/// direct_iteration::sample_size = 1
-///
-/// @var double direct_iteration::C_init
-/// @brief Initial magnitude of the weight update
-///
-/// @var double direct_iteration::C_min
-/// @brief Minimum magnitude of the weight update
-///
-/// @var double direct_iteration::C
-/// @brief Magnitude of the weight update
-/// @details This entry is decreased through the direct iteration method until
-/// \f$ C < C_\mathrm{min}\f$ at which point the iteration is considered
-/// complete. The magnitude of the update is such that the mean weight
-/// modification is \f$C\f$. That is, the update satisfies
-/// \f{equation}{\sum_i \delta W_i = N C,\f}
-/// where \f$N\f$. is the number of bins. For sample_size = 1 we simply add
-/// \f$ C \f$ to the single relevant bin each iteration.
-///////////////////////////////////////////////////////////////////////////////
-struct direct_iteration {
-    string finish_condition;
-    int sample_size;
-    int single_check_interval;
-    double C_init;
-    double C_min;
-    double C;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-/// @struct weight_iteration_parameters
-/// @brief An internal struct parametrising multicanonical methods.
-///
-/// @var string weight_iteration_parameters::weight_loc
-/// @brief Path to the weight function file
-///
-/// @var string weight_iteration_parameters::outfile_name_base
-/// @brief Prefix for the saved weight function files
-/// @details
-///
-/// @var string weight_iteration_parameters::method
-/// @brief Name of the iteration method
-/// @details Current options: "direct"
-/// See the documentation for the details of different methods.
-///
-/// @var bool weight_iteration_parameters::visuals
-/// @brief Whether to print histogram during iteration
-///
-/// @var bool weight_iteration_parameters::hard_walls
-/// @brief Whether the weight outside max_OP and min_OP is infinite
-/// @details If not, the weight is assigned through constant extrapolation of
-/// the nearest bin (first or last). Please start your simulations so that the
-/// first configuration is within the interval, or the iteration can get stuck.
-///
-/// @var double weight_iteration_parameters::max_OP
-/// @brief Maximum order parameter value
-/// @details Only matters when creating bins from given parameters. When the
-/// details of the weights are read from file this parameter is not used.
-///
-/// @var double weight_iteration_parameters::min_OP
-/// @brief Minimum order parameter value
-/// @details Only matters when creating bins from given parameters. When the
-/// details of the weights are read from file this parameter is not used.
-///
-/// @var int weight_iteration_parameters::bin_number
-/// @brief Number of OP bins
-/// @details Only matters when creating bins from given parameters. When the
-/// details of the weights are read from file this parameter is not used.
-///
-/// @var bool weight_iteration_parameters::AR_iteration
-/// @brief Whether to update the weights after each call to accept_reject
-///
-/// @var struct direct_iteration weight_iteration_parameters::DIP
-/// @brief A substruct that contains method specific parameters
-///
-/// @var struct canonical_iteration weight_iteration_parameters::CIP
-/// @brief A substruct that contains method specific parameters
-///////////////////////////////////////////////////////////////////////////////
-struct weight_iteration_parameters {
-    string weight_loc;
-    string outfile_name_base;
-    string method;
-
-    bool visuals;
-    bool hard_walls;
-    double max_OP;
-    double min_OP;
-    int bin_number;
-    bool AR_iteration;
-    struct direct_iteration DIP;
-    struct canonical_iteration CIP;
-};
+namespace hila {
+namespace muca {
 
 // File global parameter struct filled by read_weight_parameters
 static weight_iteration_parameters g_WParam;
@@ -170,9 +26,6 @@ static int_vector g_N_OP_Bin(1, 0);
 static int_vector g_N_OP_BinTotal(1, 0);
 static int g_WeightIterationCount = 0;
 static bool g_WeightIterationFlag = true;
-
-namespace hila {
-namespace muca {
 
 // Pointer to the iteration function
 iteration_pointer iterate_weights;
@@ -217,7 +70,8 @@ string generate_outfile_name() {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Parses the weight parameter file and fills the g_WParam struct.
-/// @details
+/// @details Cannot fail. If parameter file is not of the correct format hila::finishrun() kills the
+/// process.
 ///
 /// @param parameter_file_name   parameter file name
 ////////////////////////////////////////////////////////////////////////////////
@@ -323,73 +177,101 @@ void read_weight_parameters(string parameter_file_name) {
 ///
 /// *Avoid substring "OP_value"
 ///
+/// Should be called only from hila::myrank()==0
+///
 /// @param W_function_filename
+/// @return false if reading the file fails.
 ////////////////////////////////////////////////////////////////////////////////
-void read_weight_function(string W_function_filename) {
-    hila::out0 << "\nLoading the user supplied weight function.\n";
+bool read_weight_function(string W_function_filename) {
+    printf("Loading the user supplied weight function `%s`\n", W_function_filename.c_str());
+
+    int header_length = 1, data_length = -1;
+    std::ifstream W_file;
+    W_file.open(W_function_filename.c_str());
+
+    if (!W_file.is_open()) {
+        printf("ERROR: Could not open file `%s`: %s\n", W_function_filename.c_str(),
+               std::strerror(errno));
+        return false;
+    }
+
     // Compute first header length by counting lines until finding
     // the column header through regex.
-    if (hila::myrank() == 0) {
-        int header_length = 1, data_length = -1;
-        std::ifstream W_file;
-        W_file.open(W_function_filename.c_str());
-        if (W_file.is_open()) {
-            string line;
-            while (std::getline(W_file, line)) {
-                if (std::regex_match(line, std::regex(".*OP_value.*")))
-                    data_length = 0;
-
-                if (data_length < 0)
-                    header_length += 1;
-                else
-                    data_length += 1;
-            }
-        }
-        W_file.close();
-        W_file.open(W_function_filename.c_str());
-
-        // Skip the header and sscanf the values and add them into the vectors.
-        int count = -header_length;
-        data_length -= 1;
-        printf("Weight function has header length of %d rows.\n", header_length);
-        printf("Weight function has data length of %d rows.\n", data_length);
-        printf("Reading the weight function into the program.\n");
-
-        // Initialise the weight vectors to correct dimensions
-        g_OPBinLimits = vector(data_length);
-        g_OPValues = vector(data_length - 1);
-        g_WValues = vector(data_length - 1);
-
-        // Read in the values. Note that g_OPBinLimits has one more entry than
-        // the weight vector.
-        if (W_file.is_open()) {
-            string line;
-            while (std::getline(W_file, line)) {
-                float bin_lim, weight, centre;
-                // Read lower bin limits and corresponding weights.
-                if (count >= 0 and count < data_length - 1) {
-                    sscanf(line.c_str(), "%e\t%e\t%e", &bin_lim, &centre, &weight);
-
-                    g_OPBinLimits[count] = bin_lim;
-                    g_OPValues[count] = centre;
-                    g_WValues[count] = weight;
-                }
-                // And the rightmost bin limit.
-                if (count == data_length - 1) {
-                    sscanf(line.c_str(), "%e", &bin_lim);
-                    g_OPBinLimits[count] = bin_lim;
-                }
-                count += 1;
-            }
-        }
-        W_file.close();
-
-        // Fill out bin centres for the interpolator.
-        for (int i = 0; i < data_length - 1; i++) {
-            g_OPValues[i] = (g_OPBinLimits[i + 1] + g_OPBinLimits[i]) / 2.0;
-        }
+    string line;
+    while (std::getline(W_file, line)) {
+        if (std::regex_match(line, std::regex(".*OP_value.*")))
+            data_length = 0;
+        if (data_length < 0)
+            header_length += 1;
+        else
+            data_length += 1;
     }
-    hila::out0 << "\nSuccesfully loaded the user provided weight function.\n";
+    if (!W_file.eof() && W_file.fail()) {
+        printf("ERROR:(1) Failed to getline on file `%s`: %s\n", W_function_filename.c_str(),
+               std::strerror(errno));
+        return false;
+    }
+
+    // goto the beginning of the file
+    W_file.clear(); // clear error bit set by above reaching eof
+    W_file.seekg(std::ios_base::beg);
+
+    // Skip the header and sscanf the values and add them into the vectors.
+    int count = -header_length;
+    data_length -= 1;
+    printf("Weight function has header length of %d rows.\n", header_length);
+    printf("Weight function has data length of %d rows.\n", data_length);
+    printf("Reading the weight function into the program.\n");
+
+    // Initialise the weight vectors to correct dimensions
+    g_OPBinLimits = vector(data_length);
+    g_OPValues = vector(data_length - 1);
+    g_WValues = vector(data_length - 1);
+
+    // Read in the values. Note that g_OPBinLimits has one more entry than
+    // the weight vector.
+    int line_no = 0;
+    while (std::getline(W_file, line)) {
+        line_no++;
+        float bin_lim, weight, centre;
+        // Read lower bin limits and corresponding weights.
+        if (count >= 0 and count < data_length - 1) {
+            if (3 != sscanf(line.c_str(), "%e\t%e\t%e", &bin_lim, &centre, &weight)) {
+                printf("ERROR: Could not match `%%e\\t%%e\\t%%e` at %s:%d \n",
+                       W_function_filename.c_str(), line_no);
+                return false;
+            }
+
+            g_OPBinLimits[count] = bin_lim;
+            g_OPValues[count] = centre;
+            g_WValues[count] = weight;
+        }
+        // And the rightmost bin limit.
+        if (count == data_length - 1) {
+            if (1 != sscanf(line.c_str(), "%e", &bin_lim)) {
+                printf("ERROR: Could not match `%%e` at %s:%d \n", W_function_filename.c_str(),
+                       line_no);
+                return false;
+            }
+
+            g_OPBinLimits[count] = bin_lim;
+        }
+        count += 1;
+    }
+    if (!W_file.eof() && W_file.fail()) {
+        printf("ERROR:(2) Failed to getline on file %s:%d %s\n", W_function_filename.c_str(),
+               line_no, std::strerror(errno));
+        return false;
+    }
+
+    W_file.close(); // Lets not care if closing fails...
+
+    // Fill out bin centres for the interpolator.
+    for (int i = 0; i < data_length - 1; i++) {
+        g_OPValues[i] = (g_OPBinLimits[i + 1] + g_OPBinLimits[i]) / 2.0;
+    }
+    printf("Succesfully loaded the user provided weight function.\n");
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1095,23 +977,31 @@ void set_continuous_iteration(bool YN) {
 ///          methods.
 ///
 /// @param wfile_name   path to the weight parameter file
+/// @return false if something fails during init.
 ////////////////////////////////////////////////////////////////////////////////
-void initialise(const string wfile_name) {
+bool initialise(const string wfile_name) {
     // Read parameters into g_WParam struct
     read_weight_parameters(wfile_name);
+    bool ret = true;
     // This is fine to do just for process zer0
     if (hila::myrank() == 0) {
         // Read pre-existing weight if given
         if (g_WParam.weight_loc.compare("NONE") != 0) {
-            read_weight_function(g_WParam.weight_loc);
+            if (!read_weight_function(g_WParam.weight_loc)) {
+                ret = false;
+                goto early_return;
+            }
         }
-
         // Initialise rest of the uninitialised vectors
         initialise_weight_vectors();
     }
 
     // Choose an iteration method (or the default)
     setup_iteration();
+
+early_return:
+    hila::broadcast(ret);
+    return ret;
 }
 
 } // namespace muca
