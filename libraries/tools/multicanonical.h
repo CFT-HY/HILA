@@ -35,8 +35,8 @@ typedef bool (*iteration_pointer)(const double OP);
 extern iteration_pointer iterate_weights;
 
 // Quick helper function for writing values to a file
-template <class K>
-void to_file(std::ofstream &output_file, std::string fmt, K input_value);
+template <class... Ks>
+static inline void to_file(std::ofstream &output_file, std::string fmt, Ks... input_value);
 
 // Generates timestamped file names
 std::string generate_outfile_name();
@@ -48,7 +48,7 @@ void read_weight_parameters(std::string parameter_file_name);
 bool read_weight_function(std::string W_function_filename);
 
 // Writes weight functions to a file
-void write_weight_function(std::string filename);
+bool write_weight_function(std::string filename);
 
 // Gives the weight as a function of the order parameter
 double weight_function(double OP);

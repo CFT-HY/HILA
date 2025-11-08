@@ -34,18 +34,27 @@ iteration_pointer iterate_weights;
 finish_condition_pointer finish_check;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// @brief Writes a variable to the file, given the format string.
+/// @brief Writes variables to the file, given the format string.
+///        Quick and dirty. No error handling.
+/// TODO: swith to std::format when c++20
 ///
 /// @param output_file
 /// @param fmt           format string corresponding to input_value
-/// @param input_value   numerical value to write to output_file
+/// @param input_values   numerical values to write to output_file
 ////////////////////////////////////////////////////////////////////////////////
-template <class K>
-void to_file(std::ofstream &output_file, string fmt, K input_value) {
-    char buffer[1024];
-    sprintf(buffer, fmt.c_str(), input_value);
-    if (hila::myrank() == 0)
-        output_file << string(buffer);
+template <class... Ks>
+static inline void to_file(std::ofstream &output_file, string fmt, Ks... input_values) {
+
+    constexpr int buf_len = 1024;
+    char buffer[buf_len];
+    int res = snprintf(buffer, buf_len, fmt.c_str(), input_values...);
+    if (res < 0) {
+        printf("WARNING: to_file snprintf error %d\n", res);
+    } else if (res >= buf_len) {
+        printf("WARNING: to_file snprintf truncated %d\n", res);
+    }
+
+    output_file << string(buffer);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -280,29 +289,35 @@ bool read_weight_function(string W_function_filename) {
 /// @details The printing happens in an format identical to what is expected
 ///          by the funciton read_weight_function. See its documentation for
 ///          details.
+///          Should only be called from hila::myrank()==0
+///
 ///          TBA: Add string input that can contain user specified header data.
 ///
 /// @param W_function_filename
 /// @param g_WParam                    struct of weight iteration parameters
+/// @return false if writing fails
 ////////////////////////////////////////////////////////////////////////////////
-void write_weight_function(string W_function_filename) {
-    if (hila::myrank() == 0) {
-        std::ofstream W_file;
-        // string filename = generate_outfile_name(RP);
-        W_file.open(W_function_filename.c_str());
-        // write_weight_file_header(W_file, FP, RP, g_WParam);
+bool write_weight_function(string W_function_filename) {
 
-        to_file(W_file, "%s", "OP_bin_limit\tOP_value\tWeight\n");
-        int i;
-        for (i = 0; i < g_OPValues.size(); ++i) {
-            to_file(W_file, "%e\t", g_OPBinLimits[i]);
-            to_file(W_file, "%e\t", g_OPValues[i]);
-            to_file(W_file, "%e\n", g_WValues[i]);
-        }
-        // Remember to write the last bin upper limit
-        to_file(W_file, "%e\n", g_OPBinLimits[i]);
-        W_file.close();
+    std::ofstream W_file;
+    // string filename = generate_outfile_name(RP);
+    W_file.open(W_function_filename.c_str());
+    if (!W_file.is_open()) {
+        printf("WARNING: Could not open file `%s` for `write_weight_function()`: %s\n",
+               W_function_filename.c_str(), std::strerror(errno));
+        return false;
     }
+    // write_weight_file_header(W_file, FP, RP, g_WParam);
+
+    to_file(W_file, "%s", "OP_bin_limit\tOP_value\tWeight\n");
+    int i;
+    for (i = 0; i < g_OPValues.size(); ++i) {
+        to_file(W_file, "%e\t%e\t%e\n", g_OPBinLimits[i], g_OPValues[i], g_WValues[i]);
+    }
+    // Remember to write the last bin upper limit
+    to_file(W_file, "%e\n", g_OPBinLimits[i]);
+    W_file.close();
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
