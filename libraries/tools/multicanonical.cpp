@@ -823,67 +823,6 @@ bool iterate_weight_function_direct(Muca &muca, double OP) {
     return continue_iteration;
 }
 
-
-bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
-    bool continue_iteration;
-    if (hila::myrank() == 0) {
-        const int samples = muca.WParam.DIP.sample_size;
-        const int N = muca.WValues.size();
-
-        // Don't bin visits outside of the binned areas
-        if (OP > muca.OPBinLimits.front() && OP < muca.OPBinLimits.back()) {
-            auto it = std::lower_bound(muca.OPBinLimits.begin(), muca.OPBinLimits.end(), OP);
-            int i = std::distance(muca.OPBinLimits.begin(), it) - 1;
-
-            // clang-format off
-            // Helps smooth the weight function (kind of kernel density estimation)
-            if(i>=2)  muca.N_OP_Bin[i-2] += 1;//#
-            if(i>=1)  muca.N_OP_Bin[i-1] += 3;//###
-                      muca.N_OP_Bin[i+0] += 5;//##### hit
-            if(i<N-1) muca.N_OP_Bin[i+1] += 3;//###
-            if(i<N-2) muca.N_OP_Bin[i+2] += 1;//#
-            // clang-format on
-        }
-
-        muca.weightIterationCount += 1;
-
-        if (muca.weightIterationCount >= samples) {
-            for (int m = 0; m < N; m++) {
-                muca.WValues[m] += muca.WParam.DIP.C * (muca.N_OP_Bin[m] - muca.N_OP_Bin[0]) / N;
-                muca.N_OP_BinTotal[m] += muca.N_OP_Bin[m];
-            }
-
-            if (muca.WParam.visuals)
-                muca.print_iteration_histogram();
-
-            for (int m = 0; m < N; ++m) {
-                muca.N_OP_Bin[m] = 0;
-            }
-            muca.weightIterationCount = 0;
-
-            if (muca.finish_check(muca)) {
-                for (int m = 0; m < N; m++) {
-                    muca.N_OP_BinTotal[m] = 0;
-                }
-
-                muca.WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = "
-                           << muca.WParam.DIP.C << "\n";
-            }
-            muca.write_weight_function("intermediate_weight.dat");
-        }
-
-        continue_iteration = true;
-        if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
-            hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
-                       << " Weight iteration complete.\n";
-            continue_iteration = false;
-        }
-    }
-    hila::broadcast(continue_iteration);
-    return continue_iteration;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Same as iterate_weight_function_direct for sample size 1.
 /// @details In this special case the weights are modified after each new
@@ -945,6 +884,66 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP) {
             }
 
             muca.write_weight_function("intermediate_weight.dat");
+        }
+    }
+    hila::broadcast(continue_iteration);
+    return continue_iteration;
+}
+
+bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
+    bool continue_iteration;
+    if (hila::myrank() == 0) {
+        const int samples = muca.WParam.DIP.sample_size;
+        const int N = muca.WValues.size();
+
+        // Don't bin visits outside of the binned areas
+        if (OP > muca.OPBinLimits.front() && OP < muca.OPBinLimits.back()) {
+            auto it = std::lower_bound(muca.OPBinLimits.begin(), muca.OPBinLimits.end(), OP);
+            int i = std::distance(muca.OPBinLimits.begin(), it) - 1;
+
+            // clang-format off
+            // Helps smooth the weight function (kind of kernel density estimation)
+            if(i>=2)  muca.N_OP_Bin[i-2] += 1;//#
+            if(i>=1)  muca.N_OP_Bin[i-1] += 3;//###
+                      muca.N_OP_Bin[i+0] += 5;//##### hit
+            if(i<N-1) muca.N_OP_Bin[i+1] += 3;//###
+            if(i<N-2) muca.N_OP_Bin[i+2] += 1;//#
+            // clang-format on
+        }
+
+        muca.weightIterationCount += 1;
+
+        if (muca.weightIterationCount >= samples) {
+            for (int m = 0; m < N; m++) {
+                muca.WValues[m] += muca.WParam.DIP.C * (muca.N_OP_Bin[m] - muca.N_OP_Bin[0]) / N;
+                muca.N_OP_BinTotal[m] += muca.N_OP_Bin[m];
+            }
+
+            if (muca.WParam.visuals)
+                muca.print_iteration_histogram();
+
+            for (int m = 0; m < N; ++m) {
+                muca.N_OP_Bin[m] = 0;
+            }
+            muca.weightIterationCount = 0;
+
+            if (muca.finish_check(muca)) {
+                for (int m = 0; m < N; m++) {
+                    muca.N_OP_BinTotal[m] = 0;
+                }
+
+                muca.WParam.DIP.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = "
+                           << muca.WParam.DIP.C << "\n";
+            }
+            muca.write_weight_function("intermediate_weight.dat");
+        }
+
+        continue_iteration = true;
+        if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
+            hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
+                       << " Weight iteration complete.\n";
+            continue_iteration = false;
         }
     }
     hila::broadcast(continue_iteration);
