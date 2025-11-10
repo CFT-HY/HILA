@@ -15,24 +15,6 @@
 namespace hila {
 namespace muca {
 
-// File global parameter struct filled by read_weight_parameters
-static weight_iteration_parameters g_WParam;
-
-// Initialise some static vectors for this file only.
-static std::vector<double> g_OPValues(1, 0);
-static std::vector<double> g_OPBinLimits(2, 0);
-static std::vector<double> g_WValues(1, 0);
-static std::vector<int> g_N_OP_Bin(1, 0);
-static std::vector<int> g_N_OP_BinTotal(1, 0);
-static int g_WeightIterationCount = 0;
-static bool g_WeightIterationFlag = true;
-
-// Pointer to the iteration function
-iteration_pointer iterate_weights;
-
-// Pointer to the finish condition check
-finish_condition_pointer finish_check;
-
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Writes variables to the file, given the format std::string.
 ///        Quick and dirty. No error handling.
@@ -63,8 +45,8 @@ static inline void to_file(std::ofstream &output_file, std::string fmt, Ks... in
 ///
 /// @return      generated filename std::string
 ////////////////////////////////////////////////////////////////////////////////
-std::string generate_outfile_name() {
-    std::string filename = g_WParam.outfile_name_base + "_weight_function_";
+std::string generate_outfile_name(const std::string &outfile_name_base) {
+    std::string filename = outfile_name_base + "_weight_function_";
 
     // A terrible mess to get the datetime format nice
     std::stringstream ss;
@@ -84,7 +66,7 @@ std::string generate_outfile_name() {
 ///
 /// @param parameter_file_name   parameter file name
 ////////////////////////////////////////////////////////////////////////////////
-void read_weight_parameters(std::string parameter_file_name) {
+void Muca::read_weight_parameters(std::string parameter_file_name) {
     // Open the weight parameter file and list through the parameters.
     // See the parameter file for the roles of the parameters.
     hila::input par(parameter_file_name);
@@ -147,7 +129,7 @@ void read_weight_parameters(std::string parameter_file_name) {
     else
         hwalls = false;
 
-    g_WParam =
+    WParam =
     {
         weight_loc,
         outfile_name_base,
@@ -187,7 +169,7 @@ void read_weight_parameters(std::string parameter_file_name) {
 /// @param W_function_filename
 /// @return false if reading the file fails.
 ////////////////////////////////////////////////////////////////////////////////
-bool read_weight_function(std::string W_function_filename) {
+bool Muca::read_weight_function(const std::string &W_function_filename) {
     printf("Loading the user supplied weight function `%s`\n", W_function_filename.c_str());
 
     int header_length = 1, data_length = -1;
@@ -229,9 +211,9 @@ bool read_weight_function(std::string W_function_filename) {
     printf("Reading the weight function into the program.\n");
 
     // Initialise the weight vectors to correct dimensions
-    g_OPBinLimits = std::vector<double>(data_length);
-    g_OPValues = std::vector<double>(data_length - 1);
-    g_WValues = std::vector<double>(data_length - 1);
+    OPBinLimits = std::vector<double>(data_length);
+    OPValues = std::vector<double>(data_length - 1);
+    WValues = std::vector<double>(data_length - 1);
 
     // Read in the values. Note that g_OPBinLimits has one more entry than
     // the weight vector.
@@ -247,9 +229,9 @@ bool read_weight_function(std::string W_function_filename) {
                 return false;
             }
 
-            g_OPBinLimits[count] = bin_lim;
-            g_OPValues[count] = centre;
-            g_WValues[count] = weight;
+            OPBinLimits[count] = bin_lim;
+            OPValues[count] = centre;
+            WValues[count] = weight;
         }
         // And the rightmost bin limit.
         if (count == data_length - 1) {
@@ -259,7 +241,7 @@ bool read_weight_function(std::string W_function_filename) {
                 return false;
             }
 
-            g_OPBinLimits[count] = bin_lim;
+            OPBinLimits[count] = bin_lim;
         }
         count += 1;
     }
@@ -273,7 +255,7 @@ bool read_weight_function(std::string W_function_filename) {
 
     // Fill out bin centres for the interpolator.
     for (int i = 0; i < data_length - 1; i++) {
-        g_OPValues[i] = (g_OPBinLimits[i + 1] + g_OPBinLimits[i]) / 2.0;
+        OPValues[i] = (OPBinLimits[i + 1] + OPBinLimits[i]) / 2.0;
     }
     printf("Succesfully loaded the user provided weight function.\n");
     return true;
@@ -283,7 +265,7 @@ bool read_weight_function(std::string W_function_filename) {
 /// @brief Reads the precomputed weight function from run_parameters struct
 ///        and saves it into a file.
 /// @details The printing happens in an format identical to what is expected
-///          by the funciton read_weight_function. See its documentation for
+///          by the function read_weight_function. See its documentation for
 ///          details.
 ///          Should only be called from hila::myrank()==0
 ///
@@ -293,7 +275,7 @@ bool read_weight_function(std::string W_function_filename) {
 /// @param g_WParam                    struct of weight iteration parameters
 /// @return false if writing fails
 ////////////////////////////////////////////////////////////////////////////////
-bool write_weight_function(std::string W_function_filename) {
+bool Muca::write_weight_function(const std::string &W_function_filename) {
 
     std::ofstream W_file;
     // std::string filename = generate_outfile_name(RP);
@@ -307,11 +289,11 @@ bool write_weight_function(std::string W_function_filename) {
 
     to_file(W_file, "%s", "OP_bin_limit\tOP_value\tWeight\n");
     int i;
-    for (i = 0; i < g_OPValues.size(); ++i) {
-        to_file(W_file, "%e\t%e\t%e\n", g_OPBinLimits[i], g_OPValues[i], g_WValues[i]);
+    for (i = 0; i < OPValues.size(); ++i) {
+        to_file(W_file, "%e\t%e\t%e\n", OPBinLimits[i], OPValues[i], WValues[i]);
     }
     // Remember to write the last bin upper limit
-    to_file(W_file, "%e\n", g_OPBinLimits[i]);
+    to_file(W_file, "%e\n", OPBinLimits[i]);
     W_file.close();
     return true;
 }
@@ -325,31 +307,35 @@ bool write_weight_function(std::string W_function_filename) {
 /// @param  OP   value of the order parameter
 /// @return The value of the weight.
 ////////////////////////////////////////////////////////////////////////////////
-double weight_function(double OP) {
+double Muca::weight_function(double OP) const {
+    // the Muca struct is to be initialised only on node 0
+    if (hila::myrank() != 0)
+        return 0;
+
     double val;
     // If out of range, constant extrapolation or for hard walls, num inf.
-    if (OP <= g_OPValues.front()) {
-        if (g_WParam.hard_walls)
+    if (OP <= OPValues.front()) {
+        if (WParam.hard_walls)
             val = std::numeric_limits<double>::infinity();
         else
-            val = g_WValues.front();
-    } else if (OP >= g_OPValues.back()) {
-        if (g_WParam.hard_walls)
+            val = WValues.front();
+    } else if (OP >= OPValues.back()) {
+        if (WParam.hard_walls)
             val = std::numeric_limits<double>::infinity();
         else
-            val = g_WValues.back();
+            val = WValues.back();
     }
     // Otherwise find interval, calculate slope, base index, etc.
     // Basic linear interpolation to obtain the weight value.
     else {
-        auto it = std::lower_bound(g_OPValues.begin(), g_OPValues.end(), OP);
-        int i = std::distance(g_OPValues.begin(), it) - 1;
-        double y_value = g_WValues[i + 1] - g_WValues[i];
-        double x_value = g_OPValues[i + 1] - g_OPValues[i];
+        auto it = std::lower_bound(OPValues.begin(), OPValues.end(), OP);
+        int i = std::distance(OPValues.begin(), it) - 1;
+        double y_value = WValues[i + 1] - WValues[i];
+        double x_value = OPValues[i + 1] - OPValues[i];
         double slope = y_value / x_value;
 
-        double xbase = g_OPValues[i];
-        double ybase = g_WValues[i];
+        double xbase = OPValues[i];
+        double ybase = WValues[i];
 
         double xdiff = OP - xbase;
         val = ybase + xdiff * slope;
@@ -362,7 +348,7 @@ double weight_function(double OP) {
 /// @brief process 0 interface to "weight function" for the user accessing
 ///        the weights.
 ////////////////////////////////////////////////////////////////////////////////
-double weight(double OP) {
+double Muca::weight(double OP) const {
     double val;
     if (hila::myrank() == 0) {
         val = weight_function(OP);
@@ -376,9 +362,8 @@ double weight(double OP) {
 ///
 /// @param YN   boolean indicating whether the iteration is to continue
 ////////////////////////////////////////////////////////////////////////////////
-void set_weight_iter_flag(bool YN) {
-    if (hila::myrank() == 0)
-        g_WeightIterationFlag = YN;
+void Muca::set_weight_iter_flag(bool YN) {
+    weightIterationFlag = YN;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -386,10 +371,10 @@ void set_weight_iter_flag(bool YN) {
 ///
 /// @return State of g_WeighITerationFlag
 ////////////////////////////////////////////////////////////////////////////////
-bool check_weight_iter_flag() {
+bool Muca::check_weight_iter_flag() {
     bool flag;
     if (hila::myrank() == 0)
-        flag = g_WeightIterationFlag;
+        flag = weightIterationFlag;
     hila::broadcast(flag);
     return flag;
 }
@@ -405,7 +390,7 @@ bool check_weight_iter_flag() {
 /// @return Boolean indicating whether the update was accepted (true) or
 ///         rejected (false).
 ////////////////////////////////////////////////////////////////////////////////
-bool accept_reject(const double OP_old, const double OP_new) {
+bool Muca::accept_reject(const double OP_old, const double OP_new) {
     bool update;
     bool AR_iterate;
     // Only compute on node 0, broadcast to others
@@ -427,7 +412,7 @@ bool accept_reject(const double OP_old, const double OP_new) {
         }
 
         // Get value from process 0
-        AR_iterate = g_WParam.AR_iteration;
+        AR_iterate = WParam.AR_iteration;
     }
 
     // Broadcast the update status to other processes along with the
@@ -437,7 +422,7 @@ bool accept_reject(const double OP_old, const double OP_new) {
 
     // Check if iteration is enabled
     if (AR_iterate) {
-        bool continue_iter = iterate_weights(update ? OP_new : OP_old);
+        bool continue_iter = iterate_weights(*this, update ? OP_new : OP_old);
         set_weight_iter_flag(continue_iter);
     }
 
@@ -452,18 +437,19 @@ bool accept_reject(const double OP_old, const double OP_new) {
 ///          out of range, -1 is returned.
 ///
 /// @param OP   value of the order parameter
+/// @param OPBinLimits   bin limits of the weight function hist
 /// @return integer index for the vector g_N_OP_Bin
 ////////////////////////////////////////////////////////////////////////////////
-static int find_OP_bin_index(double OP) {
+static inline int find_OP_bin_index(double OP, const std::vector<double> &OPBinLimits) {
     // Return -1 when not in the interval
-    if (OP <= g_OPBinLimits.front()) {
+    if (OP <= OPBinLimits.front()) {
         return -1;
-    } else if (OP >= g_OPBinLimits.back()) {
+    } else if (OP >= OPBinLimits.back()) {
         return -1;
     }
     // Find index of minimum edge value such that edge < OP:
-    auto it = std::lower_bound(g_OPBinLimits.begin(), g_OPBinLimits.end(), OP);
-    int lower_limit = std::distance(g_OPBinLimits.begin(), it) - 1;
+    auto it = std::lower_bound(OPBinLimits.begin(), OPBinLimits.end(), OP);
+    int lower_limit = std::distance(OPBinLimits.begin(), it) - 1;
     return lower_limit;
 }
 
@@ -474,17 +460,17 @@ static int find_OP_bin_index(double OP) {
 ///
 /// @param OP   value of the order parameter
 ////////////////////////////////////////////////////////////////////////////////
-static void bin_OP_value(double OP) {
+inline void Muca::bin_OP_value(double OP) {
     // Don't bin visits outside of the binned areas
-    if (OP <= g_OPBinLimits.front()) {
+    if (OP <= OPBinLimits.front()) {
         return;
-    } else if (OP >= g_OPBinLimits.back()) {
+    } else if (OP >= OPBinLimits.back()) {
         return;
     }
     // Find index of minimum edge value such that edge < OP:
-    auto it = std::lower_bound(g_OPBinLimits.begin(), g_OPBinLimits.end(), OP);
-    int lower_limit = std::distance(g_OPBinLimits.begin(), it) - 1;
-    g_N_OP_Bin[lower_limit] += 1;
+    auto it = std::lower_bound(OPBinLimits.begin(), OPBinLimits.end(), OP);
+    int lower_limit = std::distance(OPBinLimits.begin(), it) - 1;
+    N_OP_Bin[lower_limit] += 1;
 }
 
 
@@ -495,7 +481,8 @@ static void bin_OP_value(double OP) {
 /// @param  visit   integer vector with values 1 corresponding to visits
 /// @return a boolean indicating the statement
 ////////////////////////////////////////////////////////////////////////////////
-static bool all_visited(std::vector<int> &n) {
+bool all_visited(const Muca &muca) {
+    const auto &n = muca.N_OP_BinTotal;
     int len = n.size();
     for (int i = 0; i < len; ++i) {
         if (n[i] == 0)
@@ -511,7 +498,8 @@ static bool all_visited(std::vector<int> &n) {
 /// @param  visit   integer vector with values 1 corresponding to visits
 /// @return a boolean indicating the statement
 ////////////////////////////////////////////////////////////////////////////////
-static bool first_last_visited(std::vector<int> &n) {
+bool first_last_visited(const Muca &muca) {
+    const auto &n = muca.N_OP_BinTotal;
     int len = n.size();
     if ((n[0] == 0) or (n[len - 1] == 0))
         return false;
@@ -532,8 +520,8 @@ static bool first_last_visited(std::vector<int> &n) {
 ///
 /// @param fc_pointer   A function pointer to a suitable condition function
 ////////////////////////////////////////////////////////////////////////////////
-void set_direct_iteration_FC(bool (*fc_pointer)(std::vector<int> &n)) {
-    finish_check = fc_pointer;
+inline void Muca::set_direct_iteration_FC(finish_condition_fn fc) {
+    finish_check = fc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -717,15 +705,15 @@ static void recursive_weight_iteration(std::vector<double> &Weight, std::vector<
 /// @brief Procures a vector containing equidistant bin edges.
 /// @details
 ///
+/// @param min weight function range minimum
+/// @param max weight function range maximum
+/// @param N_bins number of bins for the weight function
 /// @return vector containing the bin edges
 ////////////////////////////////////////////////////////////////////////////////
-static std::vector<double> get_equidistant_bin_limits() {
-    double min = g_WParam.min_OP;
-    double max = g_WParam.max_OP;
-    int N = g_WParam.bin_number;
-    std::vector<double> bin_edges(N + 1);
-    double diff = (max - min) / (N - 1);
-    for (int i = 0; i < N + 1; ++i) {
+static inline std::vector<double> get_equidistant_bin_limits(double min, double max, int N_bins) {
+    std::vector<double> bin_edges(N_bins + 1);
+    double diff = (max - min) / (N_bins - 1);
+    for (int i = 0; i < N_bins + 1; ++i) {
         bin_edges[i] = min - diff / 2.0 + diff * i;
     }
     return bin_edges;
@@ -736,43 +724,43 @@ static std::vector<double> get_equidistant_bin_limits() {
 ///        get_equidistant_bin_limits.
 /// @details
 ////////////////////////////////////////////////////////////////////////////////
-static void setup_equidistant_bins() {
+inline void Muca::setup_equidistant_bins() {
     // Get bin limits so that centre of first bin is at min_OP and
     // the last bin centre is at max_OP.
-    g_OPBinLimits = get_equidistant_bin_limits();
-    for (int i = 0; i < g_OPValues.size(); i++) {
-        double centre = (g_OPBinLimits[i + 1] + g_OPBinLimits[i]) / 2.0;
-        g_OPValues[i] = centre;
+    OPBinLimits = get_equidistant_bin_limits(WParam.min_OP, WParam.max_OP, WParam.bin_number);
+    for (int i = 0; i < OPValues.size(); i++) {
+        double centre = (OPBinLimits[i + 1] + OPBinLimits[i]) / 2.0;
+        OPValues[i] = centre;
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// @brief Initialises the global vectors appropriately, setting up a binning
+/// @brief Initialises the hist vectors appropriately, setting up a binning
 ///        if not provided by the user.
-/// @details The global vectors are initialised to correct dimensions as to
+/// @details The vectors are initialised to correct dimensions as to
 ///          prevent indexing errors in the iteration methods.
 ////////////////////////////////////////////////////////////////////////////////
-static void initialise_weight_vectors() {
+inline void Muca::initialise_weight_vectors() {
     // If no input weight, set up equidistant bins
-    if (g_WParam.weight_loc.compare("NONE") == 0) {
-        int N = g_WParam.bin_number;
-        g_WValues = std::vector<double>(N, 0.0);
-        g_OPValues = std::vector<double>(N, 0.0);
-        g_OPBinLimits = std::vector<double>(N + 1, 0.0);
+    if (WParam.weight_loc.compare("NONE") == 0) {
+        int N = WParam.bin_number;
+        WValues = std::vector<double>(N, 0.0);
+        OPValues = std::vector<double>(N, 0.0);
+        OPBinLimits = std::vector<double>(N + 1, 0.0);
 
         setup_equidistant_bins();
 
-        g_N_OP_Bin = std::vector<int>(N, 0);
-        g_N_OP_BinTotal = std::vector<int>(N, 0);
+        N_OP_Bin = std::vector<int>(N, 0);
+        N_OP_BinTotal = std::vector<int>(N, 0);
     }
-    // Same for predetermined bins. g_OPValues, g_WValues
-    // and g_OP_BinLimits have been read from the input file.
+    // Same for predetermined bins. OPValues, WValues
+    // and OP_BinLimits have been read from the input file.
     // To prevent any accidents with the iterators, these bin vectors
     // are initialised in all cases. Should really not affect performance.
     else {
-        int N = g_WValues.size();
-        g_N_OP_Bin = std::vector<int>(N, 0);
-        g_N_OP_BinTotal = std::vector<int>(N, 0);
+        int N = WValues.size();
+        N_OP_Bin = std::vector<int>(N, 0);
+        N_OP_BinTotal = std::vector<int>(N, 0);
     }
 }
 
@@ -781,51 +769,52 @@ static void initialise_weight_vectors() {
 ///        periodically updates the weights accordingly.
 /// @details This extremely simple update method
 ///
+/// @param muca the multicanonical 'context'
 /// @param  OP   order parameter of the current configuration (user supplied)
 /// @return boolean indicating whether the iteration is considered complete
 ////////////////////////////////////////////////////////////////////////////////
-static bool iterate_weight_function_direct(double OP) {
+bool iterate_weight_function_direct(Muca &muca, double OP) {
     bool continue_iteration;
     if (hila::myrank() == 0) {
-        int samples = g_WParam.DIP.sample_size;
-        int N = g_WValues.size();
+        int samples = muca.WParam.DIP.sample_size;
+        int N = muca.WValues.size();
 
-        bin_OP_value(OP);
-        g_WeightIterationCount += 1;
+        muca.bin_OP_value(OP);
+        muca.weightIterationCount += 1;
 
-        if (g_WeightIterationCount >= samples) {
+        if (muca.weightIterationCount >= samples) {
             for (int m = 0; m < N; m++) {
-                g_WValues[m] += g_WParam.DIP.C * g_N_OP_Bin[m] * N / samples;
-                g_N_OP_BinTotal[m] += g_N_OP_Bin[m];
+                muca.WValues[m] += muca.WParam.DIP.C * muca.N_OP_Bin[m] * N / samples;
+                muca.N_OP_BinTotal[m] += muca.N_OP_Bin[m];
             }
 
-            if (g_WParam.visuals)
-                print_iteration_histogram();
+            if (muca.WParam.visuals)
+                muca.print_iteration_histogram();
 
-            double base = *std::min_element(g_WValues.begin(), g_WValues.end());
+            double base = *std::min_element(muca.WValues.begin(), muca.WValues.end());
             for (int m = 0; m < N; ++m) {
                 // Always set minimum weight to zero. This is inconsequential
                 // as only the differences matter.
-                g_WValues[m] -= base;
-                g_N_OP_Bin[m] = 0;
+                muca.WValues[m] -= base;
+                muca.N_OP_Bin[m] = 0;
             }
-            g_WeightIterationCount = 0;
+            muca.weightIterationCount = 0;
 
-            if (finish_check(g_N_OP_BinTotal)) {
+            if (muca.finish_check(muca)) {
                 for (int m = 0; m < N; m++) {
-                    g_N_OP_BinTotal[m] = 0;
+                    muca.N_OP_BinTotal[m] = 0;
                 }
 
-                g_WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
-                           << "\n";
+                muca.WParam.DIP.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = "
+                           << muca.WParam.DIP.C << "\n";
             }
-            write_weight_function("intermediate_weight.dat");
+            muca.write_weight_function("intermediate_weight.dat");
         }
 
         continue_iteration = true;
-        if (g_WParam.DIP.C < g_WParam.DIP.C_min) {
-            hila::out0 << "Muca: Reached minimum update size C = " << g_WParam.DIP.C
+        if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
+            hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
                        << " Weight iteration complete.\n";
             continue_iteration = false;
         }
@@ -835,58 +824,58 @@ static bool iterate_weight_function_direct(double OP) {
 }
 
 
-static bool iterate_weight_function_direct_smooth(double OP) {
+bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     bool continue_iteration;
     if (hila::myrank() == 0) {
-        const int samples = g_WParam.DIP.sample_size;
-        const int N = g_WValues.size();
+        const int samples = muca.WParam.DIP.sample_size;
+        const int N = muca.WValues.size();
 
         // Don't bin visits outside of the binned areas
-        if (OP > g_OPBinLimits.front() && OP < g_OPBinLimits.back()) {
-            auto it = std::lower_bound(g_OPBinLimits.begin(), g_OPBinLimits.end(), OP);
-            int i = std::distance(g_OPBinLimits.begin(), it) - 1;
+        if (OP > muca.OPBinLimits.front() && OP < muca.OPBinLimits.back()) {
+            auto it = std::lower_bound(muca.OPBinLimits.begin(), muca.OPBinLimits.end(), OP);
+            int i = std::distance(muca.OPBinLimits.begin(), it) - 1;
 
             // clang-format off
             // Helps smooth the weight function (kind of kernel density estimation)
-            if(i>=2)  g_N_OP_Bin[i-2] += 1;//#
-            if(i>=1)  g_N_OP_Bin[i-1] += 3;//###
-                      g_N_OP_Bin[i+0] += 5;//##### hit
-            if(i<N-1) g_N_OP_Bin[i+1] += 3;//###
-            if(i<N-2) g_N_OP_Bin[i+2] += 1;//#
+            if(i>=2)  muca.N_OP_Bin[i-2] += 1;//#
+            if(i>=1)  muca.N_OP_Bin[i-1] += 3;//###
+                      muca.N_OP_Bin[i+0] += 5;//##### hit
+            if(i<N-1) muca.N_OP_Bin[i+1] += 3;//###
+            if(i<N-2) muca.N_OP_Bin[i+2] += 1;//#
             // clang-format on
         }
 
-        g_WeightIterationCount += 1;
+        muca.weightIterationCount += 1;
 
-        if (g_WeightIterationCount >= samples) {
+        if (muca.weightIterationCount >= samples) {
             for (int m = 0; m < N; m++) {
-                g_WValues[m] += g_WParam.DIP.C * (g_N_OP_Bin[m] - g_N_OP_Bin[0]) / N;
-                g_N_OP_BinTotal[m] += g_N_OP_Bin[m];
+                muca.WValues[m] += muca.WParam.DIP.C * (muca.N_OP_Bin[m] - muca.N_OP_Bin[0]) / N;
+                muca.N_OP_BinTotal[m] += muca.N_OP_Bin[m];
             }
 
-            if (g_WParam.visuals)
-                print_iteration_histogram();
+            if (muca.WParam.visuals)
+                muca.print_iteration_histogram();
 
             for (int m = 0; m < N; ++m) {
-                g_N_OP_Bin[m] = 0;
+                muca.N_OP_Bin[m] = 0;
             }
-            g_WeightIterationCount = 0;
+            muca.weightIterationCount = 0;
 
-            if (finish_check(g_N_OP_BinTotal)) {
+            if (muca.finish_check(muca)) {
                 for (int m = 0; m < N; m++) {
-                    g_N_OP_BinTotal[m] = 0;
+                    muca.N_OP_BinTotal[m] = 0;
                 }
 
-                g_WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
-                           << "\n";
+                muca.WParam.DIP.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = "
+                           << muca.WParam.DIP.C << "\n";
             }
-            write_weight_function("intermediate_weight.dat");
+            muca.write_weight_function("intermediate_weight.dat");
         }
 
         continue_iteration = true;
-        if (g_WParam.DIP.C < g_WParam.DIP.C_min) {
-            hila::out0 << "Muca: Reached minimum update size C = " << g_WParam.DIP.C
+        if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
+            hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
                        << " Weight iteration complete.\n";
             continue_iteration = false;
         }
@@ -901,60 +890,60 @@ static bool iterate_weight_function_direct_smooth(double OP) {
 ///          value of the order parameter. Reduced internal complexity due to
 ///          this simplification.
 ///          Whether all bins have been visited is now checked only every
-///          g_WParam.DIP.single_check_interval to prevent excessive checking
+///          WParam.DIP.single_check_interval to prevent excessive checking
 ///          for the visits.
 ///
 /// @param  OP   order parameter of the current configuration (user supplied)
 /// @return boolean indicating whether the iteration is considered complete
 ////////////////////////////////////////////////////////////////////////////////
-static bool iterate_weight_function_direct_single(double OP) {
+bool iterate_weight_function_direct_single(Muca &muca, double OP) {
     int continue_iteration;
     if (hila::myrank() == 0) {
-        int samples = g_WParam.DIP.sample_size;
-        int N = g_WValues.size();
+        int samples = muca.WParam.DIP.sample_size;
+        int N = muca.WValues.size();
 
-        int bin_index = find_OP_bin_index(OP);
+        int bin_index = find_OP_bin_index(OP, muca.OPBinLimits);
         // Only increment if on the min-max interval
         if (bin_index != -1)
-            g_N_OP_BinTotal[bin_index] += 1;
+            muca.N_OP_BinTotal[bin_index] += 1;
 
-        g_WeightIterationCount += 1;
+        muca.weightIterationCount += 1;
 
-        g_WValues[bin_index] += g_WParam.DIP.C;
+        muca.WValues[bin_index] += muca.WParam.DIP.C;
 
-        if (g_WeightIterationCount % g_WParam.DIP.single_check_interval == 0) {
+        if (muca.weightIterationCount % muca.WParam.DIP.single_check_interval == 0) {
 
-            double base = *std::min_element(g_WValues.begin(), g_WValues.end());
+            double base = *std::min_element(muca.WValues.begin(), muca.WValues.end());
             for (int m = 0; m < N; ++m) {
                 // Always set minimum weight to zero. This is inconsequential
                 // as only the differences matter.
-                g_WValues[m] -= base;
-                g_N_OP_Bin[m] = 0;
+                muca.WValues[m] -= base;
+                muca.N_OP_Bin[m] = 0;
             }
 
             // Visuals
-            if (g_WParam.visuals)
-                print_iteration_histogram();
+            if (muca.WParam.visuals)
+                muca.print_iteration_histogram();
 
             // If condition satisfied, zero the totals and decrease C
-            if (finish_check(g_N_OP_BinTotal)) {
+            if (muca.finish_check(muca)) {
                 for (int m = 0; m < N; m++) {
-                    g_N_OP_BinTotal[m] = 0;
+                    muca.N_OP_BinTotal[m] = 0;
                 }
 
-                g_WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
-                           << "\n";
+                muca.WParam.DIP.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = "
+                           << muca.WParam.DIP.C << "\n";
             }
 
             continue_iteration = true;
-            if (g_WParam.DIP.C < g_WParam.DIP.C_min) {
-                hila::out0 << "Muca: Reached minimum update size C = " << g_WParam.DIP.C
+            if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
+                hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
                            << " Weight iteration complete.\n";
                 continue_iteration = false;
             }
 
-            write_weight_function("intermediate_weight.dat");
+            muca.write_weight_function("intermediate_weight.dat");
         }
     }
     hila::broadcast(continue_iteration);
@@ -963,16 +952,16 @@ static bool iterate_weight_function_direct_single(double OP) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Prints out a crude horisontal histogram.
-/// @details Procures a crude horisontal ASCII histogram based on the g_N_OP_Bin
-///          vector. The histogram bin heights are proportional to g_N_OP_Bin
+/// @details Procures a crude horisontal ASCII histogram based on the N_OP_Bin
+///          vector. The histogram bin heights are proportional to N_OP_Bin
 ///          values. This is not very expressive for large N, as it won't fit
 ///          the height of the screen.
 ////////////////////////////////////////////////////////////////////////////////
-static void print_iteration_histogram() {
-    int samples = g_WParam.DIP.sample_size;
-    int N = g_WValues.size();
+inline void Muca::print_iteration_histogram() const {
+    int samples = WParam.DIP.sample_size;
+    int N = WValues.size();
     // Find maximum bin content for normalisation
-    int nmax = *std::max_element(g_N_OP_Bin.begin(), g_N_OP_Bin.end());
+    int nmax = *std::max_element(N_OP_Bin.begin(), N_OP_Bin.end());
     // Write a column header
     printf("Order Parameter     Weight 	         Number of hits\n");
 
@@ -981,12 +970,12 @@ static void print_iteration_histogram() {
         // hits to each bin and print it out along with relevant numerical
         // values
         std::string n_sum_hist = "";
-        if (g_N_OP_BinTotal[m] > 0)
+        if (N_OP_BinTotal[m] > 0)
             n_sum_hist += "O";
-        for (int i = 0; i < int(g_N_OP_Bin[m] * 200.0 / samples); i++) {
+        for (int i = 0; i < int(N_OP_Bin[m] * 200.0 / samples); i++) {
             n_sum_hist += "|";
         }
-        printf("%-20.3f%-20.3f%d\t\t\t%s\n", g_OPValues[m], g_WValues[m], g_N_OP_Bin[m],
+        printf("%-20.3f%-20.3f%d\t\t\t%s\n", OPValues[m], WValues[m], N_OP_Bin[m],
                n_sum_hist.c_str());
     }
 }
@@ -1001,28 +990,28 @@ static void print_iteration_histogram() {
 ///          parameter file. Further, method specific variables that are
 ///          modified during the run are also set to the necessary values.
 ////////////////////////////////////////////////////////////////////////////////
-static void setup_iteration() {
+inline void Muca::setup_iteration() {
     // Initialise iterate_weights by pointing it at the
     // correct method
-    if (g_WParam.method.compare("direct") == 0) {
-        if (g_WParam.DIP.sample_size > 1) {
+    if (WParam.method.compare("direct") == 0) {
+        if (WParam.DIP.sample_size > 1) {
             iterate_weights = &iterate_weight_function_direct;
         } else {
             iterate_weights = &iterate_weight_function_direct_single;
         }
-        g_WParam.DIP.C = g_WParam.DIP.C_init;
+        WParam.DIP.C = WParam.DIP.C_init;
     } else {
         iterate_weights = &iterate_weight_function_direct;
-        g_WParam.DIP.C = g_WParam.DIP.C_init;
+        WParam.DIP.C = WParam.DIP.C_init;
     }
 
     // Zero the iteration counter
-    g_WeightIterationCount = 0;
+    weightIterationCount = 0;
 
     // Set up the finish condition pointer for the direct method.
-    if (g_WParam.DIP.finish_condition.compare("all_visited") == 0) {
+    if (WParam.DIP.finish_condition.compare("all_visited") == 0) {
         finish_check = &all_visited;
-    } else if (g_WParam.DIP.finish_condition.compare("ends_visited") == 0) {
+    } else if (WParam.DIP.finish_condition.compare("ends_visited") == 0) {
         finish_check = &first_last_visited;
     } else {
         finish_check = &all_visited;
@@ -1037,9 +1026,9 @@ static void setup_iteration() {
 ///
 /// @param YN   enable (true) or disable (false) the iteration
 ////////////////////////////////////////////////////////////////////////////////
-void set_continuous_iteration(bool YN) {
+void Muca::set_continuous_iteration(bool YN) {
     if (hila::myrank() == 0)
-        g_WParam.AR_iteration = YN;
+        WParam.AR_iteration = YN;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1051,15 +1040,15 @@ void set_continuous_iteration(bool YN) {
 /// @param wfile_name   path to the weight parameter file
 /// @return false if something fails during init.
 ////////////////////////////////////////////////////////////////////////////////
-bool initialise(const std::string wfile_name) {
+bool Muca::initialise(const std::string wfile_name) {
     // Read parameters into g_WParam struct
     read_weight_parameters(wfile_name);
     bool ret = true;
     // This is fine to do just for process zer0
     if (hila::myrank() == 0) {
         // Read pre-existing weight if given
-        if (g_WParam.weight_loc.compare("NONE") != 0) {
-            if (!read_weight_function(g_WParam.weight_loc)) {
+        if (WParam.weight_loc.compare("NONE") != 0) {
+            if (!read_weight_function(WParam.weight_loc)) {
                 ret = false;
                 goto early_return;
             }
