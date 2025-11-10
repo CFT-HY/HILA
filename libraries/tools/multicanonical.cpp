@@ -904,7 +904,7 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP) {
 
         int bin_index = find_OP_bin_index(OP, muca.OPBinLimits);
         // Only increment if on the min-max interval
-        if (bin_index >= 0){
+        if (bin_index >= 0) {
             muca.N_OP_BinTotal[bin_index] += 1;
             muca.WValues[bin_index] += muca.WParam.DIP.C;
         }
@@ -1004,6 +1004,11 @@ inline void Muca::setup_iteration() {
     } else {
         iterate_weights = &iterate_weight_function_direct;
         WParam.DIP.C = WParam.DIP.C_init;
+        if (hila::myrank() == 0) {
+            printf("Muca: note: input iteration method `%s` did not match any method:\n"
+                   "            setting the default `direct` method\n",
+                   WParam.method.c_str());
+        }
     }
 
     // Zero the iteration counter
@@ -1016,6 +1021,11 @@ inline void Muca::setup_iteration() {
         finish_check = &first_last_visited;
     } else {
         finish_check = &all_visited;
+        if (hila::myrank() == 0) {
+            printf("Muca: note: input finish condition `%s` did not match any:\n"
+                   "            setting the default `all_visited` condition\n",
+                   WParam.DIP.finish_condition.c_str());
+        }
     }
 }
 
