@@ -6,7 +6,7 @@ From: ubuntu:24.04
     apt-get -y install git make libfftw3-dev
 
     #installing clang devel tools
-    export LLVM_VERSION=15
+    export LLVM_VERSION=18
     apt-get -y install clang-$LLVM_VERSION \
                        libclang-$LLVM_VERSION-dev
 
@@ -18,10 +18,19 @@ From: ubuntu:24.04
     cd /
     rm -rf HILA
     apt-get -y remove make git
-    apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev libclang1-$LLVM_VERSION libclang-cpp$LLVM_VERSION
+    apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev libclang1-$LLVM_VERSION libclang-cpp$LLVM_VERSION || true
+    apt-get -y remove \
+        perl \
+        python3 \
+        python3-minimal \
+        python3-setuptools \
+        python3-pygments \
+        python3-yaml \
+        python3.12 \
+        python3.12-minimal || true
 
 %environment
-    export LLVM_VERSION=14
+    export LLVM_VERSION=18
 
 %runscript
     /hilapp $@
