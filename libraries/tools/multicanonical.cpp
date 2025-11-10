@@ -19,11 +19,11 @@ namespace muca {
 static weight_iteration_parameters g_WParam;
 
 // Initialise some static vectors for this file only.
-static vector g_OPValues(1, 0);
-static vector g_OPBinLimits(2, 0);
-static vector g_WValues(1, 0);
-static int_vector g_N_OP_Bin(1, 0);
-static int_vector g_N_OP_BinTotal(1, 0);
+static std::vector<double> g_OPValues(1, 0);
+static std::vector<double> g_OPBinLimits(2, 0);
+static std::vector<double> g_WValues(1, 0);
+static std::vector<int> g_N_OP_Bin(1, 0);
+static std::vector<int> g_N_OP_BinTotal(1, 0);
 static int g_WeightIterationCount = 0;
 static bool g_WeightIterationFlag = true;
 
@@ -34,16 +34,16 @@ iteration_pointer iterate_weights;
 finish_condition_pointer finish_check;
 
 ////////////////////////////////////////////////////////////////////////////////
-/// @brief Writes variables to the file, given the format string.
+/// @brief Writes variables to the file, given the format std::string.
 ///        Quick and dirty. No error handling.
 /// TODO: swith to std::format when c++20
 ///
 /// @param output_file
-/// @param fmt           format string corresponding to input_value
+/// @param fmt           format std::string corresponding to input_value
 /// @param input_values   numerical values to write to output_file
 ////////////////////////////////////////////////////////////////////////////////
 template <class... Ks>
-static inline void to_file(std::ofstream &output_file, string fmt, Ks... input_values) {
+static inline void to_file(std::ofstream &output_file, std::string fmt, Ks... input_values) {
 
     constexpr int buf_len = 1024;
     char buffer[buf_len];
@@ -54,24 +54,24 @@ static inline void to_file(std::ofstream &output_file, string fmt, Ks... input_v
         printf("WARNING: to_file snprintf truncated %d\n", res);
     }
 
-    output_file << string(buffer);
+    output_file << std::string(buffer);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Generates a time stamped and otherwise appropriate file name for the
 ///        saved weight function files.
 ///
-/// @return      generated filename string
+/// @return      generated filename std::string
 ////////////////////////////////////////////////////////////////////////////////
-string generate_outfile_name() {
-    string filename = g_WParam.outfile_name_base + "_weight_function_";
+std::string generate_outfile_name() {
+    std::string filename = g_WParam.outfile_name_base + "_weight_function_";
 
     // A terrible mess to get the datetime format nice
     std::stringstream ss;
     std::time_t t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
     ss << std::put_time(&tm, "created_%Y.%m.%d_%H:%M:%S");
-    string date = ss.str();
+    std::string date = ss.str();
 
     filename = filename + date;
     return filename;
@@ -84,39 +84,30 @@ string generate_outfile_name() {
 ///
 /// @param parameter_file_name   parameter file name
 ////////////////////////////////////////////////////////////////////////////////
-void read_weight_parameters(string parameter_file_name) {
+void read_weight_parameters(std::string parameter_file_name) {
     // Open the weight parameter file and list through the parameters.
     // See the parameter file for the roles of the parameters.
     hila::input par(parameter_file_name);
 
+    // clang-format off
     // Generic control parameters
-    string output_loc = par.get("output file location");
-    string outfile_name_base = par.get("output file name base");
+    std::string output_loc        = par.get("output file location"); // Unused
 
-    string weight_loc = par.get("weight file location");
-    string iter_method = par.get("iteration method");
-    string hard_walls = par.get("hard walls");
-    double max_OP = par.get("max OP");
-    double min_OP = par.get("min OP");
-    int bin_number = par.get("bin number");
-    string iter_vis = par.get("iteration visuals");
+    std::string outfile_name_base = par.get("output file name base");
+    std::string weight_loc        = par.get("weight file location");
+    std::string iter_method       = par.get("iteration method");
+    std::string hard_walls        = par.get("hard walls");
+    double max_OP                 = par.get("max OP");
+    double min_OP                 = par.get("min OP");
+    int bin_number                = par.get("bin number");
+    std::string iter_vis          = par.get("iteration visuals");
 
     // Direct iteration parameters
-    string finish_condition = par.get("finish condition");
-    int DIM_sample_size = par.get("DIM sample size");
-    int DIM_check_interval = par.get("DIM visit check interval");
-    double add_initial = par.get("add initial");
-    double add_minimum = par.get("add minimum");
-
-    // Canonical iteration parameters
-    int CIM_sample_size = par.get("CIM sample size");
-    int initial_bin_hits = par.get("initial bin hits");
-    int OC_max_iter = par.get("OC max iter");
-    int OC_frequency = par.get("OC frequency");
-
-    par.close();
-
-    // clang-format off
+    std::string finish_condition = par.get("finish condition");
+    int DIM_sample_size          = par.get("DIM sample size");
+    int DIM_check_interval       = par.get("DIM visit check interval");
+    double add_initial           = par.get("add initial");
+    double add_minimum           = par.get("add minimum");
     struct direct_iteration DIP
     {
         finish_condition,
@@ -127,6 +118,11 @@ void read_weight_parameters(string parameter_file_name) {
         add_initial
     };
 
+    // Canonical iteration parameters
+    int CIM_sample_size  = par.get("CIM sample size");
+    int initial_bin_hits = par.get("initial bin hits");
+    int OC_max_iter      = par.get("OC max iter");
+    int OC_frequency     = par.get("OC frequency");
     struct canonical_iteration CIP
     {
         CIM_sample_size,
@@ -134,7 +130,8 @@ void read_weight_parameters(string parameter_file_name) {
         OC_max_iter,
         OC_frequency
     };
-    // clang-format on
+
+    par.close();
 
     bool AR_ITER = false;
 
@@ -150,7 +147,6 @@ void read_weight_parameters(string parameter_file_name) {
     else
         hwalls = false;
 
-    // clang-format off
     g_WParam =
     {
         weight_loc,
@@ -191,7 +187,7 @@ void read_weight_parameters(string parameter_file_name) {
 /// @param W_function_filename
 /// @return false if reading the file fails.
 ////////////////////////////////////////////////////////////////////////////////
-bool read_weight_function(string W_function_filename) {
+bool read_weight_function(std::string W_function_filename) {
     printf("Loading the user supplied weight function `%s`\n", W_function_filename.c_str());
 
     int header_length = 1, data_length = -1;
@@ -206,7 +202,7 @@ bool read_weight_function(string W_function_filename) {
 
     // Compute first header length by counting lines until finding
     // the column header through regex.
-    string line;
+    std::string line;
     while (std::getline(W_file, line)) {
         if (std::regex_match(line, std::regex(".*OP_value.*")))
             data_length = 0;
@@ -233,9 +229,9 @@ bool read_weight_function(string W_function_filename) {
     printf("Reading the weight function into the program.\n");
 
     // Initialise the weight vectors to correct dimensions
-    g_OPBinLimits = vector(data_length);
-    g_OPValues = vector(data_length - 1);
-    g_WValues = vector(data_length - 1);
+    g_OPBinLimits = std::vector<double>(data_length);
+    g_OPValues = std::vector<double>(data_length - 1);
+    g_WValues = std::vector<double>(data_length - 1);
 
     // Read in the values. Note that g_OPBinLimits has one more entry than
     // the weight vector.
@@ -291,16 +287,16 @@ bool read_weight_function(string W_function_filename) {
 ///          details.
 ///          Should only be called from hila::myrank()==0
 ///
-///          TBA: Add string input that can contain user specified header data.
+///          TBA: Add std::string input that can contain user specified header data.
 ///
 /// @param W_function_filename
 /// @param g_WParam                    struct of weight iteration parameters
 /// @return false if writing fails
 ////////////////////////////////////////////////////////////////////////////////
-bool write_weight_function(string W_function_filename) {
+bool write_weight_function(std::string W_function_filename) {
 
     std::ofstream W_file;
-    // string filename = generate_outfile_name(RP);
+    // std::string filename = generate_outfile_name(RP);
     W_file.open(W_function_filename.c_str());
     if (!W_file.is_open()) {
         printf("WARNING: Could not open file `%s` for `write_weight_function()`: %s\n",
@@ -499,7 +495,7 @@ static void bin_OP_value(double OP) {
 /// @param  visit   integer vector with values 1 corresponding to visits
 /// @return a boolean indicating the statement
 ////////////////////////////////////////////////////////////////////////////////
-static bool all_visited(int_vector &n) {
+static bool all_visited(std::vector<int> &n) {
     int len = n.size();
     for (int i = 0; i < len; ++i) {
         if (n[i] == 0)
@@ -515,7 +511,7 @@ static bool all_visited(int_vector &n) {
 /// @param  visit   integer vector with values 1 corresponding to visits
 /// @return a boolean indicating the statement
 ////////////////////////////////////////////////////////////////////////////////
-static bool first_last_visited(int_vector &n) {
+static bool first_last_visited(std::vector<int> &n) {
     int len = n.size();
     if ((n[0] == 0) or (n[len - 1] == 0))
         return false;
@@ -536,7 +532,7 @@ static bool first_last_visited(int_vector &n) {
 ///
 /// @param fc_pointer   A function pointer to a suitable condition function
 ////////////////////////////////////////////////////////////////////////////////
-void set_direct_iteration_FC(bool (*fc_pointer)(int_vector &n)) {
+void set_direct_iteration_FC(bool (*fc_pointer)(std::vector<int> &n)) {
     finish_check = fc_pointer;
 }
 
@@ -554,9 +550,9 @@ void set_direct_iteration_FC(bool (*fc_pointer)(int_vector &n)) {
 /// @param Weight   vector containing the previously used weights
 /// @param n_sum    vector containing the total number of visits
 ////////////////////////////////////////////////////////////////////////////////
-static void overcorrect(vector &Weight, int_vector &n_sum) {
+static void overcorrect(std::vector<double> &Weight, std::vector<int> &n_sum) {
     int N = n_sum.size();
-    vector W(N, 0);
+    std::vector<double> W(N, 0);
     constexpr float C = 1;
 
     for (int m = 0; m < N; ++m) {
@@ -582,13 +578,13 @@ static void overcorrect(vector &Weight, int_vector &n_sum) {
 /// @param g_log_h_sum   vector containing the sum of previous logs of the
 ///                      canonical weights
 ////////////////////////////////////////////////////////////////////////////////
-static void recursive_weight_iteration(vector &Weight, int_vector &n, int_vector &g_sum,
-                                       vector &g_log_h_sum) {
+static void recursive_weight_iteration(std::vector<double> &Weight, std::vector<int> &n,
+                                       std::vector<int> &g_sum, std::vector<double> &g_log_h_sum) {
     const int nmin = 10;
     int N = n.size();
 
     // Fill out log(h)
-    vector log_h(N);
+    std::vector<double> log_h(N);
     for (int m = 0; m < N; ++m) {
         if (n[m] > 0) {
             log_h[m] = ::log(n[m]) + Weight[m];
@@ -600,7 +596,7 @@ static void recursive_weight_iteration(vector &Weight, int_vector &n, int_vector
     }
 
     // Compute the iteration. Note that W[0] is permanently kept to zero
-    vector W(N);
+    std::vector<double> W(N);
     W[0] = 0;
     Weight[0] = W[0];
     for (int m = 1; m < N; ++m) {
@@ -656,7 +652,7 @@ static void recursive_weight_iteration(vector &Weight, int_vector &n, int_vector
 //     vector limits = get_bin_limits(min, max, N);
 //
 //     // Initialise the storage vectors to zero:
-//     int_vector n(N, 0), g_sum(N, 0), n_sum(N, 0);
+//      std::vector<int> n(N, 0), g_sum(N, 0), n_sum(N, 0);
 //     vector g_log_h_sum(N, 0), log_h(N, 0), W_prev(N, 0);
 //
 //     // Get initial guesses
@@ -723,11 +719,11 @@ static void recursive_weight_iteration(vector &Weight, int_vector &n, int_vector
 ///
 /// @return vector containing the bin edges
 ////////////////////////////////////////////////////////////////////////////////
-static vector get_equidistant_bin_limits() {
+static std::vector<double> get_equidistant_bin_limits() {
     double min = g_WParam.min_OP;
     double max = g_WParam.max_OP;
     int N = g_WParam.bin_number;
-    vector bin_edges(N + 1);
+    std::vector<double> bin_edges(N + 1);
     double diff = (max - min) / (N - 1);
     for (int i = 0; i < N + 1; ++i) {
         bin_edges[i] = min - diff / 2.0 + diff * i;
@@ -760,14 +756,14 @@ static void initialise_weight_vectors() {
     // If no input weight, set up equidistant bins
     if (g_WParam.weight_loc.compare("NONE") == 0) {
         int N = g_WParam.bin_number;
-        g_WValues = vector(N, 0.0);
-        g_OPValues = vector(N, 0.0);
-        g_OPBinLimits = vector(N + 1, 0.0);
+        g_WValues = std::vector<double>(N, 0.0);
+        g_OPValues = std::vector<double>(N, 0.0);
+        g_OPBinLimits = std::vector<double>(N + 1, 0.0);
 
         setup_equidistant_bins();
 
-        g_N_OP_Bin = int_vector(N, 0);
-        g_N_OP_BinTotal = int_vector(N, 0);
+        g_N_OP_Bin = std::vector<int>(N, 0);
+        g_N_OP_BinTotal = std::vector<int>(N, 0);
     }
     // Same for predetermined bins. g_OPValues, g_WValues
     // and g_OP_BinLimits have been read from the input file.
@@ -775,8 +771,8 @@ static void initialise_weight_vectors() {
     // are initialised in all cases. Should really not affect performance.
     else {
         int N = g_WValues.size();
-        g_N_OP_Bin = int_vector(N, 0);
-        g_N_OP_BinTotal = int_vector(N, 0);
+        g_N_OP_Bin = std::vector<int>(N, 0);
+        g_N_OP_BinTotal = std::vector<int>(N, 0);
     }
 }
 
@@ -811,6 +807,67 @@ static bool iterate_weight_function_direct(double OP) {
                 // Always set minimum weight to zero. This is inconsequential
                 // as only the differences matter.
                 g_WValues[m] -= base;
+                g_N_OP_Bin[m] = 0;
+            }
+            g_WeightIterationCount = 0;
+
+            if (finish_check(g_N_OP_BinTotal)) {
+                for (int m = 0; m < N; m++) {
+                    g_N_OP_BinTotal[m] = 0;
+                }
+
+                g_WParam.DIP.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = " << g_WParam.DIP.C
+                           << "\n";
+            }
+            write_weight_function("intermediate_weight.dat");
+        }
+
+        continue_iteration = true;
+        if (g_WParam.DIP.C < g_WParam.DIP.C_min) {
+            hila::out0 << "Muca: Reached minimum update size C = " << g_WParam.DIP.C
+                       << " Weight iteration complete.\n";
+            continue_iteration = false;
+        }
+    }
+    hila::broadcast(continue_iteration);
+    return continue_iteration;
+}
+
+
+static bool iterate_weight_function_direct_smooth(double OP) {
+    bool continue_iteration;
+    if (hila::myrank() == 0) {
+        const int samples = g_WParam.DIP.sample_size;
+        const int N = g_WValues.size();
+
+        // Don't bin visits outside of the binned areas
+        if (OP > g_OPBinLimits.front() && OP < g_OPBinLimits.back()) {
+            auto it = std::lower_bound(g_OPBinLimits.begin(), g_OPBinLimits.end(), OP);
+            int i = std::distance(g_OPBinLimits.begin(), it) - 1;
+
+            // clang-format off
+            // Helps smooth the weight function (kind of kernel density estimation)
+            if(i>=2)  g_N_OP_Bin[i-2] += 1;//#
+            if(i>=1)  g_N_OP_Bin[i-1] += 3;//###
+                      g_N_OP_Bin[i+0] += 5;//##### hit
+            if(i<N-1) g_N_OP_Bin[i+1] += 3;//###
+            if(i<N-2) g_N_OP_Bin[i+2] += 1;//#
+            // clang-format on
+        }
+
+        g_WeightIterationCount += 1;
+
+        if (g_WeightIterationCount >= samples) {
+            for (int m = 0; m < N; m++) {
+                g_WValues[m] += g_WParam.DIP.C * (g_N_OP_Bin[m] - g_N_OP_Bin[0]) / N;
+                g_N_OP_BinTotal[m] += g_N_OP_Bin[m];
+            }
+
+            if (g_WParam.visuals)
+                print_iteration_histogram();
+
+            for (int m = 0; m < N; ++m) {
                 g_N_OP_Bin[m] = 0;
             }
             g_WeightIterationCount = 0;
@@ -994,7 +1051,7 @@ void set_continuous_iteration(bool YN) {
 /// @param wfile_name   path to the weight parameter file
 /// @return false if something fails during init.
 ////////////////////////////////////////////////////////////////////////////////
-bool initialise(const string wfile_name) {
+bool initialise(const std::string wfile_name) {
     // Read parameters into g_WParam struct
     read_weight_parameters(wfile_name);
     bool ret = true;

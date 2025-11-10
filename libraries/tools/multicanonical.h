@@ -22,10 +22,6 @@ namespace hila {
 // Multicanonical methods are separated to their own namespace
 namespace muca {
 
-using string = std::string;
-using int_vector = std::vector<int>;
-using vector = std::vector<double>;
-
 struct Muca;
 
 typedef bool (*finish_condition_pointer)(std::vector<int> &visits);
@@ -137,7 +133,7 @@ struct canonical_iteration {
 /// \f$ C \f$ to the single relevant bin each iteration.
 ///////////////////////////////////////////////////////////////////////////////
 struct direct_iteration {
-    string finish_condition;
+    std::string finish_condition;
     int sample_size;
     int single_check_interval;
     double C_init;
@@ -195,9 +191,9 @@ struct direct_iteration {
 /// @brief A substruct that contains method specific parameters
 ///////////////////////////////////////////////////////////////////////////////
 struct weight_iteration_parameters {
-    string weight_loc;
-    string outfile_name_base;
-    string method;
+    std::string weight_loc;
+    std::string outfile_name_base;
+    std::string method;
 
     bool visuals;
     bool hard_walls;
@@ -213,9 +209,9 @@ struct Muca {
     // parameter struct filled by read_weight_parameters
     weight_iteration_parameters WParam;
 
-    vector OPValues;
-    vector OPBinLimits;
-    vector WValues;
+    std::vector<double> OPValues;
+    std::vector<double> OPBinLimits;
+    std::vector<double> WValues;
 
     int WeightIterationCount = 0;
     bool WeightIterationFlag = true;
@@ -225,8 +221,8 @@ struct Muca {
     finish_condition_pointer finish_check;
 
     // Direct iteration
-    int_vector N_OP_Bin;
-    int_vector N_OP_BinTotal;
+    std::vector<int> N_OP_Bin;
+    std::vector<int> N_OP_BinTotal;
 
 
 ////////////////////////////////////////////////////////////////////////////////
