@@ -904,12 +904,13 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP) {
 
         int bin_index = find_OP_bin_index(OP, muca.OPBinLimits);
         // Only increment if on the min-max interval
-        if (bin_index != -1)
+        if (bin_index >= 0){
             muca.N_OP_BinTotal[bin_index] += 1;
+            muca.WValues[bin_index] += muca.WParam.DIP.C;
+        }
 
         muca.weightIterationCount += 1;
 
-        muca.WValues[bin_index] += muca.WParam.DIP.C;
 
         if (muca.weightIterationCount % muca.WParam.DIP.single_check_interval == 0) {
 
