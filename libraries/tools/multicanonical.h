@@ -194,14 +194,14 @@ struct Muca {
     // Weight function is parametrized as piecewise linear func
     //
     // The order parameter (OP) range [min_OP, max_OP] is divided into bins
-    //    'c' OP bin centers:    0   1   2   3    ... N     ,stored in `OPValues`
-    //                         | c | c | c | c |  ...
-    //     '|' OP bin limits:  0   1   2   3   4  ... N + 1 ,stored in `OPBinLimits`
-    // Thus limits for OPValues[i] are OPBinLimits[i] to OPBinLimits[i + 1]
-    // The weights are tracked on the centers of each bin ,stored in `WValues`
-    std::vector<double> OPValues;
-    std::vector<double> OPBinLimits;
-    std::vector<double> WValues;
+    //    'c' `OP_bin_centers`:    0   1   2   3    ... N
+    //      cc                   | c | c | c | c |  ...
+    //     '|' `OP_bin_limits`:  0   1   2   3   4  ... N + 1
+    // Thus limits for OP_bin_centers[i] are OP_bin_limits[i] to OP_bin_limits[i + 1]
+    // The weights are tracked on the centers of each bin ,stored in `weight_at_centers`
+    std::vector<double> OP_bin_centers;
+    std::vector<double> OP_bin_limits;
+    std::vector<double> weight_at_centers;
 
     int weightIterationCount = 0;
     bool weightIterationFlag = true;
@@ -209,8 +209,10 @@ struct Muca {
     finish_condition_fn finish_check;
 
     // Direct iteration
-    std::vector<int> N_OP_Bin;
-    std::vector<int> N_OP_BinTotal;
+    /// Number of hits in OP bins
+    std::vector<int> OP_bin_hits;
+    /// Total accumulated hits in OP bins
+    std::vector<int> OP_bin_hits_total;
 
     //
     std::vector<double> OP_c_hist;
@@ -224,7 +226,7 @@ struct Muca {
     // Initialises the muca computations according to the weight parameter file.
     // This function is to always be called before using any of the below functions
     bool initialise(const std::string wfile_name);
-    // Pointer to the iteration function, set by initialisation (or manyally if custom)
+    // Pointer to the iteration function, set by initialisation (or manually if custom)
     iteration_fn iterate_weights;
     // Writes weight functions to a file
     bool write_weight_function(const std::string &W_function_filename);
@@ -247,7 +249,7 @@ struct Muca {
     // Direct iteration stuff
     /// Set the direct iteration finish condition
     void set_direct_iteration_FC(finish_condition_fn fc);
-    void bin_OP_value(double OP);
+    void bin_hit_OP_value(double OP);
     void setup_equidistant_bins();
     void print_iteration_histogram() const;
 
@@ -265,7 +267,7 @@ struct Muca {
 
 // static helper funcs
 static inline std::vector<double> get_equidistant_bin_limits(double min, double max, int N_bins);
-static inline int find_OP_bin_index(double OP, const std::vector<double> &OPBinLimits);
+static inline int find_OP_bin_index(double OP, const std::vector<double> &OP_bin_limits);
 
 } // namespace muca
 } // namespace hila
