@@ -160,8 +160,8 @@ struct weight_iteration_parameters {
 
     bool visuals;
     bool hard_walls;
-    double max_OP;
     double min_OP;
+    double max_OP;
     int bin_number;
     bool AR_iteration;
     struct direct_iteration DIP;
@@ -186,14 +186,25 @@ struct Muca {
     // parameter struct filled by read_weight_parameters
     weight_iteration_parameters WParam;
 
+
+    /////////////////////////////////////////////////////////////
+    // Data:
+
+
+    // Weight function is parametrized as piecewise linear func
+    //
+    // The order parameter (OP) range [min_OP, max_OP] is divided into bins
+    //    'c' OP bin centers:    0   1   2   3    ... N     ,stored in `OPValues`
+    //                         | c | c | c | c |  ...
+    //     '|' OP bin limits:  0   1   2   3   4  ... N + 1 ,stored in `OPBinLimits`
+    // Thus limits for OPValues[i] are OPBinLimits[i] to OPBinLimits[i + 1]
+    // The weights are tracked on the centers of each bin ,stored in `WValues`
     std::vector<double> OPValues;
     std::vector<double> OPBinLimits;
     std::vector<double> WValues;
 
     int weightIterationCount = 0;
     bool weightIterationFlag = true;
-    // Pointer to the iteration function
-    iteration_fn iterate_weights;
     // Pointer to the finish condition check
     finish_condition_fn finish_check;
 
@@ -201,54 +212,56 @@ struct Muca {
     std::vector<int> N_OP_Bin;
     std::vector<int> N_OP_BinTotal;
 
-    // Initialises the muca computations according to the weight parameter file.
-    // This function is to always be called before using any of the above functions
-    bool initialise(const std::string wfile_name);
+    //
+    std::vector<double> OP_c_hist;
+    std::vector<int> N_OP_nsum;
+    std::vector<int> N_OP_gsum;
+    std::vector<double> non_corrected_W;
 
     /////////////////////////////////////////////////////////////
-    // Reads parameters for muca computations
-    void read_weight_parameters(std::string parameter_file_name);
+    // Intended interface:
 
-    // Reads weight functions from a file
-    bool read_weight_function(const std::string &W_function_filename);
-
+    // Initialises the muca computations according to the weight parameter file.
+    // This function is to always be called before using any of the below functions
+    bool initialise(const std::string wfile_name);
+    // Pointer to the iteration function, set by initialisation (or manyally if custom)
+    iteration_fn iterate_weights;
     // Writes weight functions to a file
     bool write_weight_function(const std::string &W_function_filename);
-
     // Gives the weight as a function of the order parameter
     double weight_function(double OP) const;
     double weight(double OP) const;
-
     // Accept/reject determination for pairs of order parameter values
     bool accept_reject(const double OP_old, const double OP_new);
 
-    // Set the direct iteration finish condition
+    /////////////////////////////////////////////////////////////
+    // Internal functions
+
+    // private:
+    void read_weight_parameters(std::string parameter_file_name);
+    // Reads weight functions from a file
+    bool read_weight_function(const std::string &W_function_filename);
+    void initialise_weight_vectors();
+    void setup_iteration();
+
+    // Direct iteration stuff
+    /// Set the direct iteration finish condition
     void set_direct_iteration_FC(finish_condition_fn fc);
+    void bin_OP_value(double OP);
+    void setup_equidistant_bins();
+    void print_iteration_histogram() const;
 
-    // Set to perform the weight iteration at each call to accept_reject
+    /// Set to perform the weight iteration at each call to accept_reject
     void set_continuous_iteration(bool YN);
-
-    // For the continuous iteration the finish condition is tracked internally
-    // and can be checked and set using the two functions below
+    /// For the continuous iteration the finish condition is tracked internally
+    /// and can be checked and set using the two functions below
     bool check_weight_iter_flag();
     void set_weight_iter_flag(bool YN);
-
-    /////////////////////////////////////////////////////////////
-    // private:
-    void bin_OP_value(double OP);
 
     void overcorrect(std::vector<double> &Weight, std::vector<int> &n_sum);
     void recursive_weight_iteration(std::vector<double> &Weight, std::vector<int> &n,
                                     std::vector<int> &g_sum, std::vector<double> &g_log_h_sum);
-
-    void print_iteration_histogram() const;
-
-    void setup_equidistant_bins();
-    void initialise_weight_vectors();
-
-    void setup_iteration();
 };
-
 
 // static helper funcs
 static inline std::vector<double> get_equidistant_bin_limits(double min, double max, int N_bins);

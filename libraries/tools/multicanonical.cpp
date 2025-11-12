@@ -215,7 +215,7 @@ bool Muca::read_weight_function(const std::string &W_function_filename) {
     OPValues = std::vector<double>(data_length - 1);
     WValues = std::vector<double>(data_length - 1);
 
-    // Read in the values. Note that g_OPBinLimits has one more entry than
+    // Read in the values. Note that OPBinLimits has one more entry than
     // the weight vector.
     int line_no = 0;
     while (std::getline(W_file, line)) {
@@ -269,10 +269,9 @@ bool Muca::read_weight_function(const std::string &W_function_filename) {
 ///          details.
 ///          Should only be called from hila::myrank()==0
 ///
-///          TBA: Add std::string input that can contain user specified header data.
+///          TODO: Add std::string input that can contain user specified header data.
 ///
 /// @param W_function_filename
-/// @param g_WParam                    struct of weight iteration parameters
 /// @return false if writing fails
 ////////////////////////////////////////////////////////////////////////////////
 bool Muca::write_weight_function(const std::string &W_function_filename) {
@@ -950,6 +949,87 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     return continue_iteration;
 }
 
+// WIP
+bool iterate_weight_function_canonical(Muca &muca, double OP) {
+    bool continue_iteration = true;
+    if (hila::myrank() == 0) {
+
+        muca.weightIterationCount += 1;
+
+        // Accumulate bin hits
+        if (OP > muca.OPBinLimits.front() && OP < muca.OPBinLimits.back()) {
+            auto it = std::lower_bound(muca.OPBinLimits.begin(), muca.OPBinLimits.end(), OP);
+            int i = std::distance(muca.OPBinLimits.begin(), it) - 1;
+
+            muca.N_OP_Bin[i] += 1;
+            double w = muca.weight_function(OP);
+            muca.OP_c_hist[i] += ::exp(w);
+        }
+
+        // update weights
+        if (muca.weightIterationCount >= muca.WParam.CIP.sample_size) {
+            muca.weightIterationCount = 0;
+
+            // before updating weights swap WValues to the non-corrected one
+            std::swap(muca.non_corrected_W, muca.WValues);
+
+            for (size_t i = 1; i < muca.OP_c_hist.size(); ++i) {
+                double bin_width = muca.OPBinLimits[i] - muca.OPBinLimits[i - 1];
+                muca.OP_c_hist[i - 1] /= bin_width;
+            }
+
+            constexpr int min_hits = 8;
+            std::vector<double> WValues_prev = muca.WValues; // copy
+
+            muca.N_OP_nsum[0] += muca.N_OP_Bin[0];
+            for (size_t i = 1; i < muca.OP_c_hist.size(); ++i) {
+                muca.N_OP_nsum[i] += muca.N_OP_Bin[i];
+
+                size_t gi = 0;
+                if (muca.N_OP_Bin[i] >= min_hits && muca.N_OP_Bin[i - 1] >= min_hits) {
+                    gi = muca.N_OP_Bin[i] + muca.N_OP_Bin[i - 1];
+                } else {
+                    muca.WValues[i] = WValues_prev[i] - WValues_prev[i - 1] + muca.WValues[i - 1];
+                    //
+                    continue;
+                }
+
+                double ln = -gi * ::log(muca.OP_c_hist[i - 1] / muca.OP_c_hist[i]);
+                size_t gi_sum = muca.N_OP_gsum[i] + gi;
+
+                muca.WValues[i] =
+                    muca.WValues[i - 1] +
+                    ((WValues_prev[i] - WValues_prev[i - 1]) * muca.N_OP_gsum[i] + ln) / (gi_sum);
+
+                muca.N_OP_gsum[i] = gi_sum;
+            }
+
+            // reset counters
+            for (size_t i = 0; i < muca.N_OP_Bin.size(); ++i) {
+                muca.N_OP_Bin[i] = 0;
+                muca.OP_c_hist[i] = 0;
+            }
+
+            // over correct
+            // overcorrected weights are used only for the next updates
+            // the weight function to be updated after the next updates will be the non
+            // overcorrected one.
+            std::memcpy(muca.non_corrected_W.data(), muca.WValues.data(),
+                        muca.non_corrected_W.size() * sizeof(muca.non_corrected_W[0]));
+
+            double C = 2.0;
+            double d0 = muca.OPBinLimits[1] - muca.OPBinLimits[0];
+            for (size_t i = 1; i < muca.WValues.size(); ++i) {
+                double bin_width = muca.OPBinLimits[i] - muca.OPBinLimits[i - 1];
+                muca.WValues[i - 1] +=
+                    C * ::log((d0 / bin_width) * muca.N_OP_nsum[i - 1] / muca.N_OP_nsum[0]);
+            }
+        }
+    }
+    hila::broadcast(continue_iteration);
+    return continue_iteration;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Prints out a crude horisontal histogram.
 /// @details Procures a crude horisontal ASCII histogram based on the N_OP_Bin
@@ -1000,6 +1080,20 @@ inline void Muca::setup_iteration() {
             iterate_weights = &iterate_weight_function_direct_single;
         }
         WParam.DIP.C = WParam.DIP.C_init;
+    } else if (WParam.method.compare("direct_smooth") == 0) {
+        iterate_weights = &iterate_weight_function_direct_smooth;
+        WParam.DIP.C = WParam.DIP.C_init;
+    } else if (WParam.method.compare("canonical") == 0) {
+        iterate_weights = &iterate_weight_function_canonical;
+
+        // initialise stuff specific for canonical iteration
+        constexpr int n_initial = 1;
+        N_OP_nsum = std::vector<int>(N_OP_Bin.size(), n_initial);
+        constexpr int g_initial = 5;
+        N_OP_gsum = std::vector<int>(N_OP_Bin.size(), g_initial);
+        OP_c_hist = std::vector<double>(N_OP_Bin.size(), 0);
+        non_corrected_W = WValues; // copy
+
     } else {
         iterate_weights = &iterate_weight_function_direct;
         WParam.DIP.C = WParam.DIP.C_init;
