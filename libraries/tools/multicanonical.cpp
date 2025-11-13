@@ -13,7 +13,7 @@
 #include "tools/multicanonical.h"
 
 namespace hila {
-namespace muca {
+//namespace muca {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Writes variables to the file, given the format std::string.
@@ -136,8 +136,8 @@ void Muca::read_weight_parameters(std::string parameter_file_name) {
         iter_method,
         visuals,
         hwalls,
-        max_OP,
         min_OP,
+        max_OP,
         bin_number,
         AR_ITER,
         DIP,
@@ -481,10 +481,11 @@ inline void Muca::bin_hit_OP_value(double OP) {
 
 
 ////////////////////////////////////////////////////////////////////////////////
-/// @brief Checks if all the bins have been visited by.
-/// @details Simply checks whether all bins have a nonzero number of entries
+/// @brief Checks if all the bins have been visited.
+/// @details Simply checks whether all bins have a nonzero number of entries in
+/// `muca.OP_bin_hits_total`.
 ///
-/// @param  visit   integer vector with values 1 corresponding to visits
+/// @param  muca the multicanonical context
 /// @return a boolean indicating the statement
 ////////////////////////////////////////////////////////////////////////////////
 bool all_visited(const Muca &muca) {
@@ -499,18 +500,14 @@ bool all_visited(const Muca &muca) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Checks if the first and last bin have been visited
-/// @details Simply checks whether all bins have a nonzero number of entries.
+/// @details Simply checks whether first and last entry of `muca.OP_bin_hits_total` are nonzero.
 ///
-/// @param  visit   integer vector with values 1 corresponding to visits
+/// @param  muca the multicanonical context
 /// @return a boolean indicating the statement
 ////////////////////////////////////////////////////////////////////////////////
 bool first_last_visited(const Muca &muca) {
     const auto &n = muca.OP_bin_hits_total;
-    int len = n.size();
-    if ((n[0] == 0) or (n[len - 1] == 0))
-        return false;
-    else
-        return true;
+    return !((n.front() == 0) or (n.back() == 0));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1184,5 +1181,5 @@ early_return:
     return ret;
 }
 
-} // namespace muca
+//} // namespace muca
 } // namespace hila

@@ -20,7 +20,7 @@
 
 namespace hila {
 // Multicanonical methods are separated to their own namespace
-namespace muca {
+// namespace muca {
 
 struct Muca;
 
@@ -168,13 +168,13 @@ struct weight_iteration_parameters {
     struct canonical_iteration CIP;
 };
 
-// type of the finish condition function
+/// type of the finish condition function
 typedef bool (*finish_condition_fn)(const Muca &muca);
 // Different finish condition funcs
 bool all_visited(const Muca &muca);
 bool first_last_visited(const Muca &muca);
 
-// type of the iteration function
+/// type of the iteration function
 typedef bool (*iteration_fn)(Muca &muca, const double OP);
 // Different iteration funcs
 // iteration fuctions
@@ -183,13 +183,32 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP);
 bool iterate_weight_function_direct_smooth(Muca &muca, double OP);
 
 struct Muca {
-    // parameter struct filled by read_weight_parameters
-    weight_iteration_parameters WParam;
+    /////////////////////////////////////////////////////////////
+    // Intended interface:
+
+    // Initialises the muca computations according to the weight parameter file.
+    // This function is to always be called before using any of the below functions
+    bool initialise(const std::string wfile_name);
+    // Pointer to the iteration function, set by initialisation (or manually if custom)
+    iteration_fn iterate_weights;
+    // Writes weight functions to a file
+    bool write_weight_function(const std::string &W_function_filename);
+    // Gives the weight as a function of the order parameter
+    double weight_function(double OP) const;
+    double weight(double OP) const;
+    // Accept/reject determination for pairs of order parameter values
+    bool accept_reject(const double OP_old, const double OP_new);
+
 
 
     /////////////////////////////////////////////////////////////
-    // Data:
+    // Internals (in normal use should be considered private)
+    // private:
 
+    // Data: ----------------------------------------------------
+
+    // parameter struct filled by read_weight_parameters
+    weight_iteration_parameters WParam;
 
     // Weight function is parametrized as piecewise linear func
     //
@@ -220,26 +239,9 @@ struct Muca {
     std::vector<int> N_OP_gsum;
     std::vector<double> non_corrected_W;
 
-    /////////////////////////////////////////////////////////////
-    // Intended interface:
 
-    // Initialises the muca computations according to the weight parameter file.
-    // This function is to always be called before using any of the below functions
-    bool initialise(const std::string wfile_name);
-    // Pointer to the iteration function, set by initialisation (or manually if custom)
-    iteration_fn iterate_weights;
-    // Writes weight functions to a file
-    bool write_weight_function(const std::string &W_function_filename);
-    // Gives the weight as a function of the order parameter
-    double weight_function(double OP) const;
-    double weight(double OP) const;
-    // Accept/reject determination for pairs of order parameter values
-    bool accept_reject(const double OP_old, const double OP_new);
+    // Internal functions: --------------------------------------
 
-    /////////////////////////////////////////////////////////////
-    // Internal functions
-
-    // private:
     void read_weight_parameters(std::string parameter_file_name);
     // Reads weight functions from a file
     bool read_weight_function(const std::string &W_function_filename);
@@ -269,7 +271,7 @@ struct Muca {
 static inline std::vector<double> get_equidistant_bin_limits(double min, double max, int N_bins);
 static inline int find_OP_bin_index(double OP, const std::vector<double> &OP_bin_limits);
 
-} // namespace muca
+//} // namespace muca
 } // namespace hila
 
 #endif
