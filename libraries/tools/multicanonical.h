@@ -195,7 +195,7 @@ struct Muca {
     //
     // The order parameter (OP) range [min_OP, max_OP] is divided into bins
     //    'c' `OP_bin_centers`:    0   1   2   3    ... N
-    //      cc                   | c | c | c | c |  ...
+    //                           | c | c | c | c |  ...
     //     '|' `OP_bin_limits`:  0   1   2   3   4  ... N + 1
     // Thus limits for OP_bin_centers[i] are OP_bin_limits[i] to OP_bin_limits[i + 1]
     // The weights are tracked on the centers of each bin ,stored in `weight_at_centers`

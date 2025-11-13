@@ -303,6 +303,10 @@ bool Muca::write_weight_function(const std::string &W_function_filename) {
 ///          the function on the interval. This interpolant provides the
 ///          requested weights to be used as the multicanonical weight.
 ///
+///          The bin centers are used to interpolate the weight function.
+///          The last bins are interpolated as constants (towards the range ends) after the bin
+///          center.
+///
 /// @param  OP   value of the order parameter
 /// @return The value of the weight.
 ////////////////////////////////////////////////////////////////////////////////
@@ -328,10 +332,13 @@ double Muca::weight_function(double OP) const {
     // Basic linear interpolation to obtain the weight value.
     else {
         auto it = std::lower_bound(OP_bin_centers.begin(), OP_bin_centers.end(), OP);
+        // `it` is the first bin_center for which *it >= OP
+        // note: `it` is never .begin() or .end()-1 since .front() < OP <.back(), checked above
+        //       thus: 0 <= i <= .size() - 2, so this is ok.
         int i = std::distance(OP_bin_centers.begin(), it) - 1;
-        double y_value = weight_at_centers[i + 1] - weight_at_centers[i];
-        double x_value = OP_bin_centers[i + 1] - OP_bin_centers[i];
-        double slope = y_value / x_value;
+        double dy = weight_at_centers[i + 1] - weight_at_centers[i];
+        double dx = OP_bin_centers[i + 1] - OP_bin_centers[i];
+        double slope = dy / dx;
 
         double xbase = OP_bin_centers[i];
         double ybase = weight_at_centers[i];
