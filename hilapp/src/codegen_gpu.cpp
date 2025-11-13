@@ -137,13 +137,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             for (dir_ptr &d : l.dir_list)
                 if (d.count > 0) {
 
-                    code << l.new_name << ".pack_buffers(" << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                    code << "_dir_mask_ |= " << l.new_name << ".pack_buffers(" << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
                 
                 }
         } else {
                 code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                         "++HILA_dir_) {\n"
-                    << l.new_name << ".pack_buffers(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+                    << "_dir_mask_ |= " << l.new_name << ".pack_buffers(HILA_dir_," << loop_info.parity_str << ");\n}\n";
         }
     }
     
@@ -331,7 +331,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
              << ") * N_blocks );\n";
         if (r.reduction_type == reduction::SUM) {
             // no need to zero the array
-            // code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
+            code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
         }
         if (r.reduction_type == reduction::PRODUCT) {
             code << "gpu_set_value(dev_" << r.reduction_name << ", 1, N_blocks);\n";
@@ -950,11 +950,20 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         kernel << "}\n";
         // kernel << "}\n";
 
-        kernel << "if(threadIdx.x == 0) {\n"
-               // << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
-               << "_hila_kernel_copy_var(" << r.loop_name << "[blockIdx.x], " << r.loop_name
-               << "sh[0]);\n";
-        kernel << "}\n";
+
+        if (r.reduction_type == reduction::SUM) {
+            kernel << "if(threadIdx.x == 0) {\n"
+                // << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+                << "_hila_kernel_add_var(" << r.loop_name << "[blockIdx.x], " << r.loop_name
+                << "sh[0]);\n";
+            kernel << "}\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            kernel << "if(threadIdx.x == 0) {\n"
+                // << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+                << "_hila_kernel_mul_var(" << r.loop_name << "[blockIdx.x], " << r.loop_name
+                << "sh[0]);\n";
+            kernel << "}\n";
+        }
     }
     // Reduction end handling stops here
 
@@ -1035,9 +1044,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     code << "halo_streams.synchronize_all();\n";
 
     code << "if (_dir_mask_ != 0) {\n"
-         << "    _hila_loop_begin = _hila_ranges.min[1];\n"
-         << "    _hila_loop_end = _hila_ranges.max[1];\n"
-         << "    N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n"
+         << "    int _hila_loop_begin = _hila_ranges.min[1];\n"
+         << "    int _hila_loop_end = _hila_ranges.max[1];\n"
+         << "    int N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n"
          << "    " << kernel_launch
          << "    gpuEventRecord(bulk_event, bulk_stream);\n"
          << "    gpuEventSynchronize(bulk_event);\n}\n";

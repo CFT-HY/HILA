@@ -258,7 +258,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
 
 template <typename T>
-hila::gather_status_t Field<T>::check_communication(Direction d, Parity &p) const {
+Field<T>::gather_status_t Field<T>::check_communication(Direction d, Parity &p) const {
 
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -266,7 +266,7 @@ hila::gather_status_t Field<T>::check_communication(Direction d, Parity &p) cons
 
     if (is_gathered(d, p)) {
         hila::n_gather_avoided++;
-        return hila::gather_status_t::DONE; // nothing to wait for
+        return gather_status_t::DONE; // nothing to wait for
     }
 
     // No comms to do, nothing to wait for -- we'll use the is_gathered
@@ -275,13 +275,13 @@ hila::gather_status_t Field<T>::check_communication(Direction d, Parity &p) cons
     if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
         fs->set_local_boundary_elements(d, p);
         mark_gathered(d, p);
-        return hila::gather_status_t::DONE;
+        return gather_status_t::DONE;
     }
 
     // if this parity or ALL-type gather is going on nothing to be done
     if (!gather_not_done(d, p) || !gather_not_done(d, ALL)) {
         hila::n_gather_avoided++;
-        return hila::gather_status_t::STARTED; // nothing to do, but still need to wait
+        return gather_status_t::STARTED; // nothing to do, but still need to wait
     }
 
     // if p is ALL but ODD or EVEN is going on/done, turn off parity which is not needed
@@ -290,7 +290,7 @@ hila::gather_status_t Field<T>::check_communication(Direction d, Parity &p) cons
         if (!gather_not_done(d, EVEN) && !gather_not_done(d, ODD)) {
             // even and odd are going on or ready, nothing to be done
             hila::n_gather_avoided++;
-            return hila::gather_status_t::STARTED;
+            return gather_status_t::STARTED;
         }
         if (!gather_not_done(d, EVEN))
             p = ODD;
@@ -299,7 +299,7 @@ hila::gather_status_t Field<T>::check_communication(Direction d, Parity &p) cons
         // if neither is the case par = ALL
     }
 
-    return hila::gather_status_t::NOT_STARTED;
+    return gather_status_t::NOT_DONE;
 }
 
 
@@ -323,11 +323,11 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 
     Parity par = p;
 
-    hila::gather_status_t gather_status = check_communication(d, par);
+    gather_status_t gather_status = check_communication(d, par);
 
-    if (gather_status == hila::gather_status_t::DONE)
+    if (gather_status == gather_status_t::DONE)
         return 0;
-    else if (gather_status == hila::gather_status_t::STARTED)
+    else if (gather_status == gather_status_t::STARTED)
         return get_dir_mask(d);
 
     mark_gather_started(d, par);
@@ -521,10 +521,14 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
  * @param p Parity
  */
 template <typename T>
-void Field<T>::pack_buffers(Direction d, Parity p) const {
+dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
 
-    if (check_communication(d, p) != hila::gather_status_t::NOT_STARTED)
-        return;
+    gather_status_t gather_status = check_communication(d, p);
+    if (gather_status == gather_status_t::DONE)
+        return 0;
+    else if (gather_status == gather_status_t::STARTED)
+        return get_dir_mask(d);
+
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &to_node = ci.to_node;
     if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
@@ -532,6 +536,7 @@ void Field<T>::pack_buffers(Direction d, Parity p) const {
             fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
         fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node);
     }
+    return get_dir_mask(d);
 }
 
 /**

@@ -413,9 +413,7 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 #endif
        
     unsigned N_blocks = n / N_threads + 1;
-    hila::out0 << "Placing " << n << " elements from rank " << from_node.rank
-                    << " n*sizeof(T)=" << n * sizeof(T) / (1024.0 * 1024.0) << " MB " <<
-                    "at location " << reinterpret_cast<uintptr_t>(buffer) << " " << reinterpret_cast<uintptr_t>(buffer) + n*sizeof(T) << " with N_blocks " << N_blocks << "\n"; 
+
     place_comm_elements_kernel<<<N_blocks, N_threads, 0, ::halo_streams().next_stream()>>>((*this), d_buffer, from_node.offset(par), n,
                                                         lattice->mynode.field_alloc_size);
 
