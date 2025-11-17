@@ -13,7 +13,7 @@
 #include "tools/multicanonical.h"
 
 namespace hila {
-//namespace muca {
+// namespace muca {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Writes variables to the file, given the format std::string.
@@ -956,7 +956,7 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     return continue_iteration;
 }
 
-// WIP
+// WIP TODO: check how edge bins are handeled
 bool iterate_weight_function_canonical(Muca &muca, double OP) {
     bool continue_iteration = true;
     if (hila::myrank() == 0) {
@@ -986,7 +986,7 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
             }
 
             constexpr int min_hits = 8;
-            std::vector<double> weight_at_centers_prev = muca.weight_at_centers; // copy
+            std::vector<double> w_prev = muca.weight_at_centers; // copy
 
             muca.N_OP_nsum[0] += muca.OP_bin_hits[0];
             for (size_t i = 1; i < muca.OP_c_hist.size(); ++i) {
@@ -996,22 +996,18 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
                 if (muca.OP_bin_hits[i] >= min_hits && muca.OP_bin_hits[i - 1] >= min_hits) {
                     gi = muca.OP_bin_hits[i] + muca.OP_bin_hits[i - 1];
                 } else {
-                    muca.weight_at_centers[i] = weight_at_centers_prev[i] -
-                                                weight_at_centers_prev[i - 1] +
-                                                muca.weight_at_centers[i - 1];
+                    muca.weight_at_centers[i] =
+                        w_prev[i] - w_prev[i - 1] + muca.weight_at_centers[i - 1];
                     //
                     continue;
                 }
 
-                double ln = -gi * ::log(muca.OP_c_hist[i - 1] / muca.OP_c_hist[i]);
+                double ln = -(double)gi * ::log(muca.OP_c_hist[i - 1] / muca.OP_c_hist[i]);
                 size_t gi_sum = muca.N_OP_gsum[i] + gi;
 
                 muca.weight_at_centers[i] =
                     muca.weight_at_centers[i - 1] +
-                    ((weight_at_centers_prev[i] - weight_at_centers_prev[i - 1]) *
-                         muca.N_OP_gsum[i] +
-                     ln) /
-                        (gi_sum);
+                    ((w_prev[i] - w_prev[i - 1]) * muca.N_OP_gsum[i] + ln) / (gi_sum);
 
                 muca.N_OP_gsum[i] = gi_sum;
             }
@@ -1036,6 +1032,7 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
                 muca.weight_at_centers[i - 1] +=
                     C * ::log((d0 / bin_width) * muca.N_OP_nsum[i - 1] / muca.N_OP_nsum[0]);
             }
+            muca.write_weight_function("intermediate_weight.dat");
         }
     }
     hila::broadcast(continue_iteration);
