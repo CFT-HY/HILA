@@ -258,7 +258,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
 
 template <typename T>
-Field<T>::gather_status_t Field<T>::check_communication(Direction d, Parity &p) const {
+typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Parity &p) const {
 
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -407,8 +407,10 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
  */
 template <typename T>
 dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
-#if defined(CUDA) || defined(HIP)
+#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
     pack_buffers(d, p);
+    auto& halo_streams = ::halo_streams();
+    halo_streams.wait_all();
 #endif
     return start_communication(d, p);
 }

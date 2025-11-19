@@ -277,7 +277,11 @@ gpuStreamPool& halo_streams() {
 }
 
 gpuStream_t& bulk_stream() {
-    static gpuStream_t instance; 
+    static gpuStream_t instance = []{
+        gpuStream_t stream; 
+        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        return stream;
+    }();
     return instance;
 }
 

@@ -42,6 +42,20 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity p
         onsites(opp_parity(par)) {
             lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
         }
+        hila::out0 << lower.get_value_at(0) << '\n';
+        hila::out0 << "Direction d2: ";
+        hila::out0 << d2 << std::endl;
+        {
+            auto v = lower.get_value_at(0);
+            std::ostringstream _oss;
+            _oss << v;
+            std::string _s = _oss.str();
+            if (_s.find("nan") != std::string::npos || _s.find("NaN") != std::string::npos) {
+                hila::out0 << "FATAL: NaN detected in staples[0]; aborting\n";
+                hila::finishrun();
+                std::exit(EXIT_FAILURE);
+            }
+        }
 
         // calculate then the upper 'n', and add the lower
         // lower could also be added on a separate loop
@@ -55,7 +69,23 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity p
                 staples[X] += U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
             }
         }
+        hila::out0 << staples.get_value_at(0) << '\n';
+        hila::out0 << "Direction d2: ";
+        hila::out0 << d2 << std::endl;
+        {
+            auto v = staples.get_value_at(0);
+            std::ostringstream _oss;
+            _oss << v;
+            std::string _s = _oss.str();
+            if (_s.find("nan") != std::string::npos || _s.find("NaN") != std::string::npos) {
+                hila::out0 << "FATAL: NaN detected in staples[0]; aborting\n";
+                hila::finishrun();
+                std::exit(EXIT_FAILURE);
+            }
+        }
     }
+    hila::out0 << "Finished staplesum for direction d1: ";  
+    hila::out0 << d1 << std::endl;
 }
 
 template <typename T>
@@ -112,7 +142,9 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1,
                 staples[X] += plaqw[d1][d2][X] * U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
             }
         }
+
     }
+
 }
 
 #endif

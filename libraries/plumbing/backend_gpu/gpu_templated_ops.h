@@ -148,7 +148,6 @@ T gpu_reduce_sum(T *vector, int N) {
         gpuDeviceSynchronize();
     }
     gpuMemcpy(host_vector, vector, vector_size * sizeof(T), gpuMemcpyDeviceToHost);
-
     for (int i = 0; i < vector_size; i++) {
         sum += host_vector[i];
     }
@@ -427,7 +426,7 @@ __global__ void gpu_set_value_kernel_ptr(T *vector, const T *valptr, int elems) 
 /// use memset to set value to zero - not useful for other values
 template <typename T>
 inline void gpu_set_zero(T *vec, size_t N) {
-    gpuMemset(vec, 0, N * sizeof(T));
+    gpuMemsetAsync(vec, 0, N * sizeof(T), ::bulk_stream());
 }
 
 /// Setting to some value needs to be done elem-by-elem

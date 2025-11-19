@@ -95,6 +95,7 @@ using gpuError = cudaError;
 #define gpuEventSynchronize(a) GPU_CHECK(cudaEventSynchronize(a))
 #define gpuEventDestroy(a) GPU_CHECK(cudaEventDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(cudaMemset(a, b, c))
+#define gpuMemsetAsync(a, b, c, d) GPU_CHECK(cudaMemsetAsync(a, b, c, d))
 #define gpuMemcpyToSymbol(a, b, size, c, dir) GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
 #define gpuFuncAttributes cudaFuncAttributes
 #define gpuFuncGetAttributes cudaFuncGetAttributes
@@ -162,6 +163,7 @@ using gpuError = hipError_t;
 #define gpuEventSynchronize(a) GPU_CHECK(hipEventSynchronize(a))
 #define gpuEventDestroy(a) GPU_CHECK(hipEventDestroy(a))
 #define gpuMemset(a, b, c) GPU_CHECK(hipMemset(a, b, c))
+#define gpuMemsetAsync(a, b, c, d) GPU_CHECK(hipMemsetAsync(a, b, c, d))
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                                      \
     GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
 #define gpuFuncAttributes hipFuncAttributes
@@ -241,7 +243,7 @@ public:
         }
     }
 
-    void synchronize_all() {
+    void wait_all() {
         while (!active_streams.empty()) {
             for (auto it = active_streams.begin(); it != active_streams.end(); ) {
                 if (gpuStreamQuery(*it) == gpuSuccess) {
