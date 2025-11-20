@@ -31,84 +31,6 @@ static inline void to_file(std::ofstream &output_file, std::string fmt, Ks... in
 // Generates timestamped file names
 std::string generate_outfile_name(const std::string &outfile_name_base);
 
-// Structs to encompass the various options related to
-// iteration of the multicanonical weights.
-////////////////////////////////////////////////////////////////////////////////
-/// @struct canonical_iteration
-/// @brief An internal struct parametrising the canonical weight
-/// iteration method.
-///
-/// @var int canonical_iteration::sample_size
-/// @brief Number of samples before weight function update
-///
-/// @var int canonical_iteration::initial_bin_hits
-/// @brief Initial number of entries in the bin totals
-/// @details Larger number makes the weight less susceptible to changes in the
-/// following iterations.
-///
-/// @var int canonical_iteration::min_bin_hits
-/// @brief Minimum number of hits a bin needs to have before taken into account in the weight
-/// function update.
-///
-/// @var int canonical_iteration::OC_max_iter
-/// @brief Up to which iteration the overcorrection updates can be used
-///
-/// @var int canonical_iteration::OC_frequency
-/// @brief How often the overcorrection update is used
-/// @details If the value is n, every n:th update will be an overcorrection.
-///////////////////////////////////////////////////////////////////////////////
-struct canonical_iteration {
-    int sample_size;
-    int initial_bin_hits;
-    int min_bin_hits;
-    int OC_max_iter;
-    int OC_frequency;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-/// @struct direct_iteration
-/// @brief An internal struct parametrising the direct weight iteration method.
-///
-/// @var string direct_iteration::finish_condition
-/// @brief Determines the iteration condition for the iteration method.
-/// @details Current options: "all_visited", "ends_visited". The weight
-/// modification factor \f$C\f$ is decreased after set bins are visited. These
-/// can include e.g. all bins, or just the ends (the two preset options).
-/// Finishing conditions can also be determined by the user and passed to the
-/// methods through muca::direct_iteration_finish_condition(&func_pointer)
-///
-/// @var int direct_iteration::sample_size
-/// @brief Number of samples before weight function update
-///
-/// @var int direct_iteration::single_check_interval
-/// @brief Determines how often the update condition is checked for the case
-/// direct_iteration::sample_size = 1
-///
-/// @var double direct_iteration::C_init
-/// @brief Initial magnitude of the weight update
-///
-/// @var double direct_iteration::C_min
-/// @brief Minimum magnitude of the weight update
-///
-/// @var double direct_iteration::C
-/// @brief Magnitude of the weight update
-/// @details This entry is decreased through the direct iteration method until
-/// \f$ C < C_\mathrm{min}\f$ at which point the iteration is considered
-/// complete. The magnitude of the update is such that the mean weight
-/// modification is \f$C\f$. That is, the update satisfies
-/// \f{equation}{\sum_i \delta W_i = N C,\f}
-/// where \f$N\f$. is the number of bins. For sample_size = 1 we simply add
-/// \f$ C \f$ to the single relevant bin each iteration.
-///////////////////////////////////////////////////////////////////////////////
-struct direct_iteration {
-    std::string finish_condition;
-    int sample_size;
-    int single_check_interval;
-    double C_init;
-    double C_min;
-    double C;
-};
-
 ////////////////////////////////////////////////////////////////////////////////
 /// @struct weight_iteration_parameters
 /// @brief An internal struct parametrising multicanonical methods.
@@ -169,8 +91,6 @@ struct weight_iteration_parameters {
     double max_OP;
     int bin_number;
     bool AR_iteration;
-    struct direct_iteration DIP;
-    struct canonical_iteration CIP;
 };
 
 /// type of the finish condition function
@@ -186,7 +106,9 @@ typedef bool (*iteration_fn)(Muca &muca, const double OP);
 bool iterate_weight_function_direct(Muca &muca, double OP);
 bool iterate_weight_function_direct_single(Muca &muca, double OP);
 bool iterate_weight_function_direct_smooth(Muca &muca, double OP);
+bool iterate_weight_function_canonical(Muca &muca, double OP);
 
+/// Muca struct
 struct Muca {
     /////////////////////////////////////////////////////////////
     // Intended interface:
@@ -211,37 +133,79 @@ struct Muca {
 
     // Data: ----------------------------------------------------
 
-    // parameter struct filled by read_weight_parameters
+    /// parameter struct filled by read_weight_parameters
     weight_iteration_parameters WParam;
 
-    // Weight function is parametrized as piecewise linear func
-    //
-    // The order parameter (OP) range [min_OP, max_OP] is divided into bins
-    //    'c' `OP_bin_centers`:    0   1   2   3    ... N
-    //                           | c | c | c | c |  ...
-    //     '|' `OP_bin_limits`:  0   1   2   3   4  ... N + 1
-    // Thus limits for OP_bin_centers[i] are OP_bin_limits[i] to OP_bin_limits[i + 1]
-    // The weights are tracked on the centers of each bin ,stored in `weight_at_centers`
-    std::vector<double> OP_bin_centers;
-    std::vector<double> OP_bin_limits;
-    std::vector<double> weight_at_centers;
+    /// Weight function is parametrized as piecewise linear func
+    ///
+    /// The order parameter (OP) range [min_OP, max_OP] is divided into bins  \n<pre>
+    ///    'c' `OP_bin_centers`:    0   1   2   3    ... N                    \n
+    ///                           | c | c | c | c |  ...                      \n
+    ///     '|' `OP_bin_limits`:  0   1   2   3   4  ... N + 1                \n</pre>
+    /// Thus limits for OP_bin_centers[i] are OP_bin_limits[i] to OP_bin_limits[i + 1]
+    /// The weights are tracked on the centers of each bin ,stored in `weights`
+    std::vector<double> weights;        ///< The weight values at each OP bin center
+    std::vector<double> OP_bin_centers; ///< Positions of the bin centers in OP
+    std::vector<double> OP_bin_limits;  ///< Limits of the bins in OP
 
     int weightIterationCount = 0;
     bool weightIterationFlag = true;
-    // Pointer to the finish condition check
-    finish_condition_fn finish_check;
+    finish_condition_fn finish_check; ///< Pointer to the finish condition check
 
-    // Direct iteration
-    /// Number of hits in OP bins
-    std::vector<int> OP_bin_hits;
-    /// Total accumulated hits in OP bins
-    std::vector<int> OP_bin_hits_total;
+    std::vector<int> OP_bin_hits;       ///< Number of hits in OP bins
+    std::vector<int> OP_bin_hits_total; ///< Total accumulated hits in OP bins
 
-    //
-    std::vector<double> OP_c_hist;
-    std::vector<int> N_OP_nsum;
-    std::vector<int> N_OP_gsum;
-    std::vector<double> non_corrected_W;
+    /// An internal struct for direct weight iteration methods parameters and iteration data.
+    struct direct_iteration {
+        /// @brief Determines the iteration condition for the iteration method.
+        /// @details Current options: "all_visited", "ends_visited". The weight
+        /// modification factor \f$C\f$ is decreased after set bins are visited. These
+        /// can include e.g. all bins, or just the ends (the two preset options).
+        /// Finishing conditions can also be determined by the user and passed to the
+        /// methods through muca::direct_iteration_finish_condition(&func_pointer)
+        std::string finish_condition;
+        /// Number of samples before weight function update
+        int sample_size;
+        /// Determines how often the update condition is checked for the case
+        /// direct_iteration::sample_size = 1
+        int single_check_interval;
+        /// Initial magnitude of the weight update
+        double C_init;
+        /// Minimum magnitude of the weight update
+        double C_min;
+        /// @brief Magnitude of the weight update
+        /// @details This entry is decreased through the direct iteration method until
+        /// \f$ C < C_\mathrm{min}\f$ at which point the iteration is considered
+        /// complete. The magnitude of the update is such that the mean weight
+        /// modification is \f$C\f$. That is, the update satisfies
+        /// \f{equation}{\sum_i \delta W_i = N C,\f}
+        /// where \f$N\f$. is the number of bins. For sample_size = 1 we simply add
+        /// \f$ C \f$ to the single relevant bin each iteration.
+        double C;
+    } DI;
+
+    /// An internal struct for canonical weight iteration methods parameters and iteration data.
+    struct canonical_iteration {
+        /// Number of samples before weight function update
+        int sample_size;
+        /// Initial number of entries in the bin totals. Larger number makes the weight less
+        /// susceptible to changes in the following iterations.
+        int initial_bin_hits;
+        /// Minimum number of hits a bin needs to have before taken into account in the weight
+        /// function update.
+        int min_bin_hits;
+        double OC_factor;
+        /// Up to which iteration step the overcorrection updates can be used
+        int OC_max_iter;
+        /// How often the overcorrection update is used. If the value is n, every n:th update will
+        /// be an overcorrection.
+        int OC_frequency;
+
+        std::vector<double> can_hist;    ///< estimate of the canonical histogram `h_i^k`
+        std::vector<int> hits_nsum;      ///< cumulative sum of the number of hits in bins `n_i^k`
+        std::vector<int> gsum;           ///< cumulative sum of the two-bin weight factor `g_i^k`
+        std::vector<double> noc_weights; ///< buffer to save the Non-OverCorrected weight function
+    } CI;
 
 
     // Internal functions: --------------------------------------

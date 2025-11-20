@@ -75,92 +75,36 @@ void Muca::read_weight_parameters(std::string parameter_file_name) {
     // Generic control parameters
     std::string output_loc        = par.get("output file location"); // Unused
 
-    std::string outfile_name_base = par.get("output file name base");
-    std::string weight_loc        = par.get("weight file location");
-    std::string iter_method       = par.get("iteration method");
-    std::string hard_walls        = par.get("hard walls");
-    double max_OP                 = par.get("max OP");
-    double min_OP                 = par.get("min OP");
-    int bin_number                = par.get("bin number");
-    std::string iter_vis          = par.get("iteration visuals");
+    WParam.outfile_name_base = par.get("output file name base");
+    WParam.weight_loc        = par.get("weight file location");
+    WParam.method            = par.get("iteration method");
+    std::string hard_walls   = par.get("hard walls");
+    WParam.hard_walls        = (hard_walls.compare("YES") == 0);
+    WParam.max_OP            = par.get("max OP");
+    WParam.min_OP            = par.get("min OP");
+    WParam.bin_number        = par.get("bin number");
+    std::string iter_vis     = par.get("iteration visuals");
+    WParam.visuals           = (iter_vis.compare("YES") == 0);
+    WParam.AR_iteration = false;
 
+    // TODO ? check that these parameters are in allowed range ?
     // Direct iteration parameters
-    std::string finish_condition = par.get("finish condition");
-    int DIM_sample_size          = par.get("DIM sample size");
-    int DIM_check_interval       = par.get("DIM visit check interval");
-    double add_initial           = par.get("add initial");
-    double add_minimum           = par.get("add minimum");
-    struct direct_iteration DIP
-    {
-        finish_condition,
-        DIM_sample_size,
-        DIM_check_interval,
-        add_initial,
-        add_minimum,
-        add_initial
-    };
+    DI.finish_condition      = par.get("finish condition");
+    DI.sample_size           = par.get("DIM sample size");
+    DI.single_check_interval = par.get("DIM visit check interval");
+    DI.C_init                = par.get("add initial");
+    DI.C_min                 = par.get("add minimum");
+    DI.C = DI.C_init; // set also the initial value here
 
     // Canonical iteration parameters
-    int CIM_sample_size  = par.get("CIM sample size");
-    int initial_bin_hits = par.get("initial bin hits");
-    int min_bin_hits     = par.get("min bin hits");
-    int OC_max_iter      = par.get("Overcorrect max iter");
-    int OC_frequency     = par.get("Overcorrect frequency");
-    if (initial_bin_hits <= 0) {
-        constexpr int default_init_bin_hits = 5;
-        if (hila::myrank() == 0)
-            printf("Muca: note: `initial bin hits` has to be > 0, in `%s` found %d. Setting to "
-                   "default value of %d\n",
-                   parameter_file_name.c_str(), initial_bin_hits, default_init_bin_hits);
-        initial_bin_hits = default_init_bin_hits;
-    }
-    if (min_bin_hits <= 0) {
-        constexpr int default_min_bin_hits = 8;
-        if (hila::myrank() == 0)
-            printf("Muca: note: `min bin hits` has to be > 0, in `%s` found %d. Setting to "
-                   "default value of %d\n",
-                   parameter_file_name.c_str(), min_bin_hits, default_min_bin_hits);
-        min_bin_hits = default_min_bin_hits;
-    }
-    struct canonical_iteration CIP
-    {
-        CIM_sample_size,
-        initial_bin_hits,
-        min_bin_hits,
-        OC_max_iter,
-        OC_frequency
-    };
+    CI.sample_size      = par.get("CIM sample size");    // 100
+    CI.initial_bin_hits = par.get("initial bin hits");   // 5
+    CI.min_bin_hits     = par.get("min bin hits");       // 8
+    CI.OC_factor        = par.get("Overcorrect factor"); // 2.0
+    CI.OC_max_iter      = par.get("Overcorrect max iter");
+    CI.OC_frequency     = par.get("Overcorrect frequency");
 
     par.close();
-
-    bool AR_ITER = false;
-
-    bool visuals;
-    if (iter_vis.compare("YES") == 0)
-        visuals = true;
-    else
-        visuals = false;
-
-    bool hwalls;
-    if (hard_walls.compare("YES") == 0)
-        hwalls = true;
-    else
-        hwalls = false;
-
-    WParam =
-    {
-        weight_loc,
-        outfile_name_base,
-        iter_method,
-        visuals,
-        hwalls,
-        min_OP,
-        max_OP,
-        bin_number,
-        AR_ITER,
-        DIP,
-        CIP
-    };
     // clang-format on
 }
 
@@ -231,7 +175,7 @@ bool Muca::read_weight_function(const std::string &W_function_filename) {
     // Initialise the weight vectors to correct dimensions
     OP_bin_limits = std::vector<double>(data_length);
     OP_bin_centers = std::vector<double>(data_length - 1);
-    weight_at_centers = std::vector<double>(data_length - 1);
+    weights = std::vector<double>(data_length - 1);
 
     // Read in the values. Note that OP_bin_limits has one more entry than
     // the weight vector.
@@ -249,7 +193,7 @@ bool Muca::read_weight_function(const std::string &W_function_filename) {
 
             OP_bin_limits[count] = bin_lim;
             OP_bin_centers[count] = centre;
-            weight_at_centers[count] = weight;
+            weights[count] = weight;
         }
         // And the rightmost bin limit.
         if (count == data_length - 1) {
@@ -307,7 +251,7 @@ bool Muca::write_weight_function(const std::string &W_function_filename) {
     to_file(W_file, "%s", "OP_bin_limit\tOP_value\tWeight\n");
     int i;
     for (i = 0; i < OP_bin_centers.size(); ++i) {
-        to_file(W_file, "%e\t%e\t%e\n", OP_bin_limits[i], OP_bin_centers[i], weight_at_centers[i]);
+        to_file(W_file, "%e\t%e\t%e\n", OP_bin_limits[i], OP_bin_centers[i], weights[i]);
     }
     // Remember to write the last bin upper limit
     to_file(W_file, "%e\n", OP_bin_limits[i]);
@@ -339,12 +283,12 @@ double Muca::weight_function(double OP) const {
         if (WParam.hard_walls)
             val = std::numeric_limits<double>::infinity();
         else
-            val = weight_at_centers.front();
+            val = weights.front();
     } else if (OP >= OP_bin_centers.back()) {
         if (WParam.hard_walls)
             val = std::numeric_limits<double>::infinity();
         else
-            val = weight_at_centers.back();
+            val = weights.back();
     }
     // Otherwise find interval, calculate slope, base index, etc.
     // Basic linear interpolation to obtain the weight value.
@@ -354,12 +298,12 @@ double Muca::weight_function(double OP) const {
         // note: `it` is never .begin() or .end()-1 since .front() < OP <.back(), checked above
         //       thus: 0 <= i <= .size() - 2, so this is ok.
         int i = std::distance(OP_bin_centers.begin(), it) - 1;
-        double dy = weight_at_centers[i + 1] - weight_at_centers[i];
+        double dy = weights[i + 1] - weights[i];
         double dx = OP_bin_centers[i + 1] - OP_bin_centers[i];
         double slope = dy / dx;
 
         double xbase = OP_bin_centers[i];
-        double ybase = weight_at_centers[i];
+        double ybase = weights[i];
 
         double xdiff = OP - xbase;
         val = ybase + xdiff * slope;
@@ -765,7 +709,7 @@ inline void Muca::initialise_weight_vectors() {
     // If no input weight, set up equidistant bins
     if (WParam.weight_loc.compare("NONE") == 0) {
         int N = WParam.bin_number;
-        weight_at_centers = std::vector<double>(N, 0.0);
+        weights = std::vector<double>(N, 0.0);
         OP_bin_centers = std::vector<double>(N, 0.0);
         OP_bin_limits = std::vector<double>(N + 1, 0.0);
 
@@ -774,12 +718,12 @@ inline void Muca::initialise_weight_vectors() {
         OP_bin_hits = std::vector<int>(N, 0);
         OP_bin_hits_total = std::vector<int>(N, 0);
     }
-    // Same for predetermined bins. OP_bin_centers, weight_at_centers
+    // Same for predetermined bins. OP_bin_centers, weights
     // and OP_BinLimits have been read from the input file.
     // To prevent any accidents with the iterators, these bin vectors
     // are initialised in all cases. Should really not affect performance.
     else {
-        int N = weight_at_centers.size();
+        int N = weights.size();
         OP_bin_hits = std::vector<int>(N, 0);
         OP_bin_hits_total = std::vector<int>(N, 0);
     }
@@ -797,27 +741,26 @@ inline void Muca::initialise_weight_vectors() {
 bool iterate_weight_function_direct(Muca &muca, double OP) {
     bool continue_iteration;
     if (hila::myrank() == 0) {
-        int samples = muca.WParam.DIP.sample_size;
-        int N = muca.weight_at_centers.size();
+        int samples = muca.DI.sample_size;
+        int N = muca.weights.size();
 
         muca.bin_hit_OP_value(OP);
         muca.weightIterationCount += 1;
 
         if (muca.weightIterationCount >= samples) {
             for (int m = 0; m < N; m++) {
-                muca.weight_at_centers[m] += muca.WParam.DIP.C * muca.OP_bin_hits[m] * N / samples;
+                muca.weights[m] += muca.DI.C * muca.OP_bin_hits[m] * N / samples;
                 muca.OP_bin_hits_total[m] += muca.OP_bin_hits[m];
             }
 
             if (muca.WParam.visuals)
                 muca.print_iteration_histogram();
 
-            double base =
-                *std::min_element(muca.weight_at_centers.begin(), muca.weight_at_centers.end());
+            double base = *std::min_element(muca.weights.begin(), muca.weights.end());
             for (int m = 0; m < N; ++m) {
                 // Always set minimum weight to zero. This is inconsequential
                 // as only the differences matter.
-                muca.weight_at_centers[m] -= base;
+                muca.weights[m] -= base;
                 muca.OP_bin_hits[m] = 0;
             }
             muca.weightIterationCount = 0;
@@ -827,16 +770,16 @@ bool iterate_weight_function_direct(Muca &muca, double OP) {
                     muca.OP_bin_hits_total[m] = 0;
                 }
 
-                muca.WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = "
-                           << muca.WParam.DIP.C << "\n";
+                muca.DI.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = " << muca.DI.C
+                           << "\n";
             }
             muca.write_weight_function("intermediate_weight.dat");
         }
 
         continue_iteration = true;
-        if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
-            hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
+        if (muca.DI.C < muca.DI.C_min) {
+            hila::out0 << "Muca: Reached minimum update size C = " << muca.DI.C
                        << " Weight iteration complete.\n";
             continue_iteration = false;
         }
@@ -851,7 +794,7 @@ bool iterate_weight_function_direct(Muca &muca, double OP) {
 ///          value of the order parameter. Reduced internal complexity due to
 ///          this simplification.
 ///          Whether all bins have been visited is now checked only every
-///          WParam.DIP.single_check_interval to prevent excessive checking
+///          DI.single_check_interval to prevent excessive checking
 ///          for the visits.
 ///
 /// @param  OP   order parameter of the current configuration (user supplied)
@@ -860,27 +803,26 @@ bool iterate_weight_function_direct(Muca &muca, double OP) {
 bool iterate_weight_function_direct_single(Muca &muca, double OP) {
     int continue_iteration;
     if (hila::myrank() == 0) {
-        int samples = muca.WParam.DIP.sample_size;
-        int N = muca.weight_at_centers.size();
+        int samples = muca.DI.sample_size;
+        int N = muca.weights.size();
 
         int bin_index = find_OP_bin_index(OP, muca.OP_bin_limits);
         // Only increment if on the min-max interval
         if (bin_index >= 0) {
             muca.OP_bin_hits_total[bin_index] += 1;
-            muca.weight_at_centers[bin_index] += muca.WParam.DIP.C;
+            muca.weights[bin_index] += muca.DI.C;
         }
 
         muca.weightIterationCount += 1;
 
 
-        if (muca.weightIterationCount % muca.WParam.DIP.single_check_interval == 0) {
+        if (muca.weightIterationCount % muca.DI.single_check_interval == 0) {
 
-            double base =
-                *std::min_element(muca.weight_at_centers.begin(), muca.weight_at_centers.end());
+            double base = *std::min_element(muca.weights.begin(), muca.weights.end());
             for (int m = 0; m < N; ++m) {
                 // Always set minimum weight to zero. This is inconsequential
                 // as only the differences matter.
-                muca.weight_at_centers[m] -= base;
+                muca.weights[m] -= base;
                 muca.OP_bin_hits[m] = 0;
             }
 
@@ -894,14 +836,14 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP) {
                     muca.OP_bin_hits_total[m] = 0;
                 }
 
-                muca.WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = "
-                           << muca.WParam.DIP.C << "\n";
+                muca.DI.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = " << muca.DI.C
+                           << "\n";
             }
 
             continue_iteration = true;
-            if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
-                hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
+            if (muca.DI.C < muca.DI.C_min) {
+                hila::out0 << "Muca: Reached minimum update size C = " << muca.DI.C
                            << " Weight iteration complete.\n";
                 continue_iteration = false;
             }
@@ -916,8 +858,8 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP) {
 bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     bool continue_iteration;
     if (hila::myrank() == 0) {
-        const int samples = muca.WParam.DIP.sample_size;
-        const int N = muca.weight_at_centers.size();
+        const int samples = muca.DI.sample_size;
+        const int N = muca.weights.size();
 
         // Don't bin visits outside of the binned areas
         if (OP > muca.OP_bin_limits.front() && OP < muca.OP_bin_limits.back()) {
@@ -938,8 +880,7 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
 
         if (muca.weightIterationCount >= samples) {
             for (int m = 0; m < N; m++) {
-                muca.weight_at_centers[m] +=
-                    muca.WParam.DIP.C * (muca.OP_bin_hits[m] - muca.OP_bin_hits[0]) / N;
+                muca.weights[m] += muca.DI.C * (muca.OP_bin_hits[m] - muca.OP_bin_hits[0]) / N;
                 muca.OP_bin_hits_total[m] += muca.OP_bin_hits[m];
             }
 
@@ -956,16 +897,16 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
                     muca.OP_bin_hits_total[m] = 0;
                 }
 
-                muca.WParam.DIP.C /= 1.5;
-                hila::out0 << "Muca: Decreasing update size. New update size C = "
-                           << muca.WParam.DIP.C << "\n";
+                muca.DI.C /= 1.5;
+                hila::out0 << "Muca: Decreasing update size. New update size C = " << muca.DI.C
+                           << "\n";
             }
             muca.write_weight_function("intermediate_weight.dat");
         }
 
         continue_iteration = true;
-        if (muca.WParam.DIP.C < muca.WParam.DIP.C_min) {
-            hila::out0 << "Muca: Reached minimum update size C = " << muca.WParam.DIP.C
+        if (muca.DI.C < muca.DI.C_min) {
+            hila::out0 << "Muca: Reached minimum update size C = " << muca.DI.C
                        << " Weight iteration complete.\n";
             continue_iteration = false;
         }
@@ -990,55 +931,53 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
 
             muca.OP_bin_hits[i] += 1;
             double w = muca.weight_function(OP);
-            muca.OP_c_hist[i] += ::exp(w);
+            muca.CI.can_hist[i] += ::exp(w);
         }
 
         // update weights
-        if (muca.weightIterationCount >= muca.WParam.CIP.sample_size) {
+        if (muca.weightIterationCount >= muca.CI.sample_size) {
             muca.weightIterationCount = 0;
 
-            // before updating weights swap weight_at_centers to the non-corrected one
-            std::swap(muca.non_corrected_W, muca.weight_at_centers);
+            // before updating weights swap weights to the non-corrected one
+            std::swap(muca.CI.noc_weights, muca.weights);
 
-            for (size_t i = 1; i < muca.OP_c_hist.size(); ++i) {
+            // normalisation necesary if bins with different lengths
+            for (size_t i = 1; i < muca.CI.can_hist.size(); ++i) {
                 double bin_width = muca.OP_bin_limits[i] - muca.OP_bin_limits[i - 1];
-                muca.OP_c_hist[i - 1] /= bin_width;
+                muca.CI.can_hist[i - 1] /= bin_width;
             }
 
-            int min_hits = muca.WParam.CIP.min_bin_hits;
-            std::vector<double> w_prev = muca.weight_at_centers; // copy
+            int min_hits = muca.CI.min_bin_hits;
+            std::vector<double> w_prev = muca.weights; // copy
 
-            muca.N_OP_nsum[0] += muca.OP_bin_hits[0];
-            for (size_t i = 1; i < muca.OP_c_hist.size(); ++i) {
-                muca.N_OP_nsum[i] += muca.OP_bin_hits[i];
+            muca.CI.hits_nsum[0] += muca.OP_bin_hits[0];
+            for (size_t i = 1; i < muca.CI.can_hist.size(); ++i) {
+                muca.CI.hits_nsum[i] += muca.OP_bin_hits[i];
 
                 size_t gi = 0;
                 if (muca.OP_bin_hits[i] >= min_hits && muca.OP_bin_hits[i - 1] >= min_hits) {
                     gi = muca.OP_bin_hits[i] + muca.OP_bin_hits[i - 1];
                 } else {
-                    muca.weight_at_centers[i] =
-                        w_prev[i] - w_prev[i - 1] + muca.weight_at_centers[i - 1];
-                    //
+                    // no update, but need to still do this if [i-1] was updated..
+                    muca.weights[i] = w_prev[i] - w_prev[i - 1] + muca.weights[i - 1];
                     continue;
                 }
 
-                double ln = -(double)gi * ::log(muca.OP_c_hist[i - 1] / muca.OP_c_hist[i]);
-                size_t gi_sum = muca.N_OP_gsum[i] + gi;
-
-                muca.weight_at_centers[i] =
-                    muca.weight_at_centers[i - 1] +
-                    ((w_prev[i] - w_prev[i - 1]) * muca.N_OP_gsum[i] + ln) / (gi_sum);
-
-                muca.N_OP_gsum[i] = gi_sum;
+                // [hep-lat/9804019] eq. (6.12):
+                double ln = -(double)gi * ::log(muca.CI.can_hist[i - 1] / muca.CI.can_hist[i]);
+                size_t gi_sum = muca.CI.gsum[i] + gi;
+                muca.weights[i] = muca.weights[i - 1] +
+                                  ((w_prev[i] - w_prev[i - 1]) * muca.CI.gsum[i] + ln) / (gi_sum);
+                muca.CI.gsum[i] = gi_sum;
             }
 
             // reset counters
             for (size_t i = 0; i < muca.OP_bin_hits.size(); ++i) {
                 muca.OP_bin_hits[i] = 0;
-                muca.OP_c_hist[i] = 0;
+                muca.CI.can_hist[i] = 0;
             }
 
-            // Overcorrect
+            // Overcorrect [hep-lat/9804019] eq. (6.13)
             // Overcorrection checks which bins have been visited the most and
             // modifies the weights in such a manner that the frequently visited
             // bins are weighted (disproportionally) heavily. This should
@@ -1047,14 +986,14 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
             // overcorrected weights are used only for the next updates.
             // The weight function to be modified after the next updates will be the non
             // overcorrected one. So we save the wights before overcorrection.
-            std::memcpy(muca.non_corrected_W.data(), muca.weight_at_centers.data(),
-                        muca.non_corrected_W.size() * sizeof(muca.non_corrected_W[0]));
-            double C = 2.0;
+            std::memcpy(muca.CI.noc_weights.data(), muca.weights.data(),
+                        muca.CI.noc_weights.size() * sizeof(muca.CI.noc_weights[0]));
+            double C = muca.CI.OC_factor;
             double d0 = muca.OP_bin_limits[1] - muca.OP_bin_limits[0];
-            for (size_t i = 1; i < muca.weight_at_centers.size(); ++i) {
+            for (size_t i = 1; i < muca.weights.size(); ++i) {
                 double bin_width = muca.OP_bin_limits[i] - muca.OP_bin_limits[i - 1];
-                muca.weight_at_centers[i - 1] +=
-                    C * ::log((d0 / bin_width) * muca.N_OP_nsum[i - 1] / muca.N_OP_nsum[0]);
+                muca.weights[i - 1] +=
+                    C * ::log((d0 / bin_width) * muca.CI.hits_nsum[i - 1] / muca.CI.hits_nsum[0]);
             }
 
             muca.write_weight_function("intermediate_weight.dat");
@@ -1072,8 +1011,8 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
 ///          the height of the screen.
 ////////////////////////////////////////////////////////////////////////////////
 inline void Muca::print_iteration_histogram() const {
-    int samples = WParam.DIP.sample_size;
-    int N = weight_at_centers.size();
+    int samples = DI.sample_size;
+    int N = weights.size();
     // Find maximum bin content for normalisation
     int nmax = *std::max_element(OP_bin_hits.begin(), OP_bin_hits.end());
     // Write a column header
@@ -1089,8 +1028,8 @@ inline void Muca::print_iteration_histogram() const {
         for (int i = 0; i < int(OP_bin_hits[m] * 200.0 / samples); i++) {
             n_sum_hist += "|";
         }
-        printf("%-20.3f%-20.3f%d\t\t\t%s\n", OP_bin_centers[m], weight_at_centers[m],
-               OP_bin_hits[m], n_sum_hist.c_str());
+        printf("%-20.3f%-20.3f%d\t\t\t%s\n", OP_bin_centers[m], weights[m], OP_bin_hits[m],
+               n_sum_hist.c_str());
     }
 }
 
@@ -1108,28 +1047,28 @@ inline void Muca::setup_iteration() {
     // Initialise iterate_weights by pointing it at the
     // correct method
     if (WParam.method.compare("direct") == 0) {
-        if (WParam.DIP.sample_size > 1) {
+        if (DI.sample_size > 1) {
             iterate_weights = &iterate_weight_function_direct;
         } else {
             iterate_weights = &iterate_weight_function_direct_single;
         }
-        WParam.DIP.C = WParam.DIP.C_init;
+        DI.C = DI.C_init;
     } else if (WParam.method.compare("direct_smooth") == 0) {
         iterate_weights = &iterate_weight_function_direct_smooth;
-        WParam.DIP.C = WParam.DIP.C_init;
+        DI.C = DI.C_init;
     } else if (WParam.method.compare("canonical") == 0) {
         iterate_weights = &iterate_weight_function_canonical;
 
         // initialise stuff specific for canonical iteration
         constexpr int n_initial = 1;
-        N_OP_nsum = std::vector<int>(OP_bin_hits.size(), n_initial);
-        N_OP_gsum = std::vector<int>(OP_bin_hits.size(), WParam.CIP.initial_bin_hits);
-        OP_c_hist = std::vector<double>(OP_bin_hits.size(), 0);
-        non_corrected_W = weight_at_centers; // copy
+        CI.hits_nsum = std::vector<int>(OP_bin_hits.size(), n_initial);
+        CI.gsum = std::vector<int>(OP_bin_hits.size(), CI.initial_bin_hits);
+        CI.can_hist = std::vector<double>(OP_bin_hits.size(), 0);
+        CI.noc_weights = weights; // copy
 
     } else {
         iterate_weights = &iterate_weight_function_direct;
-        WParam.DIP.C = WParam.DIP.C_init;
+        DI.C = DI.C_init;
         if (hila::myrank() == 0) {
             printf("Muca: note: input iteration method `%s` did not match any method:\n"
                    "            setting the default `direct` method\n",
@@ -1141,16 +1080,16 @@ inline void Muca::setup_iteration() {
     weightIterationCount = 0;
 
     // Set up the finish condition pointer for the direct method.
-    if (WParam.DIP.finish_condition.compare("all_visited") == 0) {
+    if (DI.finish_condition.compare("all_visited") == 0) {
         finish_check = &all_visited;
-    } else if (WParam.DIP.finish_condition.compare("ends_visited") == 0) {
+    } else if (DI.finish_condition.compare("ends_visited") == 0) {
         finish_check = &first_last_visited;
     } else {
         finish_check = &all_visited;
         if (hila::myrank() == 0) {
             printf("Muca: note: input finish condition `%s` did not match any:\n"
                    "            setting the default `all_visited` condition\n",
-                   WParam.DIP.finish_condition.c_str());
+                   DI.finish_condition.c_str());
         }
     }
 }
