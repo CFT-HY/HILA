@@ -246,6 +246,18 @@ static std::vector<pragma_types> pragma_hila_types{
     {"novector", false},     {"nonvectorizable", false}, {"contains_rng", false},
     {"direct_access", true}, {"safe_access", true},      {"omp_parallel_region", false}};
 
+
+// And grab also #pragma once locations, not allowed in hila code
+// Store file and loc in pragma_once_files
+struct pragma_once_t {
+    FileID fid;
+    SourceLocation loc;
+};
+
+static std::vector<pragma_once_t> pragma_once_files;
+
+///////////////////////////////////////////////////////////////////////////////
+
 void check_pragmas(std::string &arg, SourceLocation prloc, SourceLocation refloc,
                    std::vector<pragma_loc_struct> &pragmas) {
 
@@ -401,7 +413,7 @@ class MyPPCallbacks : public PPCallbacks {
     // }
 
     /// This is triggered when a pragma directive is encountered. It checks for the
-    /// "#pragma hilapp" and stores the location, file and the command
+    /// "#pragma hila" and stores the location, file and the command
     /// If pragma is "skip" it marks the tranlation unit for skipping.
     ///
     /// Note that pragmas where the code location is important are handled in
@@ -488,6 +500,16 @@ class MyPPCallbacks : public PPCallbacks {
                 check_pragmas(rest, Loc, sl, pragmalocs[f].pragmas);
 
                 // llvm::errs() << " - GOT PRAGMA HILA; FILE " << f << '\n';
+
+
+            } else if (contains_word_list(line, "pragma once", &rest)) {
+
+                // Store here if got #pragma once
+                // not fatal if file is not included
+                pragma_once_t pt;
+                pt.fid = SM.getFileID(Loc);
+                pt.loc = Loc;
+                pragma_once_files.push_back(pt);
             }
         }
     }
@@ -1099,6 +1121,26 @@ class MyFrontendAction : public ASTFrontendAction {
                 // is the included file a system file?
                 srcBuf *buf_from = get_file_buffer(TheRewriter, f);
                 if (buf_from != nullptr) {
+
+                    // Check if included file contains #pragma once
+                    for (auto &r : pragma_once_files) {
+                        if (r.fid == f) {
+                            // It is, disallow it!
+
+                            llvm::errs() << "\n *** ERROR: '#pragma once' in file:row "
+                                         << r.loc.printToString(SM) << '\n';
+                            llvm::errs() << "#pragma once is not allowed in include files containing "
+                                            "hila code, because hilapp "
+                                            "rearranges include file contents.\n"
+                                            "Use standard include guards instead\n"
+                                            "  #ifndef SOME_INCLUDE_GUARD_NAME_\n"
+                                            "  #define SOME_INCLUDE_GUARD_NAME_\n"
+                                            "  ...\n"
+                                            "  #endif\n";
+                            
+                            exit(1);
+                        }
+                    }
 
                     // Remove "#include"
                     buf->remove(SR);
