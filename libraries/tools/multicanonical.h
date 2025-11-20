@@ -28,8 +28,8 @@ struct Muca;
 template <class... Ks>
 static inline void to_file(std::ofstream &output_file, std::string fmt, Ks... input_value);
 
-// Generates timestamped file names
-std::string generate_outfile_name(const std::string &outfile_name_base);
+/// For generating time stamped file names
+std::string append_time_stamp(const std::string &outfile_name_base);
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @struct weight_iteration_parameters

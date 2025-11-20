@@ -45,8 +45,8 @@ static inline void to_file(std::ofstream &output_file, std::string fmt, Ks... in
 ///
 /// @return      generated filename std::string
 ////////////////////////////////////////////////////////////////////////////////
-std::string generate_outfile_name(const std::string &outfile_name_base) {
-    std::string filename = outfile_name_base + "_weight_function_";
+std::string append_time_stamp(const std::string &outfile_name_base) {
+    std::string filename = outfile_name_base;
 
     // A terrible mess to get the datetime format nice
     std::stringstream ss;
@@ -239,7 +239,7 @@ bool Muca::read_weight_function(const std::string &W_function_filename) {
 bool Muca::write_weight_function(const std::string &W_function_filename) {
 
     std::ofstream W_file;
-    // std::string filename = generate_outfile_name(RP);
+
     W_file.open(W_function_filename.c_str());
     if (!W_file.is_open()) {
         printf("WARNING: Could not open file `%s` for `write_weight_function()`: %s\n",
@@ -359,8 +359,10 @@ bool Muca::check_weight_iter_flag() {
 ///         rejected (false).
 ////////////////////////////////////////////////////////////////////////////////
 bool Muca::accept_reject(const double OP_old, const double OP_new) {
-    bool update;
-    bool AR_iterate;
+    constexpr int update = 0;
+    constexpr int AR_iterate = 1;
+    // flags[0] = accept/reject, flags[1] = do iterate weights,
+    std::array<bool, 2> flags;
     // Only compute on node 0, broadcast to others
     if (hila::myrank() == 0) {
         double W_new = weight_function(OP_new);
@@ -374,27 +376,26 @@ bool Muca::accept_reject(const double OP_old, const double OP_new) {
         // whether the update is to be accepted.
         double rval = hila::random();
         if (::log(rval) < log_P) {
-            update = true;
+            flags[update] = true;
         } else {
-            update = false;
+            flags[update] = false;
         }
 
         // Get value from process 0
-        AR_iterate = WParam.AR_iteration;
+        flags[AR_iterate] = WParam.AR_iteration;
     }
 
     // Broadcast the update status to other processes along with the
     // weight iteration parameter
-    hila::broadcast(update);
-    hila::broadcast(AR_iterate);
+    hila::broadcast(flags);
 
     // Check if iteration is enabled
-    if (AR_iterate) {
-        bool continue_iter = iterate_weights(*this, update ? OP_new : OP_old);
+    if (flags[AR_iterate]) {
+        bool continue_iter = iterate_weights(*this, flags[update] ? OP_new : OP_old);
         set_weight_iter_flag(continue_iter);
     }
 
-    return update;
+    return flags[update];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
