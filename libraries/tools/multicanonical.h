@@ -46,6 +46,10 @@ std::string generate_outfile_name(const std::string &outfile_name_base);
 /// @details Larger number makes the weight less susceptible to changes in the
 /// following iterations.
 ///
+/// @var int canonical_iteration::min_bin_hits
+/// @brief Minimum number of hits a bin needs to have before taken into account in the weight
+/// function update.
+///
 /// @var int canonical_iteration::OC_max_iter
 /// @brief Up to which iteration the overcorrection updates can be used
 ///
@@ -56,6 +60,7 @@ std::string generate_outfile_name(const std::string &outfile_name_base);
 struct canonical_iteration {
     int sample_size;
     int initial_bin_hits;
+    int min_bin_hits;
     int OC_max_iter;
     int OC_frequency;
 };
@@ -198,7 +203,6 @@ struct Muca {
     double weight(double OP) const;
     // Accept/reject determination for pairs of order parameter values
     bool accept_reject(const double OP_old, const double OP_new);
-
 
 
     /////////////////////////////////////////////////////////////

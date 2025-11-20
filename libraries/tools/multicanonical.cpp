@@ -103,6 +103,7 @@ void Muca::read_weight_parameters(std::string parameter_file_name) {
     // Canonical iteration parameters
     int CIM_sample_size  = par.get("CIM sample size");
     int initial_bin_hits = par.get("initial bin hits");
+    int min_bin_hits     = par.get("min bin hits");
     int OC_max_iter      = par.get("Overcorrect max iter");
     int OC_frequency     = par.get("Overcorrect frequency");
     if (initial_bin_hits <= 0) {
@@ -113,10 +114,19 @@ void Muca::read_weight_parameters(std::string parameter_file_name) {
                    parameter_file_name.c_str(), initial_bin_hits, default_init_bin_hits);
         initial_bin_hits = default_init_bin_hits;
     }
+    if (min_bin_hits <= 0) {
+        constexpr int default_min_bin_hits = 8;
+        if (hila::myrank() == 0)
+            printf("Muca: note: `min bin hits` has to be > 0, in `%s` found %d. Setting to "
+                   "default value of %d\n",
+                   parameter_file_name.c_str(), min_bin_hits, default_min_bin_hits);
+        min_bin_hits = default_min_bin_hits;
+    }
     struct canonical_iteration CIP
     {
         CIM_sample_size,
         initial_bin_hits,
+        min_bin_hits,
         OC_max_iter,
         OC_frequency
     };
@@ -964,7 +974,9 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     return continue_iteration;
 }
 
+// 'Canonical' iteration method based on https://arxiv.org/abs/hep-lat/9804019 p.19 ->
 // WIP TODO: check how edge bins are handeled
+//     TODO: stop iter criterion
 bool iterate_weight_function_canonical(Muca &muca, double OP) {
     bool continue_iteration = true;
     if (hila::myrank() == 0) {
@@ -993,7 +1005,7 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
                 muca.OP_c_hist[i - 1] /= bin_width;
             }
 
-            constexpr int min_hits = 8;
+            int min_hits = muca.WParam.CIP.min_bin_hits;
             std::vector<double> w_prev = muca.weight_at_centers; // copy
 
             muca.N_OP_nsum[0] += muca.OP_bin_hits[0];
@@ -1026,13 +1038,17 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
                 muca.OP_c_hist[i] = 0;
             }
 
-            // over correct
-            // overcorrected weights are used only for the next updates
-            // the weight function to be updated after the next updates will be the non
-            // overcorrected one.
+            // Overcorrect
+            // Overcorrection checks which bins have been visited the most and
+            // modifies the weights in such a manner that the frequently visited
+            // bins are weighted (disproportionally) heavily. This should
+            // encourage the process to visit other bins during the next run of
+            // iterations.
+            // overcorrected weights are used only for the next updates.
+            // The weight function to be modified after the next updates will be the non
+            // overcorrected one. So we save the wights before overcorrection.
             std::memcpy(muca.non_corrected_W.data(), muca.weight_at_centers.data(),
                         muca.non_corrected_W.size() * sizeof(muca.non_corrected_W[0]));
-
             double C = 2.0;
             double d0 = muca.OP_bin_limits[1] - muca.OP_bin_limits[0];
             for (size_t i = 1; i < muca.weight_at_centers.size(); ++i) {
@@ -1040,6 +1056,7 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
                 muca.weight_at_centers[i - 1] +=
                     C * ::log((d0 / bin_width) * muca.N_OP_nsum[i - 1] / muca.N_OP_nsum[0]);
             }
+
             muca.write_weight_function("intermediate_weight.dat");
         }
     }
@@ -1153,9 +1170,9 @@ void Muca::set_continuous_iteration(bool YN) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Loads parameters and weights for the multicanonical computation.
-/// @details Sets up iteration variables. Can be called multiple times and must
-///          be called at least once before attempting to use any of the muca
-///          methods.
+/// @details Sets up iteration variables. NOTE: these are set up only on `hila::myrank()==0`.
+///          Can be called multiple times and must be called at least once before attempting to use
+///          any of the muca methods.
 ///
 /// @param wfile_name   path to the weight parameter file
 /// @return false if something fails during init.
