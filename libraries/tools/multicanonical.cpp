@@ -103,8 +103,16 @@ void Muca::read_weight_parameters(std::string parameter_file_name) {
     // Canonical iteration parameters
     int CIM_sample_size  = par.get("CIM sample size");
     int initial_bin_hits = par.get("initial bin hits");
-    int OC_max_iter      = par.get("OC max iter");
-    int OC_frequency     = par.get("OC frequency");
+    int OC_max_iter      = par.get("Overcorrect max iter");
+    int OC_frequency     = par.get("Overcorrect frequency");
+    if (initial_bin_hits <= 0) {
+        constexpr int default_init_bin_hits = 5;
+        if (hila::myrank() == 0)
+            printf("Muca: note: `initial bin hits` has to be > 0, in `%s` found %d. Setting to "
+                   "default value of %d\n",
+                   parameter_file_name.c_str(), initial_bin_hits, default_init_bin_hits);
+        initial_bin_hits = default_init_bin_hits;
+    }
     struct canonical_iteration CIP
     {
         CIM_sample_size,
@@ -1098,8 +1106,7 @@ inline void Muca::setup_iteration() {
         // initialise stuff specific for canonical iteration
         constexpr int n_initial = 1;
         N_OP_nsum = std::vector<int>(OP_bin_hits.size(), n_initial);
-        constexpr int g_initial = 5;
-        N_OP_gsum = std::vector<int>(OP_bin_hits.size(), g_initial);
+        N_OP_gsum = std::vector<int>(OP_bin_hits.size(), WParam.CIP.initial_bin_hits);
         OP_c_hist = std::vector<double>(OP_bin_hits.size(), 0);
         non_corrected_W = weight_at_centers; // copy
 
