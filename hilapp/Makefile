@@ -25,9 +25,13 @@
 # directories of LLVM, Clang in tools/clang/, etc.
 # LLVM_SRC_PATH := /usr/lib/llvm-8
 
-# If it is a system distribution (linux), then llvm-config should be installed:
-# if LLVM_VERSION not given, try first llvm-config and 
-# then llvm-config-$(LLVM_DEFAULT_VERSION)
+# If it is a system distribution (linux), then llvm-config should be installed.
+# the chain of reasoning the executable is
+# - use LLVM_VERSION if set
+# - use 'llvm-config' if found in PATH
+# - use 'clang --version' if along PATH
+# - use latest 'llvm-config-NN' if found in PATH
+
 
 
 # First, let's find out what distro we have
@@ -37,8 +41,8 @@ $(info --------------------------------------------------------------)
 $(info We are on $(DISTRO) distribution)
 $(info --------------------------------------------------------------)
 
-# keep 14 as default for now
-LLVM_DEFAULT_VERSION := 18
+## Then, find out the llvm version, either from LLVM_VERSION variable or
+## snooping llvm-config-NN, which must be along PATH
 
 ifdef LLVM_VERSION 
 
@@ -59,26 +63,39 @@ else
 # llvm-config not found, next step...
 $(info "llvm-config" not found along PATH, trying version from clang.. )
 VERSION_FROM_CLANG := $(shell clang --version | head -1 | awk 'BEGIN{FS="version *"} {print $$2}' | awk 'BEGIN{FS="."} {print $$1}' )
-$(info clang version $(VERSION_FROM_CLANG))
 ifneq (, $(shell which llvm-config-$(VERSION_FROM_CLANG)))
 LLVM_PATH := $(shell llvm-config-$(VERSION_FROM_CLANG) --prefix)
-
+$(info clang version $(VERSION_FROM_CLANG))
 else
-$(info "clang" failed, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
 
-ifeq (, $(shell which llvm-config-$(LLVM_DEFAULT_VERSION)))
-$(info llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH! )
-$(error Use "make [..] LLVM_VERSION=<N>" )
+$(info "clang" failed, trying to glob llvm-config-NN )
+LLVM_CONFIG := $(shell ls /*/llvm-config-* | sort | tail -1)
+ifeq (, $(shell which $(LLVM_CONFIG)))
+$(error No llvm-config-NN found along PATH)
 else
-LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
+LLVM_PATH := $(shell $(LLVM_CONFIG) --prefix)
+$(info using $(LLVM_CONFIG))
+endif
+
+# else
+# $(info "clang" failed, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
+
+# ifeq (, $(shell which llvm-config-$(LLVM_DEFAULT_VERSION)))
+# $(info llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH! )
+# $(error Use "make [..] LLVM_VERSION=<N>" )
+# else
+# LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
+# endif
+
 endif
 endif
-endif    
 
 # get the llvm version number if not set before
 LLVM_VERSION = $(shell $(LLVM_PATH)/bin/llvm-config --version | cut -d. -f1)
 
 endif
+
+## Now LLVM_VERSION is set
 
 LLVM_BIN_PATH := $(LLVM_PATH)/bin
 
