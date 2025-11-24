@@ -15,6 +15,10 @@
 // Furthermore, the repository will contain a short example program that
 // elucidates the use of the various muca methods.
 
+// NOTE: TODO: at the moment different iteration methods `direct`, `direct_smooth`, `canonical` will
+// result into differently normalized weight functions. End results should be the same upto a some
+// constant shift. This does not matter in the end since only differences matter.
+
 #include <vector>
 #include <string>
 
@@ -113,17 +117,18 @@ struct Muca {
     /////////////////////////////////////////////////////////////
     // Intended interface:
 
-    // Initialises the muca computations according to the weight parameter file.
-    // This function is to always be called before using any of the below functions
+    /// Initialises the muca computations according to the weight parameter file `wfile_name`.
+    /// This function is to always be called before using any of the below functions.
+    /// (see, Example parameter file in applications/multicanonical_example/muca_parameters.)
     bool initialise(const std::string wfile_name);
-    // Pointer to the iteration function, set by initialisation (or manually if custom)
+    /// Pointer to the iteration function, set by initialisation (or manually if custom)
     iteration_fn iterate_weights;
-    // Writes weight functions to a file
+    /// Writes weight functions to a file
     bool write_weight_function(const std::string &W_function_filename);
-    // Gives the weight as a function of the order parameter
+    /// Gives the weight as a function of the order parameter
     double weight_function(double OP) const;
     double weight(double OP) const;
-    // Accept/reject determination for pairs of order parameter values
+    /// Accept/reject determination for pairs of order parameter values
     bool accept_reject(const double OP_old, const double OP_new);
 
 
@@ -194,13 +199,17 @@ struct Muca {
         /// Minimum number of hits a bin needs to have before taken into account in the weight
         /// function update.
         int min_bin_hits;
+        /// stop iteration after reaching this many updates of the weight func
+        int max_iters;
+        ///
         double OC_factor;
         /// Up to which iteration step the overcorrection updates can be used
-        int OC_max_iter;
+        int OC_max_iter; // TODO: not used atm
         /// How often the overcorrection update is used. If the value is n, every n:th update will
         /// be an overcorrection.
-        int OC_frequency;
+        int OC_frequency; // TODO: not used atm
 
+        int weight_update_count;         ///< How many times the weight function has been updated
         std::vector<double> can_hist;    ///< estimate of the canonical histogram `h_i^k`
         std::vector<int> hits_nsum;      ///< cumulative sum of the number of hits in bins `n_i^k`
         std::vector<int> gsum;           ///< cumulative sum of the two-bin weight factor `g_i^k`

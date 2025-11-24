@@ -73,36 +73,34 @@ void Muca::read_weight_parameters(std::string parameter_file_name) {
 
     // clang-format off
     // Generic control parameters
-    std::string output_loc        = par.get("output file location"); // Unused
-
-    WParam.outfile_name_base = par.get("output file name base");
-    WParam.weight_loc        = par.get("weight file location");
-    WParam.method            = par.get("iteration method");
-    std::string hard_walls   = par.get("hard walls");
+    WParam.weight_loc        = par.get("weight_file_location");
+    WParam.method            = par.get("iteration_method");
+    std::string hard_walls   = par.get("hard_walls");
     WParam.hard_walls        = (hard_walls.compare("YES") == 0);
-    WParam.max_OP            = par.get("max OP");
-    WParam.min_OP            = par.get("min OP");
-    WParam.bin_number        = par.get("bin number");
-    std::string iter_vis     = par.get("iteration visuals");
+    WParam.max_OP            = par.get("max_OP");
+    WParam.min_OP            = par.get("min_OP");
+    WParam.bin_number        = par.get("number_of_bins");
+    std::string iter_vis     = par.get("iteration_visuals");
     WParam.visuals           = (iter_vis.compare("YES") == 0);
     WParam.AR_iteration = false;
 
     // TODO ? check that these parameters are in allowed range ?
     // Direct iteration parameters
-    DI.finish_condition      = par.get("finish condition");
-    DI.sample_size           = par.get("DIM sample size");
-    DI.single_check_interval = par.get("DIM visit check interval");
-    DI.C_init                = par.get("add initial");
-    DI.C_min                 = par.get("add minimum");
+    DI.finish_condition      = par.get("DI_finish_condition");      // all_visited
+    DI.sample_size           = par.get("DI_sample_size");           // 100
+    DI.single_check_interval = par.get("DI_single_check_interval"); // 100
+    DI.C_init                = par.get("DI_C_init");                // 0.1
+    DI.C_min                 = par.get("DI_C_min");                 // 0.001
     DI.C = DI.C_init; // set also the initial value here
 
     // Canonical iteration parameters
-    CI.sample_size      = par.get("CIM sample size");    // 100
-    CI.initial_bin_hits = par.get("initial bin hits");   // 5
-    CI.min_bin_hits     = par.get("min bin hits");       // 8
-    CI.OC_factor        = par.get("Overcorrect factor"); // 2.0
-    CI.OC_max_iter      = par.get("Overcorrect max iter");
-    CI.OC_frequency     = par.get("Overcorrect frequency");
+    CI.sample_size      = par.get("CI_sample_size");          // 100
+    CI.initial_bin_hits = par.get("CI_initial_bin_hits");     // 5
+    CI.min_bin_hits     = par.get("CI_min_bin_hits");         // 8
+    CI.max_iters        = par.get("CI_max_iters");            // 400
+    CI.OC_factor        = par.get("CI_overcorrect_factor");   // 2.0
+    CI.OC_max_iter      = par.get("CI_overcorrect_max_iter"); //
+    CI.OC_frequency     = par.get("CI_overcorrect_frequency");//
 
     par.close();
     // clang-format on
@@ -491,183 +489,6 @@ inline void Muca::set_direct_iteration_FC(finish_condition_fn fc) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Following three functions related to "canonical" iteration are currently
-// not implemented properly.
-////////////////////////////////////////////////////////////////////////////////
-/// @brief Computes an overcorrection of W given the visits ns (NOT FUNCTIONAL).
-/// @details Overcorrection checks which bins have been visited the most and
-///          modifies the weights in such a manner that the frequently visited
-///          bins are weighted (disproportionally) heavily. This should
-///          encourage the process to visit other bins during the next run of
-///          iterations.
-///
-/// @param Weight   vector containing the previously used weights
-/// @param n_sum    vector containing the total number of visits
-////////////////////////////////////////////////////////////////////////////////
-static void overcorrect(std::vector<double> &Weight, std::vector<int> &n_sum) {
-    int N = n_sum.size();
-    std::vector<double> W(N, 0);
-    constexpr float C = 1;
-
-    for (int m = 0; m < N; ++m) {
-        if (n_sum[m] > 0)
-            W[m] = C * ::log(n_sum[m]);
-    }
-
-    // Redefine W[0] back to zero, set new weights
-    double base = W[0];
-    for (int i = 0; i < N; ++i) {
-        Weight[i] += W[i] - base;
-    }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// @brief Computes the next weight vector through iteration based on previous
-///        weights (NOT FUNCTIONAL).
-/// @details
-///
-/// @param Weight        vector containing the previously used weights
-/// @param n             vector containing the current number of visits
-/// @param g_sum         vector containing the previous local sums of n
-/// @param g_log_h_sum   vector containing the sum of previous logs of the
-///                      canonical weights
-////////////////////////////////////////////////////////////////////////////////
-static void recursive_weight_iteration(std::vector<double> &Weight, std::vector<int> &n,
-                                       std::vector<int> &g_sum, std::vector<double> &g_log_h_sum) {
-    const int nmin = 10;
-    int N = n.size();
-
-    // Fill out log(h)
-    std::vector<double> log_h(N);
-    for (int m = 0; m < N; ++m) {
-        if (n[m] > 0) {
-            log_h[m] = ::log(n[m]) + Weight[m];
-        }
-        // This is only going to get multiplied by zero,
-        // so the value doesn't matter.
-        else
-            log_h[m] = 0;
-    }
-
-    // Compute the iteration. Note that W[0] is permanently kept to zero
-    std::vector<double> W(N);
-    W[0] = 0;
-    Weight[0] = W[0];
-    for (int m = 1; m < N; ++m) {
-        int gm;
-        // Check that both bins contain nmin hits before taking into account
-        if (n[m] > nmin and n[m - 1] > nmin) {
-            gm = n[m] + n[m - 1];
-        } else
-            gm = 0;
-
-        g_sum[m] += gm;
-        g_log_h_sum[m] += gm * (log_h[m] - log_h[m - 1]);
-
-        W[m] = W[m - 1] + g_log_h_sum[m] / g_sum[m];
-
-        // Modify the input weights to their new values
-        Weight[m] = W[m];
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////////
-///// @brief Given an order parameter, iterates the weight function until the
-/////        sampling becomes acceptably efficient. Save the weight function into
-/////        a file for later use (NOT FUNCTIONAL).
-///// @details
-/////
-///// @param F     struct of fields
-///// @param FP    struct of field parameters
-///// @param RP    struct of run parameters
-///// @param g_WParam   struct of weight iteration parameters
-//////////////////////////////////////////////////////////////////////////////////
-// void iterate_weight_function_canonical(fields &F,
-//                                        field_parameters &FP,
-//                                        run_parameters &RP,
-//                                        weight_iteration_parameters &g_WParam)
-//{
-//     int samples  = g_WParam.sample_size;
-//     int n_sweeps = g_WParam.sample_steps;
-//
-//     double max = g_WParam.max_OP;
-//     double min = g_WParam.min_OP;
-//
-//     int N = g_WParam.bin_number;
-//     // Initialise the weight vector with the bin centres
-//     // and get corresponding bin limits.
-//     {
-//         double dx = (max - min) / (N - 1);
-//         for (int i = 0; i < N; ++i)
-//         {
-//             RP.OP_values[i] = min + i * dx;
-//         }
-//     }
-//     vector limits = get_bin_limits(min, max, N);
-//
-//     // Initialise the storage vectors to zero:
-//      std::vector<int> n(N, 0), g_sum(N, 0), n_sum(N, 0);
-//     vector g_log_h_sum(N, 0), log_h(N, 0), W_prev(N, 0);
-//
-//     // Get initial guesses
-//     for (int i = 0; i < N; ++i)
-//     {
-//         n[i]     = 0;
-//         g_sum[i] = g_WParam.initial_bin_hits;
-//         log_h[i] = RP.W_values[i];
-//     }
-//
-//     static int count = 1;
-//     while (true)
-//     {
-//         float accept = 0;
-//         float OP_sum = 0;
-//         for (int i = 0; i < samples; i++)
-//         {
-//             accept += mc_update_sweeps(F, FP, RP, n_sweeps);
-//             OP_sum += FP.OP_value;
-//             bin_hit_OP_values(n, limits, FP.OP_value);
-//         }
-//
-//         for (int m = 0; m < N; m++)
-//         {
-//             n_sum[m] += n[m];
-//         }
-//
-//         if (count % g_WParam.OC_frequency == 0 and count < g_WParam.OC_max_iter)
-//         {
-//             overcorrect(RP.W_values, n_sum);
-//         }
-//         else
-//         {
-//             recursive_weight_iteration(RP.W_values, n, g_sum, g_log_h_sum);
-//         }
-//
-//
-//         // Some mildly useful print out
-//         int nmax = *std::max_element(n_sum.begin(), n_sum.end());
-//         for (int m = 0; m < N; ++m)
-//         {
-//             std::string n_sum_log = "";
-//             for (int i = 0; i < int(n_sum[m] * 50.0 / nmax); i++)
-//             {
-//                 n_sum_log += "|";
-//             }
-//             if (hila::myrank() == 0)
-//             {
-//                 printf("%5.3f\t%10.3f\t\t%d\t%s\n", limits[m],
-//                         RP.W_values[m],
-//                         n_sum[m], n_sum_log.c_str());
-//             }
-//             n[m] = 0;
-//         }
-//
-//         count += 1;
-//         if (count > g_WParam.max_iter) break;
-//     }
-// }
-
-////////////////////////////////////////////////////////////////////////////////
 /// @brief Procures a vector containing equidistant bin edges.
 /// @details
 ///
@@ -916,9 +737,9 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     return continue_iteration;
 }
 
-// 'Canonical' iteration method based on https://arxiv.org/abs/hep-lat/9804019 p.19 ->
-// WIP TODO: check how edge bins are handeled
-//     TODO: stop iter criterion
+/// 'Canonical' iteration method based on https://arxiv.org/abs/hep-lat/9804019 p.19
+///     TODO: doublecheck how edge bins are handeled
+///     TODO: better stop iter criterion
 bool iterate_weight_function_canonical(Muca &muca, double OP) {
     bool continue_iteration = true;
     if (hila::myrank() == 0) {
@@ -998,6 +819,14 @@ bool iterate_weight_function_canonical(Muca &muca, double OP) {
             }
 
             muca.write_weight_function("intermediate_weight.dat");
+
+            // check if we should stop
+            muca.CI.weight_update_count++;
+            if (muca.CI.weight_update_count > muca.CI.max_iters)
+                continue_iteration = false;
+            // print progress
+            if (muca.CI.weight_update_count % (muca.CI.max_iters / 100) == 0)
+                printf("Muca: iteration %d / %d\n", muca.CI.weight_update_count, muca.CI.max_iters);
         }
     }
     hila::broadcast(continue_iteration);
@@ -1062,6 +891,7 @@ inline void Muca::setup_iteration() {
 
         // initialise stuff specific for canonical iteration
         constexpr int n_initial = 1;
+        CI.weight_update_count = 0;
         CI.hits_nsum = std::vector<int>(OP_bin_hits.size(), n_initial);
         CI.gsum = std::vector<int>(OP_bin_hits.size(), CI.initial_bin_hits);
         CI.can_hist = std::vector<double>(OP_bin_hits.size(), 0);
@@ -1118,7 +948,7 @@ void Muca::set_continuous_iteration(bool YN) {
 /// @return false if something fails during init.
 ////////////////////////////////////////////////////////////////////////////////
 bool Muca::initialise(const std::string wfile_name) {
-    // Read parameters into g_WParam struct
+    // Read parameters into WParam struct
     read_weight_parameters(wfile_name);
     bool ret = true;
     // This is fine to do just for process zer0

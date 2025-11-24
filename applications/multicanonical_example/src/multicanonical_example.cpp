@@ -32,7 +32,7 @@ Field<double> compute_local_action(Field<double> phi) {
 
 // Mean value of phi is a convenient order parameter, since its cheap
 // to compute and has different values in the different minima.
-double order_parameter(Field<double> &phi) {
+double order_parameter(const Field<double> &phi) {
     double OP = phi.sum();
     return OP / lattice.volume();
 }
@@ -80,6 +80,11 @@ void multican_update(hila::Muca &muca, Field<double> &phi, Parity PAR) {
 // algorithm thinks its done and kills the loop. We save the weight data
 // for good measure.
 void iterate_weights(hila::Muca &muca, Field<double> &phi) {
+    std::ofstream MFile;
+    if (hila::myrank() == 0) {
+        MFile.open("iter_measurements", std::ios_base::app);
+    }
+    int i = 0;
     bool iterate_status = true;
     while (iterate_status) {
         // Perform a number of updates
@@ -91,9 +96,15 @@ void iterate_weights(hila::Muca &muca, Field<double> &phi) {
         // iterator
         double OP = order_parameter(phi);
         iterate_status = muca.iterate_weights(muca, OP);
+        if (hila::myrank() == 0) {
+            char buffer[1024];
+            sprintf(buffer, "%d\t%e\t%e\n", i++, OP, muca.weight_function(OP));
+            MFile << std::string(buffer);
+            MFile.flush();
+        }
     }
     if (hila::myrank() == 0)
-        muca.write_weight_function(hila::generate_outfile_name("weight_func"));
+        muca.write_weight_function(hila::append_time_stamp("weight_func_"));
 }
 
 // Here we combine the above functions into a full simulation that
@@ -127,6 +138,25 @@ int main(int argc, char *argv[]) {
             hila::out0 << "Running a standard simulation.\n";
             MFile.open("ca_measurements", std::ios_base::app);
         }
+    }
+
+    // thermalize, not really necesary in this example...
+    std::ofstream therm_meas;
+    if (hila::myrank() == 0) {
+        therm_meas.open("therm_measurements");
+    }
+    for (int i = 0; i < 1000; i++) {
+        multican_update(muca, phi, ODD);
+        multican_update(muca, phi, EVEN);
+        double OP = order_parameter(phi);
+        if (hila::myrank() == 0) {
+            char buffer[1024];
+            sprintf(buffer, "%d\t%e\t%e\n", i, OP, muca.weight_function(OP));
+            therm_meas << std::string(buffer);
+        }
+    }
+    if (hila::myrank() == 0) {
+        therm_meas.close();
     }
 
     if (do_muca)
