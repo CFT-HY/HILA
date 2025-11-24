@@ -509,8 +509,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // start kernel building
     ////////////////////////////////////////////////////////////////////////////////////////////////
     std::string kernel_launch;
-    kernel_launch = kernel_name + "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
 
+    if (gpu_overlap_comm) {
+        kernel_launch = kernel_name +
+                        "<<< N_blocks, N_threads, 0, bulk_stream>>>( _hila_loops, _hila_ranges.payload";
+    } else if (gpu_ccl) {
+        kernel_launch = kernel_name + "<<< N_blocks, N_threads,0, bulk_stream>>>( _hila_loop_begin, _hila_loop_end";
+    } else {
+        kernel_launch = kernel_name + "<<< N_blocks, N_threads >>>( _hila_loop_begin, _hila_loop_end";
+    }
     // print field call list
     int i = 0;
     for (field_info &l : field_info_list) {
@@ -1224,6 +1231,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             << "    gpuEventRecord(bulk_event, bulk_stream);\n"
             << "    gpuEventSynchronize(bulk_event);\n}\n";
 
+    } else if (gpu_ccl) {
+        code << "gpuEventRecord(bulk_event, bulk_stream);\n"
+             << "gpuEventSynchronize(bulk_event);\n";
+    } else {
+        code << "gpuDeviceSynchronize();\n";
     }
 
 

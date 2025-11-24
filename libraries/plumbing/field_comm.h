@@ -311,12 +311,14 @@ typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Pa
  */
 template <typename T>
 dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
-#if (defined(CUDA) || defined(HIP))
+#if (defined(CUDA) || defined(HIP)) && !defined(GPU_CCL)
     pack_buffers(d, p);
     auto& halo_streams = hila::halo_streams();
     halo_streams.wait_all();
-#endif
     return start_communication(d, p);
+#else
+    return 0;
+#endif
 }
 
 template <typename T>
@@ -403,9 +405,9 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
     // NOTE: there should be no danger of MPI and shuffle overwriting, MPI writes
     // to halo buffers only if no permutation is needed.  With a permutation MPI
     // uses special receive buffer
-#ifndef MPI_BENCHMARK_TEST
-    fs->set_local_boundary_elements(d, par);
-#endif
+// #ifndef MPI_BENCHMARK_TEST
+//     fs->set_local_boundary_elements(d, par);
+// #endif
 
     return get_dir_mask(d);
 
@@ -483,13 +485,13 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
-#if !defined(MPI_BENCHMARK_TEST) && !defined(CUDA) && !defined(HIP)
+#if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
         fs->gather_comm_elements(d, par, send_buffer, to_node, 0);
 #endif
 
         size_t n = sites * size;
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
         gpuStreamSynchronize(0);
         // gpuDeviceSynchronize();
 #endif
