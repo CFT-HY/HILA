@@ -254,8 +254,6 @@ inline void synchronize_threads() {
 }
 } // namespace hila
 
-
-
 class gpuStreamPool {
 public:
 
