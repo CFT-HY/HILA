@@ -256,7 +256,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     const unsigned *d_site_index = to_node.get_sitelist(par, n);
     T *d_buffer;
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
     // The buffer is already on the device
     d_buffer = buffer;
 #else
@@ -283,7 +283,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
                                                          lattice->mynode.field_alloc_size);
 #endif
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     // Copy the result to the host
     gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
     gpuFree(d_buffer);
@@ -404,7 +404,7 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
     unsigned n = from_node.n_sites(par);
     T *d_buffer;
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
     // MPI buffer is on device
     d_buffer = buffer;
 #else
@@ -417,12 +417,12 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
     place_comm_elements_kernel<<<N_blocks, N_threads>>>((*this), d_buffer, from_node.offset(par), n,
                                                         lattice->mynode.field_alloc_size);
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     gpuFree(d_buffer);
 #endif
 }
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
 
 template <typename T>
 void field_storage<T>::free_mpi_buffer(T *d_buffer) {

@@ -79,6 +79,7 @@
 // Special defines for GPU targets
 #if defined(CUDA) || defined(HIP)
 
+/// @brief GPU_MEMORY_POOL enables custom memory pool for GPU allocations.
 /// Use gpu memory pool by default
 /// turn off by using -DGPU_MEMORY_POOL=0 in Makefile
 #ifndef GPU_MEMORY_POOL
@@ -87,15 +88,33 @@
 #undef GPU_MEMORY_POOL
 #endif
 
-/// GPU_AWARE_MPI
-/// By default GPU aware MPI is on. Turn it off in Makefile with -DGPU_AWARE_MPI=0
-#ifndef GPU_AWARE_MPI
-#define GPU_AWARE_MPI 1
-#elif GPU_AWARE_MPI == 0
-#undef GPU_AWARE_MPI
+/// @brief GPU_AWARE_COMM enables using gpu device buffers directly in MPI and NCCL/RCCL communication. 
+/// By default GPU aware MPI is on. Turn it off in Makefile with -DGPU_AWARE_COMM=0
+#ifndef GPU_AWARE_COMM
+#define GPU_AWARE_COMM 1
+#elif GPU_AWARE_COMM == 0
+#undef GPU_AWARE_COMM
 #endif
 
-/// GPU_RNG_THREAD_BLOCKS
+/**
+ * @brief GPU_CCL if set and !=0, use NCCL/RCCL for communication. Enable with -DGPU_CCL=1
+ */
+#ifndef GPU_CCL
+  // leave undefined by default
+#elif GPU_CCL == 0
+  #undef GPU_CCL
+#endif
+
+/**
+ * @brief GPU_OVERLAP_COMM if set and !=0, overlap communication and computation in onsites()-loops. Enable with -DGPU_OVERLAP_COMM=1
+ */
+#ifndef GPU_OVERLAP_COMM
+  // leave undefined by default
+#elif GPU_OVERLAP_COMM == 0
+  #undef GPU_OVERLAP_COMM
+#endif
+
+/// @brief  GPU_RNG_THREAD_BLOCKS number of blocks to use in onsites()-loops containing random numbers. Default is 32.
 /// Number of thread blocks (of N_threads threads) to use in onsites()-loops containing random
 /// numbers. GPU_RNG_THREAD_BLOCKS=0 or undefined means use one RNG on each lattice site, and the
 /// thread block number is not restricted.  RNG takes about 48 B/generator (with XORWOW). When
@@ -124,6 +143,8 @@
 /// (GPU_VECTOR_REDUCTION_THREAD_BLOCKS*N_threads) working copies of the histogram which are then
 /// combined. Too small value slows the loop where this happens computation, too large uses
 /// (temporarily) more memory. Example:
+///
+/// \code
 ///      ReductionVector<double> rv(100);
 ///      Field<int> index;
 ///      ... (set index to values 0 .. 99)
@@ -131,6 +152,7 @@
 ///           rv[index[X]] += ..
 ///           ..
 ///      }
+/// \endcode
 ///
 /// GPU_VECTOR_REDUCTION_THREAD_BLOCKS = 0 or undefined means that the thread block number is not
 /// restricted and only a single histogram is used with atomic operations (atomicAdd).  This
@@ -153,12 +175,12 @@
 #endif
 
 
-/// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is an optimization parameter. If reduction size
-/// is large than threshold, we use "single pass" kernel; if smaller, hierarchial
-/// kernel launch. Both use the same amount of memory. The algorithms become
-/// correspondingly better at extreme ends, but around 500-1000 there is
-/// a slow changeover, depending on computing hardware. 
-/// NOT USED IN PRESENT ReductionVector implementation
+// GPU_VECTOR_REDUCTION_SIZE_THRESHOLD is an optimization parameter. If reduction size
+// is large than threshold, we use "single pass" kernel; if smaller, hierarchial
+// kernel launch. Both use the same amount of memory. The algorithms become
+// correspondingly better at extreme ends, but around 500-1000 there is
+// a slow changeover, depending on computing hardware. 
+// NOT USED IN PRESENT ReductionVector implementation
 
 // #ifndef GPU_VECTOR_REDUCTION_SIZE_THRESHOLD
 // #define GPU_VECTOR_REDUCTION_SIZE_THRESHOLD 700
@@ -207,7 +229,7 @@
 
 #if defined(CUDA)
 
-/// General number of threads in a thread block
+/// Global number of threads in a thread block
 #ifndef N_threads
 #define N_threads 256
 #endif
@@ -236,7 +258,7 @@
 
 #if defined(HIP)
 
-// General number of threads in a thread block
+// Global number of threads in a thread block
 #ifndef N_threads
 #define N_threads 256
 #endif

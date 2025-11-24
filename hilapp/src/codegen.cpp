@@ -246,64 +246,65 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // change the f[X+offset] -references, generate code
     handle_field_plus_offsets(code, loopBuf, loop_info.parity_str);
 
-    bool first = true;
-    bool generate_wait_loops;
-    if (cmdline::no_interleaved_comm)
-        generate_wait_loops = false;
-    else
-        generate_wait_loops = true;
+// TOOKS THIS OUT AND PUT IN RESPECTIVE CODEGEN FILES ---------------------------
+    // bool first = true;
+    // bool generate_wait_loops;
+    // if (cmdline::no_interleaved_comm)
+    //     generate_wait_loops = false;
+    // else
+    //     generate_wait_loops = true;
 
-    for (field_info &l : field_info_list) {
-        // If neighbour references exist, communicate them
-        if (!l.is_loop_local_dir) {
-            // "normal" dir references only here
-            for (dir_ptr &d : l.dir_list)
-                if (d.count > 0) {
-                    if (!generate_wait_loops) {
-                        code << l.new_name << ".gather(" << d.direxpr_s << ", "
-                             << loop_info.parity_str << ");\n";
-                    } else {
-                        if (first)
-                            code << "dir_mask_t  _dir_mask_ = 0;\n";
-                        first = false;
+    // for (field_info &l : field_info_list) {
+    //     // If neighbour references exist, communicate them
+    //     if (!l.is_loop_local_dir) {
+    //         // "normal" dir references only here
+    //         for (dir_ptr &d : l.dir_list)
+    //             if (d.count > 0) {
+    //                 if (!generate_wait_loops) {
+    //                     code << l.new_name << ".gather(" << d.direxpr_s << ", "
+    //                          << loop_info.parity_str << ");\n";
+    //                 } else {
+    //                     if (first)
+    //                         code << "dir_mask_t  _dir_mask_ = 0;\n";
+    //                     first = false;
 
-                        code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
-                             << ", " << loop_info.parity_str << ");\n";
-                    }
-                }
-        } else {
-            // now loop local dirs - gather all neighbours!
-            // TODO: restrict dirs
-            if (!generate_wait_loops) {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
-                     << ");\n}\n";
-            } else {
-                if (first)
-                    code << "dir_mask_t  _dir_mask_ = 0;\n";
-                first = false;
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
-                     << loop_info.parity_str << ");\n}\n";
-            }
-        }
-    }
+    //                     code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
+    //                          << ", " << loop_info.parity_str << ");\n";
+    //                 }
+    //             }
+    //     } else {
+    //         // now loop local dirs - gather all neighbours!
+    //         // TODO: restrict dirs
+    //         if (!generate_wait_loops) {
+    //             code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+    //                     "++HILA_dir_) {\n"
+    //                  << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
+    //                  << ");\n}\n";
+    //         } else {
+    //             if (first)
+    //                 code << "dir_mask_t  _dir_mask_ = 0;\n";
+    //             first = false;
+    //             code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+    //                     "++HILA_dir_) {\n"
+    //                  << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
+    //                  << loop_info.parity_str << ");\n}\n";
+    //         }
+    //     }
+    // }
 
-    // write wait gathers here also
-    if (!generate_wait_loops)
-        for (field_info &l : field_info_list)
-            if (l.is_loop_local_dir) {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
-                     << ");\n}\n";
-            }
+    // // write wait gathers here also
+    // if (!generate_wait_loops)
+    //     for (field_info &l : field_info_list)
+    //         if (l.is_loop_local_dir) {
+    //             code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+    //                     "++HILA_dir_) {\n"
+    //                  << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
+    //                  << ");\n}\n";
+    //         }
 
-    if (first)
-        generate_wait_loops = false; // no communication needed in the 1st place
-
+    // if (first)
+    //     generate_wait_loops = false; // no communication needed in the 1st place
+// TOOK THIS OUT ---------------------------------------------------------------------
     /////////////////////////////////////////////////////////////////////
     // make the reduction expr list from variables and loop const expressions
 
@@ -352,6 +353,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         }
     }
 
+    bool generate_wait_loops;
 
     // Place the content of the loop
     code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);

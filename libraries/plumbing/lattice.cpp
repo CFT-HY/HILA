@@ -164,7 +164,7 @@ bool lattice_struct::is_on_mynode(const CoordinateVector &loc) const {
 
 #ifndef SUBNODE_LAYOUT
 
-#ifndef BOUNDARY_LAYER_LAYOUT
+#ifndef GPU_OVERLAP_COMM
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 
@@ -182,7 +182,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 #endif
 }
 
-#else // Now BOUNDARY_LAYER_LAYOUT
+#else // Now GPU_VERLAP_COMM layout version
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
 
@@ -414,7 +414,7 @@ void lattice_struct::node_struct::advance_local_coordinate(CoordinateVector &l) 
 
 ////////////////////////////////////////////////////////////////////////
 
-#ifdef BOUNDARY_LAYER_LAYOUT
+#ifdef GPU_OVERLAP_COMM
 
 int lattice_struct::loop_ranges(Parity par, bool gather_on, hila::iter_range_t &ranges) const {
 
@@ -562,7 +562,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
         v *= size[d];
     }
 
-#ifdef BOUNDARY_LAYER_LAYOUT
+#ifdef GPU_OVERLAP_COMM
     construct_index_map();
 #endif
 

@@ -431,10 +431,69 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
 
     code << comment_string(vector_diag) << '\n';
 
+    bool first = true;
+    if (cmdline::no_interleaved_comm)
+        generate_wait_loops = false;
+    else
+        generate_wait_loops = true;
+
     // can go through std non-vector code generation
     if (!is_vectorized) {
         code << generate_code_cpu(S, semicolon_at_end, loopBuf, generate_wait_loops);
         return code.str();
+    } else {
+
+        for (field_info &l : field_info_list) {
+            // If neighbour references exist, communicate them
+            if (!l.is_loop_local_dir) {
+                // "normal" dir references only here
+                for (dir_ptr &d : l.dir_list)
+                    if (d.count > 0) {
+                        if (!generate_wait_loops) {
+                            code << l.new_name << ".gather(" << d.direxpr_s << ", "
+                                << loop_info.parity_str << ");\n";
+                        } else {
+                            if (first)
+                                code << "dir_mask_t  _dir_mask_ = 0;\n";
+                            first = false;
+
+                            code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
+                                << ", " << loop_info.parity_str << ");\n";
+                        }
+                    }
+            } else {
+                // now loop local dirs - gather all neighbours!
+                // TODO: restrict dirs
+                if (!generate_wait_loops) {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                        << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
+                        << ");\n}\n";
+                } else {
+                    if (first)
+                        code << "dir_mask_t  _dir_mask_ = 0;\n";
+                    first = false;
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                        << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
+                        << loop_info.parity_str << ");\n}\n";
+                }
+            }
+        }
+
+        // write wait gathers here also
+        if (!generate_wait_loops)
+            for (field_info &l : field_info_list)
+                if (l.is_loop_local_dir) {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                        << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
+                        << ");\n}\n";
+                }
+
+        if (first)
+            generate_wait_loops = false; // no communication needed in the 1st place
+
     }
 
     // Create temporary variables for reductions (vector reduction is in the loop)

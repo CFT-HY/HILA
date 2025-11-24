@@ -363,7 +363,7 @@ void hila_fft<cmplx_t>::gather_data() {
     std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
     std::vector<MPI_Status> stat(n_comms);
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     std::vector<cmplx_t *> send_p(n_comms);
     std::vector<cmplx_t *> receive_p(n_comms);
 #endif
@@ -387,7 +387,7 @@ void hila_fft<cmplx_t>::gather_data() {
                 hila::terminate(1);
             }
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
             cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(siz);
 #else
             cmplx_t *p = rec_p[j];
@@ -408,8 +408,8 @@ void hila_fft<cmplx_t>::gather_data() {
             cmplx_t *p = send_buf + fn.column_offset * elements;
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
-#ifndef GPU_AWARE_MPI
-            // now not GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
+            // now not GPU_AWARE_COMM
             send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(send_p[i], p, n, gpuMemcpyDeviceToHost);
             p = send_p[i];
@@ -426,7 +426,7 @@ void hila_fft<cmplx_t>::gather_data() {
         MPI_Waitall(n_comms, recreq.data(), stat.data());
         MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
         i = j = 0;
 
         for (auto &fn : fft.hila_pencil_comms[dir]) {
@@ -467,7 +467,7 @@ void hila_fft<cmplx_t>::scatter_data() {
     std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
     std::vector<MPI_Status> stat(n_comms);
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     std::vector<cmplx_t *> send_p(n_comms);
     std::vector<cmplx_t *> receive_p(n_comms);
 #endif
@@ -483,7 +483,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         if (fn.node != hila::myrank()) {
 
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
             cmplx_t *p = send_buf + fn.column_offset * elements;
 #else
             cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(n);
@@ -502,7 +502,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         if (fn.node != hila::myrank()) {
 
             size_t n = fn.recv_buf_size * elements * sizeof(cmplx_t);
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
             cmplx_t *p = rec_p[j];
 //             gpuStreamSynchronize(0);
 #else
@@ -522,7 +522,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         MPI_Waitall(n_comms, recreq.data(), stat.data());
         MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
         i = 0;
         for (auto &fn : fft.hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {

@@ -8,7 +8,7 @@
 # Use columns 8 and 30 (for -)
 #% general make options:
 #%     make [..] ARCH=<arch> - compile to architecture 'arch'
-#%     make [..] OPTS=".."   - add options to compiler command line, e.g. OPTS="-DGPU_AWARE_MPI"
+#%     make [..] OPTS=".."   - add options to compiler command line, e.g. OPTS="-DGPU_AWARE_COMM"
 #%     make list             - list available make targets/arguments
 #%     make list-archs       - list machine architectures
 #%     make clean            - remove .o and .cpt -files
@@ -24,7 +24,9 @@
 #%         looping over parities (EVEN/ODD).
 #%   NO_INTERLEAVE=1         - turn off compute during MPI communications (default: on)
 #% GPU-relevant options:
-#%   GPU_AWARE_MPI=0         - turn off GPU aware MPI (default: on) 
+#%   GPU_AWARE_COMM=0        - turn off GPU aware MPI (default: on) former (GPU_AWARE_COMM)
+#%   GPU_CCL=1               - turn on NCCL/RCCL support for GPU communications (default: off)
+#%   GPU_OVERLAP_COMM=1      - enable overlapping GPU communications with computations (default: off)    
 #%   GPU_SYNCHRONIZE_TIMERS=1 - Synchronize timers with GPU kernels.
 #%         Provides accurate timing but possibly slightly slower (default: off)
 
@@ -149,9 +151,9 @@ ifdef GPU_SYNCHRONIZE_TIMERS
 HILA_OPTS += -DGPU_SYNCHRONIZE_TIMERS
 endif
 
-ifdef GPU_AWARE_MPI
-ifeq (GPU_AWARE_MPI,0)
-HILA_OPTS += -DGPU_AWARE_MPI=0
+ifdef GPU_AWARE_COMM
+ifeq (GPU_AWARE_COMM,0)
+HILA_OPTS += -DGPU_AWARE_COMM=0
 endif
 endif
 

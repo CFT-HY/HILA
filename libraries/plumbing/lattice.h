@@ -25,7 +25,6 @@ constexpr unsigned number_of_subnodes = VECTOR_SIZE / sizeof(float);
 }
 #endif
 
-// #define BOUNDARY_LAYER_LAYOUT
 
 namespace hila {
 /// list of field boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
@@ -79,6 +78,10 @@ class lattice_struct {
     // Guarantee 64 bits for these - 32 can overflow!
     MPI_Comm mpi_comm_lat;
 
+#if defined(GPU_CCL)
+    gcclComm_t gccl_comm_lat;
+#endif
+
     // is this lattice derived from another, through e.g. .block()?  Pointer to parent lattice
     lattice_struct *parent;
 
@@ -97,7 +100,7 @@ class lattice_struct {
         std::vector<CoordinateVector> coordinates;
 #endif
 
-#ifdef BOUNDARY_LAYER_LAYOUT
+#ifdef GPU_OVERLAP_COMM
         std::vector<unsigned> map_site_index;
         // in physical layout, sites are (if EVEN_SITES_FIRST)
         // inner_even + inner_odd + boundary_even + boundary_odd
@@ -294,7 +297,7 @@ class lattice_struct {
 #endif
 
 #if defined(EVEN_SITES_FIRST)
-#ifdef BOUNDARY_LAYER_LAYOUT
+#ifdef GPU_OVERLAP_COMM
 
     int loop_ranges(Parity P, bool fetch_on, hila::iter_range_t &ranges) const;
 

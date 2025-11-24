@@ -39,6 +39,29 @@ using gpurandState = hiprandState_t;
 
 #endif
 
+gpuStreamPool& hila::halo_streams() {
+    static gpuStreamPool instance;
+    return instance;
+}
+
+gpuStream_t& hila::bulk_stream() {
+    static gpuStream_t instance = []{
+        gpuStream_t stream; 
+        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        return stream;
+    }();
+    return instance;
+}
+
+gpuEvent_t& hila::bulk_event() {
+    static gpuEvent_t instance = []{
+        gpuEvent_t e;
+        gpuEventCreate(&e);
+        return e;
+    }(); 
+    return instance;
+}
+
 // // Save "constants" lattice size and volume here
 // __constant__ int64_t _d_volume;
 // // __constant__ int _d_size[NDIM];
@@ -269,6 +292,38 @@ void initialize_gpu(int rank, int device) {
 #endif
 }
 
+// if using NCCL or RCCL
+#ifdef GPU_CCL
+namespace hila {
+/**
+ * @brief initialize nccl/rccl communicator for GPU communication
+ * @details Uses same mapping as MPI communicator (gpu per task)
+ * 
+ */
+void initialize_gccl_communications() {
+    int rank = lattice->mynode.rank;
+    int size = lattice->nodes.number;
+
+    gpuSetDevice(rank);
+
+    gcclComm_t communicator;
+    gcclUniqueId unique_id;
+
+    if (rank==0) {
+        gcclGetUniqueId(&unique_id);
+    }
+
+    MPI_Bcast(&unique_id, sizeof(unique_id), MPI_BYTE, 0, lattice->mpi_comm_lat);
+
+    gcclCommInitRank(&communicator, size, unique_id, rank);
+
+    lattice.ptr()->gccl_comm_lat = communicator;
+
+}
+} // namespace hila
+#endif // GPU_CCL
+
+
 #ifdef CUDA
 
 #ifdef OPEN_MPI
@@ -313,6 +368,13 @@ void gpu_device_info() {
 
         hila::out << "Thread block size used: " << N_threads << '\n';
 
+
+        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" 
+                    << GPU_BLOCK_REDUCTION_THREADS 
+                    << ") may exceed available shared memory (" 
+                    << props.sharedMemPerBlock << " bytes). Consider reducing it.\n";
+
+
 // Following should be OK in open MPI
 #ifdef OPEN_MPI
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
@@ -321,14 +383,14 @@ void gpu_device_info() {
             hila::out << "  Runtime library supports CUDA-Aware MPI\n";
         else {
             hila::out << "  Runtime library does not support CUDA-Aware MPI!\n";
-#if defined(GPU_AWARE_MPI)
-            hila::out << "GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#if defined(GPU_AWARE_COMM)
+            hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
 #endif
         }
 #else
         hila::out << "OpenMPI library does not support CUDA-Aware MPI\n";
-#if defined(GPU_AWARE_MPI)
-        hila::out << "GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#if defined(GPU_AWARE_COMM)
+        hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
 #endif
 #endif // MPIX
 #endif // OPEN_MPI
@@ -367,6 +429,12 @@ void gpu_device_info() {
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
         hila::out << "Thread block size used: " << N_threads << '\n';
+        
+        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" 
+                    << GPU_BLOCK_REDUCTION_THREADS 
+                    << ") may exceed available shared memory (" 
+                    << props.sharedMemPerBlock << " bytes). Consider reducing it.\n";
+        
     }
 }
 

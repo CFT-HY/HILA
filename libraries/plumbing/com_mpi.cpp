@@ -5,6 +5,10 @@
 #include "plumbing/com_mpi.h"
 #include "plumbing/timing.h"
 
+#ifdef GPU_CCL
+#include "plumbing/backend_gpu/defs.h" 
+#endif
+
 #include "datatypes/extended.h"
 
 
@@ -164,6 +168,8 @@ void hila::initialize_communications(int &argc, char ***argv) {
 
 #endif
 
+
+
         mpi_initialized = true;
 
         // global var lattice exists, assign the mpi comms there
@@ -171,6 +177,10 @@ void hila::initialize_communications(int &argc, char ***argv) {
 
         MPI_Comm_rank(lattice->mpi_comm_lat, &lattice.ptr()->mynode.rank);
         MPI_Comm_size(lattice->mpi_comm_lat, &lattice.ptr()->nodes.number);
+
+#ifdef GPU_CCL
+        hila::initialize_gccl_communications();
+#endif
     }
 }
 
