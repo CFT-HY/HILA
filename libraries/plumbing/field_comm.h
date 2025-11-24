@@ -15,18 +15,18 @@
 template <typename T>
 void Field<T>::field_struct::gather_comm_elements(
     Direction d, Parity par, T *RESTRICT buffer,
-    const lattice_struct::comm_node_struct &to_node) const {
+    const lattice_struct::comm_node_struct &to_node, gpuStream_t stream) const {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // note: -d in is_on_edge, because we're about to send stuff to that
     // Direction (gathering from Direction +d)
     if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, true);
+        payload.gather_comm_elements(buffer, to_node, par, lattice, true, stream);
     } else {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, false);
+        payload.gather_comm_elements(buffer, to_node, par, lattice, false, stream);
     }
 #else
-    payload.gather_comm_elements(buffer, to_node, par, lattice, false);
+    payload.gather_comm_elements(buffer, to_node, par, lattice, false, stream);
 #endif
 
 #else
@@ -72,7 +72,7 @@ void Field<T>::field_struct::gather_comm_elements(
 template <typename T>
 void Field<T>::field_struct::place_comm_elements(
     Direction d, Parity par, T *RESTRICT buffer,
-    const lattice_struct::comm_node_struct &from_node) {
+    const lattice_struct::comm_node_struct &from_node, gpuStream_t stream) {
 
 #ifdef VECTORIZED
     if constexpr (hila::is_vectorizable_type<T>::value) {
@@ -87,7 +87,7 @@ void Field<T>::field_struct::place_comm_elements(
     }
 #else
     // this one is only for CUDA
-    payload.place_comm_elements(d, par, buffer, from_node, lattice);
+    payload.place_comm_elements(d, par, buffer, from_node, lattice, stream);
 #endif
     // #endif
 }
@@ -363,7 +363,7 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
 
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
-        fs->gather_comm_elements(d, par, send_buffer, to_node);
+        fs->gather_comm_elements(d, par, send_buffer, to_node, halo_stream);
 
         size_t n = sites * elems_per_T; 
         const scalar_t* scalar_send_buffer = reinterpret_cast<const scalar_t*>(send_buffer);
@@ -371,7 +371,7 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
             hila::out << "Too large MPI message!  Size " << n << '\n';
             hila::terminate(1);
         }
-#if (defined(CUDA) || defined(HIP))
+#if (defined(CUDA) || defined(HIP)) && defined(GPU_CCL)
         gcclSend(scalar_send_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, halo_stream);
 #endif
 
@@ -389,10 +389,10 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
             hila::out << "Too large MPI message!  Size " << n << '\n';
             hila::terminate(1);
         }
-#if (defined(CUDA) || defined(HIP))
+#if (defined(CUDA) || defined(HIP)) && defined(GPU_CCL)
         gcclRecv(scalar_recv_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, halo_stream);
 #endif
-        fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
+        fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node, halo_stream);
 
 
     }
@@ -484,7 +484,7 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
 #if !defined(MPI_BENCHMARK_TEST) && !defined(CUDA) && !defined(HIP)
-        fs->gather_comm_elements(d, par, send_buffer, to_node);
+        fs->gather_comm_elements(d, par, send_buffer, to_node, 0);
 #endif
 
         size_t n = sites * size;
@@ -587,7 +587,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             wait_receive_timer.stop();
 
 #if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_COMM_OVERLAP)
-            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node, 0);
 #endif
         }
 
@@ -629,10 +629,11 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
 
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
     if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
         if (fs->send_buffer[d] == nullptr)
             fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
-        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node);
+        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, hila::halo_streams().next_stream());
     }
     return get_dir_mask(d);
 }
@@ -650,7 +651,7 @@ void Field<T>::unpack_buffers(Direction d, Parity p) const {
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
-        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node);
+        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, hila::halo_streams().next_stream());
     }
 }
 

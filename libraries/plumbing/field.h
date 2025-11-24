@@ -196,14 +196,14 @@ class Field {
          * @brief Gather boundary elements for communication
          */
         void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                  const lattice_struct::comm_node_struct &to_node) const;
+                                  const lattice_struct::comm_node_struct &to_node, gpuStream_t stream) const;
 
         /**
          * @internal
          * @brief Place boundary elements from neighbour
          */
         void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                 const lattice_struct::comm_node_struct &from_node);
+                                 const lattice_struct::comm_node_struct &from_node, gpuStream_t stream);
 
         /**
          * @internal

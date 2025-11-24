@@ -251,7 +251,7 @@ template <typename T>
 void field_storage<T>::gather_comm_elements(T *buffer,
                                             const lattice_struct::comm_node_struct &to_node,
                                             Parity par, const Lattice lattice,
-                                            bool antiperiodic) const {
+                                            bool antiperiodic, gpuStream_t stream) const {
     int n;
     const unsigned *d_site_index = to_node.get_sitelist(par, n);
     T *d_buffer;
@@ -270,16 +270,16 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     if (antiperiodic) {
 
         if constexpr (hila::has_unary_minus<T>::value) {
-            gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(
+            gather_comm_elements_negated_kernel<<<N_blocks, N_threads, 0, stream>>>(
                 *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
         }
 
     } else {
-        gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+        gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(*this, d_buffer, d_site_index, n,
                                                              lattice->mynode.field_alloc_size);
     }
 #else
-    gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+    gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(*this, d_buffer, d_site_index, n,
                                                          lattice->mynode.field_alloc_size);
 #endif
 
@@ -399,7 +399,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer, un
 template <typename T>
 void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
                                            const lattice_struct::comm_node_struct &from_node,
-                                           const Lattice lattice) {
+                                           const Lattice lattice, gpuStream_t stream) {
 
     unsigned n = from_node.n_sites(par);
     T *d_buffer;
@@ -414,7 +414,7 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 #endif
 
     unsigned N_blocks = n / N_threads + 1;
-    place_comm_elements_kernel<<<N_blocks, N_threads>>>((*this), d_buffer, from_node.offset(par), n,
+    place_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>((*this), d_buffer, from_node.offset(par), n,
                                                         lattice->mynode.field_alloc_size);
 
 #ifndef GPU_AWARE_COMM

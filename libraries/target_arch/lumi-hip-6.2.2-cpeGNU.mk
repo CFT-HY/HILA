@@ -33,7 +33,7 @@ $(info	Using HILAPP includes: $(HILAPP_INCLUDES))
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 # Library -l flags for the linker. Get these from the Cray environment, and in cpeGNU we must manually add hipfft.
-LDLIBS := $(shell CC --cray-print-opts=libs) -lhipfft
+LDLIBS := $(shell CC --cray-print-opts=libs) -lhipfft -lrccl
 
 # These variables must be defined here
 #
