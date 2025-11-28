@@ -122,6 +122,9 @@ struct Muca {
     /// (see, Example parameter file in applications/multicanonical_example/muca_parameters.)
     bool initialise(const std::string wfile_name);
     /// Pointer to the iteration function, set by initialisation (or manually if custom)
+    /// NOTE: The muca struct passed as the parameter should be the same as the muca struct this
+    /// belongs to. (not ideal, but here so one can define custom iteration functions in user
+    /// code...)
     iteration_fn iterate_weights;
     /// Writes weight functions to a file
     bool write_weight_function(const std::string &W_function_filename);
