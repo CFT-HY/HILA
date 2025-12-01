@@ -877,11 +877,13 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
     // collect nn-halos
 
     Field<T> corners = 0;
+#if NDIM > 1
     Field<T> corner2 = 0;
 #if NDIM > 2
     Field<T> corner3 = 0;
 #if NDIM > 3
     Field<T> corner4 = 0;
+#endif
 #endif
 #endif
 
@@ -891,6 +893,7 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
         // gather d1 halo
         collect_field_halo_data_(data, (*this), corners, dirs, 0);
 
+#if NDIM > 1
         for (int d2 = d1 + 1; d2 < NDIM; ++d2) {
             dirs[1] = d2;
             collect_field_halo_data_(data, corners, corner2, dirs, 1);
@@ -907,6 +910,7 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
             }
 #endif
         }
+#endif
     }
 
 

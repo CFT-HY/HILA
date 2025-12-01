@@ -23,8 +23,8 @@
 
 void lattice_struct::allnodes::create_remap() {
     hila::out0 << "Node remapping: NODE_LAYOUT_TRIVIAL (no reordering)\n";
-    lattice->nodes.map_array = nullptr;
-    lattice->nodes.map_inverse = nullptr;
+    lattice.ptr()->nodes.map_array = nullptr;
+    lattice.ptr()->nodes.map_inverse = nullptr;
 }
 
 int lattice_struct::allnodes::remap(int i) const {

@@ -288,7 +288,8 @@ T Field<T>::sum(Parity par, bool allreduce) const {
 
     Reduction<T> result;
     result.allreduce(allreduce);
-    onsites(par) result += (*this)[X];
+    onsites (par)
+        result += (*this)[X];
     return result.value();
 }
 
@@ -299,7 +300,8 @@ T Field<T>::product(Parity par, bool allreduce) const {
     Reduction<T> result;
     result = 1;
     result.allreduce(allreduce);
-    onsites(par) result *= (*this)[X];
+    onsites (par)
+        result *= (*this)[X];
     return result.value();
 }
 
@@ -327,33 +329,32 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 #if defined(CUDA) || defined(HIP)
     T val = gpu_minmax(is_min, par, loc);
 #else
-    int sgn = is_min ? 1 : -1;
     // get suitable initial value
     T val = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
-// write the loop with explicit OpenMP parallel region.  It has negligible effect
-// on non-OpenMP code, and the pragmas are ignored.
-#pragma omp parallel shared(val, loc, sgn, is_min)
+    // write the loop with explicit OpenMP parallel region.  It has negligible effect
+    // on non-OpenMP code, and the pragmas are ignored.
+    #pragma omp parallel shared(val, loc, sgn, is_min)
     {
         CoordinateVector loc_th(0);
         T val_th = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
-// Pragma "hila omp_parallel_region" is necessary here, because this is within
-// omp parallel
-#pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
-        onsites(par) {
-            if (sgn * (*this)[X] < sgn * val_th) {
+        // Pragma "hila omp_parallel_region" is necessary here, because this is within
+        // omp parallel
+        #pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
+        onsites (par) {
+            if ((is_min && (*this)[X] < val_th) || (!is_min && (*this)[X] > val_th)) {
                 val_th = (*this)[X];
                 loc_th = X.coordinates();
             }
         }
-
-#pragma omp critical
-        if (sgn * val_th < sgn * val) {
+        #pragma omp critical
+        if ((is_min && val_th < val) || (!is_min && val_th > val)) {
             val = val_th;
             loc = loc_th;
         }
     }
+    
 #endif
 
     if (hila::number_of_nodes() > 1) {

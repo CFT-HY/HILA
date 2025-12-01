@@ -2151,7 +2151,7 @@ inline void dummy_X_f() {
         vec = vec - v1;
 
         // and Direction index func
-        vec[e_x] = vec[0] + vec[e_y] + vec.e(e_y);
+        vec[e_x] = vec[0] + vec[e_x] + vec.e(e_x);
     }
 }
 

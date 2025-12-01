@@ -139,10 +139,12 @@ constexpr inline const char *direction_name(Direction d) {
         return "e_x";
     case e_x_down:
         return "-e_x";
+#if NDIM > 1
     case e_y:
         return "e_y";
     case e_y_down:
         return "-e_y";
+#endif
 #if NDIM > 2
     case e_z:
         return "e_z";
@@ -611,11 +613,13 @@ class X_index_type {
     int coordinate(Direction d) const;
 
     int x() const;
+#if NDIM > 1
     int y() const;
 #if NDIM > 2
     int z() const;
 #if NDIM > 3
     int t() const;
+#endif
 #endif
 #endif
 

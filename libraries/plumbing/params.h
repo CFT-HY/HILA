@@ -58,10 +58,14 @@
 /// MPI processes within one compute node - tries to maximize the use of fast local communications.
 /// Either one of these must be defined.
 
+#if NDIM > 1
 #ifndef NODE_LAYOUT_TRIVIAL
 #ifndef NODE_LAYOUT_BLOCK
 #define NODE_LAYOUT_BLOCK 4
 #endif
+#endif
+#else
+#define NODE_LAYOUT_TRIVIAL
 #endif
 
 /// WRITE_BUFFER SIZE

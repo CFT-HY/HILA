@@ -309,7 +309,7 @@ class lattice_struct {
 
     unsigned loop_end(Parity P) const {
         if (P == EVEN)
-            return mynode.oddsites;
+            return mynode.evensites;
         else
             return mynode.volume;
     }
