@@ -1,3 +1,4 @@
+#%     make [..] NDIM=<d>    - Dimensions of system, default 3
 
 # Give the location of the top level distribution directory wrt. this.
 # Can be absolute or relative
@@ -10,7 +11,9 @@ APP_HEADERS :=
 
 ARCH := vanilla
 
-APP_OPTS := -DNDIM=3 -DSPECIAL_BOUNDARY_CONDITIONS
+NDIM := 3
+
+APP_OPTS := -DNDIM=$(NDIM) -DSPECIAL_BOUNDARY_CONDITIONS
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk

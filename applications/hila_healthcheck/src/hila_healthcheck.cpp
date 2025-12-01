@@ -118,6 +118,20 @@ void test_reductions() {
         report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
                         hila::prettyprint(sum2),
                     abs(sum) + abs(sum2), 1e-4);
+
+
+        f[ALL] = 1;
+        f[ODD] = -1;
+
+        sum = 0;
+        onsites (EVEN)
+            sum += f[X];
+        report_pass("Even site reduction", abs(sum - lattice.volume()/2), 1e-2);
+
+        sum = 0;
+        onsites (ODD)
+            sum += f[X];
+        report_pass("Odd site reduction", abs(sum + lattice.volume()/2), 1e-2);
     }
 
     {
@@ -168,7 +182,7 @@ void test_reductions() {
         report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
     }
 
-
+#if NDIM > 2
     {
 
         constexpr int N = 5;
@@ -192,6 +206,7 @@ void test_reductions() {
 
         report_pass("SU(" + std::to_string(N) + ") ReductionVector", diff, 1e-8);
     }
+#endif
 }
 
 
@@ -490,6 +505,8 @@ void test_subvolumes() {
  * @details Test forward and inverse FFT on fields.
  *
  */
+
+
 void test_fft() {
 
 
@@ -502,7 +519,7 @@ void test_fft() {
         // After one FFT the field is 0 except at coord 0
         p2 = 0;
 
-        p2[{0, 0, 0}] = lattice.volume();
+        p2[CoordinateVector(0)] = lattice.volume();
 
         FFT_field(f, p);
 
@@ -536,7 +553,7 @@ void test_fft() {
         // After one FFT the field is 0 except at coord 0
         p2 = 0;
 
-        p2[{0, 0, 0}] = lattice.volume();
+        p2[CoordinateVector(0)] = lattice.volume();
 
         FFT_field(f, p);
 
@@ -832,6 +849,7 @@ void test_matrix_algebra() {
  */
 void test_extended() {
 
+#if NDIM > 1
     // ExtendedPrecision type test with T = double
     Field<double> g;
 
@@ -925,12 +943,15 @@ void test_extended() {
 
         report_pass(ssres.str(), ev.to_double() / result, 1e-20);
     }
+#endif
 }
 
 
 //--------------------------------------------------------------------------------
 
 void test_clusters() {
+
+#if NDIM > 2
 
     Field<int> m;
 
@@ -968,6 +989,7 @@ void test_clusters() {
 
 #endif
     }
+#endif
 }
 
 //--------------------------------------------------------------------------------
@@ -1021,8 +1043,10 @@ void test_blocking() {
 
 
         sum = 0;
+        CoordinateVector divisor;
+        divisor.fill(2);
         onsites (ALL) {
-            if (X.coordinates().is_divisible({2, 2, 2})) {
+            if (X.coordinates().is_divisible(divisor)) {
                 sum += (X.coordinates() + cvf[X]).squarenorm();
             }
         }
