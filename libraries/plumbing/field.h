@@ -1223,10 +1223,13 @@ class Field {
     gather_status_t check_communication(Direction d, Parity &p) const;
     dir_mask_t start_communication(Direction d, Parity p = ALL) const;
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
-    dir_mask_t stream_gather(Direction d, Parity p = ALL) const;
+    dir_mask_t stream_gather(Direction d, Parity p) const;
+    dir_mask_t stream_gather(Direction d, Parity p, gpuStream_t &stream) const;
     dir_mask_t pack_buffers(Direction d, Parity p) const;
+    dir_mask_t pack_buffers(Direction d, Parity p, gpuStream_t &stream) const;
     void wait_gather(Direction d, Parity p) const;
     void unpack_buffers(Direction d, Parity p) const;
+    void unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const;
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
 

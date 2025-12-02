@@ -231,6 +231,24 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
         } else {
             bool code_generated = false;
+            code << "auto stream = halo_streams.next_stream();\n";
+            for (field_info &l : field_info_list) {
+                if (!l.is_loop_local_dir) {
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+
+                            code << "_dir_mask_ |= " << l.new_name << ".pack_buffers(" << d.direxpr_s
+                                    << ", " << loop_info.parity_str << ", stream);\n";
+                            
+                        }
+                } else {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                            << "_dir_mask_ |= " << l.new_name << ".pack_buffers(HILA_dir_,"
+                            << loop_info.parity_str << ",stream);\n}\n";
+                    
+                }
+            }
             for (field_info &l : field_info_list) {
                 if (!l.is_loop_local_dir) {
                     for (dir_ptr &d : l.dir_list)
@@ -241,7 +259,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                             }
 
                             code << "_dir_mask_ |= " << l.new_name << ".stream_gather(" << d.direxpr_s
-                                    << ", " << loop_info.parity_str << ");\n";
+                                    << ", " << loop_info.parity_str << ", stream);\n";
                             
                         }
                 } else {
@@ -252,14 +270,33 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
                             << "_dir_mask_ |= " << l.new_name << ".stream_gather(HILA_dir_,"
-                            << loop_info.parity_str << ");\n}\n";
+                            << loop_info.parity_str << ", stream);\n}\n";
                     
                 }
             }
             if (code_generated) {
                 code << "gcclGroupEnd();\n";
-                code << "halo_streams.wait_all();\n";
+                //code << "halo_streams.wait_all();\n";
             }
+            for (field_info &l : field_info_list) {
+                if (!l.is_loop_local_dir) {
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+
+                            code << l.new_name << ".unpack_buffers(" << d.direxpr_s
+                                    << ", " << loop_info.parity_str << ", stream);\n";
+                            
+                        }
+                } else {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                             << l.new_name << ".unpack_buffers(HILA_dir_,"
+                            << loop_info.parity_str << ", stream);\n}\n";
+                    
+                }
+            }
+            code << "halo_streams.wait_all();\n";
+            
 
         }
     }

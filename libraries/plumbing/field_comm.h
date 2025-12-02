@@ -322,8 +322,108 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 }
 
 template <typename T>
-dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
+dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
 
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &from_node = ci.from_node;
+    const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
+    // check if this is done - either gathered or no comm to be done in the 1st place
+
+    Parity par = p;
+
+    gather_status_t gather_status = check_communication(d, par);
+
+    if (gather_status == gather_status_t::DONE)
+        return 0;
+    else if (gather_status == gather_status_t::STARTED)
+        return get_dir_mask(d);
+
+    mark_gather_started(d, par);
+
+// #if (defined(CUDA) || defined(HIP))
+//     auto& halo_streams = hila::halo_streams();
+//     gpuStream_t halo_stream = halo_streams.next_stream();
+// #endif
+
+    int par_i = static_cast<int>(par) - 1; // index to dim-3 arrays
+
+    constexpr size_t size = sizeof(T);
+    using scalar_t = hila::arithmetic_type<T>;
+    constexpr size_t elems_per_T = sizeof(T) / sizeof(scalar_t);
+
+    T *receive_buffer;
+    T *send_buffer;
+    auto gccl_t = gccl_type<scalar_t>::value;
+
+    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
+        // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
+
+        unsigned sites = to_node.n_sites(par);
+
+        // if (fs->send_buffer[d] == nullptr)
+        //     fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+
+        send_buffer = fs->send_buffer[d] + to_node.offset(par);
+
+        //fs->gather_comm_elements(d, par, send_buffer, to_node, halo_stream);
+
+        size_t n = sites * elems_per_T; 
+        const void* gccl_send_buffer = reinterpret_cast<const void*>(send_buffer);
+        if (n >= (1ULL << 31)) {
+            hila::out << "Too large MPI message!  Size " << n << '\n';
+            hila::terminate(1);
+        }
+#ifndef HILAPP
+        //gcclGroupStart();
+#endif
+#if (defined(CUDA) || defined(HIP)) && defined(GPU_CCL)
+        gcclSend(gccl_send_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, stream);
+#endif
+
+    // }
+
+    // if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+
+        receive_buffer = fs->get_receive_buffer(d, par, from_node);
+
+        //unsigned sites = from_node.n_sites(par);
+        //size_n = sites*elems_per_T;
+        void* gccl_recv_buffer = reinterpret_cast<void*>(receive_buffer);
+
+        if (n >= (1ULL << 31)) {
+            hila::out << "Too large MPI message!  Size " << n << '\n';
+            hila::terminate(1);
+        }
+#if (defined(CUDA) || defined(HIP)) && defined(GPU_CCL)
+        gcclRecv(gccl_recv_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, stream);
+#endif
+#ifndef HILAPP
+        //gcclGroupEnd();
+#endif
+        //fs->place_comm_elements(d, par, reinterpret_cast<T*>(gccl_recv_buffer), from_node, halo_stream);
+
+        
+    }
+
+    
+
+    // and do the boundary shuffle here, after MPI has started
+    // NOTE: there should be no danger of MPI and shuffle overwriting, MPI writes
+    // to halo buffers only if no permutation is needed.  With a permutation MPI
+    // uses special receive buffer
+// #ifndef MPI_BENCHMARK_TEST
+//     fs->set_local_boundary_elements(d, par);
+// #endif
+    mark_gathered(d, par);
+
+    return get_dir_mask(d);
+
+
+}
+
+template <typename T>
+dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
     const lattice_struct::comm_node_struct &to_node = ci.to_node;
@@ -354,6 +454,7 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
 
     T *receive_buffer;
     T *send_buffer;
+    auto gccl_t = gccl_type<scalar_t>::value;
 
     if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
         // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
@@ -368,46 +469,46 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p) const {
         fs->gather_comm_elements(d, par, send_buffer, to_node, halo_stream);
 
         size_t n = sites * elems_per_T; 
-        const scalar_t* scalar_send_buffer = reinterpret_cast<const scalar_t*>(send_buffer);
+        const void* gccl_send_buffer = reinterpret_cast<const void*>(send_buffer);
         if (n >= (1ULL << 31)) {
             hila::out << "Too large MPI message!  Size " << n << '\n';
             hila::terminate(1);
         }
+#ifndef HILAPP
+        gcclGroupStart();
+#endif
 #if (defined(CUDA) || defined(HIP)) && defined(GPU_CCL)
-        gcclSend(scalar_send_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, halo_stream);
+        gcclSend(gccl_send_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, halo_stream);
 #endif
 
-    }
+    // }
 
-    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+    // if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
 
         receive_buffer = fs->get_receive_buffer(d, par, from_node);
 
-        unsigned sites = from_node.n_sites(par);
-        size_t n = sites*elems_per_T;
-        scalar_t* scalar_recv_buffer = reinterpret_cast<scalar_t*>(receive_buffer);
+        //unsigned sites = from_node.n_sites(par);
+        //size_n = sites*elems_per_T;
+        void* gccl_recv_buffer = reinterpret_cast<void*>(receive_buffer);
 
         if (n >= (1ULL << 31)) {
             hila::out << "Too large MPI message!  Size " << n << '\n';
             hila::terminate(1);
         }
 #if (defined(CUDA) || defined(HIP)) && defined(GPU_CCL)
-        gcclRecv(scalar_recv_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, halo_stream);
+        gcclRecv(gccl_recv_buffer, n, gccl_type<scalar_t>::value, to_node.rank, lattice->gccl_comm_lat, halo_stream);
 #endif
-        fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node, halo_stream);
+#ifndef HILAPP
+        gcclGroupEnd();
+#endif
+        fs->place_comm_elements(d, par, reinterpret_cast<T*>(gccl_recv_buffer), from_node, halo_stream);
 
-
+        
     }
 
-    
 
-    // and do the boundary shuffle here, after MPI has started
-    // NOTE: there should be no danger of MPI and shuffle overwriting, MPI writes
-    // to halo buffers only if no permutation is needed.  With a permutation MPI
-    // uses special receive buffer
-// #ifndef MPI_BENCHMARK_TEST
-//     fs->set_local_boundary_elements(d, par);
-// #endif
+
+    mark_gathered(d, par);
 
     return get_dir_mask(d);
 
@@ -640,6 +741,26 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
+template <typename T>
+dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
+
+    gather_status_t gather_status = check_communication(d, p);
+    if (gather_status == gather_status_t::DONE)
+        return 0;
+    else if (gather_status == gather_status_t::STARTED)
+        return get_dir_mask(d);
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
+    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
+        if (fs->send_buffer[d] == nullptr)
+            fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, stream);
+    }
+    return get_dir_mask(d);
+}
+
 /**
  * @internal
  * @brief Unpack GPU buffers. Only used when unpacking needs to run after bulk computation and MPI
@@ -654,6 +775,15 @@ void Field<T>::unpack_buffers(Direction d, Parity p) const {
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
         fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, hila::halo_streams().next_stream());
+    }
+}
+
+template <typename T>
+void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &from_node = ci.from_node;
+    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, stream);
     }
 }
 
