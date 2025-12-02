@@ -126,12 +126,12 @@ void test_reductions() {
         sum = 0;
         onsites (EVEN)
             sum += f[X];
-        report_pass("Even site reduction", abs(sum - lattice.volume()/2), 1e-2);
+        report_pass("Even site reduction", abs(sum - lattice.volume() / 2), 1e-2);
 
         sum = 0;
         onsites (ODD)
             sum += f[X];
-        report_pass("Odd site reduction", abs(sum + lattice.volume()/2), 1e-2);
+        report_pass("Odd site reduction", abs(sum + lattice.volume() / 2), 1e-2);
     }
 
     {
@@ -663,7 +663,7 @@ void test_fft() {
 
 
         hila::k_binning b;
-        b.k_max(M_PI * sqrt(3.0));
+        b.k_max(M_PI * sqrt(1.0 * NDIM));
 
         auto bf = b.bin_k_field(p.conj() * p);
 
@@ -690,7 +690,8 @@ void test_spectraldensity() {
     Field<Complex<double>> f, p;
 
     hila::k_binning b;
-    b.k_max(M_PI * sqrt(3.0));
+    b.k_max(M_PI * sqrt(1.0 * NDIM));
+    b.bins(b.bins() - 1); // reduce the number of default bins by 1
 
     // test std binning first
 
