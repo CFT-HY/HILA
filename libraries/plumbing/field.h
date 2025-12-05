@@ -1939,7 +1939,7 @@ Field<R> abs(const Field<T> &arg) {
  * @brief Power
  * @param p exponent to which Field element is raised to.
  */
-template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
+template <typename T, typename P, typename R = decltype(pow(std::declval<T>(), std::declval<P>()))>
 Field<R> pow(const Field<T> &arg, const P p) {
     Field<R> res;
     onsites(ALL) {
@@ -1947,6 +1947,19 @@ Field<R> pow(const Field<T> &arg, const P p) {
     }
     return res;
 }
+
+/**
+ * @brief Square element-by-element
+ */
+template <typename T, typename R = decltype(std::declval<T>() * std::declval<T>())>
+Field<R> sqr(const Field<T> &arg) {
+    Field<R> res;
+    onsites(ALL) {
+        res[X] = arg[X] * arg[X];
+    }
+    return res;
+}
+
 
 /**
  * @brief Squared norm \f$|f|^2\f$
