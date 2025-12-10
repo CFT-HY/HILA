@@ -303,22 +303,45 @@ namespace hila {
 void initialize_gccl_communications() {
     int rank = lattice->mynode.rank;
     int size = lattice->nodes.number;
+    std::cout << "pre set device " << "rank: " << rank << " num ranks " << size << std::endl;
 
-    gpuSetDevice(rank);
-
+    //gpuSetDevice(rank);
+    std::cout << "Post set device " << "rank: " << rank << " num ranks " << size << std::endl;
     gcclComm_t communicator;
+    std::cout << "Post gcclComm_t constructor " << "rank: " << rank << " num ranks " << size << std::endl;
+
     gcclUniqueId unique_id;
+    std::cout << "Post gcclUniqueId constructor " << "rank: " << rank << " num ranks " << size << std::endl;
 
     if (rank==0) {
         gcclGetUniqueId(&unique_id);
     }
+    std::cout << "Post get unique id " << "rank: " << rank << " num ranks " << size << std::endl;
 
     MPI_Bcast(&unique_id, sizeof(unique_id), MPI_BYTE, 0, lattice->mpi_comm_lat);
+    std::cout << "Post Bcast" << "rank: " << rank << " num ranks " << size << std::endl;
 
     gcclCommInitRank(&communicator, size, unique_id, rank);
+    std::cout << "Post Init comm rank" << "rank: " << rank << " num ranks " << size << std::endl;
 
     lattice.ptr()->gccl_comm_lat = communicator;
+    double* broadcast_val;
+    double* recieve;
+    double recieve_host;
+    gpuMalloc(&recieve, sizeof(double)*2048*200);
+    gpuMalloc(&broadcast_val, sizeof(double)*2048*200);
 
+    double val = 2.718281828459045;
+    gpuMemcpy(broadcast_val, &val, sizeof(double), gpuMemcpyHostToDevice);
+    
+    gcclGroupStart();
+    gcclAllReduce(broadcast_val, recieve, 2048*200, gccl_type<double>::value, ncclSum, communicator, hila::bulk_stream());
+    //gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size, communicator, hila::bulk_stream());
+    //gcclRecv(recieve, 2048*200, gccl_type<double>::value, (rank-size/2+size)%size, communicator, hila::bulk_stream());
+    gcclGroupEnd();
+    gpuStreamSynchronize(hila::bulk_stream());
+    gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
+    std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host << std::endl;
 }
 } // namespace hila
 #endif // GPU_CCL

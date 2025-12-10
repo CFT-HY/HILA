@@ -263,7 +263,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     // Allocate a buffer on the device
     gpuMalloc(&(d_buffer), n * sizeof(T));
 #endif
-
+    hila::out0 <<  n * sizeof(T)/1024/1024 << " MB will be gathered on GPU for comms\n";                
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS

@@ -210,7 +210,7 @@ template<> struct gccl_type<double>   { static constexpr ncclDataType_t value = 
 #define gcclGetUniqueId(a) NCCL_CHECK(ncclGetUniqueId(a))
 #define gcclCommInitRank(a,b,c,d) NCCL_CHECK(ncclCommInitRank(a,b,c,d))
 #define gcclCommDestroy(a) NCCL_CHECK(ncclCommDestroy(a))
-#define gcclBroadcast(a,b,c,d,e,f,g) NCCL_CHECK(ncclBcast(a,b,c,d,e,f,g))
+#define gcclBroadcast(a,b,c,d,e,f,g) NCCL_CHECK(ncclBroadcast(a,b,c,d,e,f,g))
 #define gcclAllReduce(a,b,c,d,e,f,g) NCCL_CHECK(ncclAllReduce(a,b,c,d,e,f,g))
 #define gcclReduce(a,b,c,d,e,f,g,h) NCCL_CHECK(ncclReduce(a,b,c,d,e,f,g,h))
 #define gcclAllGather(a,b,c,d,e,f) NCCL_CHECK(ncclAllGather(a,b,c,d,e,f))
