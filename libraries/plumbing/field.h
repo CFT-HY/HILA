@@ -342,7 +342,7 @@ class Field {
      * `g+h` is generated momenterally and then destroyed.
      * @param rhs
      */
-    Field(Field &&rhs) {
+    Field(Field &&rhs) noexcept {
         assert(rhs.fs->mylattice.ptr() == lattice.ptr());
         fs = rhs.fs;
         rhs.fs = nullptr;
@@ -820,7 +820,7 @@ class Field {
      * @param rhs
      * @return Field<T>&
      */
-    Field<T> &operator=(Field<T> &&rhs) {
+    Field<T> &operator=(Field<T> &&rhs) noexcept {
         if (this != &rhs) {
             assert((fs == nullptr || (rhs.fs->mylattice.ptr() == fs->mylattice.ptr())) &&
                    "Field = Field assignment possible only if fields belong to the same lattice");

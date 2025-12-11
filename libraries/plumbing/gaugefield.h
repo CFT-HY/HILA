@@ -101,12 +101,12 @@ class GaugeField {
         return *this;
     }
 
-    GaugeField(GaugeField &&rhs) {
+    GaugeField(GaugeField &&rhs) noexcept {
         foralldir (d)
             (*this)[d] = std::move(rhs[d]);
     }
 
-    GaugeField &operator=(GaugeField &&rhs) {
+    GaugeField &operator=(GaugeField &&rhs) noexcept {
         if (this != &rhs) {
             foralldir (d)
                 (*this)[d] = std::move(rhs[d]);
