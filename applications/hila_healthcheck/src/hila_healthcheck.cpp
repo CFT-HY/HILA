@@ -841,6 +841,20 @@ void test_matrix_algebra() {
     report_pass("Fully pivoted SVD with " + hila::prettyprint(myMatrix::rows()) + "x" +
                     hila::prettyprint(myMatrix::columns()) + " Complex matrix",
                 max_delta, 1e-10);
+
+
+    M += 2; // ensure that M is invertible
+    // one
+    auto one = myMatrix(1);
+    onsites (ALL) {
+        auto inv = M[X].LU_solve(one);
+        delta[X] = (M[X] * inv - one).norm();
+    }
+    max_delta = delta.max();
+
+    report_pass("LU Inversion of " + hila::prettyprint(myMatrix::rows()) + "x" +
+                    hila::prettyprint(myMatrix::columns()) + " Complex matrix",
+                max_delta, 1e-10);
 }
 
 /**
