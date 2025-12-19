@@ -208,9 +208,9 @@ class hila_saved_fftplan_t {
 
         auto siz = work_area_size;
         gpufftMakePlan1d(pp->plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch,
-                         &work_area_size);
+                         &siz);
         check_device_error("FFT Plan make1d");
-        assert(work_area_size == siz);
+        assert(work_area_size >= siz && "GPU work area mismatch");
 
 #else
 
