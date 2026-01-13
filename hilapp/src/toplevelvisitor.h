@@ -255,6 +255,8 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     void ast_dump(const Decl *d);
     void ast_dump(const FunctionDecl *d);
     void ast_dump_header(const char *s, const SourceRange sr, bool is_function);
+
+    bool is_disallowed_decl_type(VarDecl *var, const char *s);
 };
 
 /// An AST Visitor for checking constraints for a field

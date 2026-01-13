@@ -463,6 +463,13 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
                 parsing_state.skip_children = 1; // it's handled now
                 return 1;
 
+            } else if (type == array_ref::STD_ARRAY || type == array_ref::STD_VECTOR) {
+
+                reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                           "cannot define std::vector or std::array inside onsites()");
+                parsing_state.skip_children = 1;
+                return 1;
+
             } else {
 
                 reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
@@ -1800,6 +1807,23 @@ bool TopLevelVisitor::hasSemicolonAfter(SourceRange sr) {
     return getChar(s) == ';';
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Variable decls inside site loops, but also some outside
+/////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::is_disallowed_decl_type(VarDecl *var, const char *s) {
+    if (var && var->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(s, 0) <
+                   std::string::npos) {
+        std::string tname = s;
+        if (tname.back() == '<')
+            tname.pop_back();
+
+        reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
+                   "cannot declare variables of type %0 within site loops", tname.c_str());
+        return true;
+    }
+    return false;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 /// Variable decls inside site loops, but also some outside
@@ -1843,9 +1867,11 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
             return true;
         }
 
-        if (is_field_decl(var)) {
-            reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
-                       "cannot declare Field<> variables within site loops");
+        if (is_disallowed_decl_type(var, "Field<") ||
+            is_disallowed_decl_type(var, "std::vector<") ||
+            is_disallowed_decl_type(var, "std::array<") ||
+            is_disallowed_decl_type(var, "std::list<")) {
+
             parsing_state.skip_children = 1;
             return true;
         }
