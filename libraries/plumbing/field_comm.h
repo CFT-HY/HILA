@@ -311,10 +311,15 @@ typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Pa
  */
 template <typename T>
 dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
-#if (defined(CUDA) || defined(HIP)) && !defined(GPU_CCL)
+#if (defined(CUDA) || defined(HIP)) && !defined(GPU_CCL) && defined(GPU_COMM_OVERLAP)
     pack_buffers(d, p);
-    auto& halo_streams = hila::halo_streams();
-    halo_streams.wait_all();
+    auto& halo_stream = hila::halo_stream();
+    auto& halo_event = hila::halo_event();
+    gpuEventRecord(halo_event, halo_stream);
+    gpuEventSynchronize(halo_event);
+#endif
+
+#if !defined(GPU_CCL)
     return start_communication(d, p);
 #else
     return 0;
@@ -456,13 +461,14 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
 #if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
-        fs->gather_comm_elements(d, par, send_buffer, to_node, 0);
+        fs->gather_comm_elements(d, par, send_buffer, to_node, hila::bulk_stream());
 #endif
 
         size_t n = sites * size;
 
 #ifdef GPU_AWARE_COMM
-        gpuStreamSynchronize(0);
+        gpuEventRecord(hila::bulk_event(), hila::bulk_stream());
+        gpuEventSynchronize(hila::bulk_event());
         // gpuDeviceSynchronize();
 #endif
 
@@ -559,7 +565,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             wait_receive_timer.stop();
 
 #if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_COMM_OVERLAP)
-            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node, 0);
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node, hila::bulk_stream());
 #endif
         }
 
@@ -608,9 +614,11 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
     if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
         if (fs->send_buffer[d] == nullptr)
             fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
-        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, hila::halo_streams().next_stream());
+        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, hila::halo_stream());
     }
+#if !defined(GPU_COMM_OVERLAP)
     mark_gather_started(d, p);
+#endif
     return get_dir_mask(d);
 }
 
@@ -634,7 +642,9 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) co
         fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, stream);
     }
 
-    mark_gather_started(d, p);
+#if !defined(GPU_COMM_OVERLAP)
+   mark_gather_started(d, p);
+#endif
     return get_dir_mask(d);
 }
 
@@ -654,9 +664,11 @@ void Field<T>::unpack_buffers(Direction d, Parity p) const {
         return;
 
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
-        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, hila::halo_streams().next_stream());
+        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, hila::halo_stream());
     }
+#if !defined(GPU_COMM_OVERLAP)
     mark_gathered(d, p);
+#endif
 }
 
 template <typename T>
@@ -673,7 +685,9 @@ void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const 
         fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, stream);
     }
 
+#if !defined(GPU_COMM_OVERLAP)
     mark_gathered(d, p);
+#endif
 }
 #endif // CUDA or HIP
 

@@ -39,8 +39,26 @@ using gpurandState = hiprandState_t;
 
 #endif
 
-gpuStreamPool& hila::halo_streams() {
+gpuStreamPool& hila::stream_pool() {
     static gpuStreamPool instance;
+    return instance;
+}
+
+gpuStream_t& hila::halo_stream() {
+    static gpuStream_t instance = []{
+        gpuStream_t stream; 
+        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        return stream;
+    }();
+    return instance;
+}
+
+gpuEvent_t& hila::halo_event() {
+    static gpuEvent_t instance = []{
+        gpuEvent_t e;
+        gpuEventCreate(&e);
+        return e;
+    }(); 
     return instance;
 }
 
@@ -61,6 +79,7 @@ gpuEvent_t& hila::bulk_event() {
     }(); 
     return instance;
 }
+
 
 // // Save "constants" lattice size and volume here
 // __constant__ int64_t _d_volume;

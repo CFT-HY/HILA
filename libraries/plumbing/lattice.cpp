@@ -1004,6 +1004,9 @@ void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int labe
     parent = &orig;
 
     mpi_comm_lat = orig.mpi_comm_lat;
+#ifdef GPU_CCL
+    gccl_comm_lat = orig.gccl_comm_lat;
+#endif
 
     // set the layout by hand from orig lattice
     nodes.n_divisions = orig.nodes.n_divisions;

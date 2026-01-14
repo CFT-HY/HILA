@@ -405,8 +405,10 @@ class Field {
      */
     void clear() {
         if (fs != nullptr && !hila::about_to_finish) {
+#if !defined(GPU_CCL)
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
+#endif
             fs->free_payload();
             fs->free_communication();
             std::free(fs);
@@ -2029,7 +2031,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v) const {
 ///  are not needed.
 template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
-
+#if !defined(GPU_CCL)
     if (hila::is_comm_initialized()) {
         if (is_gather_started(d, ALL)) {
             drop_comms_timer.start();
@@ -2055,6 +2057,7 @@ void Field<T>::drop_comms(Direction d, Parity p) const {
             }
         }
     }
+#endif
 }
 
 

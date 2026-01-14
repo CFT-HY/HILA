@@ -133,15 +133,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     
     code << "dir_mask_t  _dir_mask_ = 0;\n";
 
-    if (gpu_overlap_comm && gpu_ccl) {
-        reportDiag(DiagnosticsEngine::Level::Error, S->getBeginLoc(),
-                   "GPU_OVERLAP_COMM and GPU_CCL cannot be used together");
-    }
+    code << "auto& bulk_stream = hila::bulk_stream();\n";
+    code << "auto& bulk_event = hila::bulk_event();\n";
 
     if (gpu_overlap_comm || gpu_ccl) {
-        code << "auto& bulk_stream = hila::bulk_stream();\n";
-        code << "auto& halo_streams = hila::halo_streams();\n";
-        code << "auto& bulk_event = hila::bulk_event();\n";
+
+        code << "auto& halo_stream = hila::halo_stream();\n";
+        code << "auto& halo_event = hila::halo_event();\n";
+
     }
 
     if (gpu_overlap_comm) {
@@ -152,16 +151,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list)
                     if (d.count > 0) {
 
-                        code << "_dir_mask_ |= " << l.new_name << ".pack_buffers(" << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                        code << "_dir_mask_ |= " << l.new_name << ".pack_buffers(" << d.direxpr_s << ", " << loop_info.parity_str << ", halo_stream);\n";
                     
                     }
             } else {
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
-                        << "_dir_mask_ |= " << l.new_name << ".pack_buffers(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+                        << "_dir_mask_ |= " << l.new_name << ".pack_buffers(HILA_dir_," << loop_info.parity_str << ", halo_stream);\n}\n";
             }
         }
-        code << "halo_streams.wait_all();\n";
     }
 
     // Initial values that are used by all onsites loop implementations
@@ -231,21 +229,20 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
         } else {
             bool code_generated = false;
-            //code << "auto stream = halo_streams.next_stream();\n";
             for (field_info &l : field_info_list) {
                 if (!l.is_loop_local_dir) {
                     for (dir_ptr &d : l.dir_list)
                         if (d.count > 0) {
 
                             code << "_dir_mask_ |= " << l.new_name << ".pack_buffers(" << d.direxpr_s
-                                    << ", " << loop_info.parity_str << ", bulk_stream);\n";
+                                    << ", " << loop_info.parity_str << ", halo_stream);\n";
                             
                         }
                 } else {
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
                             << "_dir_mask_ |= " << l.new_name << ".pack_buffers(HILA_dir_,"
-                            << loop_info.parity_str << ",bulk_stream);\n}\n";
+                            << loop_info.parity_str << ",halo_stream);\n}\n";
                     
                 }
             }
@@ -259,7 +256,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                             }
 
                             code << "_dir_mask_ |= " << l.new_name << ".stream_gather(" << d.direxpr_s
-                                    << ", " << loop_info.parity_str << ", bulk_stream);\n";
+                                    << ", " << loop_info.parity_str << ", halo_stream);\n";
                             
                         }
                 } else {
@@ -270,13 +267,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
                             << "_dir_mask_ |= " << l.new_name << ".stream_gather(HILA_dir_,"
-                            << loop_info.parity_str << ", bulk_stream);\n}\n";
+                            << loop_info.parity_str << ", halo_stream);\n}\n";
                     
                 }
             }
             if (code_generated) {
                 code << "gcclGroupEnd();\n";
-                //code << "halo_streams.wait_all();\n";
             }
             for (field_info &l : field_info_list) {
                 if (!l.is_loop_local_dir) {
@@ -284,18 +280,19 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                         if (d.count > 0) {
 
                             code << l.new_name << ".unpack_buffers(" << d.direxpr_s
-                                    << ", " << loop_info.parity_str << ", bulk_stream);\n";
+                                    << ", " << loop_info.parity_str << ", halo_stream);\n";
                             
                         }
                 } else {
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
                              << l.new_name << ".unpack_buffers(HILA_dir_,"
-                            << loop_info.parity_str << ", bulk_stream);\n}\n";
+                            << loop_info.parity_str << ", halo_stream);\n}\n";
                     
                 }
             }
-            //code << "halo_streams.wait_all();\n";
+            code << "gpuEventRecord(halo_event, halo_stream);\n"
+                 << "gpuStreamWaitEvent(bulk_stream, halo_event, 0);\n";
             
 
         }
@@ -547,14 +544,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     ////////////////////////////////////////////////////////////////////////////////////////////////
     std::string kernel_launch;
 
-    if (gpu_overlap_comm) {
-        kernel_launch = kernel_name +
-                        "<<< N_blocks, N_threads, 0, bulk_stream>>>( _hila_loops, _hila_ranges.payload";
-    } else if (gpu_ccl) {
-        kernel_launch = kernel_name + "<<< N_blocks, N_threads,0, bulk_stream>>>( _hila_loop_begin, _hila_loop_end";
-    } else {
-        kernel_launch = kernel_name + "<<< N_blocks, N_threads, 0, 0>>>( _hila_loop_begin, _hila_loop_end";
-    }
+
+    kernel_launch = kernel_name + "<<< N_blocks, N_threads,0, bulk_stream>>>( _hila_loop_begin, _hila_loop_end";
+    
     // print field call list
     int i = 0;
     for (field_info &l : field_info_list) {
@@ -1196,84 +1188,148 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     code << "check_device_error(\"" << kernel_name << "\");\n";
 
     if (gpu_overlap_comm) {
-        assert(!gpu_ccl && "GPU overlap communication requires CCL support");
-        for (field_info &l : field_info_list) {
-            // If neighbour references exist, communicate them
-            if (!l.is_loop_local_dir) {
-                // "normal" dir references only here
-                for (dir_ptr &d : l.dir_list)
-                    if (d.count > 0) {
-                        code << "_dir_mask_ |= " << l.new_name << ".start_communication(" << d.direxpr_s
-                                << ", " << loop_info.parity_str << ");\n";
-                    }
-            } else {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                        << "_dir_mask_ |= " << l.new_name << ".start_communication(HILA_dir_,"
-                        << loop_info.parity_str << ");\n}\n";
-                
+        if(!gpu_ccl) {
+            for (field_info &l : field_info_list) {
+                // If neighbour references exist, communicate them
+                if (!l.is_loop_local_dir) {
+                    // "normal" dir references only here
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+                            code << "_dir_mask_ |= " << l.new_name << ".start_communication(" << d.direxpr_s
+                                    << ", " << loop_info.parity_str << ");\n";
+                        }
+                } else {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                            << "_dir_mask_ |= " << l.new_name << ".start_communication(HILA_dir_,"
+                            << loop_info.parity_str << ");\n}\n";
+                    
+                }
             }
-        }
 
-        // write wait gathers here also
-        for (field_info &l : field_info_list) {
-            // If neighbour references exist, communicate them
-            if (!l.is_loop_local_dir) {
-                for (dir_ptr &d : l.dir_list)
-                    if (d.count > 0) {
-                        code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
-                            << loop_info.parity_str << ");\n";
-                    }
-            } else {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                    << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+            // write wait gathers here also
+            for (field_info &l : field_info_list) {
+                // If neighbour references exist, communicate them
+                if (!l.is_loop_local_dir) {
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+                            code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
+                                << loop_info.parity_str << ");\n";
+                        }
+                } else {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                        << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+                }
             }
-        }
-        code << "gpuEventRecord(bulk_event, bulk_stream);\n"
-             << "gpuEventSynchronize(bulk_event);\n";
-        code << "if (_dir_mask_ != 0) {\n";
-        // Wait for the communication to finish
-        for (field_info &l : field_info_list) {
-            // If neighbour references exist, communicate them
-            if (!l.is_loop_local_dir) {
-                for (dir_ptr &d : l.dir_list)
-                    if (d.count > 0) {
-                        code << "    " << l.new_name << ".unpack_buffers(" << d.direxpr_s << ", "
-                            << loop_info.parity_str << ");\n";
-                    }
-            } else {
-                code << "    for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                    << "    " << l.new_name << ".unpack_buffers(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+            code << "if (_dir_mask_ != 0) {\n";
+            // Wait for the communication to finish
+            for (field_info &l : field_info_list) {
+                // If neighbour references exist, communicate them
+                if (!l.is_loop_local_dir) {
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+                            code << "    " << l.new_name << ".unpack_buffers(" << d.direxpr_s << ", "
+                                << loop_info.parity_str << ", halo_stream);\n";
+                        }
+                } else {
+                    code << "    for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                        << "    " << l.new_name << ".unpack_buffers(HILA_dir_," << loop_info.parity_str << ", halo_stream);\n}\n";
+                }
             }
-        }
-        code << "    halo_streams.wait_all();\n";
-        code << "}\n";
+            code << "}\n";
+            code << "gpuEventRecord(halo_event, halo_stream);\n";
+            code << "gpuStreamWaitEvent(bulk_stream, halo_event, 0);\n";
+            code << "if (_hila_loops == 2) {\n"
+                << "    int _hila_loop_begin = _hila_ranges.min[1];\n"
+                << "    int _hila_loop_end = _hila_ranges.max[1];\n"
+                << "    int N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n";
+            if (reduction_list.size() != 0) {
+                code << "    bool HILA_reduction_init_ = false;\n";
+            }
 
-        code << "if (_hila_loops == 2) {\n"
-            << "    int _hila_loop_begin = _hila_ranges.min[1];\n"
-            << "    int _hila_loop_end = _hila_ranges.max[1];\n"
-            << "    int N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n";
-        if (reduction_list.size() != 0) {
-            code << "    bool HILA_reduction_init_ = false;\n";
-        }
+            if (use_thread_blocks) {
+                code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
+                    << ";\n";
+            }
+            
+            code << "    " << kernel_launch << "}\n";
+            code << "gpuEventRecord(bulk_event, bulk_stream);\n"
+                 << "gpuEventSynchronize(bulk_event);\n";
 
-        if (use_thread_blocks) {
-            code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
-                << ";\n";
+        } else { //GPU_CCL with overlap
+            bool code_generated = false;
+            for (field_info &l : field_info_list) {
+                if (!l.is_loop_local_dir) {
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+                            if (!code_generated) {
+                                code_generated = true;
+                                code << "gcclGroupStart();\n";
+                            }
+
+                            code << "_dir_mask_ |= " << l.new_name << ".stream_gather(" << d.direxpr_s
+                                    << ", " << loop_info.parity_str << ", halo_stream);\n";
+                            
+                        }
+                } else {
+                    if (!code_generated) {
+                        code_generated = true;
+                        code << "gcclGroupStart();\n";
+                    }
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                            << "_dir_mask_ |= " << l.new_name << ".stream_gather(HILA_dir_,"
+                            << loop_info.parity_str << ", halo_stream);\n}\n";
+                    
+                }
+            }
+            if (code_generated) {
+                code << "gcclGroupEnd();\n";
+            }
+            for (field_info &l : field_info_list) {
+                if (!l.is_loop_local_dir) {
+                    for (dir_ptr &d : l.dir_list)
+                        if (d.count > 0) {
+
+                            code << l.new_name << ".unpack_buffers(" << d.direxpr_s
+                                    << ", " << loop_info.parity_str << ", halo_stream);\n";
+                            
+                        }
+                } else {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                             << l.new_name << ".unpack_buffers(HILA_dir_,"
+                            << loop_info.parity_str << ", halo_stream);\n}\n";
+                    
+                }
+            }
+            code << "gpuEventRecord(halo_event, halo_stream);\n";
+            code << "gpuStreamWaitEvent(bulk_stream, halo_event, 0);\n";
+            code << "if (_hila_loops == 2) {\n"
+                << "    int _hila_loop_begin = _hila_ranges.min[1];\n"
+                << "    int _hila_loop_end = _hila_ranges.max[1];\n"
+                << "    int N_blocks = (_hila_loop_end - _hila_loop_begin + N_threads - 1)/N_threads;\n";
+            if (reduction_list.size() != 0) {
+                code << "    bool HILA_reduction_init_ = false;\n";
+            }
+
+            if (use_thread_blocks) {
+                code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
+                    << ";\n";
+            }
+            code << "    " << kernel_launch << "}\n";
+            code << "gpuEventRecord(bulk_event, bulk_stream);\n"
+                 << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
         }
-        
-        code << "    " << kernel_launch
-            << "    gpuEventRecord(bulk_event, bulk_stream);\n"
-            << "    gpuEventSynchronize(bulk_event);\n}\n";
 
     } else if (gpu_ccl) {
         code << "gpuEventRecord(bulk_event, bulk_stream);\n"
-             << "gpuEventSynchronize(bulk_event);\n";
-    } else {
-        code << "gpuDeviceSynchronize();\n";
+             << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
     }
+
+
 
 
     // If arrays were copied free memory

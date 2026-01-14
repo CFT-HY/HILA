@@ -88,6 +88,7 @@ using gpuError = cudaError;
 #define gpuStreamCreateWithFlags(a,b) GPU_CHECK(cudaStreamCreateWithFlags(a,b))
 #define gpuStreamQuery(a) cudaStreamQuery(a)
 #define gpuStreamDestroy(a) GPU_CHECK(cudaStreamDestroy(a))
+#define gpuStreamWaitEvent(a,b,c) GPU_CHECK(cudaStreamWaitEvent(a,b,c))
 #define gpuEventCreate(a) GPU_CHECK(cudaEventCreate(a))
 #define gpuEventCreateWithFlags(a,b) GPU_CHECK(cudaEventCreateWithFlags(a,b))
 #define gpuEventRecord(a,b) GPU_CHECK(cudaEventRecord(a,b))
@@ -157,6 +158,7 @@ using gpuError = hipError_t;
 #define gpuStreamCreateWithFlags(a,b) GPU_CHECK(hipStreamCreateWithFlags(a,b))
 #define gpuStreamQuery(a) hipStreamQuery(a)
 #define gpuStreamDestroy(a) GPU_CHECK(hipStreamDestroy(a))
+#define gpuStreamWaitEvent(a,b,c) GPU_CHECK(hipStreamWaitEvent(a,b,c))
 #define gpuEventCreate(a) GPU_CHECK(hipEventCreate(a))
 #define gpuEventCreateWithFlags(a,b) GPU_CHECK(hipEventCreateWithFlags(a,b))
 #define gpuEventRecord(a,b) GPU_CHECK(hipEventRecord(a,b))
@@ -180,7 +182,7 @@ using gpuError = hipError_t;
 #ifdef __HIP_DEVICE_COMPILE__
 #define _GPU_DEVICE_COMPILE_ __HIP_DEVICE_COMPILE__
 #endif
-
+#endif // CUDA or HIP
 #ifdef GPU_CCL // if GPU_CCL and CUDA is defined use NCCL
 
 #if defined(CUDA)
@@ -231,7 +233,6 @@ template<> struct gccl_type<double>   { static constexpr ncclDataType_t value = 
 
 #endif // GPU_CCL
 
-#endif
 ////////////////////////////////////////////////////////////////////////////////////
 // General GPU (cuda/hip) definitions
 ////////////////////////////////////////////////////////////////////////////////////
@@ -317,7 +318,9 @@ private:
 };
 
 namespace hila {
-    gpuStreamPool& halo_streams(); 
+    gpuStreamPool& stream_pool();
+    gpuStream_t& halo_stream(); 
+    gpuEvent_t& halo_event();
     gpuStream_t& bulk_stream();
     gpuEvent_t& bulk_event();
 }
@@ -352,6 +355,10 @@ using gpuError = int;
 #define gpuStreamSynchronize(a) do {} while(0)
 #define gpuDeviceSynchronize() do {} while(0)
 
+#define gpuEventRecord(a,b) do {} while(0)
+#define gpuEventSynchronize(a) do {} while(0)
+
+
 #define gpuGetLastError cudaGetLastError
 
 // Placeholder for hilapp
@@ -371,10 +378,31 @@ struct gpuStreamPool {
     }
 };
 
-inline gpuStreamPool& halo_streams() {
+inline gpuStreamPool& stream_pool() {
     static gpuStreamPool dummy;
     return dummy;
 }
+
+inline gpuStream_t& halo_stream() {
+    static gpuStream_t dummy = nullptr;
+    return dummy;
+}
+
+inline gpuStream_t& bulk_stream() {
+    static gpuStream_t dummy = nullptr;
+    return dummy;
+}
+
+inline gpuStream_t& halo_event() {
+    static gpuStream_t dummy = nullptr;
+    return dummy;
+}
+
+inline gpuStream_t& bulk_event() {
+    static gpuStream_t dummy = nullptr;
+    return dummy;
+}
+
 
 void initialize_gccl_communications();
 
