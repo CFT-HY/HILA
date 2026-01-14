@@ -1811,16 +1811,26 @@ bool TopLevelVisitor::hasSemicolonAfter(SourceRange sr) {
 /// Variable decls inside site loops, but also some outside
 /////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::is_disallowed_decl_type(VarDecl *var, const char *s) {
-    if (var && var->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(s, 0) <
-                   std::string::npos) {
-        std::string tname = s;
-        if (tname.back() == '<')
-            tname.pop_back();
+static const std::vector<const char *> disallowed_types{
+    "Field<",      "Reduction<",   "ReductionVector<", "SiteSelect",
+    "hila::timer", "std::vector<", "std::array<",      "std::list<"};
 
-        reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
-                   "cannot declare variables of type %0 within site loops", tname.c_str());
-        return true;
+bool TopLevelVisitor::is_disallowed_decl_type(VarDecl *var) {
+    if (!var)
+        return false;
+
+    std::string typestr = var->getType().getCanonicalType().getUnqualifiedType().getAsString(PP);
+
+    for (const char *p : disallowed_types) {
+        if (typestr.find(p, 0) < std::string::npos) {
+            std::string tname = p;
+            if (tname.back() == '<')
+                tname.push_back('>');
+
+            reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
+                       "cannot declare variables of type %0 within site loops", tname.c_str());
+            return true;
+        }
     }
     return false;
 }
@@ -1867,11 +1877,7 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
             return true;
         }
 
-        if (is_disallowed_decl_type(var, "Field<") ||
-            is_disallowed_decl_type(var, "std::vector<") ||
-            is_disallowed_decl_type(var, "std::array<") ||
-            is_disallowed_decl_type(var, "std::list<")) {
-
+        if (is_disallowed_decl_type(var)) {
             parsing_state.skip_children = 1;
             return true;
         }
