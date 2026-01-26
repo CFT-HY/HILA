@@ -308,7 +308,7 @@ T Field<T>::product(Parity par, bool allreduce) const {
 
 // get global minimum/maximums - meant to be used through .min() and .max()
 
-#ifdef OPENMP
+#if defined(OPENMP) && !defined(HILAPP) 
 #include <omp.h>
 #endif
 
@@ -334,7 +334,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     // write the loop with explicit OpenMP parallel region.  It has negligible effect
     // on non-OpenMP code, and the pragmas are ignored.
-    #pragma omp parallel shared(val, loc, sgn, is_min)
+    #pragma omp parallel shared(val, loc, is_min)
     {
         CoordinateVector loc_th(0);
         T val_th = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();

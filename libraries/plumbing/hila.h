@@ -40,7 +40,7 @@
 
 #include "plumbing/spectraldensity.h"
 
-#if defined(OPENMP)
+#if defined(OPENMP) && !defined(HILAPP)
 #include <omp.h>
 #endif
 

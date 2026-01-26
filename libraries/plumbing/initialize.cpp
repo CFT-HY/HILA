@@ -227,7 +227,7 @@ void hila::initialize(int argc, char **argv) {
         hila::out0 << "Input file from command line: " << hila::cmdline.get_string("-i") << "\n";
     }
 
-#if defined(OPENMP)
+#if defined(OPENMP) && !defined(HILAPP)
     hila::out0 << "Using option OPENMP - with " << omp_get_max_threads() << " threads\n";
 #endif
 
