@@ -741,7 +741,7 @@ template <int n, int m, typename A, typename B>
 inline auto operator+(const Array<n, m, A> &a, const Array<n, m, B> &b) {
     Array<n, m, hila::type_plus<A, B>> res;
     for (int i = 0; i < n * m; i++)
-        res.c[i] = a.c[i] * b.c[i];
+        res.c[i] = a.c[i] + b.c[i];
     return res;
 }
 
@@ -981,6 +981,16 @@ std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
 
 namespace hila {
 
+/////////////////////////////////////////////////////////////////////////////////
+/// @brief hila::is_array<T>::value is true if T is of array type
+
+template <typename T, typename = std::void_t<>>
+struct is_array : std::false_type {};
+
+template <typename T>
+struct is_array<T, std::void_t<decltype(T::is_array())>> : std::true_type {};
+
+
 /**
  * @brief Converts Array object to string
  *
@@ -1202,18 +1212,23 @@ inline Array<n, m, T> atanh(Array<n, m, T> a) {
  *
  * @param b Array, Integer or Real scalar to raise to the power of
  */
-template <int n, int m, typename T>
-inline Array<n, m, T> pow(Array<n, m, T> a, int b) {
+
+
+template <int n, int m, typename T, typename B,
+          std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, B>>::value, int> = 0>
+inline Array<n, m, T> pow(Array<n, m, T> a, B b) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = pow(a.c[i], b);
     return a;
 }
 
-template <int n, int m, typename T>
-inline Array<n, m, T> pow(Array<n, m, T> a, T b) {
+template <int n, int m, typename T, typename B,
+          std::enable_if_t<!hila::is_assignable<T &, hila::type_mul<T, B>>::value, int> = 0>
+inline auto pow(Array<n, m, T> &a, T b) {
+    Array<n, m, hila::type_mul<T,B>> res;
     for (int i = 0; i < n * m; i++)
-        a.c[i] = pow(a.c[i], b);
-    return a;
+        res.c[i] = pow(a.c[i], b);
+    return res;
 }
 
 template <int n, int m, typename T>

@@ -510,7 +510,7 @@ class Matrix_t {
      *
      * @return DiagonalMatrix<n,T>
      */
-    #pragma hila loop_function
+    // #pragma hila loop_function
     template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
@@ -1992,6 +1992,15 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
 namespace hila {
 
+/////////////////////////////////////////////////////////////////////////////////
+/// @brief hila::is_matrix<T>::value is true if T is of matrix type
+
+template <typename T, typename = std::void_t<>>
+struct is_matrix : std::false_type {};
+
+template <typename T>
+struct is_matrix<T, std::void_t<decltype(T::is_matrix())>> : std::true_type {};
+
 //////////////////////////////////////////////////////////////////////////
 // Tool to get "right" result type for matrix (T1) + (T2) -op, where
 // T1 and T2 are either complex or arithmetic matrices
@@ -3172,6 +3181,35 @@ inline auto squarenorm(const Mt &rhs) {
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
 inline auto norm(const Mt &rhs) {
     return rhs.norm();
+}
+
+/**
+ * @brief integer power of matrix
+ */
+template <typename Mt, typename P, std::enable_if_t<Mt::is_matrix(), int> = 0>
+Mt pow(const Mt &m, P p_) {
+    static_assert(Mt::rows() == Mt::columns(), "pow() only for square matrices");
+    static_assert(std::is_integral<P>::value, "Matrix power must be non-negative integer");
+
+    uint32_t p = p_;
+
+    Mt res, p2 = m;
+
+    if (p % 2 != 0) {
+        res = m;
+    } else {
+        res = 1;
+    }
+    p /= 2;
+
+    while (p != 0) {
+        p2 *= p2;
+        if (p % 2 != 0) {
+            res *= p2;
+        }
+        p /= 2;
+    }
+    return res;
 }
 
 /**
