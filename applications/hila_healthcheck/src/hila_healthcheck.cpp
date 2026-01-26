@@ -858,6 +858,31 @@ void test_matrix_algebra() {
 }
 
 /**
+ * @brief Test matrix/vector elementwise operations
+ *
+ */
+
+void test_element_operations() {
+
+    Field<Matrix<3, 2, Complex<double>>> mf;
+
+    mf = 0;
+
+    double sum = 0, sum2 = 0, sum3 = 0;
+    onsites (ALL) {
+        mf[X] = hila::elem::exp(mf[X]);
+        sum += (hila::elem::sub(mf[X],1)).squarenorm();
+        sum2 += hila::elem::log(mf[X]).squarenorm();
+        sum3 += (hila::elem::mul(hila::elem::add(mf[X],-2*mf[X]),-1) - mf[X]).squarenorm();
+    }
+
+    report_pass("hila::elem::exp, log, sub, add, mul", sum + sum2 + sum3, 1e-8);
+
+
+}
+
+
+/**
  * @brief Test extended type
  * @details Test extended type for sums that exibit loss in accuracy with double.
  *
@@ -1106,6 +1131,7 @@ int main(int argc, char **argv) {
     test_set_elements_and_select();
     test_subvolumes();
     test_matrix_operations();
+    test_element_operations();
     test_fft();
     test_spectraldensity();
     test_matrix_algebra();
