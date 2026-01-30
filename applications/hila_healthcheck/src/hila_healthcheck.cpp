@@ -871,14 +871,12 @@ void test_element_operations() {
     double sum = 0, sum2 = 0, sum3 = 0;
     onsites (ALL) {
         mf[X] = hila::elem::exp(mf[X]);
-        sum += (hila::elem::sub(mf[X],1)).squarenorm();
+        sum += (hila::elem::sub(mf[X], 1)).squarenorm();
         sum2 += hila::elem::log(mf[X]).squarenorm();
-        sum3 += (hila::elem::mul(hila::elem::add(mf[X],-2*mf[X]),-1) - mf[X]).squarenorm();
+        sum3 += (hila::elem::mul(hila::elem::add(mf[X], -2 * mf[X]), -1) - mf[X]).squarenorm();
     }
 
     report_pass("hila::elem::exp, log, sub, add, mul", sum + sum2 + sum3, 1e-8);
-
-
 }
 
 
@@ -991,47 +989,78 @@ void test_extended() {
 
 void test_clusters() {
 
+    {
 #if NDIM > 2
 
-    Field<int> m;
+        Field<int> m;
 
-    m = hila::clusters::background;
+        m = hila::clusters::background;
 
-    onsites (ALL) {
-        auto c = X.coordinates();
-        if (c[e_x] == 0 && c[e_y] == 0)
-            m[X] = 1;
-        else if (c[e_x] == 2 && c[e_z] == 2)
-            m[X] = 2;
-        else if (c[e_x] == 4 && c[e_y] < 3 && c[e_z] > 1 && c[e_z] <= 4)
-            m[X] = 3;
-    }
+        onsites (ALL) {
+            auto c = X.coordinates();
+            if (c[e_x] == 0 && c[e_y] == 0)
+                m[X] = 1;
+            else if (c[e_x] == 2 && c[e_z] == 2)
+                m[X] = 2;
+            else if (c[e_x] == 4 && c[e_y] < 3 && c[e_z] > 1 && c[e_z] <= 4)
+                m[X] = 3;
+        }
 
-    hila::clusters cl(m);
+        hila::clusters cl(m);
 
-    report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
-    if (cl.number() == 3) {
-        double sumsize =
-            fabs(cl.size(0) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
-            fabs(cl.size(1) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
-            fabs(cl.size(2) - 1 * 3 * 3);
-        report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
+        report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
+        if (cl.number() == 3) {
+            double sumsize =
+                fabs(cl.size(0) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
+                fabs(cl.size(1) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
+                fabs(cl.size(2) - 1 * 3 * 3);
+            report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
 
-        double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
-        report_pass("Cluster test: cluster types ", types, 1e-10);
+            double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
+            report_pass("Cluster test: cluster types ", types, 1e-10);
 
 #if NDIM == 3
-        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) +
-                      abs(cl.area(1) - 4 * lattice.size(e_y)) +
-                      abs(cl.area(2) - 2 * (1 * 3 + 1 * 3 + 3 * 3));
+            double area = abs(cl.area(0) - 4 * lattice.size(e_z)) +
+                          abs(cl.area(1) - 4 * lattice.size(e_y)) +
+                          abs(cl.area(2) - 2 * (1 * 3 + 1 * 3 + 3 * 3));
 
-        report_pass("Cluster test: cluster area ", area, 1e-10);
+            report_pass("Cluster test: cluster area ", area, 1e-10);
+
+#endif
+        }
+#endif
+    }
+    {
+#if NDIM == 3
+        VectorField<uint8_t> link = 0;
+        onsites (ALL) {
+            auto c = X.coordinates();
+            if ((c[e_x] == 0 || c[e_x] == lattice.size(e_x) / 2) &&
+                (c[e_y] == 0 || c[e_y] == lattice.size(e_y) / 2) &&
+                c[e_z] < lattice.size(e_z) / 2) {
+                link[e_z][X] = 1;
+            }
+
+            if ((c[e_x] == 0 || c[e_x] == lattice.size(e_x) / 2) &&
+                c[e_y] < lattice.size(e_y) / 2 &&
+                (c[e_z] == 0 || c[e_z] == lattice.size(e_z) / 2)) {
+                link[e_y][X] = 1;
+            }
+        }
+
+        hila::clusters cl(link);
+
+        report_pass("Link cluster test: number of clusters ", cl.number() - 2, 1e-10);
+
+        if (cl.number() == 2) {
+            auto s = 2*(lattice.size(e_y)/2 + lattice.size(e_z)/2);
+            s = abs(cl.size(0) - s) + abs(cl.size(1) - s); 
+            report_pass("Link cluster sizes", s, 1e-10);
+        }
 
 #endif
     }
-#endif
 }
-
 //--------------------------------------------------------------------------------
 
 void test_blocking() {

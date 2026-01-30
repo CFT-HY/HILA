@@ -11,8 +11,13 @@
  * @file clusters.h
  * @brief provides cluster finding tools
  * @details clusters are grown with the help of auxiliary Field variable of type
- * Field<uint8_t>. Elements of this accept values 0 .. 254, allowing for 255 cluster classes.
+ * Field<uint8_t> or VectorField<uint8_t>. Elements of the first case accept values
+ * 0 .. 254, allowing for 255 cluster "colours".
+ *
  * Special value hila::clusters::background indicates neutral, background sites.
+ *
+ * For the VectorField ("link") type non-zero value of the link[d][X] indicates that
+ * points X and X+d are connected. In this case there are no classes.
  *
  * Example:
  * ----------------------
@@ -37,6 +42,19 @@
  *         hila::out << "Cluster " << i << " type " << cl.type(i) << " size " << cl.size(i) << '\n';
  *     }
  * }
+ * ----------------------
+ * Alternatively, using links:
+ * ----------------------
+ * VectorField<uint8_t> links{hila::clusters::background};
+ *
+ * foralldir(d) {
+ *     onsites(ALL) {
+ *         if (<cond>) link[d][X] = 1;
+ *     }
+ * }
+ * hila::clusters::cl(links);
+ * ...
+ * // same functions as in first case
  * ----------------------
  *
  * Functions:
@@ -127,7 +145,7 @@ class clusters {
 
 
   public:
-    /// hila::clusters::background is special value to mark "non-interesting" sites.
+    /// @brief hila::clusters::background is special value to mark "non-interesting" sites.
     /// Using this can make finding clusters faster
     static constexpr uint8_t background = CLUSTER_BACKGROUND_; // 8 ones here = 255
 
@@ -139,6 +157,11 @@ class clusters {
         find(type);
     }
 
+    template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
+    clusters(const VectorField<inttype> &vfield) {
+        find(vfield);
+    }
+
     /// @brief find nearest-neighbour -connected clusters which have the same type
     /// @param type field which contains the type of the site, possible values 0-254.
     /// special value hila::clusters::background indicates site does not belong to any cluster
@@ -148,8 +171,22 @@ class clusters {
         classify();
     }
 
-    /// @brief number of clusters found
+    /// @brief nearest-neighbour -connected clusters which connecting link
+    /// @param link[d][X] is non-zero if sites X and X + d are to be connected
+    template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
+    void find(const VectorField<inttype> &link) {
+        Field<uint8_t> f{hila::clusters::background};
+        foralldir (d) {
+            onsites (ALL) {
+                if (link[d][X] != 0 || link[d][X - d] != 0)
+                    f[X] = 1;
+            }
+        }
+        find(f);
+    }
 
+
+    /// @brief number of clusters found
     size_t number() const {
         return clist.size();
     }
@@ -194,7 +231,7 @@ class clusters {
         uint64_t lbl = label(i);
         uint64_t cl_area = 0;
 
-        onsites(ALL) {
+        onsites (ALL) {
             if (labels[X] == lbl) {
                 for (Direction d = e_x; d < NDIRS; ++d) {
                     if (labels[X + d] != lbl)
@@ -216,7 +253,7 @@ class clusters {
         SiteSelect sites;
         uint64_t la = label(i);
 
-        onsites(ALL) {
+        onsites (ALL) {
             if (labels[X] == la)
                 sites.select(X);
         }
@@ -240,9 +277,9 @@ class clusters {
         do {
             changed = 0;
             for (Parity par : {EVEN, ODD}) {
-                // take away annoying warning
-#pragma hila safe_access(labels)
-                onsites(par) {
+                // take away annoying warning with pragma
+                #pragma hila safe_access(labels)
+                onsites (par) {
                     auto type_0 = get_cl_label_type(labels[X]);
                     if (type_0 != background) {
                         for (Direction d = e_x; d < NDIRS; ++d) {
