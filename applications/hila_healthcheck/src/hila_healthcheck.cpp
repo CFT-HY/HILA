@@ -994,7 +994,7 @@ void test_clusters() {
 
         Field<int> m;
 
-        m = hila::clusters::background;
+        m = hila::Clusters::background;
 
         onsites (ALL) {
             auto c = X.coordinates();
@@ -1006,29 +1006,56 @@ void test_clusters() {
                 m[X] = 3;
         }
 
-        hila::clusters cl(m);
+        hila::Clusters cl(m);
 
         report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
         if (cl.number() == 3) {
             double sumsize =
-                fabs(cl.size(0) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
-                fabs(cl.size(1) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
-                fabs(cl.size(2) - 1 * 3 * 3);
+                fabs(cl[0].size() - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
+                fabs(cl[1].size() - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
+                fabs(cl[2].size() - 1 * 3 * 3);
             report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
 
-            double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
+            double types = abs(cl[0].type() - 1) + abs(cl[1].type() - 2) + abs(cl[2].type() - 3);
             report_pass("Cluster test: cluster types ", types, 1e-10);
 
 #if NDIM == 3
-            double area = abs(cl.area(0) - 4 * lattice.size(e_z)) +
-                          abs(cl.area(1) - 4 * lattice.size(e_y)) +
-                          abs(cl.area(2) - 2 * (1 * 3 + 1 * 3 + 3 * 3));
+            double area = abs(cl[0].area() - 4 * lattice.size(e_z)) +
+                          abs(cl[1].area() - 4 * lattice.size(e_y)) +
+                          abs(cl[2].area() - 2 * (1 * 3 + 1 * 3 + 3 * 3));
 
             report_pass("Cluster test: cluster area ", area, 1e-10);
 
 #endif
         }
 #endif
+
+        // test coordinates of cluster
+        m = hila::Clusters::background;
+        CoordinateVector cv = 0;
+        for (int x = 0; x < 4; x++) {
+            cv[e_x] = x;
+            m[cv] = 1;
+        }
+        cl.find(m);
+
+        int ok = (cl.number() == 1);
+        if (ok) {
+            auto c = cl[0].sites();
+            ok = (c.size() == 4);
+
+            // the coordinates are in unspecified order
+            for (int i = 0; ok && i < 4; i++) {
+                auto cvc = c[i].coordinates();
+                bool found = false;
+                for (int x = 0; !found && x < 4; x++) {
+                    cv[e_x] = x;
+                    found = (cv == cvc);
+                }
+                ok = found;
+            }
+        }
+        report_pass("Cluster test: cluster sites ", ok - 1, 1e-10);
     }
     {
 #if NDIM == 3
@@ -1048,13 +1075,13 @@ void test_clusters() {
             }
         }
 
-        hila::clusters cl(link);
+        hila::Clusters cl(link);
 
         report_pass("Link cluster test: number of clusters ", cl.number() - 2, 1e-10);
 
         if (cl.number() == 2) {
-            auto s = 2*(lattice.size(e_y)/2 + lattice.size(e_z)/2);
-            s = abs(cl.size(0) - s) + abs(cl.size(1) - s); 
+            auto s = 2 * (lattice.size(e_y) / 2 + lattice.size(e_z) / 2);
+            s = abs(cl[0].size() - s) + abs(cl[1].size() - s);
             report_pass("Link cluster sizes", s, 1e-10);
         }
 

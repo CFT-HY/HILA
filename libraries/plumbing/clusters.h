@@ -14,7 +14,7 @@
  * Field<uint8_t> or VectorField<uint8_t>. Elements of the first case accept values
  * 0 .. 254, allowing for 255 cluster "colours".
  *
- * Special value hila::clusters::background indicates neutral, background sites.
+ * Special value hila::Clusters::background indicates neutral, background sites.
  *
  * For the VectorField ("link") type non-zero value of the link[d][X] indicates that
  * points X and X+d are connected. In this case there are no classes.
@@ -28,71 +28,88 @@
  * onsites(ALL) {
  *     if (<some condition 1>) cltype[X] = 0;
  *     else if (condition 2>) cltype[X] = 1;
- *     else cltype[X] = hila::clusters::background;
+ *     else cltype[X] = hila::Clusters::background;
  * }
  *
  * // create connected clusters of sites with cltype values 0 and 1
- * hila::clusters cl(cltype);
+ * hila::Clusters cl(cltype);
  *
- * // above is equivalent to "hila::clusters cl;  cl.find(cltype);"
+ * // above is equivalent to "hila::Clusters cl;  cl.find(cltype);"
  *
  * if (hila::myrank() == 0) {
  *     hila::out << "Got " << cl.number() << " clusters\n";
  *     for (int i = 0; i < cl.number(); i++) {
- *         hila::out << "Cluster " << i << " type " << cl.type(i) << " size " << cl.size(i) << '\n';
+ *         hila::out << "Cluster " << i << " type " << cl[i].type() << " size " << cl[i].size() <<
+ * '\n';
  *     }
  * }
  * ----------------------
  * Alternatively, using links:
  * ----------------------
- * VectorField<uint8_t> links{hila::clusters::background};
+ * VectorField<uint8_t> links{hila::Clusters::background};
  *
  * foralldir(d) {
  *     onsites(ALL) {
  *         if (<cond>) link[d][X] = 1;
  *     }
  * }
- * hila::clusters::cl(links);
+ * hila::Clusters::cl(links);
  * ...
  * // same functions as in first case
  * ----------------------
  *
  * Functions:
  *
- * Constructor: initialize with constructor hila::clusters(const Field<uint8_t> & clustertype)
+ * Constructor: initialize with constructor hila::Clusters(const Field<uint8_t> & clustertype)
  * Example:
- *      hila::clusters cluster(cltype);   // initialize var cluster
+ *      hila::Clusters cluster(cltype);   // initialize var cluster
  *
  * where cltype is of type Field<uint8_t>.  This constructor builds connected clusters of the
- * sites with the same cltype value. Special value of hila::clusters::background are ignored.
+ * sites with the same cltype value. Special value of hila::Clusters::background are ignored.
  *
  * Above is equivalent with
- *      hila::clusters cluster;
+ *      hila::Clusters cluster;
  *      cluster.find(cltype);
  *
- * Note: initalization is a relatively expensive operation
+ * Note: initalization is an expensive operation
  *
- * size_t hila::clusters::number() - return the total number of clusters.
+ * size_t hila::Clusters::number() - return the total number of clusters.
  * Example:
  *      hila::out0 << "Found " << cluster.number() << " clusters\n";
  *
- * int64_t hila::clusters::size(size_t cl_number) - return the size of cluster number cl_number
- * Example:
- *      hila::out0 << "Size of cluster 0 is " << cluster.size(0) << '\n';
+ * The properties of the cluster number i are accessed with array index syntax []:
+ * hila::Clusters::cluster_ref  hila::Clusters::operator[](int64_t)
+ * i.e. `cluster[i]` returns a const reference to cluster number i
  *
- * uint8_t hila::clusters::type(size_t cl_number) - return the cluster type
- *      hila::out0 << "Type of cluster 0 is " << cluster.size(0) << '\n';
+ * Properties can be queried by functions
+ * int64_t hila::Clusters::cluster_ref::size() - the size of cluster
+ * int64_t hila::Clusters::cluster_ref::area() - the surface area of cluster
+ * std::vector<SiteIndex> hila::Clusters::cluster_ref::sites() - vector of cluster sites
+ * uint8_t hila::Clusters::cluster_ref::type() - the type of the cluster, 0..254
  *
- * std::vector<SiteIndex> hila::clusters::sites(size_t cl_number) - return the sites of cluster
- * cl_number Example: print the coordinates of cluster number 0: auto clsites = cluster.sites(0);
- *      for (auto & r : clsites) {
- *          hila::out0 << r.coordinates() << '\n;
- *      }
- * Note: .sites() must be called by all MPI ranks, otherwise deadlock occurs
- *
- * int64_t hila::clusters::area(size_t cl_number) - return the area of the cluster
+ * area() and sites() are expensive operators and must be called by all MPI ranks
  * Area is defined by the number of links where one end belongs to the cluster, another does not.
- * Note: .area() must be called by all MPI ranks
+ *
+ * Example:
+ *      Field<uint8_t> cltypes:
+ *      ... // fill cltypes
+ *
+ *      hila::Clusters cl(cltypes);   // create clusters
+ *
+ *      hila::out0 << "Number of clusters found: " << cl.number() << '\n';
+ *      for (int64_t i = 0; i < cl.number(); ++i) {
+ *           hila::out0 << "Cluster " << i << " size: " << cl[i].size()
+ *                      << " surface area: " << cl[i].area()
+ *                      << " type " << cl[i].type() << '\n';
+ *      }
+ *
+ *      hila::out0 << "Cluster 0 coordinates:\n";
+ *      auto sitelist = cl[0].sites();
+ *      for (auto s : sitelist) {
+ *           hila::out0 << s.coordinates() << '\n';
+ *      }
+ *
+ *
  */
 
 
@@ -117,27 +134,125 @@ inline uint8_t get_cl_label_type(const uint64_t v) {
 }
 
 
-class clusters {
+class Clusters {
 
   private:
+    // We'll use uint64_t to encode the site and the type of the site.
+    // Set the top 8 bits to type, and the bottom 54 bits to SiteIndex.
+    Field<uint64_t> labels;
+
     struct cl_struct {
         uint64_t label;
-        int64_t size, area;
+        int64_t size;
     };
 
     // clist vector contains information for all clusters. NOTE: the
     // content is valid only on rank == 0.
     std::vector<cl_struct> clist;
 
-    // We'll use uint64_t to encode the site and the type of the site.
-    // Set the top 8 bits to type, and the bottom 54 bits to SiteIndex.
-    Field<uint64_t> labels;
+    class cluster_ref {
+        const Clusters &clusters;
+        size_t index;
+
+      public:
+        cluster_ref() = delete;
+        cluster_ref(const Clusters &clust, const size_t i) : clusters(clust), index(i) {}
+        ~cluster_ref() = default;
+
+        /// @brief return size of cluster
+        auto size() const {
+            return clusters.clist[index].size;
+        }
+
+        /// @brief return type of the cluster
+        uint8_t type() const {
+            return get_cl_label_type(clusters.clist[index].label);
+        }
+
+        /// @brief return the label of cluster i
+        /// Each cluster has unique 64-bit label
+        uint64_t label() const {
+            return clusters.clist[index].label;
+        }
+
+        /// @brief returns the area of the cluster
+        /// Must be called from all MPI ranks - involves reduction
+        int64_t area() const {
+
+            uint64_t lbl = clusters.clist[index].label;
+            int64_t cl_area = 0;
+
+            onsites (ALL) {
+                if (clusters.labels[X] == lbl) {
+                    for (Direction d = e_x; d < NDIRS; ++d) {
+                        if (clusters.labels[X + d] != lbl)
+                            cl_area += 1;
+                    }
+                }
+            }
+
+            return cl_area;
+        }
+
+        /// @brief returns std::vector of SiteIndex for cluster
+        /// Expensive operation, can possibly overflow the memory of the node 0
+        /// Must be called from all MPI ranks
+
+        std::vector<SiteIndex> sites() const {
+            SiteSelect sites;
+            uint64_t la = clusters.clist[index].label;
+
+            onsites (ALL) {
+                if (clusters.labels[X] == la)
+                    sites.select(X);
+            }
+            // hila::out << "Node " << hila::myrank() << " got " << sites.size() << " sites\n";
+            return sites.move_sites();
+        }
+
+        ///////////////////////////////////////////////////////////////////
+        /// Make this iterator by the rest of the definitions
+        /// Now we can use 
+        /// for (auto r : cls) hila::out0 << r.size();
+
+        using iterator_category = std::input_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+
+        /// deref operator returns the item, not a pointer to it!
+        /// this tomfoolery makes the iterator work
+        auto operator*() const {
+            return *this;
+        }
+
+        auto operator++() {
+            index++;
+            return *this;
+        }
+        auto operator++(int) {
+            auto tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+        friend bool operator!=(const hila::Clusters::cluster_ref &a,
+                               const hila::Clusters::cluster_ref &b) {
+            return a.index != b.index;
+        }
+        friend bool operator==(const hila::Clusters::cluster_ref &a,
+                               const hila::Clusters::cluster_ref &b) {
+            return a.index == b.index;
+        }
+
+        /// iterator definitions end
+        /////////////////////////////////////////////////////////////////
+
+    };
+
 
     inline void make_local_clist();
 
     void assert_cl_index(size_t i) const {
         if (i >= clist.size()) {
-            hila::out0 << "Too large cluster index " << i << ", there are only " << clist.size()
+            hila::out0 << "Incorrect cluster index " << i << ", there are only " << clist.size()
                        << " clusters\n";
             exit(0);
         }
@@ -145,26 +260,26 @@ class clusters {
 
 
   public:
-    /// @brief hila::clusters::background is special value to mark "non-interesting" sites.
+    /// @brief hila::Clusters::background is special value to mark "non-interesting" sites.
     /// Using this can make finding clusters faster
     static constexpr uint8_t background = CLUSTER_BACKGROUND_; // 8 ones here = 255
 
-    clusters() = default;
-    ~clusters() = default;
+    Clusters() = default;
+    ~Clusters() = default;
 
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
-    clusters(const Field<inttype> &type) {
+    Clusters(const Field<inttype> &type) {
         find(type);
     }
 
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
-    clusters(const VectorField<inttype> &vfield) {
+    Clusters(const VectorField<inttype> &vfield) {
         find(vfield);
     }
 
     /// @brief find nearest-neighbour -connected clusters which have the same type
     /// @param type field which contains the type of the site, possible values 0-254.
-    /// special value hila::clusters::background indicates site does not belong to any cluster
+    /// special value hila::Clusters::background indicates site does not belong to any cluster
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
     void find(const Field<inttype> &type) {
         make_labels(type);
@@ -175,7 +290,7 @@ class clusters {
     /// @param link[d][X] is non-zero if sites X and X + d are to be connected
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
     void find(const VectorField<inttype> &link) {
-        Field<uint8_t> f{hila::clusters::background};
+        Field<uint8_t> f{hila::Clusters::background};
         foralldir (d) {
             onsites (ALL) {
                 if (link[d][X] != 0 || link[d][X - d] != 0)
@@ -191,116 +306,90 @@ class clusters {
         return clist.size();
     }
 
-    /// @brief return size of cluster i
-    /// @param i cluster number
-
-    int64_t size(size_t i) const {
-        assert_cl_index(i);
-        return clist[i].size;
+    /// @brief number of clusters found
+    size_t size() const {
+        return clist.size();
     }
 
-    /// @brief return type of the cluster
-    /// @param i cluster number
-
-    uint8_t type(size_t i) const {
+    /// @brief access cluster number i
+    const auto operator[](size_t i) const {
         assert_cl_index(i);
-        return get_cl_label_type(clist[i].label);
-    }
-
-    /// @brief return the label of cluster i
-    /// @param i cluster number
-    /// Each cluster has unique 64-bit label
-
-    uint64_t label(size_t i) const {
-        assert_cl_index(i);
-        return clist[i].label;
+        return cluster_ref(*this, i);
     }
 
 
-    /// @brief returns the area of the cluster number i
-    /// @param i cluster number
-    /// First time call involves reduction, after that value buffered
-    /// Must be called from all MPI ranks
-
-    int64_t area(size_t i) {
-        assert_cl_index(i);
-        // check if this is already computed
-        if (clist[i].area > 0)
-            return clist[i].area;
-
-        uint64_t lbl = label(i);
-        uint64_t cl_area = 0;
-
-        onsites (ALL) {
-            if (labels[X] == lbl) {
-                for (Direction d = e_x; d < NDIRS; ++d) {
-                    if (labels[X + d] != lbl)
-                        cl_area += 1;
-                }
-            }
-        }
-
-        clist[i].area = cl_area;
-        return cl_area;
+    cluster_ref begin() {
+        return cluster_ref(*this, 0);
     }
-
-    /// @brief returns std::vector of SiteIndex for cluster number i
-    /// @param i cluster number
-    /// Expensive operation, can possibly overflow the memory of the node 0
-    /// Must be called from all MPI ranks
-
-    std::vector<SiteIndex> sites(size_t i) const {
-        SiteSelect sites;
-        uint64_t la = label(i);
-
-        onsites (ALL) {
-            if (labels[X] == la)
-                sites.select(X);
-        }
-        hila::out << "Node " << hila::myrank() << " got " << sites.size() << " sites\n";
-        return sites.move_sites();
+    cluster_ref end() {
+        return cluster_ref(*this, clist.size());
     }
 
 
     /// @brief make only the Field representation of cluster labels, without counting the clusters
     /// @param type - input field classifying the sites
     /// @return a const reference to label Field
-    /// @details Usually this call is not needed, use hila::clusters::find() or constructor
+    /// @details Usually this call is not needed, use hila::Clusters::find() or constructor
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
     void make_labels(const Field<inttype> &type) {
+
+        constexpr unsigned comm_interval = 1;
 
         // mark every site with site index on 54 low, leaving 8 bits at the top for the type
         labels[ALL] = set_cl_label(X.coordinates(), type[X]);
 
         Reduction<int64_t> changed;
         changed.delayed();
+        unsigned i = 0;
         do {
-            changed = 0;
-            for (Parity par : {EVEN, ODD}) {
-                // take away annoying warning with pragma
-                #pragma hila safe_access(labels)
-                onsites (par) {
-                    auto type_0 = get_cl_label_type(labels[X]);
-                    if (type_0 != background) {
-                        for (Direction d = e_x; d < NDIRS; ++d) {
-                            auto label_1 = labels[X + d];
-                            auto type_1 = get_cl_label_type(label_1);
-                            if (type_0 == type_1 && labels[X] > label_1) {
-                                labels[X] = label_1;
-                                changed += 1;
+            if (i % comm_interval != 0) {
+                for (Parity par : {EVEN, ODD}) {
+                    for (Direction d = e_x; d < NDIRS; ++d)
+                        labels.mark_gathered(d, ALL);
+                    // take away annoying warning with pragma
+                    #pragma hila safe_access(labels)
+                    onsites (par) {
+                        auto type_0 = get_cl_label_type(labels[X]);
+                        if (type_0 != hila::Clusters::background) {
+                            for (Direction d = e_x; d < NDIRS; ++d) {
+                                auto label_1 = labels[X + d];
+                                auto type_1 = get_cl_label_type(label_1);
+                                if (type_0 == type_1 && labels[X] > label_1) {
+                                    labels[X] = label_1;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                changed = 0;
+                for (Parity par : {EVEN, ODD}) {
+                    // take away annoying warning with pragma
+                    #pragma hila safe_access(labels)
+                    onsites (par) {
+                        auto type_0 = get_cl_label_type(labels[X]);
+                        if (type_0 != hila::Clusters::background) {
+                            for (Direction d = e_x; d < NDIRS; ++d) {
+                                auto label_1 = labels[X + d];
+                                auto type_1 = get_cl_label_type(label_1);
+                                if (type_0 == type_1 && labels[X] > label_1) {
+                                    labels[X] = label_1;
+                                    changed += 1;
+                                }
                             }
                         }
                     }
                 }
             }
-
+            i++;
             // hila::out0 << "g " << changed.value() << '\n';
+        } while ((i - 1) % comm_interval != 0 || changed.value() > 0);
 
-        } while (changed.value() > 0);
+        // hila::out0 << "cluster labels: " << i << " iterations\n";
     }
 
     /// @brief obtain const refence to cluster label Field var
-    /// clusters::find() must have been called before this
+    /// Clusters::find() must have been called before this
 
     const auto &get_labels() const {
         return labels;
@@ -308,12 +397,12 @@ class clusters {
 
     /// @brief classify clusters from existing label field (make_labels() called before)
     /// @details Constructs vector with cluster info, which can be queried
-    /// Normally not needed, hila::clusters::find() already does the search
+    /// Normally not needed, hila::Clusters::find() already does the search
     void classify() {
 
         if (!labels.is_initialized(ALL)) {
-            hila::error("hila::clusters::classify() called without preceding "
-                        "hila::clusters::make_labels()");
+            hila::error("hila::Clusters::classify() called without preceding "
+                        "hila::Clusters::make_labels()");
         }
 
         clist.clear();
@@ -376,7 +465,7 @@ class clusters {
 
 #if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
 
-inline void clusters::make_local_clist() {
+inline void Clusters::make_local_clist() {
 
     void *d_temp_storage = nullptr;
     size_t temp_storage_bytes = 0;
@@ -432,15 +521,15 @@ inline void clusters::make_local_clist() {
 
     clist.resize(nclusters);
     for (int i = 0; i < nclusters; i++) {
-        clist[i] = {labels[i], sizes[i], 0};
+        clist[i] = {labels[i], sizes[i]};
     }
-    if (clist.size() > 0 && get_cl_label_type(clist.back().label) == hila::clusters::background)
+    if (clist.size() > 0 && get_cl_label_type(clist.back().label) == hila::Clusters::background)
         clist.pop_back();
 }
 
 #else
 
-inline void clusters::make_local_clist() {
+inline void Clusters::make_local_clist() {
 
     // this changes the ordering of labels - copy it
     auto lb = labels;
@@ -448,12 +537,12 @@ inline void clusters::make_local_clist() {
     std::sort(buf, buf + lattice->mynode.volume);
     // background labels are last after sort, stop handling when these are met
     int64_t i = 0;
-    while (i < lattice->mynode.volume && get_cl_label_type(buf[i]) != background) {
+    while (i < lattice->mynode.volume && get_cl_label_type(buf[i]) != hila::Clusters::background) {
         int64_t istart = i;
         auto label = buf[i];
         for (++i; i < lattice->mynode.volume && buf[i] == label; ++i)
             ;
-        clist.push_back({label, i - istart, 0});
+        clist.push_back({label, i - istart});
     }
 }
 
