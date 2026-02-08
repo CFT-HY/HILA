@@ -533,6 +533,7 @@ inline void Clusters::make_local_clist() {
 
     // this changes the ordering of labels - copy it
     auto lb = labels;
+    lb.will_change();
     auto *buf = lb.field_buffer();
     std::sort(buf, buf + lattice->mynode.volume);
     // background labels are last after sort, stop handling when these are met

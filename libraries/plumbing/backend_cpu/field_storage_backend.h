@@ -36,6 +36,11 @@ void field_storage<T>::free_field() {
     fieldbuf = nullptr;
 }
 
+template <typename T>
+void field_storage<T>::copy_field(const Lattice lattice, const field_storage<T> &source) {
+    memcpy(fieldbuf, source.fieldbuf, sizeof(T) * lattice->mynode.volume);
+}
+
 
 template <typename T>
 void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,

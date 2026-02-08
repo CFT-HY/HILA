@@ -23,6 +23,13 @@ void field_storage<T>::free_field() {
     fieldbuf = nullptr;
 }
 
+template <typename T>
+void field_storage<T>::copy_field(const Lattice lattice, const field_storage<T> &source) {
+    gpuMemcpy(fieldbuf, source.fieldbuf, sizeof(T) * lattice->mynode.field_alloc_size,
+              gpuMemcpyDeviceToDevice);
+}
+
+
 // Only attempt to compile with CUDA compiler.
 // Hilapp will skip these.
 // #if defined(__CUDACC__) || defined(__HIPCC__)
@@ -337,8 +344,7 @@ __global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsig
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const Lattice lattice,
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
 #ifdef SPECIAL_BOUNDARY_CONDITIONS

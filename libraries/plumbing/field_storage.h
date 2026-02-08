@@ -31,10 +31,12 @@ class field_storage {
     // The actual data content of the class: a pointer to the field and a
     // list of neighbour pointers.
     T *RESTRICT fieldbuf = nullptr;
+    
     const unsigned *RESTRICT neighbours[NDIRS];
 
     void allocate_field(const Lattice lattice);
     void free_field();
+    void copy_field(const Lattice lattice, const field_storage<T> &source);
 
 #ifndef VECTORIZED
     // Get an element in a loop

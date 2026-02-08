@@ -152,6 +152,7 @@ void Field<T>::read(std::ifstream &inputfile) {
     if (!this->is_allocated())
         this->allocate();
 
+    will_change();
     mark_changed(ALL);
 
     std::vector<CoordinateVector> coord_list(sites_per_read);
@@ -185,6 +186,7 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
     if (!this->is_allocated())
         this->allocate();
 
+    will_change();
     mark_changed(ALL);
 
     std::vector<CoordinateVector> coord_list(sites_per_read);

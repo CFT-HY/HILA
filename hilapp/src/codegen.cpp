@@ -124,6 +124,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // check if the range starts with a macro (e.g. onsites(ALL) foralldir(d) ...)
     // Std sourcerange fails here!
 
+    static int is_cow = -1;
+    if (is_cow < 0) {
+        is_cow = is_macro_defined("FIELD_COPY_ON_WRITE");
+        if (is_cow) llvm::errs() << " FIELD_COPY_ON_WRITE defined\n";
+    }
+
     SourceRange Srange = get_real_range(S->getSourceRange());
 
     loopBuf.copy_from_range(writeBuf, Srange);
@@ -206,6 +212,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     for (field_info &l : field_info_list)
         if (l.is_written) {
             code << l.new_name << ".check_alloc();\n";
+            if (is_cow) {
+                code << l.new_name << ".will_change();\n";
+            }
         }
 
     for (field_info &l : field_info_list) {
@@ -485,6 +494,32 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
                     // push it on stack
                     field_info_list.push_back(new_fi);
 
+#ifdef NEW
+                    std::string dirname = it->new_name + "_dir";
+
+                    // copy the shifted var
+                    code << "Field" + it->type_template + " " + offset_field_name + ";\n";
+                    code << "assert((" << d.ref_list.at(0)->direxpr_s
+                         << ").squarenorm() > 0 && \"in Field[X + offset] offset cannot be 0\")";
+                    code << "Direction " dirname << " = "
+                         << it->new_name + ".shift_minusone(" + d.ref_list.at(0)->direxpr_s + ", " +
+                                offset_field_name + ", " + paritystr + ");\n";
+
+                    // and rewrite references to the offset field
+                    for (field_ref *fr : new_fi.ref_list) {
+                        loopBuf.replace(fr->nameExpr, offset_field_name);
+                        loopBuf.replace(fr->parityExpr, "X");
+                        fr->direxpr_s.clear();
+                        fr->is_direction = false;           // no Direction
+                        fr->info = &field_info_list.back(); // info points to new field_info
+                        fr->is_written = false;
+                        fr->is_read = true;
+                        fr->is_offset = true; // leave this on, as a flag -- turned off below
+                    }
+
+
+#else
+
                     // copy the shifted var
                     code << "Field" + it->type_template + " " + offset_field_name + ";\n";
                     code << it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s + ", " +
@@ -501,6 +536,8 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
                         fr->is_read = true;
                         fr->is_offset = true; // leave this on, as a flag -- turned off below
                     }
+
+#endif
 
                 } // loop over dir_ptr w. offset
 

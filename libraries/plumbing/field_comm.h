@@ -172,7 +172,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     // no move, just copy field
     if (len == 0) {
-        res = *this;
+        res[par] = (*this)[X];
         return res;
     }
 
@@ -252,6 +252,57 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     return res;
 }
+
+
+// template <typename T>
+// Direction Field<T>::shift_minusone(const CoordinateVector &v, Field<T> &res, const Parity par) const {
+
+//     // use this to store remaining moves
+//     CoordinateVector rem = v;
+
+//     // check the parity of the move
+//     Parity par_s;
+
+//     int len = 0;
+//     foralldir(d) len += abs(rem[d]);
+
+//     // no move, just copy field
+//     if (len == 0) {
+//         res[par] = (*this)[X];
+//         return res;
+//     }
+
+
+//     // check if 
+//     bool found_dir = false;
+//     Direction mdir;
+//     foralldir(d) {
+//         if (rem[d] > 0 && gather_status(par_s, d) != gather_status_t::NOT_DONE) {
+//             mdir = d;
+//             found_dir = true;
+//             break;
+//         } else if (rem[d] < 0 && gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
+//             mdir = -d;
+//             found_dir = true;
+//             break;
+//         }
+//     }
+
+//     if (!found_dir) {
+//         // now did not find a 'ready' dir. Take the 1st available
+//         foralldir(d) {
+//             if (rem[d] > 0) {
+//                 mdir = d;
+//                 break;
+//             } else if (rem[d] < 0) {
+//                 mdir = -d;
+//                 break;
+//             }
+//         }
+//     }
+
+
+
 
 #endif // NAIVE_SHIFT
 
@@ -641,6 +692,7 @@ void Field<T>::set_elements(const std::vector<T> &elements,
     assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
     std::vector<unsigned> my_indexes;
     std::vector<T> my_elements;
+    will_change();
     for (int i = 0; i < coord_list.size(); i++) {
         CoordinateVector c = coord_list[i];
         if (lattice->is_on_mynode(c)) {
@@ -774,8 +826,6 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
 #if defined(CUDA) || defined(HIP)
     d_free(data);
 #endif
-
-    this->mark_changed(ALL);
 }
 
 

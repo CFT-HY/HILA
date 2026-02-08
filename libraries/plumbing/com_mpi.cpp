@@ -22,6 +22,8 @@ hila::timer send_timer("MPI send field");
 hila::timer drop_comms_timer("MPI wait drop_comms");
 hila::timer partition_sync_timer("partition sync");
 
+hila::timer field_alloc_timer("Field allocation");
+
 // let us house the partitions-struct here
 
 hila::partitions_struct hila::partitions;

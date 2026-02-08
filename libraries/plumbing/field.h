@@ -24,6 +24,15 @@
 #include "plumbing/com_mpi.h"
 
 
+
+// When FIELD_COPY_ON_WRITE is defined copy constructor Field<T>(const Field<T> &)
+// and default assignment operator operator=(const Field <T> &) make the fields to 
+// use the same content, without copying. Only when one of the fields is modified the
+// content is transparently copied to new storage. This option adds refcounting to the 
+// to the Field content.  In practice this does not seem to gain anything except in 
+// trivial test cases.  Probably will be removed at some point.
+// #define FIELD_COPY_ON_WRITE
+
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
 
@@ -81,6 +90,9 @@ class Field {
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
+#ifdef FIELD_COPY_ON_WRITE
+        int refcount;
+#endif
         unsigned assigned_to;                        // keeps track of first assignment to parities
         gather_status_t gather_status_arr[3][NDIRS]; // is communication done
 
@@ -96,6 +108,7 @@ class Field {
         T *receive_buffer[NDIRS];
 #endif
         T *send_buffer[NDIRS];
+
         /**
          * @internal
          * @brief Initialize communication
@@ -142,6 +155,7 @@ class Field {
         void free_payload() {
             payload.free_field();
         }
+
 
 #ifndef VECTORIZED
         /**
@@ -299,8 +313,16 @@ class Field {
     Field(const Field &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
+#if !defined(FIELD_COPY_ON_WRITE)
+
         (*this)[ALL] = other[X];
+
+#else
+        fs = other.fs;
+        fs->refcount++;
+#endif
     }
+
     /**
      * @internal
      * @brief Copy constructor form Field of type A to field of type F if the conversion is defined
@@ -364,6 +386,9 @@ class Field {
      * @brief  Sets up memory for field content and communication.
      */
     void allocate() {
+        extern hila::timer field_alloc_timer;
+
+        field_alloc_timer.start();
         assert(lattice.is_initialized() && "Fields cannot be used before lattice.setup()");
         assert(fs == nullptr);
         fs = (field_struct *)memalloc(sizeof(field_struct));
@@ -372,6 +397,9 @@ class Field {
         fs->initialize_communication();
         mark_changed(ALL);   // guarantees communications will be done
         fs->assigned_to = 0; // and this means that it is not assigned
+#ifdef FIELD_COPY_ON_WRITE
+        fs->refcount = 1;
+#endif
 
         for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
@@ -383,7 +411,7 @@ class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir(dir) {
+        foralldir (dir) {
             fs->boundary_condition[dir] = hila::bc::PERIODIC;
             fs->boundary_condition[-dir] = hila::bc::PERIODIC;
         }
@@ -397,6 +425,7 @@ class Field {
             fs->vector_lattice = nullptr;
         }
 #endif
+        field_alloc_timer.stop();
     }
 
     /**
@@ -407,11 +436,29 @@ class Field {
         if (fs != nullptr && !hila::about_to_finish) {
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
+#ifdef FIELD_COPY_ON_WRITE
+            fs->refcount--;
+            if (fs->refcount > 0) {
+                fs = nullptr;
+                return;
+            }
+#endif
             fs->free_payload();
             fs->free_communication();
             std::free(fs);
             fs = nullptr;
         }
+    }
+
+    void copy_from(const Field<T> &f) {
+        check_alloc();
+
+        fs->payload.copy_field(lattice, f.fs->payload);
+        mark_changed(ALL);
+    }
+
+    void copy(const Field<T> &f) {
+        (*this)[ALL] = f[X];
     }
 
     /**
@@ -491,6 +538,22 @@ class Field {
         }
         fs->assigned_to |= parity_bits(p);
     }
+
+#ifdef FIELD_COPY_ON_WRITE
+
+    void will_change() {
+        if (fs->refcount > 1) {
+            Field<T> tmp{*this}; // this just sets the reference (increase refcount)
+            clear();             // reset ref
+            allocate();
+            copy(tmp);
+        }
+    }
+#else
+    void will_change() {}
+
+#endif
+
 
     /**
      * @internal
@@ -594,6 +657,7 @@ class Field {
 
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
+        will_change();
 
         lattice_struct *mylat = fs->mylattice.ptr();
         fs->boundary_condition[dir] = bc;
@@ -649,7 +713,7 @@ class Field {
      */
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir(dir) {
+        foralldir (dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -748,7 +812,17 @@ class Field {
      * @return Field<T>& Assigned field
      */
     Field<T> &operator=(const Field<T> &rhs) {
+
+#if !defined(FIELD_COPY_ON_WRITE)
+
         (*this)[ALL] = rhs[X];
+
+#else
+
+        clear();
+        fs = rhs.fs;
+        fs->refcount++;
+#endif
 
         // // This is direct memcpy version of the routine, slightly faster on cpus
         //         if (this->fs == rhs.fs)
@@ -1125,7 +1199,8 @@ class Field {
     template <typename S>
     bool operator==(const Field<S> &rhs) const {
         double s = 0;
-        onsites(ALL) s += !((*this)[X] == rhs[X]);
+        onsites (ALL)
+            s += !((*this)[X] == rhs[X]);
         return (s == 0);
     }
 
@@ -1147,7 +1222,7 @@ class Field {
      */
     double squarenorm() const {
         double n = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             n += ::squarenorm((*this)[X]);
         }
         return n;
@@ -1251,6 +1326,8 @@ class Field {
 
     Field<T> shift(const CoordinateVector &v) const;
 
+    Direction shift_minusone(const CoordinateVector &v, Field<T> &r, Parity par) const;
+
     // General getters and setters
 
     /// Set a single element. Assuming that each node calls this with the same value, it
@@ -1266,6 +1343,7 @@ class Field {
      */
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
     const T set_element(const CoordinateVector &coord, const A &value) {
+        will_change();
         T element;
         element = value;
         assert(is_initialized(ALL) && "Field not initialized yet");
@@ -1348,6 +1426,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1361,6 +1440,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1374,6 +1454,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1387,6 +1468,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1829,7 +1911,7 @@ void swap(Field<T> &A, Field<T> &B) {
 template <typename T, typename R = decltype(exp(std::declval<T>()))>
 Field<R> exp(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = exp(arg[X]);
     }
     return res;
@@ -1841,7 +1923,7 @@ Field<R> exp(const Field<T> &arg) {
 template <typename T, typename R = decltype(log(std::declval<T>()))>
 Field<R> log(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = log(arg[X]);
     }
     return res;
@@ -1853,7 +1935,7 @@ Field<R> log(const Field<T> &arg) {
 template <typename T, typename R = decltype(sin(std::declval<T>()))>
 Field<R> sin(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = sin(arg[X]);
     }
     return res;
@@ -1865,7 +1947,7 @@ Field<R> sin(const Field<T> &arg) {
 template <typename T, typename R = decltype(cos(std::declval<T>()))>
 Field<R> cos(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = cos(arg[X]);
     }
     return res;
@@ -1877,7 +1959,7 @@ Field<R> cos(const Field<T> &arg) {
 template <typename T, typename R = decltype(tan(std::declval<T>()))>
 Field<R> tan(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = tan(arg[X]);
     }
     return res;
@@ -1889,7 +1971,7 @@ Field<R> tan(const Field<T> &arg) {
 template <typename T, typename R = decltype(asin(std::declval<T>()))>
 Field<R> asin(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = asin(arg[X]);
     }
     return res;
@@ -1901,7 +1983,7 @@ Field<R> asin(const Field<T> &arg) {
 template <typename T, typename R = decltype(acos(std::declval<T>()))>
 Field<R> acos(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = acos(arg[X]);
     }
     return res;
@@ -1913,7 +1995,7 @@ Field<R> acos(const Field<T> &arg) {
 template <typename T, typename R = decltype(atan(std::declval<T>()))>
 Field<R> atan(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = atan(arg[X]);
     }
     return res;
@@ -1925,7 +2007,7 @@ Field<R> atan(const Field<T> &arg) {
 template <typename T, typename R = decltype(abs(std::declval<T>()))>
 Field<R> abs(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = abs(arg[X]);
     }
     return res;
@@ -1938,7 +2020,7 @@ Field<R> abs(const Field<T> &arg) {
 template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
 Field<R> pow(const Field<T> &arg, const P p) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = pow(arg[X], p);
     }
     return res;
@@ -1950,7 +2032,7 @@ Field<R> pow(const Field<T> &arg, const P p) {
 template <typename T>
 double squarenorm(const Field<T> &arg) {
     double r = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         r += squarenorm(arg[X]);
     }
     return r;
@@ -1994,7 +2076,7 @@ Field<A> imag(const Field<T> &arg) {
 template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
 double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
     double res = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         res += squarenorm(a[X] - b[X]);
     }
     return res;
@@ -2076,13 +2158,13 @@ void Field<T>::random() {
         (*this).set_local_data(rng_buffer);
 
     } else {
-        onsites(ALL) {
+        onsites (ALL) {
             hila::random((*this)[X]);
         }
     }
 #else
 
-    onsites(ALL) {
+    onsites (ALL) {
         hila::random((*this)[X]);
     }
 
@@ -2102,13 +2184,13 @@ void Field<T>::gaussian_random(double width) {
         (*this).set_local_data(rng_buffer);
 
     } else {
-        onsites(ALL) {
+        onsites (ALL) {
             hila::gaussian_random((*this)[X], width);
         }
     }
 #else
 
-    onsites(ALL) {
+    onsites (ALL) {
         hila::gaussian_random((*this)[X], width);
     }
 
@@ -2132,7 +2214,7 @@ void Field<T>::gaussian_random(double width) {
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites(ALL) {
+    onsites (ALL) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -2171,6 +2253,7 @@ inline void ensure_field_operators_exist() {
     CoordinateVector v = 0;
     Field<T> f;
     f = f.shift(v);
+    f.copy(f);
 }
 
 #endif
