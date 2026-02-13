@@ -277,7 +277,7 @@ void initialize_gpu(int rank, int device) {
 #endif
 
 void gpu_device_info() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         const int kb = 1024;
         const int mb = kb * kb;
 
@@ -339,7 +339,7 @@ void gpu_device_info() {
 #ifdef HIP
 
 void gpu_device_info() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         const int kb = 1024;
         const int mb = kb * kb;
 

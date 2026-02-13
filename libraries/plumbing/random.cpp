@@ -97,7 +97,7 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 
     if (seed == 0) {
         // get seed from time
-        if (hila::myrank() == 0) {
+        if_rank0() {
             struct timespec tp;
 
             clock_gettime(CLOCK_MONOTONIC, &tp);

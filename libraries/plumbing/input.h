@@ -42,7 +42,7 @@ namespace hila {
  *
  * Thus:
  * \code{.cpp}
- * if (hila::myrank() == 0) {
+ * if_rank0() {
  *     double v = f.get("a value");
  *     ...
  * }
@@ -363,7 +363,7 @@ class input {
         val = 0;
         bool no_error = true;
 
-        if (hila::myrank() == 0) {
+        if_rank0() {
             no_error = get_value(val[0], label, false);
             for (int i = 1; i < n && no_error; i++) {
                 no_error = get_value(val[i], ",", false);
@@ -396,7 +396,7 @@ class input {
         val = {};
         bool no_error = true;
 
-        if (hila::myrank() == 0) {
+        if_rank0() {
             T v;
             no_error = get_value(v, label, false);
             val.push_back(v);

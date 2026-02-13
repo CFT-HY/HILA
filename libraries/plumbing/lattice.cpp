@@ -7,7 +7,7 @@
 // node size (with buffers) is larger than 2^31 - too close for comfort!
 
 void report_too_large_node() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         hila::out << "Node size too large: size = " << lattice->mynode.size[0];
         for (int d = 1; d < NDIM; d++)
             hila::out << " x " << lattice->mynode.size[d];

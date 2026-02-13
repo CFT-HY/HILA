@@ -136,7 +136,7 @@ class PlaquetteField {
         hila::open_output_file(filename, outputfile);
 
         // write header
-        if (hila::myrank() == 0) {
+        if_rank0() {
             int64_t f = config_flag;
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
             f = NDIM;
@@ -162,7 +162,7 @@ class PlaquetteField {
         // read header
         bool ok = true;
         int64_t f;
-        if (hila::myrank() == 0) {
+        if_rank0() {
             inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
             ok = (f == config_flag);
             if (!ok)

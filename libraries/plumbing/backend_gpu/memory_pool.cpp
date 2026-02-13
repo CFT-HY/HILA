@@ -142,7 +142,7 @@ void gpu_memory_pool_purge() {
 }
 
 void gpu_memory_pool_report() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         hila::out << "\nGPU Memory pool statistics from node 0:\n";
         hila::out << "   Total pool size " << ((double)total_size) / (1024 * 1024) << " MB\n";
         hila::out << "   # of allocations " << n_allocs << "  real allocs " << std::setprecision(2)

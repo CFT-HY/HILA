@@ -44,7 +44,7 @@ void checkpoint(const GaugeField<group> &U, const std::string &config_file, int 
         status.close();
     }
 
-    if (hila::myrank() == 0) {
+    if_rank0() {
 
         // write the status file
         std::ofstream outf;

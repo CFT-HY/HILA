@@ -172,6 +172,8 @@ T broadcast(T &var, int rank = 0) {
     if (hila::check_input)
         return var;
 
+    assert_all_ranks();
+
     assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
@@ -183,6 +185,7 @@ T broadcast(T &var, int rank = 0) {
 /// Version of broadcast with non-modifiable var
 template <typename T>
 T broadcast(const T &var, int rank = 0) {
+    assert_all_ranks();
     T tmp = var;
     return broadcast(tmp, rank);
 }
@@ -195,6 +198,8 @@ void broadcast(std::vector<T> &list, int rank = 0) {
 
     if (hila::check_input)
         return;
+
+    assert_all_ranks();
 
     broadcast_timer.start();
 
@@ -221,6 +226,7 @@ void broadcast(std::array<T, n> &arr, int rank = 0) {
     if (hila::check_input || n <= 0)
         return;
 
+    assert_all_ranks();
     broadcast_timer.start();
 
     // move vectors directly to the storage
@@ -249,6 +255,8 @@ void broadcast_array(T *var, int n, int rank = 0) {
     if (hila::check_input || n <= 0)
         return;
 
+    assert_all_ranks(); 
+
     broadcast_timer.start();
     MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
@@ -264,6 +272,8 @@ void broadcast2(T &t, U &u, int rank = 0) {
 
     if (hila::check_input)
         return;
+
+    assert_all_ranks();
 
     struct {
         T tv;
@@ -339,6 +349,8 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     if (hila::check_input || send_count == 0)
         return;
 
+    assert_all_ranks();
+
     std::vector<T> recv_data(send_count);
     MPI_Datatype dtype;
     dtype = get_MPI_number_type<T>();
@@ -353,7 +365,7 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
         MPI_Reduce((void *)value, (void *)recv_data.data(),
                    send_count * (sizeof(T) / sizeof(hila::arithmetic_type<T>)), dtype, MPI_SUM, 0,
                    lattice->mpi_comm_lat);
-        if (hila::myrank() == 0)
+        if_rank0()
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];
     }
@@ -380,6 +392,8 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
     if (hila::check_input)
         return;
 
+    assert_all_ranks();
+
     dtype = get_MPI_number_type<T>();
 
     reduction_timer.start();
@@ -391,7 +405,7 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
     } else {
         MPI_Reduce((void *)send_data, (void *)recv_data.data(), send_count, dtype, MPI_PROD, 0,
                    lattice->mpi_comm_lat);
-        if (hila::myrank() == 0)
+        if_rank0()
             for (int i = 0; i < send_count; i++)
                 send_data[i] = recv_data[i];
     }

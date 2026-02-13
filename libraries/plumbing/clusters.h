@@ -36,7 +36,7 @@
  *
  * // above is equivalent to "hila::Clusters cl;  cl.find(cltype);"
  *
- * if (hila::myrank() == 0) {
+ * if_rank0() {
  *     hila::out << "Got " << cl.number() << " clusters\n";
  *     for (int i = 0; i < cl.number(); i++) {
  *         hila::out << "Cluster " << i << " type " << cl[i].type() << " size " << cl[i].size() <<
@@ -178,6 +178,7 @@ class Clusters {
         /// @brief returns the area of the cluster
         /// Must be called from all MPI ranks - involves reduction
         int64_t area() const {
+            assert_all_ranks();
 
             uint64_t lbl = clusters.clist[index].label;
             int64_t cl_area = 0;
@@ -199,6 +200,8 @@ class Clusters {
         /// Must be called from all MPI ranks
 
         std::vector<SiteIndex> sites() const {
+            assert_all_ranks();
+
             SiteSelect sites;
             uint64_t la = clusters.clist[index].label;
 
@@ -290,6 +293,7 @@ class Clusters {
     /// @param link[d][X] is non-zero if sites X and X + d are to be connected
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
     void find(const VectorField<inttype> &link) {
+        assert_all_ranks();
         Field<uint8_t> f{hila::Clusters::background};
         foralldir (d) {
             onsites (ALL) {
@@ -333,6 +337,7 @@ class Clusters {
     template <typename inttype, std::enable_if_t<std::is_integral<inttype>::value, int> = 0>
     void make_labels(const Field<inttype> &type) {
 
+        assert_all_ranks();
         constexpr unsigned comm_interval = 1;
 
         // mark every site with site index on 54 low, leaving 8 bits at the top for the type
@@ -404,6 +409,7 @@ class Clusters {
             hila::error("hila::Clusters::classify() called without preceding "
                         "hila::Clusters::make_labels()");
         }
+        assert_all_ranks();
 
         clist.clear();
 

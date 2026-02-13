@@ -96,7 +96,7 @@ void hila::initialize(int argc, char **argv) {
     hila::inittime();
 
     // open hila::out0 only for node 0
-    if (hila::myrank() == 0)
+    if_rank0()
         hila::out0.rdbuf(std::cout.rdbuf());
 
     // Set the inbuilt command-line flags and their corresponding help texts
@@ -185,7 +185,7 @@ void hila::initialize(int argc, char **argv) {
     }
 
 
-    if (hila::myrank() == 0) {
+    if_rank0() {
         hila::print_dashed_line("HILA lattice framework");
         hila::out0 << "Running program " << argv[0] << "\n";
         hila::out0 << "with command line arguments '";
@@ -346,7 +346,7 @@ void setup_output() {
 
     bool do_exit = false;
 
-    if (hila::myrank() == 0) {
+    if_rank0() {
         if (hila::cmdline.flag_present("-o")) {
             // Quits if '-o' was left without an argument
             std::string name;
@@ -368,7 +368,7 @@ void setup_output() {
                     hila::out.rdbuf(
                         hila::output_file.rdbuf()); // output now points to output_redirect
 
-                    if (hila::myrank() == 0)
+                    if_rank0()
                         hila::out0.rdbuf(hila::out.rdbuf());
                 }
             }
@@ -435,7 +435,7 @@ void setup_partitions() {
 #endif
 
     std::string dirname = partition_dir + std::to_string(hila::partitions.mylattice());
-    if (hila::myrank() == 0) {
+    if_rank0() {
         filesys_ns::create_directory(dirname);
     }
     hila::synchronize();
@@ -468,7 +468,7 @@ void setup_partitions() {
         if (!hila::check_input) {
             hila::out.rdbuf(hila::output_file.rdbuf());
             // output now points to output_redirect
-            if (hila::myrank() == 0) {
+            if_rank0() {
                 hila::out0.rdbuf(hila::out.rdbuf());
             }
         }
@@ -526,7 +526,7 @@ void vector_type_info() {
 void hila::print_dashed_line(const std::string &text) {
     static constexpr int linelength = 60;
 
-    if (hila::myrank() == 0) {
+    if_rank0() {
 
         if (text.size() == 0) {
             for (int i = 0; i < linelength; i++)

@@ -107,7 +107,7 @@ class ReductionVector {
                               operation, lattice->mpi_comm_lat);
             }
         } else {
-            if (hila::myrank() == 0) {
+            if_rank0() {
                 if (is_nonblocking_) {
                     MPI_Ireduce(MPI_IN_PLACE, (void *)val.data(),
                                 sizeof(T) * val.size() / sizeof(hila::arithmetic_type<T>), dtype,

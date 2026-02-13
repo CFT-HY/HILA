@@ -41,7 +41,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
     }
 
     bool got_error = false;
-    if (hila::myrank() == 0) {
+    if_rank0() {
         if (is_initialized) {
             if (speaking)
                 hila::out0 << "Error: file '" << fname << "' cannot be opened because '" << filename
@@ -121,7 +121,7 @@ void input::close() {
 
 // read one line skipping comments and initial whitespace
 bool input::get_line() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         do {
             std::istream *inptr;
 
@@ -178,7 +178,7 @@ void input::print_linebuf(int end_of_key) {
 
 // remove leading whitespace, incl. lines
 bool input::remove_whitespace() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         while (lb_start < linebuffer.size() && std::isspace(linebuffer[lb_start]))
             lb_start++;
         if (lb_start == linebuffer.size())
@@ -290,7 +290,7 @@ bool input::match_token(const std::string &tok) {
 // require the (typically beginning of line) key for parameters
 
 bool input::handle_key(const std::string &key) {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         // check the linebuffer for stuff
         remove_whitespace();
 
@@ -365,7 +365,7 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
     double d;
     std::string s;
 
-    if (hila::myrank() == 0) {
+    if_rank0() {
         if (no_error && peek_token(s)) {
 
             for (int i = 0; i < items.size() && item < 0; i++) {

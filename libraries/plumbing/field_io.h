@@ -11,8 +11,9 @@ namespace hila {
 // a bit crazy
 template <typename IS, std::enable_if_t<std::is_same<IS, std::ifstream>::value, int> = 0>
 bool open_input_file(const std::string &filename, IS &inputfile) {
+
     bool ok = true;
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         inputfile.open(filename, std::ios::in | std::ios::binary);
         if (inputfile.fail()) {
             hila::out0 << "ERROR in opening file " << filename << '\n';
@@ -30,7 +31,7 @@ template <typename OS, std::enable_if_t<std::is_same<OS, std::ofstream>::value, 
 bool open_output_file(const std::string &filename, OS &outputfile, bool binary = true,
                       int precision = 8) {
     bool ok = true;
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         std::ios::openmode mode = std::ios::out | std::ios::trunc;
         if (binary)
             mode |= std::ios::binary;
@@ -55,7 +56,7 @@ template <typename S, std::enable_if_t<std::is_same<S, std::ofstream>::value ||
                                        int> = 0>
 bool close_file(const std::string &filename, S &fstream) {
     bool error = false;
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         fstream.close();
         if (fstream.fail()) {
             hila::out0 << "ERROR in reading/writing file " << filename << '\n';
@@ -80,6 +81,8 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
 
+    assert_all_ranks();
+
     if (!binary)
         outputfile.precision(precision);
 
@@ -97,7 +100,7 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
             coord_list.resize(sites);
 
         fs->gather_elements(buffer, coord_list);
-        if (hila::myrank() == 0) {
+        if_rank0 () {
             if (binary) {
                 outputfile.write((char *)buffer, sites * sizeof(T));
             } else {
@@ -152,6 +155,7 @@ void Field<T>::read(std::ifstream &inputfile) {
     if (!this->is_allocated())
         this->allocate();
 
+    assert_all_ranks();
     will_change();
     mark_changed(ALL);
 
@@ -168,7 +172,7 @@ void Field<T>::read(std::ifstream &inputfile) {
         if (sites < sites_per_read)
             coord_list.resize(sites);
 
-        if (hila::myrank() == 0)
+        if_rank0 ()
             inputfile.read((char *)buffer, sites * sizeof(T));
 
         fs->scatter_elements(buffer, coord_list);
@@ -179,13 +183,14 @@ void Field<T>::read(std::ifstream &inputfile) {
 
 /// Read the Field from a stream
 template <typename T>
-void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
+void Field<T>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
     constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
 
     if (!this->is_allocated())
         this->allocate();
 
+    assert_all_ranks();
     will_change();
     mark_changed(ALL);
 
@@ -196,7 +201,7 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
     int scalef[NDIM];
     size_t tvol = 1;
     size_t scvol = 1;
-    foralldir(d) {
+    foralldir (d) {
         scalef[d] = lsize[d] / insize[d];
         tvol *= insize[d];
         scvol *= scalef[d];
@@ -204,13 +209,13 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
 
     for (size_t i = 0; i < tvol; i += sites_per_read) {
         size_t sites = std::min(sites_per_read, tvol - i);
-        if (hila::myrank() == 0) {
+        if_rank0 () {
             inputfile.read((char *)buffer, sites * sizeof(T));
         }
-        
+
         for (size_t j = 0; j < sites; j++) {
             size_t ind = i + j;
-            foralldir(dir) {
+            foralldir (dir) {
                 coord_list[j][dir] = ind % insize[dir];
                 ind /= insize[dir];
             }
@@ -227,7 +232,7 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector& insize) {
         for (size_t sci = 1; sci < scvol; ++sci) {
             std::vector<CoordinateVector> tcoord_list(coord_list.size());
             size_t ind = sci;
-            foralldir(dir) {
+            foralldir (dir) {
                 int tsf = ind % scalef[dir];
                 ind /= scalef[dir];
                 for (size_t j = 0; j < sites; j++) {
@@ -284,9 +289,11 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
 
+    assert_all_ranks();
+
     size_t sites = 1;
     int line_len = 1; // number of elements on 1st non-trivial dimension
-    foralldir(d) {
+    foralldir (d) {
         assert(cmin[d] >= 0 && cmax[d] >= cmin[d] && cmax[d] < fs->mylattice.size(d) &&
                "subvolume size mismatch");
         sites *= cmax[d] - cmin[d] + 1;
@@ -304,7 +311,7 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
     size_t i = 0, j = 0;
 
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         outputfile.precision(precision);
     }
 
@@ -318,7 +325,7 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
             fs->gather_elements(buffer, coord_list);
 
-            if (hila::myrank() == 0) {
+            if_rank0 () {
                 for (size_t k = 0; k < i; k++) {
                     for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
                         outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
@@ -356,7 +363,7 @@ void Field<T>::write_slice(outf_type &outf, const CoordinateVector &slice, int p
                   "file name / output stream argument in write_slice()?");
 
     CoordinateVector cmin, cmax;
-    foralldir(d) {
+    foralldir (d) {
         if (slice[d] < 0) {
             cmin[d] = 0;
             cmax[d] = fs->mylattice.size(d) - 1;

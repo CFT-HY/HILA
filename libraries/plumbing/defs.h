@@ -57,39 +57,47 @@
 // #endif
 
 
-// This below declares "out_only" -qualifier.  It is empty on purpose. Do not remove!
-#define out_only
-// out_only indicates that the function does not use the original value of the argument:
-//    double func( out_only double & p, ..) { ... }
-//    func(a);
-// This helps hilapp to optimize memory access.  It is not a bug to leave out out_only,
-// but it is a bug to "lie", i.e. use the original value of the variable if out_only is
-// used.
-//
-// out_only for class methods tells hilapp that the base variable original value is not
-// needed:
-// class C {
-//    int set() out_only { .. }
-// };
-// indicates that a.set(); does not need original value of a. e qualifier.
+/**
+ *  @brief Declare "out_only" -qualifier.
+ *  @details out_only indicates that the function does not use the original value of the argument:
+ *    double func( out_only double & p, ..) { ... }
+ *    func(a);
+ * This helps hilapp to optimize memory access.  It is not a bug to leave out out_only,
+ * but it is a bug to "lie", i.e. use the original value of the variable if out_only is
+ *  used.
+ *
+ * out_only for class methods tells hilapp that the base variable original value is not
+ * needed:
+ * class C {
+ *    int set() out_only { .. }
+ * };
+ * indicates that a.set(); does not need original value of a. e qualifier.
+ * Definition empty on purpose, do not remove!
+ */
 
-// Defined empty on purpose, same as above!
+#define out_only
+
+/**
+ * @brief  const_function qualifier for class methods.
+ * @details const_function does not change the base variable, but can return a (non-const)
+ * reference. Needed typically for access operators for loop extern variables:
+ *     class v {
+ *         double c[N];
+ *         double & e(const int i) const_function { return c[i]; }
+ *     };
+ *
+ *     v vv;
+ *     Field<v>  f;
+ *     onsites(ALL) { f[X].e(0) += vv.e(0); }
+ * This would not work without const_function, because vv.e(0) might modify loop
+ * extern variable vv, which is not allowed.  If method is marked "const",
+ * then the assignment would not work.
+ *
+ * const_function is weaker than const.
+ * Defined empty below, do not remove!
+ */
+
 #define const_function
-// const_function does not change the base variable, but can return a (non-const)
-// reference. Needed typically for access operators for loop extern variables:
-//     class v {
-//         double c[N];
-//         double & e(const int i) const_function { return c[i]; }
-//     };
-//
-//     v vv;
-//     Field<v>  f;
-//     onsites(ALL) { f[X].e(0) += vv.e(0); }
-// This would not work without const_function, because vv.e(0) might modify loop
-// extern variable vv, which is not allowed.  If method is marked "const",
-// then the assignment would not work.
-//
-// const_function is weaker than const.
 
 
 // text output section -- defines also hila::out0, which writes from node 0 only
@@ -131,8 +139,8 @@ void error(const char *msg);
 int myrank();
 /// how many nodes there are
 int number_of_nodes();
-/// sync MPI 
-void barrier();  
+/// sync MPI
+void barrier();
 /// synchronize mpi + gpu
 void synchronize();
 void synchronize_partitions();
@@ -147,6 +155,63 @@ void abort_communications(int status);
 void print_dashed_line(const std::string &txt = {});
 
 } // namespace hila
+
+///////////////////////////////////
+// Implement here if_rank0() -helper, as early as possible
+
+// defined in com_mpi.c
+extern int rank0_block_level_;
+
+// aux struct definition, used here to
+struct rank0_block_level_struct {
+    rank0_block_level_struct() {
+        rank0_block_level_++;
+    }
+    ~rank0_block_level_struct() {
+        rank0_block_level_--;
+    }
+};
+
+/**
+ * @brief if_rank0()  macro - execute block only if on rank 0
+ * @details
+ * @example
+ * @code.{cpp}
+ *    if_rank0() {
+ *        <do something onr rank0>
+ *    } else {
+ *        <do something on other ranks>
+ *    }
+ * @endcode
+ * Better than "if (hila::myrank() == 0)", because this keeps a status variable
+ * which some MPI calls can check, avoiding deadlock
+ *
+ * Can be decorated with additional conditions with "&&" or "||", e.g.
+ * @example
+ * @code.{cpp}
+ *    if_rank0(&& <condition>) { }
+ * @endcode
+ */
+
+#define if_rank0(a)                                                                                \
+    if (rank0_block_level_struct dummy_block_level_tracker_; (hila::myrank() == 0) a)
+
+/**
+ * @brief Assert that all ranks are running this code segment
+ *
+ */
+
+#define assert_all_ranks()                                                                         \
+    do                                                                                             \
+        if (rank0_block_level_ != 0) {                                                             \
+            hila::out << "ERROR: Function \"" << __func__                                          \
+                      << "\" must be called by all MPI ranks\n";                                   \
+            assert(rank0_block_level_ == 0);                                                       \
+        }                                                                                          \
+    while (0)
+
+/////////////////////
+
 
 // The logger uses hila::myrank, so it cannot be included on top
 #include "plumbing/logger.h"

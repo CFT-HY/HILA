@@ -58,7 +58,7 @@ class Reduction {
                               dtype, operation, lattice->mpi_comm_lat);
             }
         } else {
-            if (hila::myrank() == 0) {
+            if_rank0() {
                 if (is_nonblocking()) {
                     MPI_Ireduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::arithmetic_type<T>),
                                 dtype, operation, 0, lattice->mpi_comm_lat, &request);
@@ -103,7 +103,7 @@ class Reduction {
     ///
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Reduction(const S &v) {
-        if (hila::myrank() == 0) {
+        if_rank0() {
             val = v;
         } else {
             val = 0;
@@ -167,7 +167,7 @@ class Reduction {
 
         comm_is_on = false;
         T ret = rhs;
-        if (hila::myrank() == 0) {
+        if_rank0() {
             val = ret;
         } else {
             val = 0;

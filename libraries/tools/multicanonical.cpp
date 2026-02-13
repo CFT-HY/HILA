@@ -316,7 +316,7 @@ double Muca::weight_function(double OP) const {
 ////////////////////////////////////////////////////////////////////////////////
 double Muca::weight(double OP) const {
     double val;
-    if (hila::myrank() == 0) {
+    if_rank0() {
         val = weight_function(OP);
     }
     hila::broadcast(val);
@@ -339,7 +339,7 @@ void Muca::set_weight_iter_flag(bool YN) {
 ////////////////////////////////////////////////////////////////////////////////
 bool Muca::check_weight_iter_flag() {
     bool flag;
-    if (hila::myrank() == 0)
+    if_rank0()
         flag = weightIterationFlag;
     hila::broadcast(flag);
     return flag;
@@ -362,7 +362,7 @@ bool Muca::accept_reject(const double OP_old, const double OP_new) {
     // flags[0] = accept/reject, flags[1] = do iterate weights,
     std::array<bool, 2> flags;
     // Only compute on node 0, broadcast to others
-    if (hila::myrank() == 0) {
+    if_rank0() {
         double W_new = weight_function(OP_new);
         double W_old = weight_function(OP_old);
 
@@ -562,7 +562,7 @@ inline void Muca::initialise_weight_vectors() {
 ////////////////////////////////////////////////////////////////////////////////
 bool iterate_weight_function_direct(Muca &muca, double OP) {
     bool continue_iteration;
-    if (hila::myrank() == 0) {
+    if_rank0() {
         int samples = muca.DI.sample_size;
         int N = muca.weights.size();
 
@@ -624,7 +624,7 @@ bool iterate_weight_function_direct(Muca &muca, double OP) {
 ////////////////////////////////////////////////////////////////////////////////
 bool iterate_weight_function_direct_single(Muca &muca, double OP) {
     int continue_iteration;
-    if (hila::myrank() == 0) {
+    if_rank0() {
         int samples = muca.DI.sample_size;
         int N = muca.weights.size();
 
@@ -679,7 +679,7 @@ bool iterate_weight_function_direct_single(Muca &muca, double OP) {
 
 bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
     bool continue_iteration;
-    if (hila::myrank() == 0) {
+    if_rank0() {
         const int samples = muca.DI.sample_size;
         const int N = muca.weights.size();
 
@@ -742,7 +742,7 @@ bool iterate_weight_function_direct_smooth(Muca &muca, double OP) {
 ///     TODO: better stop iter criterion
 bool iterate_weight_function_canonical(Muca &muca, double OP) {
     bool continue_iteration = true;
-    if (hila::myrank() == 0) {
+    if_rank0() {
 
         muca.weightIterationCount += 1;
 
@@ -900,7 +900,7 @@ inline void Muca::setup_iteration() {
     } else {
         iterate_weights = &iterate_weight_function_direct;
         DI.C = DI.C_init;
-        if (hila::myrank() == 0) {
+        if_rank0() {
             printf("Muca: note: input iteration method `%s` did not match any method:\n"
                    "            setting the default `direct` method\n",
                    WParam.method.c_str());
@@ -917,7 +917,7 @@ inline void Muca::setup_iteration() {
         finish_check = &first_last_visited;
     } else {
         finish_check = &all_visited;
-        if (hila::myrank() == 0) {
+        if_rank0() {
             printf("Muca: note: input finish condition `%s` did not match any:\n"
                    "            setting the default `all_visited` condition\n",
                    DI.finish_condition.c_str());
@@ -934,7 +934,7 @@ inline void Muca::setup_iteration() {
 /// @param YN   enable (true) or disable (false) the iteration
 ////////////////////////////////////////////////////////////////////////////////
 void Muca::set_continuous_iteration(bool YN) {
-    if (hila::myrank() == 0)
+    if_rank0()
         WParam.AR_iteration = YN;
 }
 
@@ -952,7 +952,7 @@ bool Muca::initialise(const std::string wfile_name) {
     read_weight_parameters(wfile_name);
     bool ret = true;
     // This is fine to do just for process zer0
-    if (hila::myrank() == 0) {
+    if_rank0() {
         // Read pre-existing weight if given
         if (WParam.weight_loc.compare("NONE") != 0) {
             if (!read_weight_function(WParam.weight_loc)) {
