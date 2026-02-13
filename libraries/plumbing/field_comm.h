@@ -161,7 +161,7 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     // use this to store remaining moves
     CoordinateVector rem = v;
@@ -314,7 +314,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 template <typename T>
 dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     // get the mpi message tag right away, to ensure that we are always synchronized
     // with the mpi calls -- some nodes might not need comms, but the tags must be in
@@ -449,7 +449,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 template <typename T>
 void Field<T>::wait_gather(Direction d, Parity p) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -544,7 +544,7 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
                                              const std::vector<CoordinateVector> &coord_list,
                                              int root) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->nodes.number);
@@ -622,7 +622,7 @@ template <typename T>
 void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
                                               const std::vector<CoordinateVector> &coord_list,
                                               int root) {
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->nodes.number);
@@ -699,7 +699,7 @@ template <typename T>
 void Field<T>::set_elements(const std::vector<T> &elements,
                             const std::vector<CoordinateVector> &coord_list) {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
     std::vector<unsigned> my_indexes;
     std::vector<T> my_elements;
@@ -720,7 +720,7 @@ void Field<T>::set_elements(const std::vector<T> &elements,
 template <typename T>
 std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord_list,
                                       bool bcast) const {
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     std::vector<T> res;
     if_rank0 ()
@@ -739,7 +739,7 @@ template <typename T>
 std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                        bool bcast) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     size_t vol = 1;
     foralldir (d) {
         vol *= cmax[d] - cmin[d] + 1;
@@ -760,7 +760,7 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
 template <typename T>
 std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     CoordinateVector cmin, cmax;
     foralldir (d)
         if (c[d] < 0) {
@@ -852,7 +852,7 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
                                      const Vector<NDIM, int> &dirs, int ndir) {
 
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     // get the coords of the min point of the halo array
     CoordinateVector nmin = lattice->mynode.min;
@@ -910,7 +910,7 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
 template <typename T>
 void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     // get the coords of the min point of the halo array
     CoordinateVector nmin = lattice->mynode.min;
@@ -998,7 +998,7 @@ template <typename T>
 void Field<T>::block_from(Field<T> &orig) {
     assert(orig.is_initialized(ALL) && "block_from()-method field is not initialized");
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     this->check_alloc();
     lattice_struct *blocklat = this->fs->mylattice.ptr();
@@ -1054,7 +1054,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
     assert(this->is_initialized(ALL) && "unblock_to()-method field is not initialized");
     target.check_alloc();
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     lattice_struct *blocklat = this->fs->mylattice.ptr();
     lattice_struct *parentlat = target.fs->mylattice.ptr();
@@ -1104,7 +1104,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
 template <typename T>
 void Field<T>::block_to_current_lattice() {
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     this->check_alloc();
     lattice_struct *thislat = this->fs->mylattice.ptr();

@@ -201,7 +201,7 @@ struct rank0_block_level_struct {
  *
  */
 
-#define assert_all_ranks()                                                                         \
+#define assert_all_ranks_present()                                                                         \
     do                                                                                             \
         if (rank0_block_level_ != 0) {                                                             \
             hila::out << "ERROR: Function \"" << __func__                                          \

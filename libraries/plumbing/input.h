@@ -57,7 +57,7 @@ class input {
     bool is_initialized = false;
     std::string filename;
     bool use_cin;
-    int file_number;   // running file index
+    int file_number; // running file index
 
     std::string linebuffer;
     size_t lb_start = 0; // linebuffer start index
@@ -271,10 +271,12 @@ class input {
      * @return returntype Value corresponding to input key
      */
     inline returntype get(const std::string &key) {
+        assert_all_ranks_present();
         return returntype(key, this);
     }
 
     inline returntype get() {
+        assert_all_ranks_present();
         return returntype("", this);
     }
 
@@ -320,6 +322,7 @@ class input {
         }
 
         if (bcast) {
+            assert_all_ranks_present();
             // string has to be treated separately
             if constexpr (std::is_same<T, std::string>::value) {
                 hila::broadcast(val);
@@ -335,6 +338,7 @@ class input {
     // get_value for Complex<T>
     template <typename T>
     bool get_value(Complex<T> &val, const std::string &label, bool bcast = true) {
+
         val = 0;
         bool no_error = handle_key(label); // removes whitespace
 
@@ -353,6 +357,7 @@ class input {
         }
 
         if (bcast) {
+            assert_all_ranks_present();
             hila::broadcast2(val, no_error);
         }
         return no_error;
@@ -360,10 +365,11 @@ class input {
     // get_value for #Vector<n,T>
     template <int n, typename T>
     bool get_value(Vector<n, T> &val, const std::string &label, bool bcast = true) {
+
         val = 0;
         bool no_error = true;
 
-        if_rank0() {
+        if_rank0 () {
             no_error = get_value(val[0], label, false);
             for (int i = 1; i < n && no_error; i++) {
                 no_error = get_value(val[i], ",", false);
@@ -376,6 +382,7 @@ class input {
         }
 
         if (bcast) {
+            assert_all_ranks_present();
             hila::broadcast2(val, no_error);
         }
         return no_error;
@@ -396,7 +403,7 @@ class input {
         val = {};
         bool no_error = true;
 
-        if_rank0() {
+        if_rank0 () {
             T v;
             no_error = get_value(v, label, false);
             val.push_back(v);
@@ -412,6 +419,7 @@ class input {
         }
 
         if (bcast) {
+            assert_all_ranks_present();
             hila::broadcast(val);
             hila::broadcast(no_error);
         }

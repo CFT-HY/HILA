@@ -81,7 +81,7 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     if (!binary)
         outputfile.precision(precision);
@@ -155,7 +155,7 @@ void Field<T>::read(std::ifstream &inputfile) {
     if (!this->is_allocated())
         this->allocate();
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     will_change();
     mark_changed(ALL);
 
@@ -190,7 +190,7 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
     if (!this->is_allocated())
         this->allocate();
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     will_change();
     mark_changed(ALL);
 
@@ -289,7 +289,7 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     size_t sites = 1;
     int line_len = 1; // number of elements on 1st non-trivial dimension

@@ -172,7 +172,7 @@ T broadcast(T &var, int rank = 0) {
     if (hila::check_input)
         return var;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
@@ -185,7 +185,7 @@ T broadcast(T &var, int rank = 0) {
 /// Version of broadcast with non-modifiable var
 template <typename T>
 T broadcast(const T &var, int rank = 0) {
-    assert_all_ranks();
+    assert_all_ranks_present();
     T tmp = var;
     return broadcast(tmp, rank);
 }
@@ -199,7 +199,7 @@ void broadcast(std::vector<T> &list, int rank = 0) {
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     broadcast_timer.start();
 
@@ -226,7 +226,7 @@ void broadcast(std::array<T, n> &arr, int rank = 0) {
     if (hila::check_input || n <= 0)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     broadcast_timer.start();
 
     // move vectors directly to the storage
@@ -255,7 +255,7 @@ void broadcast_array(T *var, int n, int rank = 0) {
     if (hila::check_input || n <= 0)
         return;
 
-    assert_all_ranks(); 
+    assert_all_ranks_present(); 
 
     broadcast_timer.start();
     MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
@@ -273,7 +273,7 @@ void broadcast2(T &t, U &u, int rank = 0) {
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     struct {
         T tv;
@@ -349,7 +349,7 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     if (hila::check_input || send_count == 0)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     std::vector<T> recv_data(send_count);
     MPI_Datatype dtype;
@@ -392,7 +392,7 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     dtype = get_MPI_number_type<T>();
 

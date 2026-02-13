@@ -139,7 +139,7 @@ void hila_reduce_sums() {
 
 /// set allreduce on (default) or off on the next reduction
 void hila::set_allreduce(bool on) {
-    assert_all_ranks();
+    assert_all_ranks_present();
     allreduce_on = on;
 }
 
@@ -197,7 +197,7 @@ void hila::abort_communications(int status) {
 
 /* clean exit from all nodes */
 void hila::finish_communications() {
-    assert_all_ranks();
+    assert_all_ranks_present();
     // turn off mpi -- this is needed to avoid mpi calls in destructors
     mpi_initialized = false;
     hila::about_to_finish = true;
@@ -211,7 +211,7 @@ void hila::broadcast(std::string &var, int rank) {
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     int size = var.size();
     hila::broadcast(size, rank);
@@ -230,7 +230,7 @@ void hila::broadcast(std::vector<std::string> &list, int rank) {
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
     int size = list.size();
     hila::broadcast(size, rank);
     list.resize(size);
@@ -267,7 +267,7 @@ int hila::number_of_nodes() {
 }
 
 void hila::synchronize() {
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     synchronize_timer.start();
     hila::synchronize_threads();
@@ -276,7 +276,7 @@ void hila::synchronize() {
 }
 
 void hila::barrier() {
-    assert_all_ranks();
+    assert_all_ranks_present();
     synchronize_timer.start();
     MPI_Barrier(lattice->mpi_comm_lat);
     synchronize_timer.stop();
@@ -307,7 +307,7 @@ void hila::split_into_partitions(int this_lattice) {
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.ptr()->mpi_comm_lat)) !=
         MPI_SUCCESS) {
@@ -320,7 +320,7 @@ void hila::split_into_partitions(int this_lattice) {
 }
 
 void hila::synchronize_partitions() {
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     if (partitions.number() > 1)
         MPI_Barrier(MPI_COMM_WORLD);
@@ -374,7 +374,7 @@ void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool all
     if (hila::check_input)
         return;
 
-    assert_all_ranks();
+    assert_all_ranks_present();
 
     static bool init_extended_type_and_operation = true;
     if (init_extended_type_and_operation) {
