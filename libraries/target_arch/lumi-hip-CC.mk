@@ -1,4 +1,4 @@
-# Platform specific makefile for LUMI standard (CPU) code
+# Platform specific makefile for LUMI Cray Env (LUMI/yy.xx) AMD Mi250 GPU code
 #
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
@@ -6,17 +6,16 @@
 
 $(info ########################################################################)
 $(info Target lumi-hip-CC: remember to )
-$(info   module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm )
+$(info   module --force purge && module --force unload LUMI )
+$(info   module load LUMI/25.03 partition/G cpeCray/25.03 buildtools/25.03 rocm/6.3.4 )
 $(info )
-$(info Arcording to note of changes of  update of August-September 2024 from LUMI team,)
-$(info LUMI/24.04 is the only truly-supported software stack, you may condider use )
-$(info LUMI/24.03 and its toolchains to make workflow smooth. )
-$(info To load LUMI/24.03 with Cray Clang compiler, AMD GPU gfx90a libs, ROCm and toolchain run )
+$(info Arcording to note of changes of update of January 2026 from LUMI team,)
+$(info LUMI/25.03 is the default and only fully developed software stack for ROCm 6.3 )
+$(info on current LUMI system. Use LUMI/25.03 and its toolchains for smooth workflow. )
+$(info The compiler wraper CC is Cray Clang 19, which has good supports for AMD GPUs.)
 $(info )
-$(info   module --force purge && module --force unload LUMI)
-$(info   module load LUMI/24.03 partition/G cpeCray/24.03 buildtools/24.03 rocm/6.0.3 )
-$(info LUMI/24.03 contains EasyBuild extra-packages building system, read LUMI documentaion to learn more.)
-$(info Moreover, the compiler wrapper CC has full konwledge of C++ standard include files, which are significant for hilapp functionality.)
+$(info Compiler wrapper CC has full konwledge of C++ standard include files, )
+$(info which are significant for hilapp functionality.)
 $(info ########################################################################)
 
 
