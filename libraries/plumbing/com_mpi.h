@@ -192,12 +192,12 @@ T broadcast(const T &var, int rank = 0) {
 
 /// Broadcast for std::vector
 template <typename T>
-void broadcast(std::vector<T> &list, int rank = 0) {
+auto &broadcast(std::vector<T> &list, int rank = 0) {
 
     static_assert(std::is_trivial<T>::value, "broadcast(std::vector<T>) must have trivial T");
 
     if (hila::check_input)
-        return;
+        return list;
 
     assert_all_ranks_present();
 
@@ -215,16 +215,17 @@ void broadcast(std::vector<T> &list, int rank = 0) {
     }
 
     broadcast_timer.stop();
+    return list;
 }
 
 /// And broadcast for std::array
 template <typename T, int n>
-void broadcast(std::array<T, n> &arr, int rank = 0) {
+auto &broadcast(std::array<T, n> &arr, int rank = 0) {
 
     static_assert(std::is_trivial<T>::value, "broadcast(std::array<T>) must have trivial T");
 
     if (hila::check_input || n <= 0)
-        return;
+        return arr;
 
     assert_all_ranks_present();
     broadcast_timer.start();
@@ -233,6 +234,7 @@ void broadcast(std::array<T, n> &arr, int rank = 0) {
     MPI_Bcast((void *)arr.data(), sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
 
     broadcast_timer.stop();
+    return arr;
 }
 
 
@@ -241,30 +243,31 @@ void broadcast(std::array<T, n> &arr, int rank = 0) {
 
 template <typename T>
 void broadcast(T *var, int rank = 0) {
-    static_assert(sizeof(T) > 0 &&
-                  "Do not use pointers to broadcast()-function. Use 'broadcast_array(T* arr, "
-                  "int size)' to broadcast an array");
+    static_assert(sizeof(T) == 0 ,
+                  "Pointers (arrays) cannot be arguments of hila::broadcast(). Use 'broadcast_array(T* arr, "
+                  "int size)' to broadcast a c-type array");
 }
 
 ///
 /// Broadcast for arrays where size must be known and same for all nodes
 
 template <typename T>
-void broadcast_array(T *var, int n, int rank = 0) {
+T *broadcast_array(T *var, int n, int rank = 0) {
 
     if (hila::check_input || n <= 0)
-        return;
+        return var;
 
-    assert_all_ranks_present(); 
+    assert_all_ranks_present();
 
     broadcast_timer.start();
     MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
+    return var;
 }
 
 // DO string bcasts separately
-void broadcast(std::string &r, int rank = 0);
-void broadcast(std::vector<std::string> &l, int rank = 0);
+std::string &broadcast(std::string &r, int rank = 0);
+std::vector<std::string> &broadcast(std::vector<std::string> &l, int rank = 0);
 
 /// and broadcast with two values
 template <typename T, typename U>
@@ -365,7 +368,7 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
         MPI_Reduce((void *)value, (void *)recv_data.data(),
                    send_count * (sizeof(T) / sizeof(hila::arithmetic_type<T>)), dtype, MPI_SUM, 0,
                    lattice->mpi_comm_lat);
-        if_rank0()
+        if_rank0 ()
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];
     }
@@ -405,7 +408,7 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
     } else {
         MPI_Reduce((void *)send_data, (void *)recv_data.data(), send_count, dtype, MPI_PROD, 0,
                    lattice->mpi_comm_lat);
-        if_rank0()
+        if_rank0 ()
             for (int i = 0; i < send_count; i++)
                 send_data[i] = recv_data[i];
     }

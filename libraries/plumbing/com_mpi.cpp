@@ -206,10 +206,10 @@ void hila::finish_communications() {
 }
 
 // broadcast specialization
-void hila::broadcast(std::string &var, int rank) {
+std::string &hila::broadcast(std::string &var, int rank) {
 
     if (hila::check_input)
-        return;
+        return var;
 
     assert_all_ranks_present();
 
@@ -223,12 +223,13 @@ void hila::broadcast(std::string &var, int rank) {
     broadcast_timer.start();
     MPI_Bcast((void *)var.data(), size, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
+    return var;
 }
 
-void hila::broadcast(std::vector<std::string> &list, int rank) {
+std::vector<std::string> &hila::broadcast(std::vector<std::string> &list, int rank) {
 
     if (hila::check_input)
-        return;
+        return list;
 
     assert_all_ranks_present();
     int size = list.size();
@@ -238,6 +239,7 @@ void hila::broadcast(std::vector<std::string> &list, int rank) {
     for (auto &s : list) {
         hila::broadcast(s, rank);
     }
+    return list;
 }
 
 /* BASIC COMMUNICATIONS FUNCTIONS */
