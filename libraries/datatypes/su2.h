@@ -351,7 +351,7 @@ inline R mul_trace(const SU2<A> &x, const SU2<B> &y) {
 }
 /// multiply two SU2's and write the result to existing element
 template <typename A, typename B, typename R = hila::type_mul<A, B>>
-inline void mult(const SU2<A> &x, const SU2<B> &y, SU2<R> &ret) {
+inline void mult(const SU2<A> &x, const SU2<B> &y, out_only SU2<R> &ret) {
     ret.a = (x.d * y.a + x.a * y.d - x.b * y.c + x.c * y.b);
     ret.b = (x.d * y.b + x.b * y.d - x.c * y.a + x.a * y.c);
     ret.c = (x.d * y.c + x.c * y.d - x.a * y.b + x.b * y.a);
