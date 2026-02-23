@@ -1053,7 +1053,6 @@ void test_clusters() {
 
 #endif
         }
-#endif
 
         // test coordinates of cluster
         m = hila::Clusters::background;
@@ -1111,6 +1110,10 @@ void test_clusters() {
         }
 
 #endif
+
+#endif
+
+
     }
 }
 //--------------------------------------------------------------------------------
