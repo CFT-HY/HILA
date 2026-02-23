@@ -1257,6 +1257,18 @@ class Matrix_t {
     }
 
     /**
+     * @brief return L1 norm = sum of abs of elements - works also for complex!
+     * Note: by textbook definition this is not the L1 norm of a matrix!
+     */
+    hila::arithmetic_type<T> norm_L1() const {
+        hila::arithmetic_type<T> result{0};
+        for (int i = 0; i < n * m; i++) {
+            result += ::abs(c[i]);
+        }
+        return result;
+    }
+
+    /**
      * @brief Find max of Matrix only for arithmetic types
      */
     template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
@@ -1281,6 +1293,42 @@ class Matrix_t {
         }
         return res;
     }
+
+
+    /**
+     * @brief Find max of Vector and the location
+     */
+    template <typename S = T, 
+              std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
+    T max(int &elem) const {
+        T res = c[0];
+        elem = 0;
+        for (int i = 1; i < n * m; i++) {
+            if (res < c[i]) {
+                res = c[i];
+                elem = i;
+            }
+        }
+        return res;
+    }
+
+    /**
+     * @brief Find max of Vector and the location
+     */
+    template <typename S = T, 
+              std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
+    T min(int &elem) const {
+        T res = c[0];
+        elem = 0;
+        for (int i = 1; i < n * m; i++) {
+            if (res > c[i]) {
+                res = c[i];
+                elem = i;
+            }
+        }
+        return res;
+    }
+
 
     auto max_abs() const {
         hila::arithmetic_type<T> tres, res = 0;
