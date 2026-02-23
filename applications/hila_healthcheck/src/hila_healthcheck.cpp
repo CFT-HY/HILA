@@ -414,6 +414,31 @@ void test_set_elements_and_select() {
     onsites (ALL) {}
 }
 
+/**
+ * @brief Shifts
+ */
+
+void test_shift() {
+
+#if NDIM > 1
+
+    Field<CoordinateVector> cf;
+
+    onsites (ALL) {
+        cf[X] = X.coordinates();
+    }
+
+    int64_t sumvx = 0, sumvxy = 0;
+    onsites (ALL) {
+        sumvx += (cf[X + 3 * e_x] - cf[X]).mod(lattice.size()).norm_L1() - 3;
+        sumvxy += (cf[X + e_x] - cf[X - 2 * e_y]).mod(lattice.size()).norm_L1() - 3;
+    }
+
+    report_pass("Shift fields", abs(sumvx) + abs(sumvxy), 1e-6);
+
+#endif
+}
+
 
 /**
  * @brief Test subvolume operations
@@ -1185,6 +1210,7 @@ int main(int argc, char **argv) {
     test_minmax();
     test_random();
     test_set_elements_and_select();
+    test_shift();
     test_subvolumes();
     test_matrix_operations();
     test_element_operations();

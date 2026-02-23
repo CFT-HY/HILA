@@ -198,9 +198,6 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     void remove_vars_out_of_scope(unsigned level);
 
-    void create_reduction_list(std::list<var_info> &vi_list,
-                               std::list<loop_const_expr_ref> &ce_list);
-
     // add handle to get rewriter too - for source control
     Rewriter &getRewriter() {
         return TheRewriter;
@@ -210,12 +207,28 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Starting point for new code
     void generate_code(Stmt *S);
 
+    void generate_parity_code(std::stringstream &code, std::string &parity_name);
+    void generate_selection_code(std::stringstream &code);
+
+    void handle_field_info(std::stringstream &code, bool is_cow, Stmt *S);
+
     std::string get_filename_and_line(Stmt *S);
 
-    void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par);
+    void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par,
+                                   std::string &tail);
+
+    void generate_field_code(std::stringstream &code, bool &generate_wait_loops);
+
+    void create_reduction_list(std::list<var_info> &vi_list,
+                               std::list<loop_const_expr_ref> &ce_list);
+
+    void handle_reduction_init(std::stringstream &code);
+    void handle_loop_constants(std::stringstream &code, srcBuf &loopBuf);
 
     std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                       bool generate_wait);
+    void handle_reduction_result(std::stringstream &code);
+    void mark_fields_changed(std::stringstream &code);
 
     bool check_loop_vectorizable(Stmt *S, int &vector_size, std::string &diag);
 

@@ -169,9 +169,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     // check the parity of the move
     Parity par_s;
 
-    int len = 0;
-    foralldir (d)
-        len += abs(rem[d]);
+    int len = rem.norm_L1();
 
     // no move, just copy field
     if (len == 0) {
@@ -215,7 +213,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     // Len 1, copy directly
     if (len == 1) {
-        res[par_s] = (*this)[X + mdir];
+        res.shift_from(*this, mdir, par_s);
+        // res[par_s] = (*this)[X + mdir];
         return res;
     }
 
@@ -232,7 +231,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
         to = &r1;
     }
     // and copy initially to "from"
-    (*from)[par_s] = (*this)[X + mdir];
+    (*from).shift_from(*this, mdir, par_s);
+    // (*from)[par_s] = (*this)[X + mdir];
 
     // and subtract remaining moves from rem
     rem = rem - mdir;
@@ -244,7 +244,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
             while (rem[d] != 0) {
 
-                (*to)[par_s] = (*from)[X + mdir];
+                (*to).shift_from(*from, mdir, par_s);
+                //(*to)[par_s] = (*from)[X + mdir];
 
                 par_s = opp_parity(par_s);
                 rem = rem - mdir;
@@ -256,55 +257,112 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     return res;
 }
 
+#ifdef FIELD_SHIFT_BUFFERING
 
-// template <typename T>
-// Direction Field<T>::shift_minusone(const CoordinateVector &v, Field<T> &res, const Parity par)
-// const {
+template <typename T>
+void Field<T>::buffered_shift_offsets(const CoordinateVector &v, Parity par) const {
+    assert_all_ranks_present();
 
-//     // use this to store remaining moves
-//     CoordinateVector rem = v;
+    // shift 0?
+    if (v.norm_L1() == 0)
+        return;
 
-//     // check the parity of the move
-//     Parity par_s;
+    // alloc enough storage, so that no new allocs are needed - cheap!
+    if (fs->shift_buffer.capacity() == 0)
+        fs->shift_buffer.reserve(100);
 
-//     int len = 0;
-//     foralldir(d) len += abs(rem[d]);
+    // Do we have the shift?
+    for (auto &r : fs->shift_buffer) {
+        if (r.offset == v) {
+            return;
+        }
+    }
 
-//     // no move, just copy field
-//     if (len == 0) {
-//         res[par] = (*this)[X];
-//         return res;
-//     }
+    // did not, add to list
 
+    fs->shift_buffer.emplace_back();
+    fs->shift_buffer.back().par = Parity::none; // flag it new
+    fs->shift_buffer.back().offset = v;
+    return;
+}
 
-//     // check if
-//     bool found_dir = false;
-//     Direction mdir;
-//     foralldir(d) {
-//         if (rem[d] > 0 && gather_status(par_s, d) != gather_status_t::NOT_DONE) {
-//             mdir = d;
-//             found_dir = true;
-//             break;
-//         } else if (rem[d] < 0 && gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
-//             mdir = -d;
-//             found_dir = true;
-//             break;
-//         }
-//     }
+template <typename T>
+const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity par) const {
 
-//     if (!found_dir) {
-//         // now did not find a 'ready' dir. Take the 1st available
-//         foralldir(d) {
-//             if (rem[d] > 0) {
-//                 mdir = d;
-//                 break;
-//             } else if (rem[d] < 0) {
-//                 mdir = -d;
-//                 break;
-//             }
-//         }
-//     }
+    int len = v.norm_L1();
+    if (len == 0)
+        return *this;
 
+    for (auto &r : fs->shift_buffer) {
+        if (r.offset == v) {
+            // If we have the data return
+            if (r.par == par || r.par == ALL)
+                return r.f;
+
+            // Now we did not have the data, copy it
+
+            const Field<T> *fptr = nullptr;
+            Direction shiftd;
+            if (v.is_direction(shiftd)) {
+                // nearest-neighbour fetch from *this
+                fptr = this;
+            } else {
+
+                // now len > 1, check if others are next to this and shorter
+                for (auto &n : fs->shift_buffer) {
+                    if ((r.offset - n.offset).is_direction(shiftd) && n.offset.norm_L1() < len) {
+                        do_buffered_shift(n.offset, opp_parity(par));
+
+                        fptr = &n.f;
+                        break;
+                    }
+                }
+            }
+
+            if (fptr == nullptr) {
+                // Now no nb-elements!
+                // subtract one from max dir and fetch
+
+                int dir;
+                v.abs().max(dir);
+                shiftd = static_cast<Direction>(dir);
+
+                CoordinateVector nv = v;
+                if (v[shiftd] > 0)
+                    --nv[shiftd];
+                else {
+                    ++nv[shiftd];
+                    shiftd = -shiftd;
+                }
+
+                buffered_shift_offsets(nv, opp_parity(par));
+                auto &n = do_buffered_shift(nv, opp_parity(par));
+                fptr = &n;
+            }
+
+            // Finally copy field
+
+            r.f.shift_from(*fptr, shiftd, par);
+            // onsites (par) {
+            //     r.f[X] = (*fptr)[X + shiftd];
+            // }
+
+            r.par = static_cast<Parity>(parity_bits(r.par) | parity_bits(par));
+            return r.f;
+        }
+    }
+
+    hila::out << "SHIFT ERROR\n";
+
+    return *this; // unreachable
+}
+
+template <typename T>
+void Field<T>::clear_buffered_shifts() const {
+    fs->shift_buffer.clear();
+}
+
+#endif
 
 #endif // NAIVE_SHIFT
 

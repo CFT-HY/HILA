@@ -23,15 +23,17 @@
 
 #include "plumbing/com_mpi.h"
 
-
+#define FIELD_SHIFT_BUFFERING
 
 // When FIELD_COPY_ON_WRITE is defined copy constructor Field<T>(const Field<T> &)
-// and default assignment operator operator=(const Field <T> &) make the fields to 
+// and default assignment operator operator=(const Field <T> &) make the fields to
 // use the same content, without copying. Only when one of the fields is modified the
-// content is transparently copied to new storage. This option adds refcounting to the 
-// to the Field content.  In practice this does not seem to gain anything except in 
+// content is transparently copied to new storage. This option adds refcounting to the
+// to the Field content.  In practice this does not seem to gain anything except in
 // trivial test cases.  Probably will be removed at some point.
+//
 // #define FIELD_COPY_ON_WRITE
+
 
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
@@ -108,6 +110,72 @@ class Field {
         T *receive_buffer[NDIRS];
 #endif
         T *send_buffer[NDIRS];
+
+#ifdef FIELD_SHIFT_BUFFERING
+        struct shift_buffer_struct {
+            Field<T> f;
+            CoordinateVector offset;
+            Parity par;
+        };
+
+        std::vector<shift_buffer_struct> shift_buffer;
+#endif
+
+
+        /**
+         * @internal
+         * @brief field_struct constructor
+         */
+        field_struct() {
+
+            mylattice = lattice;
+            allocate_payload();
+            initialize_communication();
+            assigned_to = 0; // and this means that it is not assigned
+#ifdef FIELD_COPY_ON_WRITE
+            refcount = 1;
+#endif
+
+            for (Direction d = (Direction)0; d < NDIRS; ++d) {
+
+#if !defined(CUDA) && !defined(HIP)
+                neighbours[d] = lattice->neighb[d];
+#else
+                payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
+#endif
+            }
+
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+            foralldir (dir) {
+                boundary_condition[dir] = hila::bc::PERIODIC;
+                boundary_condition[-dir] = hila::bc::PERIODIC;
+            }
+#endif
+
+#ifdef VECTORIZED
+            if constexpr (hila::is_vectorizable_type<T>::value) {
+                vector_lattice = lattice->backend_lattice
+                                     ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+            } else {
+                vector_lattice = nullptr;
+            }
+#endif
+        }
+
+        /**
+         * @internal
+         * @brief field_struct destructor
+         */
+        ~field_struct() {
+
+            free_payload();
+            free_communication();
+
+#ifdef FIELD_SHIFT_BUFFERING
+            shift_buffer.clear();
+#endif
+        }
+
 
         /**
          * @internal
@@ -391,40 +459,9 @@ class Field {
         field_alloc_timer.start();
         assert(lattice.is_initialized() && "Fields cannot be used before lattice.setup()");
         assert(fs == nullptr);
-        fs = (field_struct *)memalloc(sizeof(field_struct));
-        fs->mylattice = lattice;
-        fs->allocate_payload();
-        fs->initialize_communication();
-        mark_changed(ALL);   // guarantees communications will be done
-        fs->assigned_to = 0; // and this means that it is not assigned
-#ifdef FIELD_COPY_ON_WRITE
-        fs->refcount = 1;
-#endif
 
-        for (Direction d = (Direction)0; d < NDIRS; ++d) {
-
-#if !defined(CUDA) && !defined(HIP)
-            fs->neighbours[d] = lattice->neighb[d];
-#else
-            fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
-#endif
-        }
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir (dir) {
-            fs->boundary_condition[dir] = hila::bc::PERIODIC;
-            fs->boundary_condition[-dir] = hila::bc::PERIODIC;
-        }
-#endif
-
-#ifdef VECTORIZED
-        if constexpr (hila::is_vectorizable_type<T>::value) {
-            fs->vector_lattice = lattice->backend_lattice
-                                     ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
-        } else {
-            fs->vector_lattice = nullptr;
-        }
-#endif
+        fs = new field_struct;
+        mark_changed(ALL); // guarantees communications will be done
         field_alloc_timer.stop();
     }
 
@@ -443,9 +480,7 @@ class Field {
                 return;
             }
 #endif
-            fs->free_payload();
-            fs->free_communication();
-            std::free(fs);
+            delete fs;
             fs = nullptr;
         }
     }
@@ -457,8 +492,20 @@ class Field {
         mark_changed(ALL);
     }
 
-    void copy(const Field<T> &f) {
-        (*this)[ALL] = f[X];
+    /**
+     * @brief elementary field copy op
+     */
+
+    void copy(const Field<T> &f, Parity par = ALL) {
+        (*this)[par] = f[X];
+    }
+
+    /**
+     * @brief Copy field from neighbours
+     */
+
+    void shift_from(const Field<T> &f, Direction d, Parity par = ALL) {
+        (*this)[par] = f[X + d];
     }
 
     /**
@@ -537,6 +584,10 @@ class Field {
             }
         }
         fs->assigned_to |= parity_bits(p);
+
+#ifdef FIELD_SHIFT_BUFFERING
+        clear_buffered_shifts();
+#endif
     }
 
 #ifdef FIELD_COPY_ON_WRITE
@@ -1326,7 +1377,11 @@ class Field {
 
     Field<T> shift(const CoordinateVector &v) const;
 
-    Direction shift_minusone(const CoordinateVector &v, Field<T> &r, Parity par) const;
+#ifdef FIELD_SHIFT_BUFFERING
+    void buffered_shift_offsets(const CoordinateVector &v, Parity par) const;
+    const Field<T> &do_buffered_shift(const CoordinateVector &v, Parity par) const;
+    void clear_buffered_shifts() const;
+#endif
 
     // General getters and setters
 
@@ -2214,7 +2269,8 @@ void Field<T>::gaussian_random(double width) {
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites (ALL) {
+    Parity par = EVEN;
+    onsites (par) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -2254,6 +2310,7 @@ inline void ensure_field_operators_exist() {
     Field<T> f;
     f = f.shift(v);
     f.copy(f);
+    f.shift_from(f, e_x);
 }
 
 #endif
