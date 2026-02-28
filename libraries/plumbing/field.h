@@ -32,8 +32,7 @@
 // to the Field content.  In practice this does not seem to gain anything except in
 // trivial test cases.  Probably will be removed at some point.
 //
-// #define FIELD_COPY_ON_WRITE
-
+//#define FIELD_COPY_ON_WRITE
 
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
@@ -586,7 +585,7 @@ class Field {
         fs->assigned_to |= parity_bits(p);
 
 #ifdef FIELD_SHIFT_BUFFERING
-        clear_buffered_shifts();
+        fs->shift_buffer.clear();
 #endif
     }
 
@@ -2309,8 +2308,10 @@ inline void ensure_field_operators_exist() {
     CoordinateVector v = 0;
     Field<T> f;
     f = f.shift(v);
+#ifdef FIELD_COPY_ON_WRITE
     f.copy(f);
     f.shift_from(f, e_x);
+#endif
 }
 
 #endif

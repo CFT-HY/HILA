@@ -757,6 +757,15 @@ class Array {
         return res;
     }
 
+    /**
+     * @brief return sum of elements
+     */
+    auto sum() const {
+        T res = 0;
+        for (int i=0; i<n*m; ++i) res += c[i];
+        return res;
+    }
+
 
 
 };
