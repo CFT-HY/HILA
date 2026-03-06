@@ -40,7 +40,7 @@ HIP_PATH ?= $(shell hipconfig --path)
 HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../hipfft/include -I$(HIP_PATH)/../rocrand/include -I$(HIP_PATH)/../rocfft/include
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 ################
 

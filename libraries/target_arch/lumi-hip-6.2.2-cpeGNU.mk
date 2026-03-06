@@ -30,7 +30,7 @@ HILAPP_INCLUDES :=  $(addprefix -I, $(shell $(CC) -E $(HILA_CPP_STD) -xc++ -Wp,-
 
 $(info	Using HILAPP includes: $(HILAPP_INCLUDES))
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # Library -l flags for the linker. Get these from the Cray environment, and in cpeGNU we must manually add hipfft.
 LDLIBS := $(shell CC --cray-print-opts=libs) -lhipfft

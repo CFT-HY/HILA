@@ -101,6 +101,7 @@ HILA_OBJECTS = \
 	build/timing.o \
 	build/test_gathers.o \
 	build/com_mpi.o \
+	build/memory_pool.o \
 	build/fft.o
 
 # Remvoved com_simple.o, require MPI

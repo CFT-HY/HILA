@@ -57,7 +57,7 @@ $(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
 
