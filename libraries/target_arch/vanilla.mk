@@ -13,9 +13,9 @@ LD := mpic++
 
 # Define compilation flags
 ifndef DEBUG
-	CXXFLAGS := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma
+	CXXFLAGS := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma -ffast-math
 else
-	CXXFLAGS := -g -O3 -x c++ --std=c++17 -fno-rtti 
+	CXXFLAGS := -g -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma -ffast-math
 endif
 
 # -fsanitize=address -fno-omit-frame-pointer
