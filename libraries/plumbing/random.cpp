@@ -74,8 +74,8 @@ void initialize_host_rng(uint64_t seed) {
 
 /**
  *@details The optional 2nd argument indicates whether to initialize the RNG on GPU device:
- * `hila::device_rng_on` (default) or `hila::device_rng_off`.  This argument does nothing if no GPU
- * platform.  If `hila::device_rng_off` is used, `onsites()` -loops cannot contain random number calls
+ * `hila::device_rng::on` (default) or `hila::device_rng::off`.  This argument does nothing if no GPU
+ * platform.  If `hila::device_rng::off` is used, `onsites()` -loops cannot contain random number calls
  * (Runtime error will be flagged and program exits).
  * 
  * Seed is shuffled so that different nodes
@@ -260,7 +260,6 @@ bool hila::is_rng_seeded() {
  *It also quit with error messages if the device RNG is not initialized.
  */
 void hila::check_that_rng_is_initialized() {
-    bool isinit;
 
     if (!rng_is_initialized) {
         hila::out0 << "ERROR: trying to use random numbers without initializing the generator"
