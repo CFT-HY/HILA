@@ -183,7 +183,7 @@ GIT_SHA_FILE := build/.git_sha_number_$(GIT_SHA)
 
 # Force recompilation if git number has changed
 
-$(GIT_SHA_FILE):
+$(GIT_SHA_FILE): $(LASTMAKE)
 	-rm -f build/.git_sha_number_*
 	touch $(GIT_SHA_FILE)
 
