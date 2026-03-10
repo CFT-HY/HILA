@@ -28,6 +28,7 @@ LD := CC
 
 # Define compilation flags
 CXXFLAGS  := -Ofast -flto=auto -x c++ --std=c++17 -fno-rtti
+CXXFLAGS_NOOPT := -O1 -flto=auto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if

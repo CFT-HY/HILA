@@ -102,6 +102,7 @@ HILA_OBJECTS = \
 	build/test_gathers.o \
 	build/com_mpi.o \
 	build/memory_pool.o \
+	build/extended.o \
 	build/fft.o
 
 # Remvoved com_simple.o, require MPI
@@ -221,6 +222,15 @@ build/%.cpt: $(LIBRARIES_DIR)/tools/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/backend_gpu/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	@mkdir -p build
 	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
+
+# Separate stanzas for extended, extended.cpp is compiled with no optimizations
+build/extended.cpt : $(LIBRARIES_DIR)/datatypes/extended.cpp $(HILA_HEADERS) $(ALL_DEPEND)
+	@mkdir -p build
+	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
+
+build/extended.o : build/extended.cpt
+	$(CC) $(APP_OPTS) $(HILA_OPTS) $(CXXFLAGS_NOOPT) $< -c -o $@
+
 
 
 build/_include_paths : 

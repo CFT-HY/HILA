@@ -16,6 +16,7 @@ LD := $(CC) -O3 --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
 CXXFLAGS := -O3 --std=c++17 -x hip -fgpu-rdc --hip-link#-nogpulib
+CXXFLAGS_NOOPT := -O1 --std=c++17 -x hip -fgpu-rdc --hip-link#-nogpulib
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!
 # CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"

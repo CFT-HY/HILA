@@ -20,6 +20,7 @@ endif
 CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
 CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --use_fast_math --restrict
 
+CXXFLAGS_NOOPT := -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
 #
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!

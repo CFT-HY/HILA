@@ -12,10 +12,11 @@ CC := mpic++
 LD := mpic++
 
 # Define compilation flags
+CXXFLAGS_NOOPT := -x c++ --std=c++17 -fno-rtti
 ifndef DEBUG
-	CXXFLAGS := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma 
+	CXXFLAGS := $(CXXFLAGS_NOOPT) -Ofast  -mavx2 -mfma -march=native 
 else
-	CXXFLAGS := -g -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma 
+	CXXFLAGS := -g $(CXXFLAGS_NOOPT) -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma 
 endif
 
 # -fsanitize=address -fno-omit-frame-pointer

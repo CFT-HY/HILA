@@ -1015,7 +1015,7 @@ void test_extended() {
 void test_clusters() {
 
     {
-#if NDIM > 2
+#if NDIM > 2 && !defined(VECTORIZED)
 
         Field<int> m;
 

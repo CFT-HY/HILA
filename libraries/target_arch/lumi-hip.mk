@@ -24,6 +24,8 @@ LD := hipcc
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
 CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc -Wno-cuda-compat
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
+CXXFLAGS_NOOPT := $(CXXFLAGS)
+CXXFLAGS += -O3
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere

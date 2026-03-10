@@ -27,11 +27,14 @@ ifndef CUDA_ARCH
 endif
 
 CXXFLAGS := -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --restrict
+CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
+ 
 ifndef DEBUG
 	CXXFLAGS += -O3 --use_fast_math
 else
 	CXXFLAGS += -g
 endif
+
 
 # -gencode arch=compute_52,code=sm_52
 

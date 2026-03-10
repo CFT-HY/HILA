@@ -20,6 +20,7 @@ LD := mpic++
 # Define compilation flags
 CXXFLAGS := -O3 -x c++ --std=c++17
 #CXXFLAGS := -g -x c++ --std=c++17 
+CXXFLAGS_NOOPT := -O1 -x c++ --std=c++17
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere

@@ -15,7 +15,7 @@ LD = hipcc  -gencode arch=compute_70,code=sm_70 --use_fast_math
 
 # Define compilation flags
 CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
-
+CXXFLAGS_NOOPT = -dc -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --restrict
 # --gpu-architecture=sm_70
 
 # 3162 is a warning about ignored inline in __global__ functions - it's not really 

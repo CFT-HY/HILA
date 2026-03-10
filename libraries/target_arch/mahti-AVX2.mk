@@ -19,6 +19,7 @@ LD := mpic++
 # Define compilation flags
 CXXFLAGS  := -O3 -x c++ --std=c++17 -march=native -mtune=znver1 -mavx2 -mfma -m3dnow -fomit-frame-pointer
 #CXXFLAGS := -g -x c++ --std=c++17
+CXXFLAGS_NOOPT := -x c++ --std=c++17 -fomit-frame-pointer
 
 # Define this to use setup_layout_vector
 # it works for non-AVX code too, but is necessary for AVX
