@@ -52,7 +52,7 @@ class ExtendedPrecision {
 
     ExtendedPrecision() = default;
     ~ExtendedPrecision() = default;
-    
+
     #pragma hila loop_function
     ExtendedPrecision(const ExtendedPrecision &rhs)
         : value(rhs.value), compensation(rhs.compensation), compensation2(rhs.compensation2) {}
@@ -83,50 +83,24 @@ class ExtendedPrecision {
         return *this;
     }
 
-    // template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-    // ExtendedPrecision operator+(const T &rhs) const {
-    //     ExtendedPrecision temp(rhs);
-    //     ExtendedPrecision result = *this;
-    //     result += temp;
-    //     return result;
-    // }
-
     inline ExtendedPrecision operator-() const {
         return ExtendedPrecision(-value, -compensation, -compensation2);
     }
 
+
+
     /**
      * @brief += addition assignment operator
      * @details Impmlements the Kahan-Babushka-Klein summation
-     *
+     *    This is compiled without aggressive optimization; reordering
+     *    arithmetics makes the algorithm to fail.  Implemented
+     *    in file extended.cpp to enable this.
      * @param rhs - value to be summed
      * @return ExtendedPrecision&
      */
 
     #pragma hila loop_function
-    template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-    inline const ExtendedPrecision &operator+=(const T &rhs_) {
-        double rhs = rhs_;
-        double t = value + rhs;
-        double c, cc;
-        if (abs(value) >= abs(rhs)) {
-            c = (value - t) + rhs;
-        } else {
-            c = (rhs - t) + value;
-        }
-        value = t;
-        t = compensation + c;
-        if (abs(compensation) >= abs(c)) {
-            cc = (compensation - t) + c;
-        } else {
-            cc = (c - t) + compensation;
-        }
-        compensation = t;
-        compensation2 += cc;
-
-        return *this;
-    }
-
+    const ExtendedPrecision &operator+=(const double rhs);
 
     /**
      * @brief += addition assignment operator for two EPs
@@ -200,17 +174,6 @@ class ExtendedPrecision {
         }
         return *this;
     }
-
-
-    // double double sum
-    // ExtendedPrecision &operator+=(const ExtendedPrecision &rhs) {
-
-    //     ExtendedPrecision<T> temp = fast_two_sum((*this).value, rhs.value);
-    //     (*this) = fast_two_sum(temp.value, temp.compensation + (*this).compensation);
-
-    //     return *this;
-
-    // }
 
     /**
      * @brief Conversion back to double from ExtendedPrecision
