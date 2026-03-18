@@ -94,7 +94,7 @@ jobs:
           path: ./singularity/
 
       - name: Publish Nightly Release
-        uses: pyTooling/Actions/releaser@v0
+        uses: pyTooling/Actions/releaser@r0
         with:
           tag: Nightly
           rm: true
