@@ -160,7 +160,7 @@ else
   LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
   endif
 
-STATIC := -static
+STATIC := -static -DUSE_COMPILER_INCLUDES
 
 # and target "static" depends only on hilapp
 static:  $(BUILDDIR)/hilapp ; @:

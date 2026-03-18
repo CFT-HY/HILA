@@ -81,8 +81,8 @@ std::string remove_all_whitespace(const std::string &line) {
 /// True if string contains word (note: this word is c++ alphanumeric word, ie. split as
 /// in )
 
-std::string::size_type find_word(const std::string &in, const std::string &pattern,
-                                 int pos, bool reverse) {
+std::string::size_type find_word(const std::string &in, const std::string &pattern, int pos,
+                                 bool reverse) {
     int i;
     if (!reverse)
         i = in.find(pattern, pos);
@@ -105,8 +105,7 @@ std::string::size_type find_word(const std::string &in, const std::string &patte
 // returns true if line contains the word list at the beginning of line.  list
 // contains the word separated by whitespace.  Remainder, if non-nullptr, will contain
 // the rest of the line if return is true.
-bool contains_word_list(const std::string &line, const std::string &list,
-                        std::string *remainder) {
+bool contains_word_list(const std::string &line, const std::string &list, std::string *remainder) {
     const char *p = line.c_str();
     const char *q = list.c_str();
     while (*p && *q) {
@@ -239,54 +238,159 @@ std::string remove_class_from_type(const std::string &s) {
         return s;
 }
 
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Get includes using system gcc - only if static compile!
+/////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef USE_COMPILER_INCLUDES
+
+#include <fstream>
+
+int get_includes_from_gcc(std::vector<const char *> &av) {
+
+    std::string compiler = "g++";
+
+    // scan args for opt
+    bool got_compiler = false;
+    char opt[] = "--" GET_INCLUDES_WITH "=";
+    int optlen = strlen(opt);
+    for (auto &r : av) {
+        if (strncmp(r, opt, optlen) == 0) {
+            if (strlen(r) <= optlen) {
+                std::cerr << "ERROR: --get-includes-with=<compiler>: no compiler name given\n";
+                exit(1);
+            }
+            compiler = r + optlen;
+            got_compiler = true;
+            break;
+        }
+    }
+
+    if (compiler != "none") {
+        char pipebuf[20000];
+        FILE *pipe;
+        if (!got_compiler) {
+            // this pipe cmd gives bash completions for g++-<tab>
+            pipe = popen("echo -n 'compgen -c g++-' | bash", "r");
+
+            int version = 0;
+            while (pipe && !feof(pipe) && fgets(pipebuf, sizeof(pipebuf), pipe) != NULL) {
+
+                int v = 0, i = 4;
+                while (pipebuf[i] >= '0' && pipebuf[i] <= '9') {
+                    i++;
+                    v *= 10;
+                    v += pipebuf[i] - '0';
+                }
+                if (pipebuf[i] == '\n')
+                    pipebuf[i] = 0;
+                if (pipebuf[i] == 0 && v > version) {
+                    compiler = pipebuf;
+                    version = v;
+                }
+            }
+
+            pclose(pipe);
+        }
+
+        // std::cerr << "FOUND COMPILER " << compiler << '\n';
+
+        // The following commmand makes the compiler to produce list of include dirs
+        std::string pipecmd =
+            "echo | " + compiler + " -c -xc++ --std=c++17 -Wp,-v - 2>&1 | grep '^ '";
+
+        // std::cerr << pipecmd << '\n';
+        pipe = popen(pipecmd.c_str(), "r");
+
+        // this needs to be static to store the strings!
+        static std::vector<std::string> includedirs;
+
+        if (pipe) {
+            while (!feof(pipe) && fgets(pipebuf, sizeof(pipebuf), pipe) != NULL) {
+
+                includedirs.push_back("-I");
+                includedirs.back() += pipebuf + 1;
+                includedirs.back().back() = 0;
+            }
+            for (auto &r : includedirs) {
+                av.push_back(r.c_str());
+                // std::cerr << r << '\n';
+            }
+        }
+        pclose(pipe);
+    }
+
+    // for (auto &r : av) {
+    //     std::cerr << r << '\n';
+    // }
+
+    return av.size();
+}
+
+#endif // USE_COMPILER_INCLUDES
+
+
 // Check if the cmdline has -I<include> or -D<define> -
 // arguments and move these after -- if that exists on the command line.
 // Clang's optionparser expects these "generic compiler and linker"
 // args to be after --
 // return value new argc
-int rearrange_cmdline(int argc, const char **argv, const char **av) {
+int rearrange_cmdline(int argc, const char **argv, std::vector<const char *> &avvect) {
 
     bool found_ddash = false;
-    av[argc + 1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
-    static char s[3] = "--"; // needs to be static because ptrs
+    // av[argc + 1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
+    static char ddash[3] = "--"; // needs to be static because ptrs
     int ddashloc = 0;
 
+    avvect.clear();
+
     for (int i = 0; i < argc; i++) {
-        av[i] = argv[i];
-        if (strcmp(av[i], s) == 0) {
+
+        avvect.push_back(argv[i]);
+        if (strcmp(avvect[i], ddash) == 0) {
             found_ddash = true;
             ddashloc = i;
         }
     }
     if (!found_ddash) {
         // add ddash, does not hurt in any case
-        av[argc] = s;
+        avvect.push_back(ddash);
         ddashloc = argc;
         argc++;
     }
 
     // now find -I and -D -options and move them after --
     for (int i = 0; i < ddashloc;) {
-        if (i < ddashloc - 1 && (strcmp(av[i], "-D") == 0 || strcmp(av[i], "-I") == 0)) {
+        if (i < ddashloc - 1 && (strcmp(avvect[i], "-D") == 0 || strcmp(avvect[i], "-I") == 0)) {
             // type -D define
-            const char *a1 = av[i];
-            const char *a2 = av[i + 1];
+            const char *a1 = avvect[i];
+            const char *a2 = avvect[i + 1];
             for (int j = i + 2; j < argc; j++)
-                av[j - 2] = av[j];
-            av[argc - 2] = a1;
-            av[argc - 1] = a2;
+                avvect[j - 2] = avvect[j];
+            avvect[argc - 2] = a1;
+            avvect[argc - 1] = a2;
             ddashloc -= 2;
-        } else if (strncmp(av[i], "-D", 2) == 0 || strncmp(av[i], "-I", 2) == 0) {
+        } else if (strncmp(avvect[i], "-D", 2) == 0 || strncmp(avvect[i], "-I", 2) == 0) {
             // type -Ddefine
-            const char *a1 = av[i];
+            const char *a1 = avvect[i];
             for (int j = i + 1; j < argc; j++)
-                av[j - 1] = av[j];
-            av[argc - 1] = a1;
+                avvect[j - 1] = avvect[j];
+            avvect[argc - 1] = a1;
             ddashloc--;
         } else {
             i++;
         }
     }
+
+#ifdef USE_COMPILER_INCLUDES
+    argc = get_includes_from_gcc(avvect);
+#endif
+
+    avvect.resize(avvect.size() + 3);
+    avvect[argc++] = "-std=c++17"; // use c++17 std
+    avvect[argc++] = "-DHILAPP";   // add global defn
+    avvect[argc] = nullptr;
 
     return argc;
 }

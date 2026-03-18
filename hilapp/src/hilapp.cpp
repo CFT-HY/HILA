@@ -47,6 +47,10 @@ llvm::cl::OptionCategory HilappCategory(program_name);
 llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
                                       llvm::cl::cat(HilappCategory));
 
+llvm::cl::opt<bool> cmdline::show_includes("show-include-paths",
+                                           llvm::cl::desc("Show hilapp include paths"),
+                                           llvm::cl::cat(HilappCategory));
+
 llvm::cl::opt<std::string> cmdline::dummy_def("D", llvm::cl::value_desc("macro[=value]"),
                                               llvm::cl::desc("Define name/macro for preprocessor"),
                                               llvm::cl::cat(HilappCategory));
@@ -75,6 +79,12 @@ llvm::cl::opt<bool> cmdline::syntax_only("syntax-only", llvm::cl::desc("Same as 
 llvm::cl::opt<std::string> cmdline::output_filename(
     "o", llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
     llvm::cl::value_desc("filename"), llvm::cl::Prefix, llvm::cl::cat(HilappCategory));
+
+llvm::cl::opt<std::string> cmdline::static_compiler(
+    GET_INCLUDES_WITH,
+    llvm::cl::desc(
+        "compiler to help find std include files (default: latest g++, disable with 'none')"),
+    llvm::cl::value_desc("compiler"), llvm::cl::cat(HilappCategory));
 
 // llvm::cl::opt<bool>
 //     cmdline::no_mpi("no-mpi",
@@ -1129,15 +1139,16 @@ class MyFrontendAction : public ASTFrontendAction {
 
                             llvm::errs() << "\n *** ERROR: '#pragma once' in file:row "
                                          << r.loc.printToString(SM) << '\n';
-                            llvm::errs() << "#pragma once is not allowed in include files containing "
-                                            "hila code, because hilapp "
-                                            "rearranges include file contents.\n"
-                                            "Use standard include guards instead\n"
-                                            "  #ifndef SOME_INCLUDE_GUARD_NAME_\n"
-                                            "  #define SOME_INCLUDE_GUARD_NAME_\n"
-                                            "  ...\n"
-                                            "  #endif\n";
-                            
+                            llvm::errs()
+                                << "#pragma once is not allowed in include files containing "
+                                   "hila code, because hilapp "
+                                   "rearranges include file contents.\n"
+                                   "Use standard include guards instead\n"
+                                   "  #ifndef SOME_INCLUDE_GUARD_NAME_\n"
+                                   "  #define SOME_INCLUDE_GUARD_NAME_\n"
+                                   "  ...\n"
+                                   "  #endif\n";
+
                             exit(1);
                         }
                     }
@@ -1259,19 +1270,24 @@ int main(int argc, const char **argv) {
     cmdline::argv = argv;
 
     // av takes over from argv
-    const char **av = new const char *[argc + 6];
+    std::vector<const char *> av;
     argc = rearrange_cmdline(argc, argv, av);
-    av[argc++] = "-std=c++17"; // use c++17 std
-    av[argc++] = "-DHILAPP";   // add global defn
-    av[argc] = nullptr;
 
-    OptionsParser op(argc, av, HilappCategory);
+    OptionsParser op(argc, av.data(), HilappCategory);
     ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
     // We have command line args, possibly do something with them
     handle_cmdline_arguments(target);
     if (cmdline::syntax_only)
         cmdline::no_output = true;
+
+    if (cmdline::show_includes) {
+        llvm::errs() << "hilapp include file paths:\n";
+        for (const char * p : av) {
+            if (p[0] == '-' && p[1] == 'I') 
+                llvm::errs() << p + 2 << '\n';
+        }
+    }
 
     // ClangTool::run accepts a FrontendActionFactory, which is then used to
     // create new objects implementing the FrontendAction interface. Here we use
