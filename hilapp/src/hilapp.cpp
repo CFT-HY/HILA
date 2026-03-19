@@ -1024,7 +1024,7 @@ class MyFrontendAction : public ASTFrontendAction {
     MyFrontendAction() {}
 
     virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
-        llvm::errs() << "** Starting operation on source file" + getCurrentFile()+"\n";
+        // llvm::errs() << "** Starting operation on source file" + getCurrentFile()+"\n";
 
         // Insert preprocessor callback functions to the stream.  This enables
         // tracking included files, ranges etc.
