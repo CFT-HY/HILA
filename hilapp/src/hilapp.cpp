@@ -182,7 +182,7 @@ int cmdline::argc;
 const char **cmdline::argv;
 
 /// Check command line arguments and set appropriate flags in target
-void handle_cmdline_arguments(codetype &target) {
+void handle_cmdline_target(codetype &target) {
     if (cmdline::CUDA) {
         target.cuda = true;
     } else if (cmdline::HIP) {
@@ -1024,8 +1024,7 @@ class MyFrontendAction : public ASTFrontendAction {
     MyFrontendAction() {}
 
     virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
-        // llvm::errs() << "** Starting operation on source file
-        // "+getCurrentFile()+"\n";
+        llvm::errs() << "** Starting operation on source file" + getCurrentFile()+"\n";
 
         // Insert preprocessor callback functions to the stream.  This enables
         // tracking included files, ranges etc.
@@ -1271,21 +1270,26 @@ int main(int argc, const char **argv) {
 
     // av takes over from argv
     std::vector<const char *> av;
-    argc = rearrange_cmdline(argc, argv, av);
+    std::string compiler = handle_cmdline_args(argc, argv, av);
 
+    argc = av.size() - 1;  // last is nullptr;
     OptionsParser op(argc, av.data(), HilappCategory);
     ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
     // We have command line args, possibly do something with them
-    handle_cmdline_arguments(target);
+    handle_cmdline_target(target);
+
     if (cmdline::syntax_only)
         cmdline::no_output = true;
 
     if (cmdline::show_includes) {
-        llvm::errs() << "hilapp include file paths:\n";
+        llvm::errs() << "----- hilapp include file paths ";
+        if (compiler.size() > 0) 
+            llvm::errs() << "(with compiler " << compiler << ")";
+        llvm::errs() << '\n';
         for (const char * p : av) {
-            if (p[0] == '-' && p[1] == 'I') 
-                llvm::errs() << p + 2 << '\n';
+            if (p && p[0] == '-' && p[1] == 'I') 
+                llvm::errs() << "    " << p + 2 << '\n';
         }
     }
 

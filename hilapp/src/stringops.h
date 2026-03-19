@@ -44,7 +44,7 @@ std::string remove_X(const std::string &s, bool *is_X = nullptr);
 std::string remove_class_from_type(const std::string &s);
 
 /// Rearranges command line args according to the wishes of clang tool
-int rearrange_cmdline(int argc, const char **argv, std::vector<const char *> &av);
+std::string handle_cmdline_args(int argc, const char **argv, std::vector<const char *> &av);
 
 #define GET_INCLUDES_WITH "get-includes-with"
 

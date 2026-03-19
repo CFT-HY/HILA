@@ -247,7 +247,7 @@ std::string remove_class_from_type(const std::string &s) {
 
 #include <fstream>
 
-int get_includes_from_gcc(std::vector<const char *> &av) {
+std::string get_includes_from_gcc(std::vector<const char *> &av) {
 
     std::string compiler = "g++";
 
@@ -272,6 +272,7 @@ int get_includes_from_gcc(std::vector<const char *> &av) {
         FILE *pipe;
         if (!got_compiler) {
             // this pipe cmd gives bash completions for g++-<tab>
+            // the code below selects the largest version number
             pipe = popen("echo -n 'compgen -c g++-' | bash", "r");
 
             int version = 0;
@@ -297,6 +298,8 @@ int get_includes_from_gcc(std::vector<const char *> &av) {
         // std::cerr << "FOUND COMPILER " << compiler << '\n';
 
         // The following commmand makes the compiler to produce list of include dirs
+        // NOTE: this relies on the compiler identifying the paths with a space
+        // at the beginning of the file.  This is the case for g++ or clang 
         std::string pipecmd =
             "echo | " + compiler + " -c -xc++ --std=c++17 -Wp,-v - 2>&1 | grep '^ '";
 
@@ -325,7 +328,8 @@ int get_includes_from_gcc(std::vector<const char *> &av) {
     //     std::cerr << r << '\n';
     // }
 
-    return av.size();
+    return compiler;
+
 }
 
 #endif // USE_COMPILER_INCLUDES
@@ -336,7 +340,7 @@ int get_includes_from_gcc(std::vector<const char *> &av) {
 // Clang's optionparser expects these "generic compiler and linker"
 // args to be after --
 // return value new argc
-int rearrange_cmdline(int argc, const char **argv, std::vector<const char *> &avvect) {
+std::string handle_cmdline_args(int argc, const char **argv, std::vector<const char *> &avvect) {
 
     bool found_ddash = false;
     // av[argc + 1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
@@ -383,14 +387,14 @@ int rearrange_cmdline(int argc, const char **argv, std::vector<const char *> &av
         }
     }
 
+    std::string compiler;
 #ifdef USE_COMPILER_INCLUDES
-    argc = get_includes_from_gcc(avvect);
+    compiler = get_includes_from_gcc(avvect);
 #endif
 
-    avvect.resize(avvect.size() + 3);
-    avvect[argc++] = "-std=c++17"; // use c++17 std
-    avvect[argc++] = "-DHILAPP";   // add global defn
-    avvect[argc] = nullptr;
+    avvect.push_back("-std=c++17");
+    avvect.push_back("-DHILAPP");
+    avvect.push_back(nullptr);   // last element (avvect[argc]) nullptr
 
-    return argc;
+    return compiler;
 }
