@@ -298,10 +298,11 @@ std::string get_includes_from_gcc(std::vector<const char *> &av) {
         // std::cerr << "FOUND COMPILER " << compiler << '\n';
 
         // The following commmand makes the compiler to produce list of include dirs
-        // NOTE: this relies on the compiler identifying the paths with a space
-        // at the beginning of the file.  This is the case for g++ or clang 
+        // NOTE: this relies on the compiler identifying the path lines starting
+        // with " /" at the beginning of each line.
+        // This is the case for g++ or clang 
         std::string pipecmd =
-            "echo | " + compiler + " -c -xc++ --std=c++17 -Wp,-v - 2>&1 | grep '^ '";
+            "echo | " + compiler + " -c -xc++ --std=c++17 -Wp,-v - 2>&1 | grep '^ /'";
 
         // std::cerr << pipecmd << '\n';
         pipe = popen(pipecmd.c_str(), "r");
