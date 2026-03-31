@@ -21,8 +21,8 @@ static_assert(0 && "HIP or CUDA must be defined");
 #endif
 
 #if defined(GPU_SHMEM)
-#define gpuMallocShared(a, b) GPU_CHECK(nvshmem_malloc(a, b))
-#define gpuFreeShared(a) GPU_CHECK(nvshmem_free(a))
+#define gpuMallocSharedDirect(a, b) GPU_CHECK(nvshmem_malloc(a, b))
+#define gpuFreeSharedDirect(a) GPU_CHECK(nvshmem_free(a))
 #endif
 
 #endif
@@ -100,7 +100,7 @@ void *hila::memory_pool::alloc(size_t req_size) {
             gpuMallocDirect(&(a.ptr), req_size);
         } else if (type == pool_type::SHARED) {
 #if defined(GPU_SHMEM)
-            gpuMallocShared(&(a.ptr), req_size);
+            gpuMallocSharedDirect(&(a.ptr), req_size);
 #else
             // Fallback or Error if SHARED requested but SHMEM not compiled
             hila::out << "Error: SHARED pool requested but GPU_SHMEM not defined\n";
@@ -164,7 +164,7 @@ void hila::memory_pool::purge() {
                 gpuFreeDirect(it->ptr);
             } else if (type == pool_type::SHARED) {
 #if defined(GPU_SHMEM)
-                gpuFreeShared(it->ptr);
+                gpuFreeSharedDirect(it->ptr);
 #else
                 // This path should technically be unreachable if alloc() failed correctly,
                 // but we keep it for safety.
@@ -221,6 +221,34 @@ void gpu_memory_pool_report() {
     }
 }
 
+#ifdef GPU_SHMEM
+static hila::memory_pool gpu_shared_pool(hila::memory_pool::pool_type::SHARED);
 
-#endif
+void gpu_shared_memory_pool_alloc(void **p, size_t req_size) {
+    *p = gpu_shared_pool.alloc(req_size);
+}
+
+void gpu_shared_memory_pool_free(void *ptr) {
+    gpu_shared_pool.free(ptr);
+}
+
+void gpu_shared_memory_pool_purge() {
+    gpu_shared_pool.purge();
+}
+
+void gpu_shared_memory_pool_report() {
+    auto p = gpu_shared_pool.status();
+    if_rank0 () {
+        hila::out << "\nGPU SHARED Memory pool statistics from node 0:\n";
+        hila::out << "   Total pool size " << ((double)p.total_size) / (1024 * 1024) << " MB in "
+                  << gpu_shared_pool.size() << " blocks\n";
+        hila::out << "   # of allocations " << p.n_allocs << "  real allocs "
+                  << std::setprecision(2) << ((double)p.n_true_allocs) / p.n_allocs * 100 << "%\n";
+        hila::out << "   Average block list search " << (double)p.blocklist_avg_search / p.n_allocs
+                  << " steps\n\n";
+    }
+}
+#endif // GPU_SHMEM
+
+#endif // GPU_MEMORY_POOL
 #endif // !HILAPP

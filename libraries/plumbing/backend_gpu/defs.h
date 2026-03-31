@@ -18,6 +18,13 @@ void gpu_memory_pool_free(void *ptr);
 void gpu_memory_pool_purge();
 void gpu_memory_pool_report();
 
+#ifdef GPU_SHMEM
+void gpu_shared_memory_pool_alloc(void **p, size_t req_size);
+void gpu_shared_memory_pool_free(void *ptr);
+void gpu_shared_memory_pool_purge();
+void gpu_shared_memory_pool_report();
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////
 // some device rng headers
 ////////////////////////////////////////////////////////////////////////////////////
@@ -54,7 +61,12 @@ using gpuError = cudaError;
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()
 #define gpuMemPoolReport() gpu_memory_pool_report()
-
+#ifdef GPU_SHMEM
+#define gpuMallocShared(a, b) gpu_shared_memory_pool_alloc((void **)a, b)
+#define gpuFreeShared(a) gpu_shared_memory_pool_free(a)
+#define gpuMemPoolPurgeShared() gpu_shared_memory_pool_purge()
+#define gpuMemPoolReportShared() gpu_shared_memory_pool_report()
+#endif \\GPU_SHMEM
 #else
 // here std interfaces
 

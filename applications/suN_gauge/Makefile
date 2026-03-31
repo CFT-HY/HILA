@@ -27,6 +27,8 @@ include $(HILA_DIR)/libraries/main.mk
 HILAPP_OPTS += -check-init
 
 APP_OPTS += -DNDIM=4 -DNCOLOR=${NCOL}
+#APP_OPTS += -DGPU_CCL
+APP_OPTS += -DGPU_OVERLAP_COMM
 
 ifdef SUN_OVERRELAX_dFJ
 APP_OPTS += -DSUN_OVERRELAX_dFJ

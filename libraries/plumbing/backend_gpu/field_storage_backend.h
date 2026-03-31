@@ -257,8 +257,8 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
 template <typename T>
 void field_storage<T>::gather_comm_elements(T *buffer,
                                             const lattice_struct::comm_node_struct &to_node,
-                                            Parity par, const Lattice lattice,
-                                            bool antiperiodic, gpuStream_t stream) const {
+                                            Parity par, const Lattice lattice, bool antiperiodic,
+                                            gpuStream_t stream) const {
     int n;
     const unsigned *d_site_index = to_node.get_sitelist(par, n);
     T *d_buffer;
@@ -270,7 +270,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     // Allocate a buffer on the device
     gpuMalloc(&(d_buffer), n * sizeof(T));
 #endif
-    hila::out0 <<  n * sizeof(T)/1024/1024 << " MB will be gathered on GPU for comms\n";                
+    hila::out0 << n * sizeof(T) / 1024 / 1024 << " MB will be gathered on GPU for comms\n";
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -282,12 +282,12 @@ void field_storage<T>::gather_comm_elements(T *buffer,
         }
 
     } else {
-        gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(*this, d_buffer, d_site_index, n,
-                                                             lattice->mynode.field_alloc_size);
+        gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
+            *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
     }
 #else
-    gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(*this, d_buffer, d_site_index, n,
-                                                         lattice->mynode.field_alloc_size);
+    gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
+        *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 #endif
 
 #ifndef GPU_AWARE_COMM
@@ -420,8 +420,8 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 #endif
 
     unsigned N_blocks = n / N_threads + 1;
-    place_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>((*this), d_buffer, from_node.offset(par), n,
-                                                        lattice->mynode.field_alloc_size);
+    place_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
+        (*this), d_buffer, from_node.offset(par), n, lattice->mynode.field_alloc_size);
 
 #ifndef GPU_AWARE_COMM
     gpuFree(d_buffer);
@@ -432,13 +432,21 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 
 template <typename T>
 void field_storage<T>::free_mpi_buffer(T *d_buffer) {
+#ifdef GPU_SHMEM
+    gpuFreeShared(d_buffer);
+#else
     gpuFree(d_buffer);
+#endif \\GPU_SHMEM
 }
 
 template <typename T>
 T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     T *d_buffer;
+#ifdef GPU_SHMEM
+    gpuMallocShared(&(d_buffer), n * sizeof(T));
+#else
     gpuMalloc(&(d_buffer), n * sizeof(T));
+#endif \\GPU_SHMEM
     return d_buffer;
 }
 

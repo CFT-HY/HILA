@@ -176,7 +176,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         generate_wait_loops = true;
 
     // generate field comm and access code
-    generate_field_code(code, generate_wait_loops);
+    // generate_field_code(code, generate_wait_loops);
 
     // make the reduction expr list from variables and loop const expressions
     create_reduction_list(var_info_list, loop_const_expr_ref_list);
@@ -436,193 +436,175 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
 
 void TopLevelVisitor::generate_field_code(std::stringstream &code, bool &generate_wait_loops) {
 
-    // TOOKS THIS OUT AND PUT IN RESPECTIVE CODEGEN FILES ---------------------------
-    // bool first = true;
-    // bool generate_wait_loops;
-    // if (cmdline::no_interleaved_comm)
-    //     generate_wait_loops = false;
-    // else
-    //     generate_wait_loops = true;
+    bool first = true;
 
-    // for (field_info &l : field_info_list) {
-    //     // If neighbour references exist, communicate them
-    //     if (!l.is_loop_local_dir) {
-    //         // "normal" dir references only here
-    //         for (dir_ptr &d : l.dir_list)
-    //             if (d.count > 0) {
-    //                 if (!generate_wait_loops) {
-    //                     code << l.new_name << ".gather(" << d.direxpr_s << ", "
-    //                          << loop_info.parity_str << ");\n";
-    //                 } else {
-    //                     if (first)
-    //                         code << "dir_mask_t  _dir_mask_ = 0;\n";
-    //                     first = false;
+    for (field_info &l : field_info_list) {
+        // If neighbour references exist, communicate them
+        if (!l.is_loop_local_dir) {
+            // "normal" dir references only here
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    if (!generate_wait_loops) {
+                        code << l.new_name << ".gather(" << d.direxpr_s << ", "
+                             << loop_info.parity_str << ");\n";
+                    } else {
+                        if (first)
+                            code << "dir_mask_t  _dir_mask_ = 0;\n";
+                        first = false;
 
-    //                     code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
-    //                          << ", " << loop_info.parity_str << ");\n";
-    //                 }
-    //             }
-    //     } else {
-    //         // now loop local dirs - gather all neighbours!
-    //         // TODO: restrict dirs
-    //         if (!generate_wait_loops) {
-    //             code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-    //                     "++HILA_dir_) {\n"
-    //                  << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
-    //                  << ");\n}\n";
-    //         } else {
-    //             if (first)
-    //                 code << "dir_mask_t  _dir_mask_ = 0;\n";
-    //             first = false;
-    //             code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-    //                     "++HILA_dir_) {\n"
-    //                  << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
-    //                  << loop_info.parity_str << ");\n}\n";
-    //         }
-    //     }
-    // }
+                        code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
+                             << ", " << loop_info.parity_str << ");\n";
+                    }
+                }
+        } else {
+            // now loop local dirs - gather all neighbours!
+            // TODO: restrict dirs
+            if (!generate_wait_loops) {
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < "
+                        "NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
+                     << ");\n}\n";
+            } else {
+                if (first)
+                    code << "dir_mask_t  _dir_mask_ = 0;\n";
+                first = false;
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < "
+                        "NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
+                     << loop_info.parity_str << ");\n}\n";
+            }
+        }
+    }
 
-    // // write wait gathers here also
-    // if (!generate_wait_loops)
-    //     for (field_info &l : field_info_list)
-    //         if (l.is_loop_local_dir) {
-    //             code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-    //                     "++HILA_dir_) {\n"
-    //                  << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
-    //                  << ");\n}\n";
-    //         }
-
-    // if (first)
-    //     generate_wait_loops = false; // no communication needed in the 1st place
-    // TOOK THIS OUT ---------------------------------------------------------------------
-    /////////////////////////////////////////////////////////////////////
-    // make the reduction expr list from variables and loop const expressions
-
-    void TopLevelVisitor::mark_fields_changed(std::stringstream & code) {
-
-        // finally mark modified fields
+    // write wait gathers here also
+    if (!generate_wait_loops)
         for (field_info &l : field_info_list)
-            if (l.is_written) {
-                code << l.new_name << ".mark_changed(" << loop_info.parity_str << ");\n";
+            if (l.is_loop_local_dir) {
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < "
+                        "NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
+                     << ");\n}\n";
             }
-    }
 
-    //////////////////////////////////////////////////////////////////////////////////
+    if (first)
+        generate_wait_loops = false; // no communication needed in the 1st place
+}
 
-    void TopLevelVisitor::handle_reduction_init(std::stringstream & code) {
-        // Create a temporary reduction variable and initialize
-        for (reduction_expr &r : reduction_list) {
+//////////////////////////////////////////////////////////////////////////////////
 
-            code << r.type << " " << r.reduction_name << ";\n";
-            if (r.reduction_type == reduction::SUM) {
-                code << r.reduction_name << " = 0;\n";
-            } else if (r.reduction_type == reduction::PRODUCT) {
-                code << r.reduction_name << " = 1;\n";
-            }
+void TopLevelVisitor::mark_fields_changed(std::stringstream &code) {
+
+    // finally mark modified fields
+    for (field_info &l : field_info_list)
+        if (l.is_written) {
+            code << l.new_name << ".mark_changed(" << loop_info.parity_str << ");\n";
         }
+}
 
-        // and vector reductions
-        for (array_ref &ar : array_ref_list) {
-            if (ar.type == array_ref::REDUCTION) {
-                code << ar.name;
-                if (ar.reduction_type == reduction::SUM)
-                    code << ".init_sum();\n";
-                else
-                    code << ".init_product();\n";
-            }
+//////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::handle_reduction_init(std::stringstream &code) {
+    // Create a temporary reduction variable and initialize
+    for (reduction_expr &r : reduction_list) {
+
+        code << r.type << " " << r.reduction_name << ";\n";
+        if (r.reduction_type == reduction::SUM) {
+            code << r.reduction_name << " = 0;\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            code << r.reduction_name << " = 1;\n";
         }
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////
-
-    if (!target.kernelize) {
-        // define new variables only if not kernelized, with kernels
-        // expressions can be written directly on kernel calls
-        code << "const " << lcer.type << " " << lcer.new_name << " = " << lcer.expression << ";\n";
-    }
-
-    // Replace references in loop body -- works also with kernels
-    for (Expr *ep : lcer.refs) {
-        loopBuf.replace(ep, lcer.new_name);
-    }
-}
-}
-
-bool generate_wait_loops;
-
-// Place the content of the loop
-code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
-
-// Check reduction variables
-for (reduction_expr &v : reduction_list) {
-
-    if (v.is_special_reduction) {
-
-        if (v.reduction_type == reduction::SUM)
-            code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
-        else if (v.reduction_type == reduction::PRODUCT)
-            code << v.name << ".reduce_product_node(" << v.reduction_name << ");\n";
-
-    } else if (v.reduction_type == reduction::PRODUCT) {
-
-        // The old value at node 0 is used, but not at other nodes!
-
-        code << "if (hila::myrank() == 0) { " << v.reduction_name << " *= " << v.name << "; }\n";
-        code << "hila::reduce_node_product( & " << v.reduction_name << ", 1, true);\n";
-        code << v.name << " = " << v.reduction_name << ";\n";
-    }
-}
-
-// handle separately sum reductions, by far most common case
-// a bit convoluted way to go through the list, done so to get
-// a bit tidier output than the easiest case
-
-bool sum_reductions = false;
-for (reduction_expr &v : reduction_list) {
-    if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
-
-        if (!sum_reductions) {
-            code << "if (hila::myrank() == 0) {\n";
-            sum_reductions = true;
+    // and vector reductions
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
+            code << ar.name;
+            if (ar.reduction_type == reduction::SUM)
+                code << ".init_sum();\n";
+            else
+                code << ".init_product();\n";
         }
-        // on node 0 add the old value to reduction
-        // forget it on other nodes
-        code << v.reduction_name << " += " << v.name << ";\n";
     }
 }
 
-if (sum_reductions) {
+///////////////////////////////////////////////////////////////////////////////////
 
-    code << "}\n";
+void TopLevelVisitor::handle_reduction_result(std::stringstream &code) {
 
+    // Check reduction variables
     for (reduction_expr &v : reduction_list) {
-        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
-            code << "hila_reduce_sum_setup( &" << v.reduction_name << ");\n";
-        }
-    }
 
-    code << "hila_reduce_sums();\n";
+        if (v.is_special_reduction) {
 
-    for (reduction_expr &v : reduction_list) {
-        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+            if (v.reduction_type == reduction::SUM)
+                code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
+            else if (v.reduction_type == reduction::PRODUCT)
+                code << v.name << ".reduce_product_node(" << v.reduction_name << ");\n";
+
+        } else if (v.reduction_type == reduction::PRODUCT) {
+
+            // The old value at node 0 is used, but not at other nodes!
+
+            code << "if (hila::myrank() == 0) { " << v.reduction_name << " *= " << v.name
+                 << "; }\n";
+            code << "hila::reduce_node_product( & " << v.reduction_name << ", 1, true);\n";
             code << v.name << " = " << v.reduction_name << ";\n";
         }
     }
-}
 
-code << "hila::set_allreduce(true);\n";
+    // handle separately sum reductions, by far most common case
+    // a bit convoluted way to go through the list, done so to get
+    // a bit tidier output than the easiest case
 
+    bool sum_reductions = false;
+    for (reduction_expr &v : reduction_list) {
+        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
 
-// and vector reductions
-for (array_ref &ar : array_ref_list) {
-    if (ar.type == array_ref::REDUCTION) {
-
-        if (ar.reduction_type == reduction::SUM)
-            code << ar.name << ".reduce_sum();\n";
-        else if (ar.reduction_type == reduction::PRODUCT)
-            code << ar.name << ".reduce_product();\n";
+            if (!sum_reductions) {
+                code << "if (hila::myrank() == 0) {\n";
+                sum_reductions = true;
+            }
+            // on node 0 add the old value to reduction
+            // forget it on other nodes
+            code << v.reduction_name << " += " << v.name << ";\n";
+        }
     }
-}
+
+    if (sum_reductions) {
+
+        code << "}\n";
+
+        for (reduction_expr &v : reduction_list) {
+            if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+                code << "hila_reduce_sum_setup( &" << v.reduction_name << ");\n";
+            }
+        }
+
+        code << "hila_reduce_sums();\n";
+
+        for (reduction_expr &v : reduction_list) {
+            if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+                code << v.name << " = " << v.reduction_name << ";\n";
+            }
+        }
+    }
+
+    code << "hila::set_allreduce(true);\n";
+
+
+    // and vector reductions
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
+
+            if (ar.reduction_type == reduction::SUM)
+                code << ar.name << ".reduce_sum();\n";
+            else if (ar.reduction_type == reduction::PRODUCT)
+                code << ar.name << ".reduce_product();\n";
+        }
+    }
 }
 
 
