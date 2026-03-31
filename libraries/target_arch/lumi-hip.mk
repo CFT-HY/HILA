@@ -24,6 +24,8 @@ LD := hipcc
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
 CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc -Wno-cuda-compat
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
+CXXFLAGS_NOOPT := $(CXXFLAGS)
+CXXFLAGS += -O3
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
@@ -43,8 +45,7 @@ $(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-# use memory_pool.o, not memory_pool2.o - fails in gpu-aware mpi!
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
 

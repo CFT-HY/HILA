@@ -39,44 +39,44 @@ using gpurandState = hiprandState_t;
 
 #endif
 
-gpuStreamPool& hila::stream_pool() {
+gpuStreamPool &hila::stream_pool() {
     static gpuStreamPool instance;
     return instance;
 }
 
-gpuStream_t& hila::halo_stream() {
-    static gpuStream_t instance = []{
-        gpuStream_t stream; 
+gpuStream_t &hila::halo_stream() {
+    static gpuStream_t instance = [] {
+        gpuStream_t stream;
         gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
         return stream;
     }();
     return instance;
 }
 
-gpuEvent_t& hila::halo_event() {
-    static gpuEvent_t instance = []{
+gpuEvent_t &hila::halo_event() {
+    static gpuEvent_t instance = [] {
         gpuEvent_t e;
         gpuEventCreate(&e);
         return e;
-    }(); 
+    }();
     return instance;
 }
 
-gpuStream_t& hila::bulk_stream() {
-    static gpuStream_t instance = []{
-        gpuStream_t stream; 
+gpuStream_t &hila::bulk_stream() {
+    static gpuStream_t instance = [] {
+        gpuStream_t stream;
         gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
         return stream;
     }();
     return instance;
 }
 
-gpuEvent_t& hila::bulk_event() {
-    static gpuEvent_t instance = []{
+gpuEvent_t &hila::bulk_event() {
+    static gpuEvent_t instance = [] {
         gpuEvent_t e;
         gpuEventCreate(&e);
         return e;
-    }(); 
+    }();
     return instance;
 }
 
@@ -193,8 +193,8 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
         if (special_neighb != lat.neighb[d]) {
             gpuMalloc(&(d_neighb_special[d]), lat.mynode.volume * sizeof(unsigned));
-            gpuMemcpy(d_neighb_special[d], special_neighb,
-                      lat.mynode.volume * sizeof(unsigned), gpuMemcpyHostToDevice);
+            gpuMemcpy(d_neighb_special[d], special_neighb, lat.mynode.volume * sizeof(unsigned),
+                      gpuMemcpyHostToDevice);
         } else {
             d_neighb_special[d] = d_neighb[d];
         }
@@ -228,13 +228,13 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
 void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
 
-    
+
 #ifdef EVEN_SITES_FIRST
 
     gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
                       gpuMemcpyHostToDevice);
 #endif
-    
+
     gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
                       gpuMemcpyHostToDevice);
 
@@ -311,28 +311,31 @@ void initialize_gpu(int rank, int device) {
 #endif
 }
 
-// if using NCCL or RCCL
-#ifdef GPU_CCL
+// if using NCCL or RCCL or NVSHMEM
 namespace hila {
+
+#ifdef GPU_CCL
 /**
  * @brief initialize nccl/rccl communicator for GPU communication
  * @details Uses same mapping as MPI communicator (gpu per task)
- * 
+ *
  */
-void initialize_gccl_communications() {
+void initialize_gccl_communication() {
     int rank = lattice->mynode.rank;
     int size = lattice->nodes.number;
     std::cout << "pre set device " << "rank: " << rank << " num ranks " << size << std::endl;
 
-    //gpuSetDevice(rank);
+    // gpuSetDevice(rank);
     std::cout << "Post set device " << "rank: " << rank << " num ranks " << size << std::endl;
     gcclComm_t communicator;
-    std::cout << "Post gcclComm_t constructor " << "rank: " << rank << " num ranks " << size << std::endl;
+    std::cout << "Post gcclComm_t constructor " << "rank: " << rank << " num ranks " << size
+              << std::endl;
 
     gcclUniqueId unique_id;
-    std::cout << "Post gcclUniqueId constructor " << "rank: " << rank << " num ranks " << size << std::endl;
+    std::cout << "Post gcclUniqueId constructor " << "rank: " << rank << " num ranks " << size
+              << std::endl;
 
-    if (rank==0) {
+    if (rank == 0) {
         gcclGetUniqueId(&unique_id);
     }
     std::cout << "Post get unique id " << "rank: " << rank << " num ranks " << size << std::endl;
@@ -344,26 +347,44 @@ void initialize_gccl_communications() {
     std::cout << "Post Init comm rank" << "rank: " << rank << " num ranks " << size << std::endl;
 
     lattice.ptr()->gccl_comm_lat = communicator;
-    double* broadcast_val;
-    double* recieve;
-    double recieve_host;
-    gpuMalloc(&recieve, sizeof(double)*2048*200);
-    gpuMalloc(&broadcast_val, sizeof(double)*2048*200);
+    // double *broadcast_val;
+    // double *recieve;
+    // double recieve_host;
+    // gpuMalloc(&recieve, sizeof(double) * 2048 * 200);
+    // gpuMalloc(&broadcast_val, sizeof(double) * 2048 * 200);
 
-    double val = 2.718281828459045;
-    gpuMemcpy(broadcast_val, &val, sizeof(double), gpuMemcpyHostToDevice);
-    
-    gcclGroupStart();
-    gcclAllReduce(broadcast_val, recieve, 2048*200, gccl_type<double>::value, ncclSum, communicator, hila::bulk_stream());
-    //gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size, communicator, hila::bulk_stream());
-    //gcclRecv(recieve, 2048*200, gccl_type<double>::value, (rank-size/2+size)%size, communicator, hila::bulk_stream());
-    gcclGroupEnd();
-    gpuStreamSynchronize(hila::bulk_stream());
-    gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
-    std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host << std::endl;
+    // double val = 2.718281828459045;
+    // gpuMemcpy(broadcast_val, &val, sizeof(double), gpuMemcpyHostToDevice);
+
+    // gcclGroupStart();
+    // gcclAllReduce(broadcast_val, recieve, 2048 * 200, gccl_type<double>::value, ncclSum,
+    //               communicator, hila::bulk_stream());
+    //// gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size,
+    /// communicator, / hila::bulk_stream()); gcclRecv(recieve, 2048*200, gccl_type<double>::value,
+    //// (rank-size/2+size)%size, communicator, hila::bulk_stream());
+    // gcclGroupEnd();
+    // gpuStreamSynchronize(hila::bulk_stream());
+    // gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
+    // std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host << std::endl;
 }
-} // namespace hila
 #endif // GPU_CCL
+#ifdef GPU_SHMEM
+#include <nvshmem.h>
+#include <nvshmemx.h>
+void initialize_nvshmem_communication() {
+    int rank, size;
+    nvshmemx_init_attr_t attr;
+    attr.mpi_comm = lattice->mpi_comm_lat;
+    nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM, &attr);
+    rank = nvshmem_my_pe();
+    size = nvshmem_n_pes();
+    std::cout << "NVSHMEM initialized. Rank: " << rank << " Size: " << size << std::endl;
+}
+
+void finalize_nvshmem_communication() {}
+
+#endif // GPU_SHMEM
+} // namespace hila
 
 
 #ifdef CUDA
@@ -374,7 +395,7 @@ void initialize_gccl_communications() {
 #endif
 
 void gpu_device_info() {
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         const int kb = 1024;
         const int mb = kb * kb;
 
@@ -411,10 +432,9 @@ void gpu_device_info() {
         hila::out << "Thread block size used: " << N_threads << '\n';
 
 
-        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" 
-                    << GPU_BLOCK_REDUCTION_THREADS 
-                    << ") may exceed available shared memory (" 
-                    << props.sharedMemPerBlock << " bytes). Consider reducing it.\n";
+        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
+                  << ") may exceed available shared memory (" << props.sharedMemPerBlock
+                  << " bytes). Consider reducing it.\n";
 
 
 // Following should be OK in open MPI
@@ -443,7 +463,7 @@ void gpu_device_info() {
 #ifdef HIP
 
 void gpu_device_info() {
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         const int kb = 1024;
         const int mb = kb * kb;
 
@@ -471,12 +491,10 @@ void gpu_device_info() {
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
         hila::out << "Thread block size used: " << N_threads << '\n';
-        
-        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" 
-                    << GPU_BLOCK_REDUCTION_THREADS 
-                    << ") may exceed available shared memory (" 
-                    << props.sharedMemPerBlock << " bytes). Consider reducing it.\n";
-        
+
+        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
+                  << ") may exceed available shared memory (" << props.sharedMemPerBlock
+                  << " bytes). Consider reducing it.\n";
     }
 }
 

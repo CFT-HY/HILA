@@ -12,7 +12,8 @@ CC := mpic++
 LD := mpic++
 
 # Define compilation flags
-CXXFLAGS  := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma -fopenmp
+CXXFLAGS_NOOPT := -x c++ --std=c++17 -fno-rtti -march=native -fopenmp 
+CXXFLAGS := $(CXXFLAGS_NOOPT) -Ofast -mavx2 -mfma
 # CXXFLAGS := -g -x c++ --std=c++17
 
 

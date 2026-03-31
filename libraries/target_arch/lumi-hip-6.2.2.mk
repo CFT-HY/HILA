@@ -19,7 +19,7 @@ LD := hipcc
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -x hip --hip-link --std=c++20 --stdlib=libc++ -fno-rtti --rocm-path=${ROCM_PATH} -O3 -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
+CXXFLAGS := -x hip --hip-link --std=c++20 --stdlib=libc++ -fno-rtti --rocm-path=${ROCM_PATH} -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
 CXXFLAGS += -D__HIP_PLATFORM_AMD__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 
 GCC_CXX_INCLUDES := \
@@ -34,6 +34,9 @@ GCC_CXX_INCLUDES := \
 # Prepend as “-isystem” so these are searched before cuda_wrappers’s own
 # built-in headers
 CXXFLAGS += $(foreach dir,$(GCC_CXX_INCLUDES),-isystem $(dir))
+
+CXXFLAGS_NOOPT = $(CXXFLAGS) -O1
+CXXFLAGS += -O3
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
 #
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
@@ -57,7 +60,7 @@ $(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
 

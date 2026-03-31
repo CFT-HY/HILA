@@ -98,6 +98,8 @@ struct vectorized_lattice_struct {
 
         // hila::out0 << "Subdivisions " << subdivisions << '\n';
 
+        assert(v_sites % 2 == 0);   // must be even for now
+
         // the basic division is done using "float" vectors -
         // for "double" vectors the vector_size and number of subnodes
         // is halved to direction lattice->mynode.subnodes.lastype_divided.dir

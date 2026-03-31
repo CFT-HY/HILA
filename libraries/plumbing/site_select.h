@@ -135,7 +135,7 @@ class SiteSelect {
     /// For delayed collect, joining starts or completes the reduction operation
     template <typename T>
     void join_data_vectors(std::vector<T> &dp) {
-        if (hila::myrank() == 0) {
+        if_rank0() {
             for (int n = 1; n < hila::number_of_nodes(); n++) {
                 size_t nsend = nmax - sites.size();
                 hila::send_to(n, nsend);

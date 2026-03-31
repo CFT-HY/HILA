@@ -15,7 +15,7 @@ LD = hipcc  -gencode arch=compute_70,code=sm_70 --use_fast_math
 
 # Define compilation flags
 CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
-
+CXXFLAGS_NOOPT = -dc -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --restrict
 # --gpu-architecture=sm_70
 
 # 3162 is a warning about ignored inline in __global__ functions - it's not really 
@@ -54,7 +54,7 @@ HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(H
 LDLIBS += -L$(HIP_PATH)/../rocfft/lib -lrocfft
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 ################
 

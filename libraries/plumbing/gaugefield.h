@@ -101,12 +101,12 @@ class GaugeField {
         return *this;
     }
 
-    GaugeField(GaugeField &&rhs) {
+    GaugeField(GaugeField &&rhs) noexcept {
         foralldir (d)
             (*this)[d] = std::move(rhs[d]);
     }
 
-    GaugeField &operator=(GaugeField &&rhs) {
+    GaugeField &operator=(GaugeField &&rhs) noexcept {
         if (this != &rhs) {
             foralldir (d)
                 (*this)[d] = std::move(rhs[d]);
@@ -198,7 +198,7 @@ class GaugeField {
         hila::open_output_file(filename, outputfile);
 
         // write header
-        if (hila::myrank() == 0) {
+        if_rank0() {
             int64_t f = config_flag;
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
             f = NDIM;
@@ -224,7 +224,7 @@ class GaugeField {
         // read header
         bool ok = true;
         int64_t f;
-        if (hila::myrank() == 0) {
+        if_rank0() {
             inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
             ok = (f == config_flag);
             if (!ok)

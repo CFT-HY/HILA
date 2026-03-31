@@ -302,6 +302,8 @@ class hila_fft {
         bool first_dir = true;
         Direction prev_dir;
 
+        result.will_change();
+
         foralldir (dir) {
             if (directions[dir]) {
 

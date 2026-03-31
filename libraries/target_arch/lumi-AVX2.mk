@@ -17,7 +17,9 @@ CC := CC
 LD := CC
 
 # Define compilation flags
-CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
+CXXFLAGS  := -flto -x c++ --std=c++17 -fno-rtti
+CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
+CXXFLAGS += -Ofast
 #CXXFLAGS := -g -x c++ --std=c++17
 
 # Vector layout for AVX

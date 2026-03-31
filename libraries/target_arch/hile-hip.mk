@@ -22,9 +22,13 @@ ROCM_PATH := /opt/rocm
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti -O3 -xhip -fgpu-rdc --offload-arch=gfx90a 
+CXXFLAGS := -std=c++17 -fno-rtti -xhip -fgpu-rdc --offload-arch=gfx90a 
 CXXFLAGS += -D__HIP_PLATFORM_AMD__=1 -D__HIP_PLATFORM_HCC__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
+
+CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
+CXXFLAGS += -O3
+
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
 #
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
@@ -44,7 +48,7 @@ $(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
 

@@ -60,6 +60,7 @@ namespace cmdline {
 // command line options
 extern llvm::cl::opt<bool> dump_ast;
 extern llvm::cl::opt<bool> no_include;
+extern llvm::cl::opt<bool> show_includes;
 extern llvm::cl::opt<std::string> dummy_def;
 extern llvm::cl::opt<std::string> dummy_incl;
 extern llvm::cl::opt<bool> funcinfo;
@@ -67,6 +68,7 @@ extern llvm::cl::opt<bool> no_output;
 extern llvm::cl::opt<bool> syntax_only;
 extern llvm::cl::opt<bool> check_initialization;
 extern llvm::cl::opt<std::string> output_filename;
+extern llvm::cl::opt<std::string> static_compiler;
 extern llvm::cl::opt<bool> vanilla;
 extern llvm::cl::opt<bool> CUDA;
 extern llvm::cl::opt<bool> HIP;

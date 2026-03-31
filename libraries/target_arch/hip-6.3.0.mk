@@ -17,6 +17,7 @@ LD := $(CC) -O3 --std=c++17 --stdlib=libc++ --offload-arch=${GPU_ARCH} -fgpu-rdc
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
 CXXFLAGS := -O3 --std=c++17 -x hip --stdlib=libc++ -fgpu-rdc --hip-link -D__HIP_PLATFORM_AMD__=1#-nogpulib
+CXXFLAGS_NOOPT := -O1 --std=c++17 -x hip --stdlib=libc++ -fgpu-rdc --hip-link -D__HIP_PLATFORM_AMD__=1
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!
 # CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"
@@ -40,7 +41,7 @@ HIP_INCLUDE_DIRS := -I$(HIP_PATH) -I$(HIP_PATH)/hiprand/include -I$(HIP_PATH)/hi
 #HIP_INCLUDE_DIRS += -I$(HIP_PATH)/rocrand/include -I$(HIP_PATH)/rocfft/include
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 ################
 

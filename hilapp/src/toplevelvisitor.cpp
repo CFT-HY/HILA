@@ -463,6 +463,13 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
                 parsing_state.skip_children = 1; // it's handled now
                 return 1;
 
+            } else if (type == array_ref::STD_ARRAY || type == array_ref::STD_VECTOR) {
+
+                reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                           "cannot define std::vector or std::array inside onsites()");
+                parsing_state.skip_children = 1;
+                return 1;
+
             } else {
 
                 reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
@@ -1800,6 +1807,33 @@ bool TopLevelVisitor::hasSemicolonAfter(SourceRange sr) {
     return getChar(s) == ';';
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Variable decls inside site loops, but also some outside
+/////////////////////////////////////////////////////////////////////////////
+
+static const std::vector<const char *> disallowed_types{
+    "Field<",      "Reduction<",   "ReductionVector<", "SiteSelect",
+    "hila::timer", "std::vector<", "std::array<",      "std::list<"};
+
+bool TopLevelVisitor::is_disallowed_decl_type(VarDecl *var) {
+    if (!var)
+        return false;
+
+    std::string typestr = var->getType().getCanonicalType().getUnqualifiedType().getAsString(PP);
+
+    for (const char *p : disallowed_types) {
+        if (typestr.find(p, 0) < std::string::npos) {
+            std::string tname = p;
+            if (tname.back() == '<')
+                tname.push_back('>');
+
+            reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
+                       "cannot declare variables of type %0 within site loops", tname.c_str());
+            return true;
+        }
+    }
+    return false;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 /// Variable decls inside site loops, but also some outside
@@ -1843,9 +1877,7 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
             return true;
         }
 
-        if (is_field_decl(var)) {
-            reportDiag(DiagnosticsEngine::Level::Error, var->getSourceRange().getBegin(),
-                       "cannot declare Field<> variables within site loops");
+        if (is_disallowed_decl_type(var)) {
             parsing_state.skip_children = 1;
             return true;
         }

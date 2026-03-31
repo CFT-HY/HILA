@@ -124,6 +124,13 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // check if the range starts with a macro (e.g. onsites(ALL) foralldir(d) ...)
     // Std sourcerange fails here!
 
+    static int is_cow = -1;
+    if (is_cow < 0) {
+        is_cow = is_macro_defined("FIELD_COPY_ON_WRITE");
+        if (is_cow)
+            llvm::errs() << " FIELD_COPY_ON_WRITE defined\n";
+    }
+
     SourceRange Srange = get_real_range(S->getSourceRange());
 
     loopBuf.copy_from_range(writeBuf, Srange);
@@ -139,26 +146,70 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     bool semicolon_at_end = hasSemicolonAfter(Srange);
 
 
-    // Build replacement in variable "code"
+    // Build replacement in variable "code", and additional after-loop commands in "tail"
     // Encapsulate everything within {}
     std::stringstream code;
     code << "{\n";
-
 
     if (loop_info.contains_random) {
         code << "hila::check_that_rng_is_initialized();\n";
     }
 
-    const std::string t = loopBuf.dump();
+    looping_var = "HILA_index_";
+    parity_name = "HILA_parity_";
 
-    looping_var = "HILA_index";
-    while (t.find(looping_var, 0) != std::string::npos)
-        looping_var += "_";
+    generate_parity_code(code, parity_name);
+    generate_selection_code(code);
 
-    // Ensure that the name is not reserved by scanning the source
-    parity_name = "HILA_parity";
-    while (t.find(parity_name, 0) != std::string::npos)
-        parity_name += "_";
+    // then, generate new names for field variables in loop
+    handle_field_info(code, is_cow, S);
+
+    // change the f[X+offset] -references, generate code
+    std::string tail;
+    handle_field_plus_offsets(code, loopBuf, loop_info.parity_str, tail);
+
+    bool generate_wait_loops;
+
+    if (cmdline::no_interleaved_comm)
+        generate_wait_loops = false;
+    else
+        generate_wait_loops = true;
+
+    // generate field comm and access code
+    generate_field_code(code, generate_wait_loops);
+
+    // make the reduction expr list from variables and loop const expressions
+    create_reduction_list(var_info_list, loop_const_expr_ref_list);
+    handle_reduction_init(code);
+
+    handle_loop_constants(code, loopBuf);
+
+    ///////////////////////////////////////////////////
+    // Place the content of the loop
+    code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
+
+    code << tail;
+
+    handle_reduction_result(code);
+
+    mark_fields_changed(code);
+
+    // and close
+    code << "}\n//----------\n";
+
+    // Remove old code + replace
+    if (semicolon_at_end) {
+        writeBuf->remove(getRangeWithSemicolon(Srange));
+    } else {
+        writeBuf->remove(Srange);
+    }
+
+    writeBuf->insert(Srange.getBegin(), indent_string(code.str()), true, true);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::generate_parity_code(std::stringstream &code, std::string &parity_name) {
 
     if (loop_info.parity_value == Parity::none) {
         // now unknown
@@ -172,6 +223,11 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     } else
         loop_info.parity_str = parity_str(loop_info.parity_value);
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::generate_selection_code(std::stringstream &code) {
 
     // any site selections?  reset previous_selection
     for (selection_info &s : selection_info_list) {
@@ -181,8 +237,11 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             code << s.new_name << ".setup();\n";
         }
     }
+}
 
-    // then, generate new names for field variables in loop
+///////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::handle_field_info(std::stringstream &code, bool is_cow, Stmt *S) {
 
     for (field_info &l : field_info_list) {
         // Generate new variable name, may be needed -- use here simple receipe
@@ -206,6 +265,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     for (field_info &l : field_info_list)
         if (l.is_written) {
             code << l.new_name << ".check_alloc();\n";
+            if (is_cow) {
+                code << l.new_name << ".will_change();\n";
+            }
         }
 
     for (field_info &l : field_info_list) {
@@ -242,11 +304,139 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             }
         }
     }
+}
 
-    // change the f[X+offset] -references, generate code
-    handle_field_plus_offsets(code, loopBuf, loop_info.parity_str);
+///////////////////////////////////////////////////////////////////////////////////
 
-// TOOKS THIS OUT AND PUT IN RESPECTIVE CODEGEN FILES ---------------------------
+// Handle field+offset expressions -- these are copied, ref removed
+// Use iterator for looping, because we may want to remove the field_info item.
+
+void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf &loopBuf,
+                                                std::string &paritystr, std::string &tail) {
+
+    bool shift_buffering = is_macro_defined("FIELD_SHIFT_BUFFERING");
+
+    for (auto it = field_info_list.begin(); it != field_info_list.end();) {
+
+        if (!it->is_read_offset) {
+            // std case, no offset
+            ++it;
+
+        } else {
+
+            if (shift_buffering) {
+                for (dir_ptr &d : it->dir_list) {
+                    if (d.is_offset) {
+                        code << it->new_name + ".buffered_shift_offsets(" +
+                                    d.ref_list.at(0)->direxpr_s + ", " + paritystr + ");\n";
+                    }
+                }
+            }
+
+            int i_offset = 0;
+            for (dir_ptr &d : it->dir_list) {
+                if (d.is_offset) {
+
+                    // get new name
+                    std::string offset_field_name =
+                        it->new_name + "_offset" + std::to_string(i_offset);
+                    i_offset++;
+
+                    if (!shift_buffering) {
+
+                        // copy the shifted var
+                        code << "Field" + it->type_template + " " + offset_field_name + ";\n";
+                        code << it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s + ", " +
+                                    offset_field_name + ", " + paritystr + ");\n";
+                    } else {
+
+                        // accumulate all shifts, set the Field ref
+                        code << "auto & " + offset_field_name + " = " + it->new_name +
+                                    ".do_buffered_shift(" + d.ref_list.at(0)->direxpr_s + ", " +
+                                    paritystr + ");\n";
+                    }
+
+                    // make new field info for new variable
+                    field_info new_fi;
+                    new_fi.type_template = it->type_template;
+                    new_fi.element_type = it->element_type;
+                    new_fi.old_name = new_fi.new_name = offset_field_name;
+                    new_fi.loop_ref_name = offset_field_name + "_index";
+                    new_fi.ref_list = d.ref_list;
+                    new_fi.dir_list = {};
+                    new_fi.is_read_nb = false;
+                    new_fi.is_read_atX = true;
+
+                    // push it on stack
+                    field_info_list.push_back(new_fi);
+
+                    // and rewrite references to the offset field
+                    for (field_ref *fr : new_fi.ref_list) {
+                        loopBuf.replace(fr->nameExpr, offset_field_name);
+                        loopBuf.replace(fr->parityExpr, "X");
+                        fr->direxpr_s.clear();
+                        fr->is_direction = false;           // no Direction
+                        fr->info = &field_info_list.back(); // info points to new field_info
+                        fr->is_written = false;
+                        fr->is_read = true;
+                        fr->is_offset = true; // leave this on, as a flag -- turned off below
+                    }
+                }
+            } // loop over dir_ptr w. offset
+
+            if (shift_buffering) {
+
+                tail.append(it->new_name + ".clear_buffered_shifts();\n");
+            }
+
+            // Remove dir_ptrs which are offset
+            // need to do this only if there are no-offset dirs
+            std::vector<dir_ptr> dp;
+            for (dir_ptr &d : it->dir_list) {
+                if (!d.is_offset)
+                    dp.push_back(d);
+            }
+            it->dir_list.clear();
+            it->dir_list = dp;
+
+            // if all references to this field var are offsets, remove the ref.
+            // reset the status too
+            it->is_read_nb = it->is_read_offset = false;
+            std::vector<field_ref *> new_ref_list = {};
+            for (field_ref *fr : it->ref_list) {
+
+                if (!fr->is_offset) {
+                    new_ref_list.push_back(fr);
+                    if (fr->is_direction)
+                        it->is_read_nb = true;
+
+                } else {
+                    // turn offset off, this ref is to the newly defined field
+                    // (see above)
+                    fr->is_offset = false;
+                }
+            }
+
+            if (new_ref_list.size() > 0) {
+                // copy the references, keep the iterator element
+                it->ref_list = new_ref_list;
+                ++it;
+
+            } else {
+                // now remove the field altogether from list
+                // iterator will point to the next element in the list after
+                // erase
+                it = field_info_list.erase(it);
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::generate_field_code(std::stringstream &code, bool &generate_wait_loops) {
+
+    // TOOKS THIS OUT AND PUT IN RESPECTIVE CODEGEN FILES ---------------------------
     // bool first = true;
     // bool generate_wait_loops;
     // if (cmdline::no_interleaved_comm)
@@ -304,33 +494,141 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     // if (first)
     //     generate_wait_loops = false; // no communication needed in the 1st place
-// TOOK THIS OUT ---------------------------------------------------------------------
+    // TOOK THIS OUT ---------------------------------------------------------------------
     /////////////////////////////////////////////////////////////////////
     // make the reduction expr list from variables and loop const expressions
 
-    create_reduction_list(var_info_list, loop_const_expr_ref_list);
+    void TopLevelVisitor::mark_fields_changed(std::stringstream & code) {
 
-    // Create a temporary reduction variable and initialize
-    for (reduction_expr &r : reduction_list) {
+        // finally mark modified fields
+        for (field_info &l : field_info_list)
+            if (l.is_written) {
+                code << l.new_name << ".mark_changed(" << loop_info.parity_str << ");\n";
+            }
+    }
 
-        code << r.type << " " << r.reduction_name << ";\n";
-        if (r.reduction_type == reduction::SUM) {
-            code << r.reduction_name << " = 0;\n";
-        } else if (r.reduction_type == reduction::PRODUCT) {
-            code << r.reduction_name << " = 1;\n";
+    //////////////////////////////////////////////////////////////////////////////////
+
+    void TopLevelVisitor::handle_reduction_init(std::stringstream & code) {
+        // Create a temporary reduction variable and initialize
+        for (reduction_expr &r : reduction_list) {
+
+            code << r.type << " " << r.reduction_name << ";\n";
+            if (r.reduction_type == reduction::SUM) {
+                code << r.reduction_name << " = 0;\n";
+            } else if (r.reduction_type == reduction::PRODUCT) {
+                code << r.reduction_name << " = 1;\n";
+            }
+        }
+
+        // and vector reductions
+        for (array_ref &ar : array_ref_list) {
+            if (ar.type == array_ref::REDUCTION) {
+                code << ar.name;
+                if (ar.reduction_type == reduction::SUM)
+                    code << ".init_sum();\n";
+                else
+                    code << ".init_product();\n";
+            }
         }
     }
 
-    // and vector reductions
-    for (array_ref &ar : array_ref_list) {
-        if (ar.type == array_ref::REDUCTION) {
-            code << ar.name;
-            if (ar.reduction_type == reduction::SUM)
-                code << ".init_sum();\n";
-            else
-                code << ".init_product();\n";
+    ///////////////////////////////////////////////////////////////////////////////////
+
+    if (!target.kernelize) {
+        // define new variables only if not kernelized, with kernels
+        // expressions can be written directly on kernel calls
+        code << "const " << lcer.type << " " << lcer.new_name << " = " << lcer.expression << ";\n";
+    }
+
+    // Replace references in loop body -- works also with kernels
+    for (Expr *ep : lcer.refs) {
+        loopBuf.replace(ep, lcer.new_name);
+    }
+}
+}
+
+bool generate_wait_loops;
+
+// Place the content of the loop
+code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
+
+// Check reduction variables
+for (reduction_expr &v : reduction_list) {
+
+    if (v.is_special_reduction) {
+
+        if (v.reduction_type == reduction::SUM)
+            code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
+        else if (v.reduction_type == reduction::PRODUCT)
+            code << v.name << ".reduce_product_node(" << v.reduction_name << ");\n";
+
+    } else if (v.reduction_type == reduction::PRODUCT) {
+
+        // The old value at node 0 is used, but not at other nodes!
+
+        code << "if (hila::myrank() == 0) { " << v.reduction_name << " *= " << v.name << "; }\n";
+        code << "hila::reduce_node_product( & " << v.reduction_name << ", 1, true);\n";
+        code << v.name << " = " << v.reduction_name << ";\n";
+    }
+}
+
+// handle separately sum reductions, by far most common case
+// a bit convoluted way to go through the list, done so to get
+// a bit tidier output than the easiest case
+
+bool sum_reductions = false;
+for (reduction_expr &v : reduction_list) {
+    if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+
+        if (!sum_reductions) {
+            code << "if (hila::myrank() == 0) {\n";
+            sum_reductions = true;
+        }
+        // on node 0 add the old value to reduction
+        // forget it on other nodes
+        code << v.reduction_name << " += " << v.name << ";\n";
+    }
+}
+
+if (sum_reductions) {
+
+    code << "}\n";
+
+    for (reduction_expr &v : reduction_list) {
+        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+            code << "hila_reduce_sum_setup( &" << v.reduction_name << ");\n";
         }
     }
+
+    code << "hila_reduce_sums();\n";
+
+    for (reduction_expr &v : reduction_list) {
+        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+            code << v.name << " = " << v.reduction_name << ";\n";
+        }
+    }
+}
+
+code << "hila::set_allreduce(true);\n";
+
+
+// and vector reductions
+for (array_ref &ar : array_ref_list) {
+    if (ar.type == array_ref::REDUCTION) {
+
+        if (ar.reduction_type == reduction::SUM)
+            code << ar.name << ".reduce_sum();\n";
+        else if (ar.reduction_type == reduction::PRODUCT)
+            code << ar.name << ".reduce_product();\n";
+    }
+}
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::handle_loop_constants(std::stringstream &code, srcBuf &loopBuf) {
 
     // and create variables for "constant expressions" if not reduction
     // Also replace the loop expressions already here
@@ -352,201 +650,10 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             }
         }
     }
-
-    bool generate_wait_loops;
-
-    // Place the content of the loop
-    code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
-
-    // Check reduction variables
-    for (reduction_expr &v : reduction_list) {
-
-        if (v.is_special_reduction) {
-
-            if (v.reduction_type == reduction::SUM)
-                code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
-            else if (v.reduction_type == reduction::PRODUCT)
-                code << v.name << ".reduce_product_node(" << v.reduction_name << ");\n";
-
-        } else if (v.reduction_type == reduction::PRODUCT) {
-
-            // The old value at node 0 is used, but not at other nodes!
-
-            code << "if (hila::myrank() == 0) { " << v.reduction_name << " *= " << v.name
-                 << "; }\n";
-            code << "hila::reduce_node_product( & " << v.reduction_name << ", 1, true);\n";
-            code << v.name << " = " << v.reduction_name << ";\n";
-        }
-    }
-
-    // handle separately sum reductions, by far most common case
-    // a bit convoluted way to go through the list, done so to get
-    // a bit tidier output than the easiest case
-
-    bool sum_reductions = false;
-    for (reduction_expr &v : reduction_list) {
-        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
-
-            if (!sum_reductions) {
-                code << "if (hila::myrank() == 0) {\n";
-                sum_reductions = true;
-            }
-            // on node 0 add the old value to reduction
-            // forget it on other nodes
-            code << v.reduction_name << " += " << v.name << ";\n";
-        }
-    }
-
-    if (sum_reductions) {
-
-        code << "}\n";
-
-        for (reduction_expr &v : reduction_list) {
-            if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
-                code << "hila_reduce_sum_setup( &" << v.reduction_name << ");\n";
-            }
-        }
-
-        code << "hila_reduce_sums();\n";
-
-        for (reduction_expr &v : reduction_list) {
-            if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
-                code << v.name << " = " << v.reduction_name << ";\n";
-            }
-        }
-    }
-
-    code << "hila::set_allreduce(true);\n";
-
-
-    // and vector reductions
-    for (array_ref &ar : array_ref_list) {
-        if (ar.type == array_ref::REDUCTION) {
-
-            if (ar.reduction_type == reduction::SUM)
-                code << ar.name << ".reduce_sum();\n";
-            else if (ar.reduction_type == reduction::PRODUCT)
-                code << ar.name << ".reduce_product();\n";
-        }
-    }
-
-    // finally mark modified fields
-    for (field_info &l : field_info_list)
-        if (l.is_written) {
-            code << l.new_name << ".mark_changed(" << loop_info.parity_str << ");\n";
-        }
-
-    // and close
-    code << "}\n//----------\n";
-
-    // Remove old code + replace
-    if (semicolon_at_end) {
-        writeBuf->remove(getRangeWithSemicolon(Srange));
-    } else {
-        writeBuf->remove(Srange);
-    }
-
-    writeBuf->insert(Srange.getBegin(), indent_string(code.str()), true, true);
 }
 
-// Handle field+offset expressions -- these are copied, ref removed
-// Use iterator for looping, because we may want to remove the field_info item.
 
-void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf &loopBuf,
-                                                std::string &paritystr) {
-
-    for (auto it = field_info_list.begin(); it != field_info_list.end();) {
-
-        if (!it->is_read_offset) {
-            // std case, no offset
-            ++it;
-
-        } else {
-
-            int i_offset = 0;
-            for (dir_ptr &d : it->dir_list)
-                if (d.is_offset) {
-
-                    // get new name
-                    std::string offset_field_name = it->new_name + "_offset";
-                    if (i_offset > 0)
-                        offset_field_name += std::to_string(i_offset);
-                    i_offset++;
-
-                    // make new field info for new variable
-                    field_info new_fi;
-                    new_fi.type_template = it->type_template;
-                    new_fi.element_type = it->element_type;
-                    new_fi.old_name = new_fi.new_name = offset_field_name;
-                    new_fi.loop_ref_name = offset_field_name + "_index";
-                    new_fi.ref_list = d.ref_list;
-                    new_fi.dir_list = {};
-                    new_fi.is_read_nb = false;
-                    new_fi.is_read_atX = true;
-
-                    // push it on stack
-                    field_info_list.push_back(new_fi);
-
-                    // copy the shifted var
-                    code << "Field" + it->type_template + " " + offset_field_name + ";\n";
-                    code << it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s + ", " +
-                                offset_field_name + ", " + paritystr + ");\n";
-
-                    // and rewrite references to the offset field
-                    for (field_ref *fr : new_fi.ref_list) {
-                        loopBuf.replace(fr->nameExpr, offset_field_name);
-                        loopBuf.replace(fr->parityExpr, "X");
-                        fr->direxpr_s.clear();
-                        fr->is_direction = false;           // no Direction
-                        fr->info = &field_info_list.back(); // info points to new field_info
-                        fr->is_written = false;
-                        fr->is_read = true;
-                        fr->is_offset = true; // leave this on, as a flag -- turned off below
-                    }
-
-                } // loop over dir_ptr w. offset
-
-            // Remove dir_ptrs which are offset
-            // need to do this only if there are no-offset dirs
-            std::vector<dir_ptr> dp;
-            for (dir_ptr &d : it->dir_list) {
-                if (!d.is_offset)
-                    dp.push_back(d);
-            }
-            it->dir_list.clear();
-            it->dir_list = dp;
-
-            // if all references to this field var are offsets, remove the ref.
-            // reset the status too
-            it->is_read_nb = it->is_read_offset = false;
-            std::vector<field_ref *> new_ref_list = {};
-            for (field_ref *fr : it->ref_list) {
-
-                if (!fr->is_offset) {
-                    new_ref_list.push_back(fr);
-                    if (fr->is_direction)
-                        it->is_read_nb = true;
-
-                } else {
-                    // turn offset off, this ref is to the newly defined field (see
-                    // above)
-                    fr->is_offset = false;
-                }
-            }
-
-            if (new_ref_list.size() > 0) {
-                // copy the references, keep the iterator element
-                it->ref_list = new_ref_list;
-                ++it;
-
-            } else {
-                // now remove the field altogether from list
-                // iterator will point to the next element in the list after erase
-                it = field_info_list.erase(it);
-            }
-        }
-    }
-}
+//////////////////////////////////////////////////////////////////////////////////
 
 /// Call the backend function for handling loop functions
 void GeneralVisitor::backend_handle_loop_function(call_info_struct &ci) {

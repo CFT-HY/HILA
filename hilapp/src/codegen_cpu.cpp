@@ -90,9 +90,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // Set the start and end points
 
     code << "const int _hila_loop_begin = hila_loop_lattice.loop_begin(" << loop_info.parity_str
-            << ");\n";
+         << ");\n";
     code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << loop_info.parity_str
-            << ");\n";
+         << ");\n";
 
     if (generate_wait_loops) {
         code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
@@ -103,35 +103,49 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     if (target.openacc) {
         generate_openacc_loop_header(code);
     } else if (target.openmp && !loop_info.contains_random) {
-        int sums = 0;
-        for (reduction_expr &r : reduction_list) {
-            if (r.reduction_type != reduction::NONE &&
-                get_number_type(r.type) == number_type::UNKNOWN) {
-                code << "#pragma omp declare reduction(_hila_reduction_sum" << sums << ":" << r.type
-                     << ":omp_out += omp_in)\n";
-                sums++;
-            }
-        }
-        if (loop_info.has_pragma_omp_parallel_region)
-            code << "#pragma omp for";
-        else
-            code << "#pragma omp parallel for";
 
-        sums = 0;
-        for (reduction_expr &r : reduction_list) {
-            if (r.reduction_type != reduction::NONE) {
-                code << " reduction(";
-                if (get_number_type(r.type) == number_type::UNKNOWN) {
-                    code << "_hila_reduction_sum" << sums;
-                } else {
-                    code << '+';
+        // CHECK if the loop has ReductionVector
+        // This is stopgap to make openmp to work..
+        // TODO: copy vector to n_threads arrays
+        // Same holds for SiteSelect
+        bool has_reductionvector = false;
+        for (array_ref &ar : array_ref_list) {
+            if (ar.type == array_ref::REDUCTION)
+                has_reductionvector = true;
+        }
+
+        if (!has_reductionvector && selection_info_list.size() == 0) {
+
+            int sums = 0;
+            for (reduction_expr &r : reduction_list) {
+                if (r.reduction_type != reduction::NONE &&
+                    get_number_type(r.type) == number_type::UNKNOWN) {
+                    code << "#pragma omp declare reduction(_hila_reduction_sum" << sums << ":"
+                         << r.type << ":omp_out += omp_in)\n";
+                    sums++;
                 }
-                code << ": " << r.reduction_name << ")";
             }
-        }
-        code << '\n';
-    }
+            if (loop_info.has_pragma_omp_parallel_region)
+                code << "#pragma omp for";
+            else
+                code << "#pragma omp parallel for";
 
+            sums = 0;
+            for (reduction_expr &r : reduction_list) {
+                if (r.reduction_type != reduction::NONE) {
+                    code << " reduction(";
+                    if (get_number_type(r.type) == number_type::UNKNOWN) {
+                        code << "_hila_reduction_sum" << sums;
+                        sums++;
+                    } else {
+                        code << '+';
+                    }
+                    code << ": " << r.reduction_name << ")";
+                }
+            }
+            code << '\n';
+        }
+    }
 
     // Start the loop
     code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
@@ -297,8 +311,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     code << "}\n";
 
     if (generate_wait_loops) {
-            // add the code for 2nd round - also need one } to balance the if ()
-        code << "}\nif (_dir_mask_ == 0 || _hila_wait_i > 0) break;    // No need for another round\n";
+        // add the code for 2nd round - also need one } to balance the if ()
+        code << "}\nif (_dir_mask_ == 0 || _hila_wait_i > 0) break;    // No need for another "
+                "round\n";
         for (field_info &l : field_info_list) {
             // If neighbour references exist, communicate them
             if (!l.is_loop_local_dir) {

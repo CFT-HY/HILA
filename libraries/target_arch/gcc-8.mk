@@ -12,9 +12,10 @@ CC := mpic++-8
 LD := mpic++-8
 
 # Define compilation flags
-CXXFLAGS  := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma
+CXXFLAGS  := -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
-
+CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
+CXXFLAGS += $(CXXFLAGS) -O3 -march=native -mavx2 -mfma
 
 ## The following incantation gives the include paths of the $(CC) compiler (if it is gcc or clang)
 # It may be that this path is not necessary at all, usually not for "system installed" clang

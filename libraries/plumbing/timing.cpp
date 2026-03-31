@@ -101,7 +101,7 @@ timer_value timer::value() {
 }
 
 void timer::report(bool print_not_timed) {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         char line[202];
 
         // time used during the counter activity
@@ -129,7 +129,7 @@ void timer::report(bool print_not_timed) {
 }
 
 void report_timers() {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         if (timer_list.size() > 0) {
 
 #if defined(CUDA) || defined(HIP)
@@ -211,7 +211,7 @@ void setup_timelimit(const std::string &timestr) {
     constexpr int timelimit_buf_size = 100;
 
     int status = 0;
-    if (hila::myrank() == 0) {
+    if_rank0() {
         const char *str = timestr.c_str();
         char buf[timelimit_buf_size];
 
@@ -332,7 +332,7 @@ bool time_to_finish() {
     // is signal up?
     int signal = signal_status();
 
-    if (hila::myrank() == 0) {
+    if_rank0() {
         if (signal != 0) {
             finish = true;
             hila::out0 << "FINISH UP ON SIGNAL SIGUSR1\n";
@@ -370,7 +370,7 @@ bool time_to_finish() {
  */
 
 void timestamp(const char *msg) {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         int p = hila::out0.precision();
         std::time_t ct = std::time(NULL);
         if (msg != NULL)

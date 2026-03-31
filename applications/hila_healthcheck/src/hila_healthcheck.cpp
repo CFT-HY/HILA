@@ -118,6 +118,20 @@ void test_reductions() {
         report_pass("Combined reductions, sum " + hila::prettyprint(sum) + ", sum2 " +
                         hila::prettyprint(sum2),
                     abs(sum) + abs(sum2), 1e-4);
+
+
+        f[ALL] = 1;
+        f[ODD] = -1;
+
+        sum = 0;
+        onsites (EVEN)
+            sum += f[X];
+        report_pass("Even site reduction", abs(sum - lattice.volume() / 2), 1e-2);
+
+        sum = 0;
+        onsites (ODD)
+            sum += f[X];
+        report_pass("Odd site reduction", abs(sum + lattice.volume() / 2), 1e-2);
     }
 
     {
@@ -168,7 +182,7 @@ void test_reductions() {
         report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
     }
 
-
+#if NDIM > 2
     {
 
         constexpr int N = 5;
@@ -192,6 +206,7 @@ void test_reductions() {
 
         report_pass("SU(" + std::to_string(N) + ") ReductionVector", diff, 1e-8);
     }
+#endif
 }
 
 
@@ -399,6 +414,31 @@ void test_set_elements_and_select() {
     onsites (ALL) {}
 }
 
+/**
+ * @brief Shifts
+ */
+
+void test_shift() {
+
+#if NDIM > 1
+
+    Field<CoordinateVector> cf;
+
+    onsites (ALL) {
+        cf[X] = X.coordinates();
+    }
+
+    int64_t sumvx = 0, sumvxy = 0;
+    onsites (ALL) {
+        sumvx += (cf[X + 3 * e_x] - cf[X]).mod(lattice.size()).norm_L1() - 3;
+        sumvxy += (cf[X + e_x] - cf[X - 2 * e_y]).mod(lattice.size()).norm_L1() - 3;
+    }
+
+    report_pass("Shift fields", abs(sumvx) + abs(sumvxy), 1e-6);
+
+#endif
+}
+
 
 /**
  * @brief Test subvolume operations
@@ -490,6 +530,8 @@ void test_subvolumes() {
  * @details Test forward and inverse FFT on fields.
  *
  */
+
+
 void test_fft() {
 
 
@@ -502,7 +544,7 @@ void test_fft() {
         // After one FFT the field is 0 except at coord 0
         p2 = 0;
 
-        p2[{0, 0, 0}] = lattice.volume();
+        p2[CoordinateVector(0)] = lattice.volume();
 
         FFT_field(f, p);
 
@@ -536,7 +578,7 @@ void test_fft() {
         // After one FFT the field is 0 except at coord 0
         p2 = 0;
 
-        p2[{0, 0, 0}] = lattice.volume();
+        p2[CoordinateVector(0)] = lattice.volume();
 
         FFT_field(f, p);
 
@@ -646,7 +688,7 @@ void test_fft() {
 
 
         hila::k_binning b;
-        b.k_max(M_PI * sqrt(3.0));
+        b.k_max(M_PI * sqrt(1.0 * NDIM));
 
         auto bf = b.bin_k_field(p.conj() * p);
 
@@ -673,7 +715,8 @@ void test_spectraldensity() {
     Field<Complex<double>> f, p;
 
     hila::k_binning b;
-    b.k_max(M_PI * sqrt(3.0));
+    b.k_max(M_PI * sqrt(1.0 * NDIM));
+    b.bins(b.bins() - 1); // reduce the number of default bins by 1
 
     // test std binning first
 
@@ -823,7 +866,44 @@ void test_matrix_algebra() {
     report_pass("Fully pivoted SVD with " + hila::prettyprint(myMatrix::rows()) + "x" +
                     hila::prettyprint(myMatrix::columns()) + " Complex matrix",
                 max_delta, 1e-10);
+
+
+    M += 2; // ensure that M is invertible
+    // one
+    auto one = myMatrix(1);
+    onsites (ALL) {
+        auto inv = M[X].LU_solve(one);
+        delta[X] = (M[X] * inv - one).norm();
+    }
+    max_delta = delta.max();
+
+    report_pass("LU Inversion of " + hila::prettyprint(myMatrix::rows()) + "x" +
+                    hila::prettyprint(myMatrix::columns()) + " Complex matrix",
+                max_delta, 1e-10);
 }
+
+/**
+ * @brief Test matrix/vector elementwise operations
+ *
+ */
+
+void test_element_operations() {
+
+    Field<Matrix<3, 2, Complex<double>>> mf;
+
+    mf = 0;
+
+    double sum = 0, sum2 = 0, sum3 = 0;
+    onsites (ALL) {
+        mf[X] = hila::elem::exp(mf[X]);
+        sum += (hila::elem::sub(mf[X], 1)).squarenorm();
+        sum2 += hila::elem::log(mf[X]).squarenorm();
+        sum3 += (hila::elem::mul(hila::elem::add(mf[X], -2 * mf[X]), -1) - mf[X]).squarenorm();
+    }
+
+    report_pass("hila::elem::exp, log, sub, add, mul", sum + sum2 + sum3, 1e-8);
+}
+
 
 /**
  * @brief Test extended type
@@ -832,6 +912,7 @@ void test_matrix_algebra() {
  */
 void test_extended() {
 
+#if NDIM > 1
     // ExtendedPrecision type test with T = double
     Field<double> g;
 
@@ -925,6 +1006,7 @@ void test_extended() {
 
         report_pass(ssres.str(), ev.to_double() / result, 1e-20);
     }
+#endif
 }
 
 
@@ -932,44 +1014,108 @@ void test_extended() {
 
 void test_clusters() {
 
-    Field<int> m;
+    {
+#if NDIM > 2 && !defined(VECTORIZED)
 
-    m = hila::clusters::background;
+        Field<int> m;
 
-    onsites (ALL) {
-        auto c = X.coordinates();
-        if (c[e_x] == 0 && c[e_y] == 0)
-            m[X] = 1;
-        else if (c[e_x] == 2 && c[e_z] == 2)
-            m[X] = 2;
-        else if (c[e_x] == 4 && c[e_y] < 3 && c[e_z] > 1 && c[e_z] <= 4)
-            m[X] = 3;
-    }
+        m = hila::Clusters::background;
 
-    hila::clusters cl(m);
+        onsites (ALL) {
+            auto c = X.coordinates();
+            if (c[e_x] == 0 && c[e_y] == 0)
+                m[X] = 1;
+            else if (c[e_x] == 2 && c[e_z] == 2)
+                m[X] = 2;
+            else if (c[e_x] == 4 && c[e_y] < 3 && c[e_z] > 1 && c[e_z] <= 4)
+                m[X] = 3;
+        }
 
-    report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
-    if (cl.number() == 3) {
-        double sumsize =
-            fabs(cl.size(0) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
-            fabs(cl.size(1) - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
-            fabs(cl.size(2) - 1 * 3 * 3);
-        report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
+        hila::Clusters cl(m);
 
-        double types = abs(cl.type(0) - 1) + abs(cl.type(1) - 2) + abs(cl.type(2) - 3);
-        report_pass("Cluster test: cluster types ", types, 1e-10);
+        report_pass("Cluster test: number of clusters ", cl.number() - 3, 1e-10);
+        if (cl.number() == 3) {
+            double sumsize =
+                fabs(cl[0].size() - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_y)))) +
+                fabs(cl[1].size() - (lattice.volume() / (lattice.size(e_x) * lattice.size(e_z)))) +
+                fabs(cl[2].size() - 1 * 3 * 3);
+            report_pass("Cluster test: cluster sizes ", sumsize, 1e-10);
+
+            double types = abs(cl[0].type() - 1) + abs(cl[1].type() - 2) + abs(cl[2].type() - 3);
+            report_pass("Cluster test: cluster types ", types, 1e-10);
 
 #if NDIM == 3
-        double area = abs(cl.area(0) - 4 * lattice.size(e_z)) +
-                      abs(cl.area(1) - 4 * lattice.size(e_y)) +
-                      abs(cl.area(2) - 2 * (1 * 3 + 1 * 3 + 3 * 3));
+            double area = abs(cl[0].area() - 4 * lattice.size(e_z)) +
+                          abs(cl[1].area() - 4 * lattice.size(e_y)) +
+                          abs(cl[2].area() - 2 * (1 * 3 + 1 * 3 + 3 * 3));
 
-        report_pass("Cluster test: cluster area ", area, 1e-10);
+            report_pass("Cluster test: cluster area ", area, 1e-10);
 
 #endif
+        }
+
+        // test coordinates of cluster
+        m = hila::Clusters::background;
+        CoordinateVector cv = 0;
+        for (int x = 0; x < 4; x++) {
+            cv[e_x] = x;
+            m[cv] = 1;
+        }
+        cl.find(m);
+
+        int ok = (cl.number() == 1);
+        if (ok) {
+            auto c = cl[0].sites();
+            ok = (c.size() == 4);
+
+            // the coordinates are in unspecified order
+            for (int i = 0; ok && i < 4; i++) {
+                auto cvc = c[i].coordinates();
+                bool found = false;
+                for (int x = 0; !found && x < 4; x++) {
+                    cv[e_x] = x;
+                    found = (cv == cvc);
+                }
+                ok = found;
+            }
+        }
+        report_pass("Cluster test: cluster sites ", ok - 1, 1e-10);
+    }
+    {
+#if NDIM == 3
+        VectorField<uint8_t> link = 0;
+        onsites (ALL) {
+            auto c = X.coordinates();
+            if ((c[e_x] == 0 || c[e_x] == lattice.size(e_x) / 2) &&
+                (c[e_y] == 0 || c[e_y] == lattice.size(e_y) / 2) &&
+                c[e_z] < lattice.size(e_z) / 2) {
+                link[e_z][X] = 1;
+            }
+
+            if ((c[e_x] == 0 || c[e_x] == lattice.size(e_x) / 2) &&
+                c[e_y] < lattice.size(e_y) / 2 &&
+                (c[e_z] == 0 || c[e_z] == lattice.size(e_z) / 2)) {
+                link[e_y][X] = 1;
+            }
+        }
+
+        hila::Clusters cl(link);
+
+        report_pass("Link cluster test: number of clusters ", cl.number() - 2, 1e-10);
+
+        if (cl.number() == 2) {
+            auto s = 2 * (lattice.size(e_y) / 2 + lattice.size(e_z) / 2);
+            s = abs(cl[0].size() - s) + abs(cl[1].size() - s);
+            report_pass("Link cluster sizes", s, 1e-10);
+        }
+
+#endif
+
+#endif
+
+
     }
 }
-
 //--------------------------------------------------------------------------------
 
 void test_blocking() {
@@ -1021,8 +1167,10 @@ void test_blocking() {
 
 
         sum = 0;
+        CoordinateVector divisor;
+        divisor.fill(2);
         onsites (ALL) {
-            if (X.coordinates().is_divisible({2, 2, 2})) {
+            if (X.coordinates().is_divisible(divisor)) {
                 sum += (X.coordinates() + cvf[X]).squarenorm();
             }
         }
@@ -1065,8 +1213,10 @@ int main(int argc, char **argv) {
     test_minmax();
     test_random();
     test_set_elements_and_select();
+    test_shift();
     test_subvolumes();
     test_matrix_operations();
+    test_element_operations();
     test_fft();
     test_spectraldensity();
     test_matrix_algebra();

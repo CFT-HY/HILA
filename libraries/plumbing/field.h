@@ -23,6 +23,16 @@
 
 #include "plumbing/com_mpi.h"
 
+#define FIELD_SHIFT_BUFFERING
+
+// When FIELD_COPY_ON_WRITE is defined copy constructor Field<T>(const Field<T> &)
+// and default assignment operator operator=(const Field <T> &) make the fields to
+// use the same content, without copying. Only when one of the fields is modified the
+// content is transparently copied to new storage. This option adds refcounting to the
+// to the Field content.  In practice this does not seem to gain anything except in
+// trivial test cases.  Probably will be removed at some point.
+//
+// #define FIELD_COPY_ON_WRITE
 
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
@@ -81,6 +91,9 @@ class Field {
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
+#ifdef FIELD_COPY_ON_WRITE
+        int refcount;
+#endif
         unsigned assigned_to;                        // keeps track of first assignment to parities
         gather_status_t gather_status_arr[3][NDIRS]; // is communication done
 
@@ -96,6 +109,73 @@ class Field {
         T *receive_buffer[NDIRS];
 #endif
         T *send_buffer[NDIRS];
+
+#ifdef FIELD_SHIFT_BUFFERING
+        struct shift_buffer_struct {
+            Field<T> f;
+            CoordinateVector offset;
+            Parity par;
+        };
+
+        std::vector<shift_buffer_struct> shift_buffer;
+#endif
+
+
+        /**
+         * @internal
+         * @brief field_struct constructor
+         */
+        field_struct() {
+
+            mylattice = lattice;
+            allocate_payload();
+            initialize_communication();
+            assigned_to = 0; // and this means that it is not assigned
+#ifdef FIELD_COPY_ON_WRITE
+            refcount = 1;
+#endif
+
+            for (Direction d = (Direction)0; d < NDIRS; ++d) {
+
+#if !defined(CUDA) && !defined(HIP)
+                neighbours[d] = lattice->neighb[d];
+#else
+                payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
+#endif
+            }
+
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+            foralldir (dir) {
+                boundary_condition[dir] = hila::bc::PERIODIC;
+                boundary_condition[-dir] = hila::bc::PERIODIC;
+            }
+#endif
+
+#ifdef VECTORIZED
+            if constexpr (hila::is_vectorizable_type<T>::value) {
+                vector_lattice = lattice->backend_lattice
+                                     ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+            } else {
+                vector_lattice = nullptr;
+            }
+#endif
+        }
+
+        /**
+         * @internal
+         * @brief field_struct destructor
+         */
+        ~field_struct() {
+
+            free_payload();
+            free_communication();
+
+#ifdef FIELD_SHIFT_BUFFERING
+            shift_buffer.clear();
+#endif
+        }
+
+
         /**
          * @internal
          * @brief Initialize communication
@@ -142,6 +222,7 @@ class Field {
         void free_payload() {
             payload.free_field();
         }
+
 
 #ifndef VECTORIZED
         /**
@@ -196,14 +277,16 @@ class Field {
          * @brief Gather boundary elements for communication
          */
         void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                  const lattice_struct::comm_node_struct &to_node, gpuStream_t stream) const;
+                                  const lattice_struct::comm_node_struct &to_node,
+                                  gpuStream_t stream) const;
 
         /**
          * @internal
          * @brief Place boundary elements from neighbour
          */
         void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                 const lattice_struct::comm_node_struct &from_node, gpuStream_t stream);
+                                 const lattice_struct::comm_node_struct &from_node,
+                                 gpuStream_t stream);
 
         /**
          * @internal
@@ -299,8 +382,16 @@ class Field {
     Field(const Field &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
+#if !defined(FIELD_COPY_ON_WRITE)
+
         (*this)[ALL] = other[X];
+
+#else
+        fs = other.fs;
+        fs->refcount++;
+#endif
     }
+
     /**
      * @internal
      * @brief Copy constructor form Field of type A to field of type F if the conversion is defined
@@ -342,7 +433,7 @@ class Field {
      * `g+h` is generated momenterally and then destroyed.
      * @param rhs
      */
-    Field(Field &&rhs) {
+    Field(Field &&rhs) noexcept {
         assert(rhs.fs->mylattice.ptr() == lattice.ptr());
         fs = rhs.fs;
         rhs.fs = nullptr;
@@ -364,39 +455,15 @@ class Field {
      * @brief  Sets up memory for field content and communication.
      */
     void allocate() {
+        extern hila::timer field_alloc_timer;
+
+        field_alloc_timer.start();
         assert(lattice.is_initialized() && "Fields cannot be used before lattice.setup()");
         assert(fs == nullptr);
-        fs = (field_struct *)memalloc(sizeof(field_struct));
-        fs->mylattice = lattice;
-        fs->allocate_payload();
-        fs->initialize_communication();
-        mark_changed(ALL);   // guarantees communications will be done
-        fs->assigned_to = 0; // and this means that it is not assigned
 
-        for (Direction d = (Direction)0; d < NDIRS; ++d) {
-
-#if !defined(CUDA) && !defined(HIP)
-            fs->neighbours[d] = lattice->neighb[d];
-#else
-            fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
-#endif
-        }
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir(dir) {
-            fs->boundary_condition[dir] = hila::bc::PERIODIC;
-            fs->boundary_condition[-dir] = hila::bc::PERIODIC;
-        }
-#endif
-
-#ifdef VECTORIZED
-        if constexpr (hila::is_vectorizable_type<T>::value) {
-            fs->vector_lattice = lattice->backend_lattice
-                                     ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
-        } else {
-            fs->vector_lattice = nullptr;
-        }
-#endif
+        fs = new field_struct;
+        mark_changed(ALL); // guarantees communications will be done
+        field_alloc_timer.stop();
     }
 
     /**
@@ -408,12 +475,39 @@ class Field {
 #if !defined(GPU_CCL)
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
+#ifdef FIELD_COPY_ON_WRITE
+            fs->refcount--;
+            if (fs->refcount > 0) {
+                fs = nullptr;
+                return;
+            }
 #endif
-            fs->free_payload();
-            fs->free_communication();
-            std::free(fs);
+            delete fs;
             fs = nullptr;
         }
+    }
+
+    void copy_from(const Field<T> &f) {
+        check_alloc();
+
+        fs->payload.copy_field(lattice, f.fs->payload);
+        mark_changed(ALL);
+    }
+
+    /**
+     * @brief elementary field copy op
+     */
+
+    void copy(const Field<T> &f, Parity par = ALL) {
+        (*this)[par] = f[X];
+    }
+
+    /**
+     * @brief Copy field from neighbours
+     */
+
+    void shift_from(const Field<T> &f, Direction d, Parity par = ALL) {
+        (*this)[par] = f[X + d];
     }
 
     /**
@@ -492,7 +586,27 @@ class Field {
             }
         }
         fs->assigned_to |= parity_bits(p);
+
+#ifdef FIELD_SHIFT_BUFFERING
+        fs->shift_buffer.clear();
+#endif
     }
+
+#ifdef FIELD_COPY_ON_WRITE
+
+    void will_change() {
+        if (fs->refcount > 1) {
+            Field<T> tmp{*this}; // this just sets the reference (increase refcount)
+            clear();             // reset ref
+            allocate();
+            copy(tmp);
+        }
+    }
+#else
+    void will_change() {}
+
+#endif
+
 
     /**
      * @internal
@@ -596,6 +710,7 @@ class Field {
 
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
+        will_change();
 
         lattice_struct *mylat = fs->mylattice.ptr();
         fs->boundary_condition[dir] = bc;
@@ -651,7 +766,7 @@ class Field {
      */
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir(dir) {
+        foralldir (dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -750,7 +865,17 @@ class Field {
      * @return Field<T>& Assigned field
      */
     Field<T> &operator=(const Field<T> &rhs) {
+
+#if !defined(FIELD_COPY_ON_WRITE)
+
         (*this)[ALL] = rhs[X];
+
+#else
+
+        clear();
+        fs = rhs.fs;
+        fs->refcount++;
+#endif
 
         // // This is direct memcpy version of the routine, slightly faster on cpus
         //         if (this->fs == rhs.fs)
@@ -822,7 +947,7 @@ class Field {
      * @param rhs
      * @return Field<T>&
      */
-    Field<T> &operator=(Field<T> &&rhs) {
+    Field<T> &operator=(Field<T> &&rhs) noexcept {
         if (this != &rhs) {
             assert((fs == nullptr || (rhs.fs->mylattice.ptr() == fs->mylattice.ptr())) &&
                    "Field = Field assignment possible only if fields belong to the same lattice");
@@ -1127,7 +1252,8 @@ class Field {
     template <typename S>
     bool operator==(const Field<S> &rhs) const {
         double s = 0;
-        onsites(ALL) s += !((*this)[X] == rhs[X]);
+        onsites (ALL)
+            s += !((*this)[X] == rhs[X]);
         return (s == 0);
     }
 
@@ -1149,7 +1275,7 @@ class Field {
      */
     double squarenorm() const {
         double n = 0;
-        onsites(ALL) {
+        onsites (ALL) {
             n += ::squarenorm((*this)[X]);
         }
         return n;
@@ -1261,6 +1387,12 @@ class Field {
 
     Field<T> shift(const CoordinateVector &v) const;
 
+#ifdef FIELD_SHIFT_BUFFERING
+    void buffered_shift_offsets(const CoordinateVector &v, Parity par) const;
+    const Field<T> &do_buffered_shift(const CoordinateVector &v, Parity par) const;
+    void clear_buffered_shifts() const;
+#endif
+
     // General getters and setters
 
     /// Set a single element. Assuming that each node calls this with the same value, it
@@ -1276,6 +1408,7 @@ class Field {
      */
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
     const T set_element(const CoordinateVector &coord, const A &value) {
+        will_change();
         T element;
         element = value;
         assert(is_initialized(ALL) && "Field not initialized yet");
@@ -1358,6 +1491,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1371,6 +1505,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1384,6 +1519,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1397,6 +1533,7 @@ class Field {
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
         assert(is_initialized(ALL));
+        will_change();
         if (fs->mylattice->is_on_mynode(coord)) {
             auto i = fs->mylattice->site_index(coord);
             auto v = get_value_at(i);
@@ -1839,7 +1976,7 @@ void swap(Field<T> &A, Field<T> &B) {
 template <typename T, typename R = decltype(exp(std::declval<T>()))>
 Field<R> exp(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = exp(arg[X]);
     }
     return res;
@@ -1851,7 +1988,7 @@ Field<R> exp(const Field<T> &arg) {
 template <typename T, typename R = decltype(log(std::declval<T>()))>
 Field<R> log(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = log(arg[X]);
     }
     return res;
@@ -1863,7 +2000,7 @@ Field<R> log(const Field<T> &arg) {
 template <typename T, typename R = decltype(sin(std::declval<T>()))>
 Field<R> sin(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = sin(arg[X]);
     }
     return res;
@@ -1875,7 +2012,7 @@ Field<R> sin(const Field<T> &arg) {
 template <typename T, typename R = decltype(cos(std::declval<T>()))>
 Field<R> cos(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = cos(arg[X]);
     }
     return res;
@@ -1887,7 +2024,7 @@ Field<R> cos(const Field<T> &arg) {
 template <typename T, typename R = decltype(tan(std::declval<T>()))>
 Field<R> tan(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = tan(arg[X]);
     }
     return res;
@@ -1899,7 +2036,7 @@ Field<R> tan(const Field<T> &arg) {
 template <typename T, typename R = decltype(asin(std::declval<T>()))>
 Field<R> asin(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = asin(arg[X]);
     }
     return res;
@@ -1911,7 +2048,7 @@ Field<R> asin(const Field<T> &arg) {
 template <typename T, typename R = decltype(acos(std::declval<T>()))>
 Field<R> acos(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = acos(arg[X]);
     }
     return res;
@@ -1923,7 +2060,7 @@ Field<R> acos(const Field<T> &arg) {
 template <typename T, typename R = decltype(atan(std::declval<T>()))>
 Field<R> atan(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = atan(arg[X]);
     }
     return res;
@@ -1935,7 +2072,7 @@ Field<R> atan(const Field<T> &arg) {
 template <typename T, typename R = decltype(abs(std::declval<T>()))>
 Field<R> abs(const Field<T> &arg) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = abs(arg[X]);
     }
     return res;
@@ -1948,7 +2085,7 @@ Field<R> abs(const Field<T> &arg) {
 template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
 Field<R> pow(const Field<T> &arg, const P p) {
     Field<R> res;
-    onsites(ALL) {
+    onsites (ALL) {
         res[X] = pow(arg[X], p);
     }
     return res;
@@ -1960,7 +2097,7 @@ Field<R> pow(const Field<T> &arg, const P p) {
 template <typename T>
 double squarenorm(const Field<T> &arg) {
     double r = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         r += squarenorm(arg[X]);
     }
     return r;
@@ -2004,7 +2141,7 @@ Field<A> imag(const Field<T> &arg) {
 template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
 double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
     double res = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         res += squarenorm(a[X] - b[X]);
     }
     return res;
@@ -2087,13 +2224,13 @@ void Field<T>::random() {
         (*this).set_local_data(rng_buffer);
 
     } else {
-        onsites(ALL) {
+        onsites (ALL) {
             hila::random((*this)[X]);
         }
     }
 #else
 
-    onsites(ALL) {
+    onsites (ALL) {
         hila::random((*this)[X]);
     }
 
@@ -2113,13 +2250,13 @@ void Field<T>::gaussian_random(double width) {
         (*this).set_local_data(rng_buffer);
 
     } else {
-        onsites(ALL) {
+        onsites (ALL) {
             hila::gaussian_random((*this)[X], width);
         }
     }
 #else
 
-    onsites(ALL) {
+    onsites (ALL) {
         hila::gaussian_random((*this)[X], width);
     }
 
@@ -2143,7 +2280,8 @@ void Field<T>::gaussian_random(double width) {
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites(ALL) {
+    Parity par = EVEN;
+    onsites (par) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -2162,7 +2300,7 @@ inline void dummy_X_f() {
         vec = vec - v1;
 
         // and Direction index func
-        vec[e_x] = vec[0] + vec[e_y] + vec.e(e_y);
+        vec[e_x] = vec[0] + vec[e_x] + vec.e(e_x);
     }
 }
 
@@ -2182,6 +2320,10 @@ inline void ensure_field_operators_exist() {
     CoordinateVector v = 0;
     Field<T> f;
     f = f.shift(v);
+#ifdef FIELD_COPY_ON_WRITE
+    f.copy(f);
+    f.shift_from(f, e_x);
+#endif
 }
 
 #endif

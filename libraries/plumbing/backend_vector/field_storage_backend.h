@@ -75,10 +75,22 @@ void field_storage<T>::allocate_field(const Lattice lattice) {
 
 template <typename T>
 void field_storage<T>::free_field() {
-#pragma acc exit data delete (fieldbuf)
+    #pragma acc exit data delete (fieldbuf)
     if (fieldbuf != nullptr)
         free(fieldbuf);
     fieldbuf = nullptr;
+}
+
+template <typename T>
+void field_storage<T>::copy_field(const Lattice lattice, const field_storage<T> &source) {
+    if constexpr (hila::is_vectorizable_type<T>::value) {
+        memcpy(fieldbuf, source.fieldbuf,
+               lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
+                       ->field_alloc_size() *
+                   sizeof(T));
+    } else {
+        memcpy(fieldbuf, source.fieldbuf, sizeof(T) * lattice->mynode.field_alloc_size);
+    }
 }
 
 // get and set a full vector T
@@ -206,8 +218,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const Lattice lattice,
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice,
                                                    bool antiperiodic) {
 
 #ifndef SPECIAL_BOUNDARY_CONDITIONS
@@ -314,8 +325,8 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
             }
             unsigned offset = lattice->special_boundaries[dir].offset + start;
 
-            gather_elements_negated(fieldbuf + offset,
-                                    lattice->special_boundaries[dir].move_index + start, n, lattice);
+            gather_elements_negated(
+                fieldbuf + offset, lattice->special_boundaries[dir].move_index + start, n, lattice);
         }
 #endif
     }

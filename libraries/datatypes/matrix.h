@@ -510,7 +510,7 @@ class Matrix_t {
      *
      * @return DiagonalMatrix<n,T>
      */
-    #pragma hila loop_function
+    // #pragma hila loop_function
     template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
     const DiagonalMatrix<n, T> &asDiagonalMatrix() const {
         return *reinterpret_cast<const DiagonalMatrix<n, T> *>(this);
@@ -1257,6 +1257,18 @@ class Matrix_t {
     }
 
     /**
+     * @brief return L1 norm = sum of abs of elements - works also for complex!
+     * Note: by textbook definition this is not the L1 norm of a matrix!
+     */
+    hila::arithmetic_type<T> norm_L1() const {
+        hila::arithmetic_type<T> result{0};
+        for (int i = 0; i < n * m; i++) {
+            result += ::abs(c[i]);
+        }
+        return result;
+    }
+
+    /**
      * @brief Find max of Matrix only for arithmetic types
      */
     template <typename S = T, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
@@ -1282,6 +1294,42 @@ class Matrix_t {
         return res;
     }
 
+
+    /**
+     * @brief Find max of Vector and the location
+     */
+    template <typename S = T, 
+              std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
+    T max(int &elem) const {
+        T res = c[0];
+        elem = 0;
+        for (int i = 1; i < n * m; i++) {
+            if (res < c[i]) {
+                res = c[i];
+                elem = i;
+            }
+        }
+        return res;
+    }
+
+    /**
+     * @brief Find max of Vector and the location
+     */
+    template <typename S = T, 
+              std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
+    T min(int &elem) const {
+        T res = c[0];
+        elem = 0;
+        for (int i = 1; i < n * m; i++) {
+            if (res > c[i]) {
+                res = c[i];
+                elem = i;
+            }
+        }
+        return res;
+    }
+
+
     auto max_abs() const {
         hila::arithmetic_type<T> tres, res = 0;
         for (int i = 0; i < n * m; i++) {
@@ -1301,6 +1349,15 @@ class Matrix_t {
                 res = tres;
             }
         }
+        return res;
+    }
+
+    /**
+     * @brief return sum of elements
+     */
+    auto sum() const {
+        T res = 0;
+        for (int i=0; i<n*m; ++i) res += c[i];
         return res;
     }
 
@@ -1991,6 +2048,15 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 };
 
 namespace hila {
+
+/////////////////////////////////////////////////////////////////////////////////
+/// @brief hila::is_matrix<T>::value is true if T is of matrix type
+
+template <typename T, typename = std::void_t<>>
+struct is_matrix : std::false_type {};
+
+template <typename T>
+struct is_matrix<T, std::void_t<decltype(T::is_matrix())>> : std::true_type {};
 
 //////////////////////////////////////////////////////////////////////////
 // Tool to get "right" result type for matrix (T1) + (T2) -op, where
@@ -3172,6 +3238,35 @@ inline auto squarenorm(const Mt &rhs) {
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
 inline auto norm(const Mt &rhs) {
     return rhs.norm();
+}
+
+/**
+ * @brief integer power of matrix
+ */
+template <typename Mt, typename P, std::enable_if_t<Mt::is_matrix(), int> = 0>
+Mt pow(const Mt &m, P p_) {
+    static_assert(Mt::rows() == Mt::columns(), "pow() only for square matrices");
+    static_assert(std::is_integral<P>::value, "Matrix power must be non-negative integer");
+
+    uint32_t p = p_;
+
+    Mt res, p2 = m;
+
+    if (p % 2 != 0) {
+        res = m;
+    } else {
+        res = 1;
+    }
+    p /= 2;
+
+    while (p != 0) {
+        p2 *= p2;
+        if (p % 2 != 0) {
+            res *= p2;
+        }
+        p /= 2;
+    }
+    return res;
 }
 
 /**

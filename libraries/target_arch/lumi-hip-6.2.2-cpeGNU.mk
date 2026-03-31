@@ -15,13 +15,16 @@ LD := hipcc
 HILA_CPP_STD := --std=c++20
 
 # "Base" HILA CXX and link flags. Need -xhip because .cpt is nonstandard so the compiler doesn't know how to deal with them otherwise
-CXXFLAGS := -O3 -x hip $(HILA_CPP_STD) -fno-rtti -fgpu-rdc
+CXXFLAGS := -x hip $(HILA_CPP_STD) -fno-rtti -fgpu-rdc
 LDFLAGS := -fgpu-rdc
 
 # Append LUMI specific flags to hipcc manually (see docs above).
 # These should be equivalent to setting HIPCC_COMPILE_FLAGS_APPEND and HIPCC_LINK_FLAGS_APPEND
 CXXFLAGS += --offload-arch=gfx90a
 CXXFLAGS += $(shell CC --cray-print-opts=cflags)
+CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
+CXXFLAGS += -O3
+
 LDFLAGS += --offload-arch=gfx90a
 
 # HILAPP needs stdlib include dirs. Unfortunately compilers don't expose these directly as envvars,
@@ -30,7 +33,7 @@ HILAPP_INCLUDES :=  $(addprefix -I, $(shell $(CC) -E $(HILA_CPP_STD) -xc++ -Wp,-
 
 $(info	Using HILAPP includes: $(HILAPP_INCLUDES))
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # Library -l flags for the linker. Get these from the Cray environment, and in cpeGNU we must manually add hipfft.
 LDLIBS := $(shell CC --cray-print-opts=libs) -lhipfft -lrccl

@@ -6,7 +6,7 @@
 #include "plumbing/timing.h"
 
 #ifdef GPU_CCL
-#include "plumbing/backend_gpu/defs.h" 
+#include "plumbing/backend_gpu/defs.h"
 #endif
 
 #include "datatypes/extended.h"
@@ -25,6 +25,8 @@ hila::timer broadcast_timer("MPI broadcast");
 hila::timer send_timer("MPI send field");
 hila::timer drop_comms_timer("MPI wait drop_comms");
 hila::timer partition_sync_timer("partition sync");
+
+hila::timer field_alloc_timer("Field allocation");
 
 // let us house the partitions-struct here
 
@@ -50,6 +52,11 @@ static int n_float = 0;
 
 // static var holding the allreduce state
 static bool allreduce_on = true;
+
+// Global variable tracking the block level
+int rank0_block_level_ = 0;
+
+////////////////////////////////////////////////////////////
 
 void hila_reduce_double_setup(double *d, int n) {
 
@@ -99,7 +106,7 @@ void hila_reduce_sums() {
         } else {
             MPI_Reduce((void *)double_reduction_buffer.data(), work.data(), n_double, MPI_DOUBLE,
                        MPI_SUM, 0, lattice->mpi_comm_lat);
-            if (hila::myrank() == 0)
+            if_rank0 ()
                 for (int i = 0; i < n_double; i++)
                     *(double_reduction_ptrs[i]) = work[i];
         }
@@ -123,7 +130,7 @@ void hila_reduce_sums() {
         } else {
             MPI_Reduce((void *)float_reduction_buffer.data(), work.data(), n_float, MPI_FLOAT,
                        MPI_SUM, 0, lattice->mpi_comm_lat);
-            if (hila::myrank() == 0)
+            if_rank0 ()
                 for (int i = 0; i < n_float; i++)
                     *(float_reduction_ptrs[i]) = work[i];
         }
@@ -136,6 +143,7 @@ void hila_reduce_sums() {
 
 /// set allreduce on (default) or off on the next reduction
 void hila::set_allreduce(bool on) {
+    assert_all_ranks_present();
     allreduce_on = on;
 }
 
@@ -160,14 +168,13 @@ void hila::initialize_communications(int &argc, char ***argv) {
         int provided;
         MPI_Init_thread(&argc, argv, MPI_THREAD_FUNNELED, &provided);
         if (provided < MPI_THREAD_FUNNELED) {
-            if (hila::myrank() == 0)
+            if_rank0 ()
                 hila::out << "MPI could not provide MPI_THREAD_FUNNELED, exiting\n";
             MPI_Finalize();
             exit(1);
         }
 
 #endif
-
 
 
         mpi_initialized = true;
@@ -179,7 +186,10 @@ void hila::initialize_communications(int &argc, char ***argv) {
         MPI_Comm_size(lattice->mpi_comm_lat, &lattice.ptr()->nodes.number);
 
 #ifdef GPU_CCL
-        hila::initialize_gccl_communications();
+        hila::initialize_gccl_communication();
+#endif
+#ifdef GPU_SHMEM
+        hila::initialize_nvshmem_communication();
 #endif
     }
 }
@@ -199,6 +209,7 @@ void hila::abort_communications(int status) {
 
 /* clean exit from all nodes */
 void hila::finish_communications() {
+    assert_all_ranks_present();
     // turn off mpi -- this is needed to avoid mpi calls in destructors
     mpi_initialized = false;
     hila::about_to_finish = true;
@@ -207,10 +218,12 @@ void hila::finish_communications() {
 }
 
 // broadcast specialization
-void hila::broadcast(std::string &var, int rank) {
+std::string &hila::broadcast(std::string &var, int rank) {
 
     if (hila::check_input)
-        return;
+        return var;
+
+    assert_all_ranks_present();
 
     int size = var.size();
     hila::broadcast(size, rank);
@@ -222,13 +235,15 @@ void hila::broadcast(std::string &var, int rank) {
     broadcast_timer.start();
     MPI_Bcast((void *)var.data(), size, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
+    return var;
 }
 
-void hila::broadcast(std::vector<std::string> &list, int rank) {
+std::vector<std::string> &hila::broadcast(std::vector<std::string> &list, int rank) {
 
     if (hila::check_input)
-        return;
+        return list;
 
+    assert_all_ranks_present();
     int size = list.size();
     hila::broadcast(size, rank);
     list.resize(size);
@@ -236,6 +251,7 @@ void hila::broadcast(std::vector<std::string> &list, int rank) {
     for (auto &s : list) {
         hila::broadcast(s, rank);
     }
+    return list;
 }
 
 /* BASIC COMMUNICATIONS FUNCTIONS */
@@ -265,6 +281,8 @@ int hila::number_of_nodes() {
 }
 
 void hila::synchronize() {
+    assert_all_ranks_present();
+
     synchronize_timer.start();
     hila::synchronize_threads();
     MPI_Barrier(lattice->mpi_comm_lat);
@@ -272,6 +290,7 @@ void hila::synchronize() {
 }
 
 void hila::barrier() {
+    assert_all_ranks_present();
     synchronize_timer.start();
     MPI_Barrier(lattice->mpi_comm_lat);
     synchronize_timer.stop();
@@ -302,7 +321,10 @@ void hila::split_into_partitions(int this_lattice) {
     if (hila::check_input)
         return;
 
-    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.ptr()->mpi_comm_lat)) != MPI_SUCCESS) {
+    assert_all_ranks_present();
+
+    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice.ptr()->mpi_comm_lat)) !=
+        MPI_SUCCESS) {
         hila::out0 << "MPI_Comm_split() call failed!\n";
         hila::finishrun();
     }
@@ -312,6 +334,8 @@ void hila::split_into_partitions(int this_lattice) {
 }
 
 void hila::synchronize_partitions() {
+    assert_all_ranks_present();
+
     if (partitions.number() > 1)
         MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -364,6 +388,8 @@ void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool all
     if (hila::check_input)
         return;
 
+    assert_all_ranks_present();
+
     static bool init_extended_type_and_operation = true;
     if (init_extended_type_and_operation) {
         create_extended_MPI_type();
@@ -382,7 +408,7 @@ void reduce_node_sum_extended(ExtendedPrecision *value, int send_count, bool all
     } else {
         MPI_Reduce((void *)value, (void *)recv_data.data(), send_count, MPI_ExtendedPrecision_type,
                    MPI_ExtendedPrecision_sum_op, 0, lattice->mpi_comm_lat);
-        if (hila::myrank() == 0)
+        if_rank0 ()
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];
     }

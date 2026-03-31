@@ -161,18 +161,19 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
 
+    assert_all_ranks_present();
+
     // use this to store remaining moves
     CoordinateVector rem = v;
 
     // check the parity of the move
     Parity par_s;
 
-    int len = 0;
-    foralldir(d) len += abs(rem[d]);
+    int len = rem.norm_L1();
 
     // no move, just copy field
     if (len == 0) {
-        res = *this;
+        res[par] = (*this)[X];
         return res;
     }
 
@@ -185,7 +186,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     // is this already gathered from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] > 0 && gather_status(par_s, d) != gather_status_t::NOT_DONE) {
             mdir = d;
             found_dir = true;
@@ -199,7 +200,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir(d) {
+        foralldir (d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -212,7 +213,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     // Len 1, copy directly
     if (len == 1) {
-        res[par_s] = (*this)[X + mdir];
+        res.shift_from(*this, mdir, par_s);
+        // res[par_s] = (*this)[X + mdir];
         return res;
     }
 
@@ -229,19 +231,21 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
         to = &r1;
     }
     // and copy initially to "from"
-    (*from)[par_s] = (*this)[X + mdir];
+    (*from).shift_from(*this, mdir, par_s);
+    // (*from)[par_s] = (*this)[X + mdir];
 
     // and subtract remaining moves from rem
     rem = rem - mdir;
     par_s = opp_parity(par_s);
 
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
             while (rem[d] != 0) {
 
-                (*to)[par_s] = (*from)[X + mdir];
+                (*to).shift_from(*from, mdir, par_s);
+                //(*to)[par_s] = (*from)[X + mdir];
 
                 par_s = opp_parity(par_s);
                 rem = rem - mdir;
@@ -252,6 +256,113 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     return res;
 }
+
+#ifdef FIELD_SHIFT_BUFFERING
+
+template <typename T>
+void Field<T>::buffered_shift_offsets(const CoordinateVector &v, Parity par) const {
+    assert_all_ranks_present();
+
+    // shift 0?
+    if (v.norm_L1() == 0)
+        return;
+
+    // alloc enough storage, so that no new allocs are needed - cheap!
+    if (fs->shift_buffer.capacity() == 0)
+        fs->shift_buffer.reserve(100);
+
+    // Do we have the shift?
+    for (auto &r : fs->shift_buffer) {
+        if (r.offset == v) {
+            return;
+        }
+    }
+
+    // did not, add to list
+
+    fs->shift_buffer.emplace_back();
+    fs->shift_buffer.back().par = Parity::none; // flag it new
+    fs->shift_buffer.back().offset = v;
+    return;
+}
+
+template <typename T>
+const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity par) const {
+
+    int len = v.norm_L1();
+    if (len == 0)
+        return *this;
+
+    for (auto &r : fs->shift_buffer) {
+        if (r.offset == v) {
+            // If we have the data return
+            if (r.par == par || r.par == ALL)
+                return r.f;
+
+            // Now we did not have the data, copy it
+
+            const Field<T> *fptr = nullptr;
+            Direction shiftd;
+            if (v.is_direction(shiftd)) {
+                // nearest-neighbour fetch from *this
+                fptr = this;
+            } else {
+
+                // now len > 1, check if others are next to this and shorter
+                for (auto &n : fs->shift_buffer) {
+                    if ((r.offset - n.offset).is_direction(shiftd) && n.offset.norm_L1() < len) {
+                        do_buffered_shift(n.offset, opp_parity(par));
+
+                        fptr = &n.f;
+                        break;
+                    }
+                }
+            }
+
+            if (fptr == nullptr) {
+                // Now no nb-elements!
+                // subtract one from max dir and fetch
+
+                int dir;
+                v.abs().max(dir);
+                shiftd = static_cast<Direction>(dir);
+
+                CoordinateVector nv = v;
+                if (v[shiftd] > 0)
+                    --nv[shiftd];
+                else {
+                    ++nv[shiftd];
+                    shiftd = -shiftd;
+                }
+
+                buffered_shift_offsets(nv, opp_parity(par));
+                auto &n = do_buffered_shift(nv, opp_parity(par));
+                fptr = &n;
+            }
+
+            // Finally copy field
+
+            r.f.shift_from(*fptr, shiftd, par);
+            // onsites (par) {
+            //     r.f[X] = (*fptr)[X + shiftd];
+            // }
+
+            r.par = static_cast<Parity>(parity_bits(r.par) | parity_bits(par));
+            return r.f;
+        }
+    }
+
+    hila::out << "SHIFT ERROR\n";
+
+    return *this; // unreachable
+}
+
+template <typename T>
+void Field<T>::clear_buffered_shifts() const {
+    fs->shift_buffer.clear();
+}
+
+#endif
 
 #endif // NAIVE_SHIFT
 
@@ -396,6 +507,8 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) c
 template <typename T>
 dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 
+    assert_all_ranks_present();
+
     // get the mpi message tag right away, to ensure that we are always synchronized
     // with the mpi calls -- some nodes might not need comms, but the tags must be in
     // sync
@@ -501,6 +614,8 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 ///  of view of the user, the value of the field does not change.
 template <typename T>
 void Field<T>::wait_gather(Direction d, Parity p) const {
+
+    assert_all_ranks_present();
 
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -698,6 +813,8 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
                                              const std::vector<CoordinateVector> &coord_list,
                                              int root) const {
 
+    assert_all_ranks_present();
+
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->nodes.number);
     std::vector<int> reshuffle_list(coord_list.size());
@@ -774,6 +891,7 @@ template <typename T>
 void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
                                               const std::vector<CoordinateVector> &coord_list,
                                               int root) {
+    assert_all_ranks_present();
 
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->nodes.number);
@@ -849,9 +967,12 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
 template <typename T>
 void Field<T>::set_elements(const std::vector<T> &elements,
                             const std::vector<CoordinateVector> &coord_list) {
+
+    assert_all_ranks_present();
     assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
     std::vector<unsigned> my_indexes;
     std::vector<T> my_elements;
+    will_change();
     for (int i = 0; i < coord_list.size(); i++) {
         CoordinateVector c = coord_list[i];
         if (lattice->is_on_mynode(c)) {
@@ -868,9 +989,10 @@ void Field<T>::set_elements(const std::vector<T> &elements,
 template <typename T>
 std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord_list,
                                       bool bcast) const {
+    assert_all_ranks_present();
 
     std::vector<T> res;
-    if (hila::myrank() == 0)
+    if_rank0 ()
         res.resize(coord_list.size());
 
     fs->gather_elements(res.data(), coord_list);
@@ -886,8 +1008,9 @@ template <typename T>
 std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                        bool bcast) const {
 
+    assert_all_ranks_present();
     size_t vol = 1;
-    foralldir(d) {
+    foralldir (d) {
         vol *= cmax[d] - cmin[d] + 1;
         assert(cmax[d] >= cmin[d] && cmin[d] >= 0 && cmax[d] < lattice.size(d));
     }
@@ -905,14 +1028,16 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
 /// Get a slice (subvolume)
 template <typename T>
 std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
+
+    assert_all_ranks_present();
     CoordinateVector cmin, cmax;
-    foralldir(d) if (c[d] < 0) {
-        cmin[d] = 0;
-        cmax[d] = lattice.size(d) - 1;
-    }
-    else {
-        cmin[d] = cmax[d] = c[d];
-    }
+    foralldir (d)
+        if (c[d] < 0) {
+            cmin[d] = 0;
+            cmax[d] = lattice.size(d) - 1;
+        } else {
+            cmin[d] = cmax[d] = c[d];
+        }
     return get_subvolume(cmin, cmax, bcast);
 }
 
@@ -937,8 +1062,8 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
     T *data = buffer.data();
 #endif
 
-#pragma hila novector direct_access(data)
-    onsites(ALL) {
+    #pragma hila novector direct_access(data)
+    onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
 
@@ -973,8 +1098,8 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
     T *data = buffer.data();
 #endif
 
-#pragma hila novector direct_access(data)
-    onsites(ALL) {
+    #pragma hila novector direct_access(data)
+    onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
 
@@ -985,8 +1110,6 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
 #if defined(CUDA) || defined(HIP)
     d_free(data);
 #endif
-
-    this->mark_changed(ALL);
 }
 
 
@@ -996,6 +1119,9 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
 template <typename T>
 inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &dest,
                                      const Vector<NDIM, int> &dirs, int ndir) {
+
+
+    assert_all_ranks_present();
 
     // get the coords of the min point of the halo array
     CoordinateVector nmin = lattice->mynode.min;
@@ -1010,13 +1136,13 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
 
     Vector<NDIM, int> node_min;
     Vector<NDIM, int> node_max;
-    foralldir(d) {
+    foralldir (d) {
         node_min[d] = lattice->mynode.min[d];
         node_max[d] = lattice->mynode.min[d] + lattice->mynode.size[d] - 1;
     }
 
-#pragma hila novector direct_access(data)
-    onsites(ALL) {
+    #pragma hila novector direct_access(data)
+    onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         CoordinateVector c = X.coordinates();
         bool gotit = true;
@@ -1053,6 +1179,8 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
 template <typename T>
 void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 
+    assert_all_ranks_present();
+
     // get the coords of the min point of the halo array
     CoordinateVector nmin = lattice->mynode.min;
     nmin.asArray() -= 1;
@@ -1065,7 +1193,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 
     // full size of the buffer
     size_t siz = 1;
-    foralldir(d) siz *= (lattice->mynode.size[d] + 2);
+    foralldir (d)
+        siz *= (lattice->mynode.size[d] + 2);
 
     buffer.resize(siz);
 #if defined(CUDA) || defined(HIP)
@@ -1076,8 +1205,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 #endif
 
     // now collect bulk
-#pragma hila novector direct_access(data)
-    onsites(ALL) {
+    #pragma hila novector direct_access(data)
+    onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
 
@@ -1088,6 +1217,7 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
     // collect nn-halos
 
     Field<T> corners = 0;
+#if NDIM > 1
     Field<T> corner2 = 0;
 #if NDIM > 2
     Field<T> corner3 = 0;
@@ -1095,13 +1225,15 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
     Field<T> corner4 = 0;
 #endif
 #endif
+#endif
 
     Vector<NDIM, int> dirs;
-    foralldir(d1) {
+    foralldir (d1) {
         dirs[0] = d1;
         // gather d1 halo
         collect_field_halo_data_(data, (*this), corners, dirs, 0);
 
+#if NDIM > 1
         for (int d2 = d1 + 1; d2 < NDIM; ++d2) {
             dirs[1] = d2;
             collect_field_halo_data_(data, corners, corner2, dirs, 1);
@@ -1118,6 +1250,7 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
             }
 #endif
         }
+#endif
     }
 
 
@@ -1133,6 +1266,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 template <typename T>
 void Field<T>::block_from(Field<T> &orig) {
     assert(orig.is_initialized(ALL) && "block_from()-method field is not initialized");
+
+    assert_all_ranks_present();
 
     this->check_alloc();
     lattice_struct *blocklat = this->fs->mylattice.ptr();
@@ -1157,8 +1292,8 @@ void Field<T>::block_from(Field<T> &orig) {
     CoordinateVector cvmin = blocklat->mynode.min;
     auto size_factor = blocklat->mynode.size_factor;
 
-#pragma hila direct_access(buf)
-    onsites(ALL) {
+    #pragma hila direct_access(buf)
+    onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
             Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
@@ -1168,8 +1303,8 @@ void Field<T>::block_from(Field<T> &orig) {
 
     lattice.switch_to(blocklat);
 
-#pragma hila direct_access(buf)
-    onsites(ALL) {
+    #pragma hila direct_access(buf)
+    onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
         (*this)[X] = buf[cv.dot(size_factor)];
@@ -1187,6 +1322,8 @@ template <typename T>
 void Field<T>::unblock_to(Field<T> &target) const {
     assert(this->is_initialized(ALL) && "unblock_to()-method field is not initialized");
     target.check_alloc();
+
+    assert_all_ranks_present();
 
     lattice_struct *blocklat = this->fs->mylattice.ptr();
     lattice_struct *parentlat = target.fs->mylattice.ptr();
@@ -1208,8 +1345,8 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     lattice.switch_to(blocklat);
 
-#pragma hila direct_access(buf)
-    onsites(ALL) {
+    #pragma hila direct_access(buf)
+    onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
         buf[cv.dot(size_factor)] = (*this)[X];
@@ -1217,8 +1354,8 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     lattice.switch_to(parentlat);
 
-#pragma hila direct_access(buf)
-    onsites(ALL) {
+    #pragma hila direct_access(buf)
+    onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
             Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
@@ -1235,6 +1372,8 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
 template <typename T>
 void Field<T>::block_to_current_lattice() {
+
+    assert_all_ranks_present();
 
     this->check_alloc();
     lattice_struct *thislat = this->fs->mylattice.ptr();
@@ -1261,8 +1400,8 @@ void Field<T>::block_to_current_lattice() {
     CoordinateVector cvmin = currentlat->mynode.min;
     auto size_factor = currentlat->mynode.size_factor;
 
-#pragma hila direct_access(buf)
-    onsites(ALL) {
+    #pragma hila direct_access(buf)
+    onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
             Vector<NDIM, unsigned> cv = X.coordinates().element_div(blockfactor) - cvmin;
@@ -1272,9 +1411,9 @@ void Field<T>::block_to_current_lattice() {
 
     lattice.switch_to(currentlat);
     (*this).clear();
-    
-#pragma hila direct_access(buf)
-    onsites(ALL) {
+
+    #pragma hila direct_access(buf)
+    onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
         (*this)[X] = buf[cv.dot(size_factor)];

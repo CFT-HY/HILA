@@ -62,7 +62,7 @@ class logger_class {
 
     /// Log function
     template <typename T> void log(T text) {
-        if (hila::myrank() == 0) {
+        if_rank0() {
             if (current_level < logging_level) {
                 output << text;
             }
@@ -75,7 +75,7 @@ class logger_class {
 /// Streaming operator for the logger class. Only node 0 prints.
 /// This should also accept formatting correctly.
 template <typename T> logger_class &operator<<(logger_class &logger, T rhs) {
-    if (hila::myrank() == 0) {
+    if_rank0() {
         if (logger.current_level < logger.logging_level) {
             logger.output << rhs;
         }

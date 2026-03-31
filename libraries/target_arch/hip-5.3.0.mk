@@ -13,6 +13,7 @@ GPU_ARCH=gfx1030
 LD := $(CC) -O3 --std=c++17 --amdgpu-target=${GPU_ARCH} -fgpu-rdc --hip-link
 
 CXXFLAGS := -O3 --std=c++17 -x hip -fgpu-rdc --hip-link#-nogpulib
+CXXFLAGS_NOOPT := --std=c++17 -x hip -fgpu-rdc --hip-link -O1
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!
 # CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"
@@ -34,7 +35,7 @@ HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/hiprand/include -I$(HIP_
 #HIP_INCLUDE_DIRS += -I$(HIP_PATH)/rocrand/include -I$(HIP_PATH)/rocfft/include
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 ################
 

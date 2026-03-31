@@ -17,7 +17,8 @@ CC = nvcc
 LD = nvcc -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
 
 # Define compilation flags
-CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict 
+CXXFLAGS_NOOPT = -dc -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --restrict 
+CXXFLAGS = $(CXXFLAGS_NOOPT) -O3 --use_fast_math
 # 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
 # it allows definition of a function in multiple compilation units as required by c++ standard!!  
 # Quiet it.
@@ -43,7 +44,7 @@ MPI_LIBS =  -lmpi
 LDLIBS = -lcufft -lm $(MPI_LIBS)
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o 
 
 # These variables must be defined here
 #

@@ -3,6 +3,7 @@
 #define STRINGOPS_H
 
 #include <string>
+#include <vector>
 
 /// Return char * to git sha value, if defined
 std::string git_sha_value();
@@ -21,8 +22,8 @@ std::string remove_all_whitespace(const std::string &line);
 
 /// if in contains the pattern returns its first location.
 /// pattern must be delimited by non-alphanumeric chars (c++ symbol name rules)
-std::string::size_type find_word(const std::string &in, const std::string &pattern,
-                                 int pos = 0, bool reverse = false);
+std::string::size_type find_word(const std::string &in, const std::string &pattern, int pos = 0,
+                                 bool reverse = false);
 
 /// Check whether line contains the list of space-separated words in list in this order.
 /// Extra whitespaces skipped if remainder != nullptr and return value == true, the string
@@ -43,6 +44,8 @@ std::string remove_X(const std::string &s, bool *is_X = nullptr);
 std::string remove_class_from_type(const std::string &s);
 
 /// Rearranges command line args according to the wishes of clang tool
-int rearrange_cmdline(int argc, const char **argv, const char **av);
+std::string handle_cmdline_args(int argc, const char **argv, std::vector<const char *> &av);
+
+#define GET_INCLUDES_WITH "get-includes-with"
 
 #endif

@@ -15,7 +15,7 @@
 #include "tools/checkpoint.h"
 
 
-#include <fftw3.h>
+// #include <fftw3.h>
 
 // local includes
 #include "parameters.h"

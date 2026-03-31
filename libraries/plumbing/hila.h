@@ -9,6 +9,7 @@
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
+#include "datatypes/element_by_element.h"
 #include "datatypes/sun_matrix.h"
 #include "datatypes/u1.h"
 #include "datatypes/su2.h"
@@ -39,7 +40,7 @@
 
 #include "plumbing/spectraldensity.h"
 
-#if defined(OPENMP)
+#if defined(OPENMP) && !defined(HILAPP)
 #include <omp.h>
 #endif
 

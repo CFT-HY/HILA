@@ -19,13 +19,16 @@ void lattice_struct::setup_layout() {
     int nfactors[NPRIMES];
     CoordinateVector nodesiz;
 
+    static_assert(NDIM > 1, "NDIM == 1 does not (yet) work with AVX (vector) layout");
+
     hila::print_dashed_line();
+
     hila::out0 << "LAYOUT: subnode lattice, with " << VECTOR_SIZE / sizeof(float) << " subnodes\n"
                << "Enabling vector length " << VECTOR_SIZE * 8
                << " bits = " << VECTOR_SIZE / sizeof(double) << " doubles or "
                << VECTOR_SIZE / sizeof(float) << " floats/ints\n";
     hila::out0 << "Lattice size ";
-    foralldir(d) {
+    foralldir (d) {
         if (d != 0)
             hila::out0 << " x ";
         hila::out0 << l_size[d];
@@ -34,11 +37,12 @@ void lattice_struct::setup_layout() {
     hila::out0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
     hila::out0 << "Layout using vector of " << hila::number_of_subnodes << " elements\n";
 
-    foralldir(d) if (l_size[d] % 2 != 0) {
-        hila::out0 << "Lattice must be even to all directions for vector/AVX layout.\n"
-                   << "Use std layout or GPU for odd sizes\n";
-        hila::finishrun();
-    }
+    foralldir (d)
+        if (l_size[d] % 2 != 0) {
+            hila::out0 << "Lattice must be even to all directions for vector/AVX layout.\n"
+                       << "Use std layout or GPU for odd sizes\n";
+            hila::finishrun();
+        }
 
     // we want to divide up to numnode * vector_size virtual nodes
     // use the float vector size to divide to hila::number_of_nodes() * vector_size
@@ -71,7 +75,7 @@ void lattice_struct::setup_layout() {
 
     CoordinateVector nsize;
     int64_t ghosts[NDIM];
-    foralldir(d) {
+    foralldir (d) {
         int64_t cosize = l_volume / l_size[d];
         int64_t n = l_size[d];
         while ((n * cosize) % nn != 0)
@@ -82,7 +86,8 @@ void lattice_struct::setup_layout() {
     }
 
     int64_t ghost_volume = 1;
-    foralldir(d) ghost_volume *= nsize[d];
+    foralldir (d)
+        ghost_volume *= nsize[d];
 
     // if the division goes even nsize = size() and ghost_volume = volume
 
@@ -98,7 +103,9 @@ void lattice_struct::setup_layout() {
 
         if (ghost_volume > l_volume) {
             gdir = NDIM - 1;
-            foralldir(j) if (ghosts[gdir] > ghosts[j]) gdir = j;
+            foralldir (j)
+                if (ghosts[gdir] > ghosts[j])
+                    gdir = j;
             // gdir is the direction where we do uneven division (if done)
             // hila::out0 << "gdir " << gdir << " ghosts gdir " << ghosts[gdir] << " nsize
             // "
@@ -106,7 +113,7 @@ void lattice_struct::setup_layout() {
         } else
             gdir = -1;
 
-        foralldir(i) {
+        foralldir (i) {
             nodesiz[i] = (i == gdir) ? nsize[i] : l_size[i]; // start with ghosted lattice size
             divisions[i] = 1;
         }
@@ -160,7 +167,9 @@ void lattice_struct::setup_layout() {
 
         bool fail = false;
 
-        foralldir(dir) if (nodesiz[dir] < 3) fail = true; // don't allow nodes of size 1 or 2
+        foralldir (dir)
+            if (nodesiz[dir] < 1)
+                fail = true; // don't allow nodes of size 1
 
         if (!fail) {
 
@@ -171,7 +180,7 @@ void lattice_struct::setup_layout() {
             int n_subn = 1;
             do {
                 div_done = false;
-                foralldir(dir) {
+                foralldir (dir) {
                     // the direction where the vector subnodes are must not be
                     // an uneven direction, node size to the direction should be
                     // divisible by 2 and the number of nodes to this dir should also be
@@ -190,7 +199,23 @@ void lattice_struct::setup_layout() {
 
             if (n_subn != hila::number_of_subnodes)
                 fail = true;
+
+            if (!fail) {
+                // check that there remains one even dir still outside of gdir and subdiv
+                bool extradirs = false;
+                fail = true;
+                foralldir (dir) {
+                    if (subdiv[dir] == 1) {
+                        extradirs = true;
+                        if (dir != gdir && nodesiz[dir] % 2 == 0)
+                            fail = false;
+                    }
+                }
+                if (!extradirs)
+                    fail = false;
+            }
         }
+
 
         if (fail && !secondtime && gdir >= 0) {
             secondtime = true;
@@ -200,7 +225,7 @@ void lattice_struct::setup_layout() {
             hila::out0 << "Could not successfully lay out the lattice with "
                        << hila::number_of_nodes() << " nodes!\n";
             hila::out0 << "  The division of ";
-            foralldir(d) {
+            foralldir (d) {
                 hila::out0 << lattice.size(d);
                 if (d < NDIM - 1)
                     hila::out0 << '*';
@@ -211,7 +236,7 @@ void lattice_struct::setup_layout() {
             hila::out0 << hila::number_of_nodes() << '*' << hila::number_of_subnodes
                        << " virtual nodes so that the virtual node size is\n";
             hila::out0 << "  even to directions where the extra divisions are done, "
-                          "and the node size is > 2.\n";
+                          "and node size is even to at least one other direction.\n";
 
             hila::finishrun();
         }
@@ -220,7 +245,7 @@ void lattice_struct::setup_layout() {
 
     // set up struct nodes variables
     nodes.number = hila::number_of_nodes();
-    foralldir(dir) {
+    foralldir (dir) {
         nodesiz[dir] *= subdiv[dir];
         nodes.n_divisions[dir] = divisions[dir] / subdiv[dir];
         nodes.divisors[dir].resize(nodes.n_divisions[dir] + 1);
@@ -237,7 +262,8 @@ void lattice_struct::setup_layout() {
     }
 
     // set up the subnode divisions here -- rest is set in setup_node
-    foralldir(d) mynode.subnodes.divisions[d] = subdiv[d];
+    foralldir (d)
+        mynode.subnodes.divisions[d] = subdiv[d];
 
     // mynode is set up in setup_node
 
@@ -262,79 +288,79 @@ void lattice_struct::setup_layout() {
             hila::out0 << "NOTE: number of smaller nodes > large nodes \n";
     }
 
-    // this was hila::number_of_nodes() > 1
-    if (1) {
-        hila::out0 << "\nSites on node: ";
-        foralldir(dir) {
-            if (dir > 0)
-                hila::out0 << " x ";
-            if (dir == gdir)
-                hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
-            else
-                hila::out0 << nodesiz[dir];
-        }
-        int64_t ns = 1;
-        foralldir(dir) ns *= nodesiz[dir];
-        if (ghost_slices > 0) {
-            int64_t ns2 = ns * (nodesiz[gdir] - 1) / nodesiz[gdir];
-            hila::out0 << "  =  " << ns2 << " - " << ns << '\n';
-        } else {
-            hila::out0 << "  =  " << ns << '\n';
-        }
+    // if (hila::number_of_nodes() > 1) {
+    hila::out0 << "\nSites on node: ";
+    foralldir (dir) {
+        if (dir > 0)
+            hila::out0 << " x ";
+        if (dir == gdir)
+            hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
+        else
+            hila::out0 << nodesiz[dir];
+    }
+    int64_t ns = 1;
+    foralldir (dir)
+        ns *= nodesiz[dir];
+    if (ghost_slices > 0) {
+        int64_t ns2 = ns * (nodesiz[gdir] - 1) / nodesiz[gdir];
+        hila::out0 << "  =  " << ns2 << " - " << ns << '\n';
+    } else {
+        hila::out0 << "  =  " << ns << '\n';
+    }
 
-        hila::out0 << "Node layout: ";
-        foralldir(dir) {
-            if (dir > 0)
-                hila::out0 << " x ";
-            hila::out0 << nodes.n_divisions[dir];
-        }
-        hila::out0 << "  =  " << hila::number_of_nodes() << " nodes\n";
+    hila::out0 << "Node layout: ";
+    foralldir (dir) {
+        if (dir > 0)
+            hila::out0 << " x ";
+        hila::out0 << nodes.n_divisions[dir];
+    }
+    hila::out0 << "  =  " << hila::number_of_nodes() << " nodes\n";
 
 #ifdef VECTORIZED
 
-        hila::out0 << "Node subdivision to 32bit elems: ";
-        foralldir(dir) {
-            if (dir > 0)
-                hila::out0 << " x ";
-            hila::out0 << subdiv[dir];
-        }
-        hila::out0 << "  =  " << hila::number_of_subnodes << " subnodes\n";
+    hila::out0 << "Node subdivision to 32bit elems: ";
+    foralldir (dir) {
+        if (dir > 0)
+            hila::out0 << " x ";
+        hila::out0 << subdiv[dir];
+    }
+    hila::out0 << "  =  " << hila::number_of_subnodes << " subnodes\n";
 
-        hila::out0 << "Sites on subnodes: ";
-        foralldir(dir) {
-            if (dir > 0)
-                hila::out0 << " x ";
-            if (dir == gdir)
-                hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
-            else
-                hila::out0 << nodesiz[dir] / subdiv[dir];
-        }
-        hila::out0 << '\n';
+    hila::out0 << "Sites on subnodes: ";
+    foralldir (dir) {
+        if (dir > 0)
+            hila::out0 << " x ";
+        if (dir == gdir)
+            hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
+        else
+            hila::out0 << nodesiz[dir] / subdiv[dir];
+    }
+    hila::out0 << '\n';
 
-        Direction dmerge = mynode.subnodes.merged_subnodes_dir;
+    Direction dmerge = mynode.subnodes.merged_subnodes_dir;
 
-        hila::out0 << "Node subdivision to 64bit elems: ";
-        foralldir(dir) {
-            if (dir > 0)
-                hila::out0 << " x ";
-            hila::out0 << ((dir == dmerge) ? subdiv[dir] / 2 : subdiv[dir]);
-        }
-        hila::out0 << "  =  " << hila::number_of_subnodes / 2 << " subnodes\n";
+    hila::out0 << "Node subdivision to 64bit elems: ";
+    foralldir (dir) {
+        if (dir > 0)
+            hila::out0 << " x ";
+        hila::out0 << ((dir == dmerge) ? subdiv[dir] / 2 : subdiv[dir]);
+    }
+    hila::out0 << "  =  " << hila::number_of_subnodes / 2 << " subnodes\n";
 
-        hila::out0 << "Sites on subnodes: ";
-        foralldir(dir) {
-            if (dir > 0)
-                hila::out0 << " x ";
-            if (dir == gdir)
-                hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
-            else
-                hila::out0 << ((dir == dmerge) ? 2 * nodesiz[dir] / subdiv[dir]
-                                               : nodesiz[dir] / subdiv[dir]);
-        }
-        hila::out0 << '\n';
+    hila::out0 << "Sites on subnodes: ";
+    foralldir (dir) {
+        if (dir > 0)
+            hila::out0 << " x ";
+        if (dir == gdir)
+            hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
+        else
+            hila::out0 << ((dir == dmerge) ? 2 * nodesiz[dir] / subdiv[dir]
+                                           : nodesiz[dir] / subdiv[dir]);
+    }
+    hila::out0 << '\n';
 
 #endif
-    }
+    // } // if (hila::number_of_nodes)
 
     // For MPI, remap the nodes for periodic torus
     // in the desired manner

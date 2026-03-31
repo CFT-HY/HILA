@@ -17,8 +17,7 @@ ifndef DEBUG
 else
 	CXXFLAGS := -g -x c++ --std=c++17 -march=native -mavx2 -mfma -fabi-version=0 -fomit-frame-pointer
 endif
-
-#CXXFLAGS := -g -x c++ --std=c++17
+CXXFLAGS_NOOPT := -x c++ --std=c++17 -march=native -O1
 
 # Define this to use setup_layout_vector
 # it works for non-AVX code too, but is necessary for AVX

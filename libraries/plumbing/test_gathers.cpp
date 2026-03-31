@@ -109,6 +109,6 @@ void test_std_gathers() {
         hila::print_dashed_line();
     }
 
-    if (hila::myrank() == 0)
+    if_rank0()
         hila::out.flush();
 }
