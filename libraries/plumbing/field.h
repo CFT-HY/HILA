@@ -475,6 +475,7 @@ class Field {
 #if !defined(GPU_CCL)
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
+#endif
 #ifdef FIELD_COPY_ON_WRITE
             fs->refcount--;
             if (fs->refcount > 0) {
@@ -2327,5 +2328,4 @@ inline void ensure_field_operators_exist() {
 }
 
 #endif
-
 #endif // FIELD_H

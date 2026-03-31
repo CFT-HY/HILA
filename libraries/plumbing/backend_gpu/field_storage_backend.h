@@ -436,7 +436,7 @@ void field_storage<T>::free_mpi_buffer(T *d_buffer) {
     gpuFreeShared(d_buffer);
 #else
     gpuFree(d_buffer);
-#endif \\GPU_SHMEM
+#endif // GPU_SHMEM
 }
 
 template <typename T>
@@ -446,7 +446,7 @@ T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     gpuMallocShared(&(d_buffer), n * sizeof(T));
 #else
     gpuMalloc(&(d_buffer), n * sizeof(T));
-#endif \\GPU_SHMEM
+#endif // GPU_SHMEM
     return d_buffer;
 }
 
