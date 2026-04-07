@@ -290,7 +290,7 @@ int Matrix_t<n, m, T, Mtype>::eigen_hermitean(out_only DiagonalMatrix<n, Et> &E,
  *   M[ALL] = .. // make symmetric
  *
  *   onsites(ALL) {
- *       auto R = M[X].svd();
+ *       auto R = M[X].eigen_hermitean();
  *
  *       // Use EV decomposition to evaluate function: sin(M) = U sin(eigenvals) U^T
  *       sn[X] = R.eigenvectors * sin(R.eigenvalues) * R.eigenvectors.dagger();
