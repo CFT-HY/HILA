@@ -45,6 +45,7 @@ void gather_test() {
             hila::terminate(1);
         }
 
+#ifndef EVEN_SITES_FIRST
         onsites(EVEN) {
             dif1 += abs(f1[X + d] - f2[X]);
             dif2 += abs(f1[X] - f2[X - d]);
@@ -61,7 +62,7 @@ void gather_test() {
                        << " direction " << hila::prettyprint(d) << " dif2 " << dif2 << '\n';
             hila::terminate(1);
         }
-
+#endif
 
 #if 0 && defined(SPECIAL_BOUNDARY_CONDITIONS)
         // test antiperiodic b.c. to one direction

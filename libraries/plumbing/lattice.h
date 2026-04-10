@@ -33,7 +33,7 @@ enum class bc { PERIODIC, ANTIPERIODIC, DIRICHLET };
 
 // Struct to pass the iteration ranges for loop traversal
 struct iter_range_t {
-    unsigned min[2],max[2];
+    unsigned min[2], max[2];
 };
 
 /// False if we have b.c. which does not require communication
@@ -257,7 +257,7 @@ class lattice_struct {
     // pointer to fft data associated with lattice
     hila::fftdata_struct *fftdata = nullptr;
 
-    
+
     void setup_base_lattice(const CoordinateVector &siz);
 
     void setup_layout();
@@ -604,6 +604,20 @@ class Lattice {
      */
     Lattice block(const CoordinateVector &cv) {
         lat_ptr->block_by_factor(cv);
+        return *this;
+    }
+
+    /**
+     * @brief block the lattice by constant factor to all directions
+     */
+    Lattice block(int factor) {
+
+        if (!(factor == 0 || factor == 1)) {
+            CoordinateVector cv;
+
+            cv.fill(factor);
+            lat_ptr->block_by_factor(cv);
+        }
         return *this;
     }
 

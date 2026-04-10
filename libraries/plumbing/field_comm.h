@@ -1063,6 +1063,14 @@ void Field<T>::block_from(Field<T> &orig) {
     lattice_struct *parentlat = orig.fs->mylattice.ptr();
     lattice_struct *currentlat = lattice.ptr();
 
+    if (blocklat == parentlat) {
+        // No blocking, just copy
+        lattice.switch_to(blocklat);
+        (*this) = orig;
+        lattice.switch_to(currentlat);
+        return;
+    }
+
     assert(blocklat->parent == parentlat && "blocking must happen from parent lattice Field");
 
     // If no sites on this node there's nothing to do
@@ -1110,15 +1118,23 @@ void Field<T>::block_from(Field<T> &orig) {
 template <typename T>
 void Field<T>::unblock_to(Field<T> &target) const {
     assert(this->is_initialized(ALL) && "unblock_to()-method field is not initialized");
-    target.check_alloc();
 
     assert_all_ranks_present();
 
     lattice_struct *blocklat = this->fs->mylattice.ptr();
-    lattice_struct *parentlat = target.fs->mylattice.ptr();
     lattice_struct *currentlat = lattice.ptr();
+    lattice_struct *parentlat = blocklat->parent;
 
-    assert(blocklat->parent == parentlat && "unblocking must happen to parent lattice Field");
+    assert((!target.is_initialized() || target.fs->mylattice.ptr() == parentlat) &&
+           "unblocking must happen to parent lattice Field");
+
+    if (blocklat == parentlat) {
+        // just a straight copy in this case
+        lattice.switch_to(blocklat);
+        target = *this;
+        lattice.switch_to(currentlat);
+        return;
+    }
 
     // If no sites on this node there's nothing to do
     if (blocklat->mynode.volume == 0)

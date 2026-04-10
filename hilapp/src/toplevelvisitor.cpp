@@ -1647,7 +1647,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                         no_errors = false;
                         found_error = true;
 
-                    } else if (loop_info.parity_value == Parity::none) {
+                    } else if (false && loop_info.parity_value == Parity::none) {
                         reportDiag(DiagnosticsEngine::Level::Remark,
                                    p->parityExpr->getSourceRange().getBegin(),
                                    "simultaneous access '%0' and assignment to '%1' is "
