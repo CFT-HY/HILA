@@ -1125,7 +1125,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
     lattice_struct *currentlat = lattice.ptr();
     lattice_struct *parentlat = blocklat->parent;
 
-    assert((!target.is_initialized() || target.fs->mylattice.ptr() == parentlat) &&
+    assert((!target.is_allocated() || target.fs->mylattice.ptr() == parentlat) &&
            "unblocking must happen to parent lattice Field");
 
     if (blocklat == parentlat) {
