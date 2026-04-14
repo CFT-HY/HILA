@@ -404,12 +404,14 @@ class lattice_struct {
 };
 
 
+namespace hila {
 /**
  * @brief global vector of defined lattice pointers
  */
 
 extern std::vector<lattice_struct *> defined_lattices;
 
+}
 
 /**
  * @brief main interface class to lattices.
@@ -642,7 +644,7 @@ class Lattice {
      */
 
     bool is_base() const {
-        return lat_ptr == defined_lattices.front();
+        return lat_ptr == hila::defined_lattices.front();
     }
 
     /**
@@ -651,7 +653,7 @@ class Lattice {
      */
 
     Lattice switch_to_base() {
-        return switch_to(defined_lattices.front());
+        return switch_to(hila::defined_lattices.front());
     }
 };
 

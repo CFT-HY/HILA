@@ -3,6 +3,20 @@
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
 
+
+// Define the global lattice handle
+Lattice lattice;
+/// A list of all defined lattices (for the future expansion)
+
+namespace hila {
+
+// Keep track of defined lattices
+std::vector<lattice_struct *> defined_lattices;
+
+// global bookkeeping
+int64_t n_gather_avoided = 0, n_gather_done = 0;
+}
+
 // Reporting on possibly too large node: stop if
 // node size (with buffers) is larger than 2^31 - too close for comfort!
 
@@ -19,25 +33,13 @@ void report_too_large_node() {
 }
 
 
-// Define the global lattice handle
-Lattice lattice;
-/// A list of all defined lattices (for the future expansion)
-
-// Keep track of defined lattices
-std::vector<lattice_struct *> defined_lattices;
-
-// global bookkeeping
-namespace hila {
-int64_t n_gather_avoided = 0, n_gather_done = 0;
-}
-
 /// General lattice setup
 void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
 
-    assert(defined_lattices.size() == 0 && "lattice.setup() can be called only once");
+    assert(hila::defined_lattices.size() == 0 && "lattice.setup() can be called only once");
 
     l_label = 0;
-    defined_lattices.push_back(this);
+    hila::defined_lattices.push_back(this);
     parent = nullptr; // this has no parent lattice
 
     l_volume = 1;
@@ -965,7 +967,7 @@ lattice_struct *lattice_struct::block_by_factor(const CoordinateVector &blocking
 
     hila::synchronize();
 
-    for (auto *l : defined_lattices) {
+    for (auto *l : hila::defined_lattices) {
         if (l->l_size == blockvol) {
             lattice.switch_to(l);
             return l;
@@ -974,11 +976,11 @@ lattice_struct *lattice_struct::block_by_factor(const CoordinateVector &blocking
 
     // Now did not find a lattice, make one
 
-    int i = defined_lattices.size(); // label for new lattice
+    int i = hila::defined_lattices.size(); // label for new lattice
 
     auto *lp = new lattice_struct;
 
-    defined_lattices.push_back(lp);
+    hila::defined_lattices.push_back(lp);
     lp->setup_blocked_lattice(blockvol, i, *this);
 
     return lp;

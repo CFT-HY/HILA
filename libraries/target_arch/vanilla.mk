@@ -14,9 +14,9 @@ LD := mpic++
 # Define compilation flags
 CXXFLAGS_NOOPT := -x c++ --std=c++17 -fno-rtti
 ifndef DEBUG
-	CXXFLAGS := $(CXXFLAGS_NOOPT) -Ofast -mavx2 -mfma -march=native 
+	CXXFLAGS := $(CXXFLAGS_NOOPT) -O3 -mavx2 -mfma -march=native
 else
-	CXXFLAGS := -g $(CXXFLAGS_NOOPT) -O3 -mavx2 -mfma 
+	CXXFLAGS := -g $(CXXFLAGS_NOOPT)
 endif
 
 # -fsanitize=address -fno-omit-frame-pointer
