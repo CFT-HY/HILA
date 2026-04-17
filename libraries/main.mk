@@ -26,6 +26,7 @@
 #% GPU-relevant options:
 #%   GPU_AWARE_COMM=0        - turn off GPU aware MPI (default: on) former (GPU_AWARE_COMM)
 #%   GPU_CCL=1               - turn on NCCL/RCCL support for GPU communications (default: off)
+#%   GPU_SHMEM=1             - turn on NVSHMEM support for GPU communication (default: off)
 #%   GPU_OVERLAP_COMM=1      - enable overlapping GPU communications with computations (default: off)    
 #%   GPU_SYNCHRONIZE_TIMERS=1 - Synchronize timers with GPU kernels.
 #%         Provides accurate timing but possibly slightly slower (default: off)

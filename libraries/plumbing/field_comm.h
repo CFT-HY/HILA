@@ -453,7 +453,7 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) c
     T *recv_ptr = fs->get_receive_buffer(d, p, ci.from_node);
 
 #if defined(GPU_SHMEM)
-    nvshmemx_putmem_nbi(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
+    nvshmemx_putmem_nbi_on_stream(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
 
 #elif defined(GPU_CCL)
     using scalar_t = hila::arithmetic_type<T>;

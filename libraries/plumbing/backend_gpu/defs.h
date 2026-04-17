@@ -66,7 +66,7 @@ using gpuError = cudaError;
 #define gpuFreeShared(a) gpu_shared_memory_pool_free(a)
 #define gpuMemPoolPurgeShared() gpu_shared_memory_pool_purge()
 #define gpuMemPoolReportShared() gpu_shared_memory_pool_report()
-#endif \\GPU_SHMEM
+#endif // GPU_SHMEM
 #else
 // here std interfaces
 
@@ -450,10 +450,10 @@ inline gpuStream_t& bulk_event() {
 
 
 void initialize_gccl_communication();
+void initialize_nvshmem_communication();
 
 }
 
-void initialize_nvshmem_communication();
 // clang-format on
 
 

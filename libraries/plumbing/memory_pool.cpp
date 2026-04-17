@@ -21,10 +21,12 @@ static_assert(0 && "HIP or CUDA must be defined");
 #endif
 
 #if defined(GPU_SHMEM)
-#define gpuMallocSharedDirect(a, b) GPU_CHECK(nvshmem_malloc(a, b))
-#define gpuFreeSharedDirect(a) GPU_CHECK(nvshmem_free(a))
+#define gpuMallocSharedDirect(a, b)                                                                \
+    do {                                                                                           \
+        *(a) = nvshmem_malloc(b);                                                                  \
+    } while (0)
+#define gpuFreeSharedDirect(a) nvshmem_free(a)
 #endif
-
 #endif
 
 
@@ -222,7 +224,7 @@ void gpu_memory_pool_report() {
 }
 
 #ifdef GPU_SHMEM
-static hila::memory_pool gpu_shared_pool(hila::memory_pool::pool_type::SHARED);
+static hila::memory_pool gpu_shared_pool(hila::pool_type::SHARED);
 
 void gpu_shared_memory_pool_alloc(void **p, size_t req_size) {
     *p = gpu_shared_pool.alloc(req_size);
