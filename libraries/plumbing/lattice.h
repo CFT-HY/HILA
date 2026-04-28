@@ -230,11 +230,17 @@ class lattice_struct {
     /// nearest neighbour comminfo struct
     std::array<nn_comminfo_struct, NDIRS> nn_comminfo;
 
+#ifdef EVEN_SITES_FIRST
     /// Main neighbour index array
     unsigned *RESTRICT neighb[NDIRS];
 
     /// implement waiting using mask_t - unsigned char is good for up to 4 dim.
     dir_mask_t *RESTRICT wait_arr_;
+#else
+    // offsets to halos, halo depth
+    size_t halo_offset[NDIRS];
+    size_t halo_depth[NDIM];
+#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
@@ -331,7 +337,7 @@ class lattice_struct {
 #else // Now not EVEN_SITES_FIRST
 
     unsigned loop_begin(Parity P) const {
-        assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
+        // assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
         return 0;
     }
     unsigned loop_end(Parity P) const {
@@ -343,9 +349,9 @@ class lattice_struct {
     // each coordinate is c[d] = (idx/size_factor[d]) % size[d] + min[d], but
     // do it like below to avoid the mod
 
-    inline const CoordinateVector coordinates(unsigned idx) const {
+    inline CoordinateVector coordinates(size_t idx) const {
         CoordinateVector c;
-        unsigned vdiv, ndiv;
+        size_t vdiv, ndiv;
 
         vdiv = idx;
         for (int d = 0; d < NDIM - 1; ++d) {
@@ -358,11 +364,11 @@ class lattice_struct {
         return c;
     }
 
-    inline int coordinate(unsigned idx, Direction d) const {
+    inline int coordinate(size_t idx, Direction d) const {
         return (idx / mynode.size_factor[d]) % mynode.size[d] + mynode.min[d];
     }
 
-    inline Parity site_parity(unsigned idx) const {
+    inline Parity site_parity(size_t idx) const {
         return coordinates(idx).parity();
     }
 
@@ -385,11 +391,6 @@ class lattice_struct {
         }
         return site;
     }
-
-    int id() const {
-        return l_label;
-    }
-
 
     bool is_this_odd_boundary(Direction d) const;
 

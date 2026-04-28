@@ -11,9 +11,6 @@
 #include "toplevelvisitor.h"
 #include "stringops.h"
 
-extern std::string looping_var;
-extern std::string parity_name;
-
 std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                                bool generate_wait_loops) {
     std::stringstream code;
@@ -29,15 +26,20 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // }
 
     bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
+    bool evenfirst = is_macro_defined("EVEN_SITES_FIRST");
 
     code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
 
+    // change later!
+    if (!evenfirst)
+        generate_wait_loops = false;
+
     // Set the start and end points
     if (!boundary_layer) {
-        code << "const int _hila_loop_begin = hila_loop_lattice.loop_begin(" << loop_info.parity_str
-             << ");\n";
-        code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << loop_info.parity_str
-             << ");\n";
+        // with not EVEN_SITES_FIRST go over all sites
+        const char *paritystr = evenfirst ? loop_info.parity_str.c_str() : "ALL";
+        code << "const int _hila_loop_begin = hila_loop_lattice.loop_begin(" << paritystr << ");\n";
+        code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << paritystr << ");\n";
 
         if (generate_wait_loops) {
             code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
@@ -102,14 +104,31 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
+    // keep track of ending braces for options
+    int ending_braces = 0;
+
     // Start the loop
     code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
          << " < _hila_loop_end; ++" << looping_var << ") {\n";
 
-    if (generate_wait_loops && !boundary_layer) {
+    if (evenfirst && generate_wait_loops && !boundary_layer) {
         code << "if (((hila_loop_lattice.wait_arr_[" << looping_var
              << "] & _dir_mask_) != 0) == _hila_wait_i) {\n";
+        ending_braces++;
     }
+
+    if (!evenfirst) {
+        if (loop_info.need_loop_coordinate) {
+            code << "CoordinateVector " << looping_cv << " = hila_loop_lattice.coordinates(" << looping_var
+                 << ");\n";
+        }
+
+        if (loop_info.parity_value != Parity::all) {
+            code << "if (" << looping_cv << ".parity() == " << loop_info.parity_str << ") {\n";
+            ending_braces++;
+        }
+    }
+
 
     // replace reduction variables in the loop
     for (reduction_expr &r : reduction_list) {
@@ -239,15 +258,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     // Handle calls to special in-loop functions
     for (special_function_call &sfc : special_function_call_list) {
-        std::string repl = sfc.replace_expression; // comes with ( now
-        if (sfc.add_loop_var) {
-            repl += looping_var;
-            if (sfc.argsExpr != nullptr)
-                repl += ',';
-            if (sfc.args_string.size() > 0)
-                repl += ", " + sfc.args_string;
-        }
-        loopBuf.replace(sfc.replace_range, repl);
+        loopBuf.replace(sfc.replace_range, sfc.replace_expression);
     }
 
     // Dump the main loop code here
@@ -263,6 +274,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                  << ");\n";
         }
 
+    // End of the loop content
     code << "}\n";
 
     if (generate_wait_loops) {
@@ -272,6 +284,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                     "round\n";
         } else {
             code << "if (_dir_mask_ != 0 && _hila_wait_i == 0) {\n";
+            ending_braces++;
         }
         for (field_info &l : field_info_list) {
             // If neighbour references exist, communicate them
@@ -289,9 +302,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             }
         }
         // if (boundary_layer) code << "}\n";
-        code << "}\n";
     }
-    if (boundary_layer)
+
+    while (ending_braces-- > 0)
         code << "}\n";
 
     // Post-process ny site selections?

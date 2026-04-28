@@ -17,9 +17,6 @@
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
 
-extern std::string looping_var;
-extern std::string parity_name;
-
 
 // write __host__ __device__ to function decl
 void GeneralVisitor::gpu_loop_function_marker(FunctionDecl *fd) {
@@ -118,10 +115,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // and the kernel is build in "kernel"
     std::stringstream code, kernel;
     // const std::string t = loopBuf.dump();
-
-    // indexing variable
-    extern std::string looping_var;
-
 
     // Get kernel name - use line number or file offset (must be deterministic)
     std::string kernel_name = TopLevelVisitor::make_kernel_name();
@@ -654,15 +647,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     // Handle calls to special in-loop functions
     for (special_function_call &sfc : special_function_call_list) {
-        std::string repl = sfc.replace_expression; // comes with ( now
-        if (sfc.add_loop_var) {
-            repl += looping_var;
-            if (sfc.argsExpr != nullptr)
-                repl += ',';
-            if (sfc.args_string.size() > 0)
-                repl += ", " + sfc.args_string;
-        }
-        loopBuf.replace(sfc.replace_range, repl);
+        loopBuf.replace(sfc.replace_range, sfc.replace_expression);
     }
 
     // Begin the function

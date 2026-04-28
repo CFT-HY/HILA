@@ -537,7 +537,7 @@ void lattice_struct::node_struct::construct_index_map() {
     assert(boundary_odd == volume);
 }
 
-#endif
+#endif // BOUNDARY_LAYER_LAYOUT
 
 ////////////////////////////////////////////////////////////////////////
 /// Fill in mynode fields -- node_rank() must be set up OK
@@ -609,34 +609,17 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
     return (lattice.size(d) % 2 > 0 && lattice->mynode.is_on_edge(d));
 }
 
+#ifdef EVEN_SITES_FIRST
+
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays
 /// This is for the index array neighbours
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
 
-// unsigned lattice_struct::count_off_node_sites(const CoordinateVector &offset) {
-
-//     CoordinateVector ln, l;
-//     unsigned count;
-
-//     for (int i = 0; i < mynode.volume; i++) {
-//         l = coordinates(i);
-//         // set ln to be the neighbour of the site
-//         // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
-//         ln = (l + offset).mod(size());
-
-//         if (!is_on_mynode(ln))
-//             count++;
-//     }
-//     return count;
-// }
-
-
 void lattice_struct::create_std_gathers() {
 
-    // allocate neighbour arrays - TODO: these should
-    // be allocated on "device" memory too!
+    // allocate neighbour arrays
 
     for (int d = 0; d < NDIRS; d++) {
         neighb[d] = (unsigned *)memalloc(((size_t)mynode.volume) * sizeof(unsigned));
@@ -649,7 +632,7 @@ void lattice_struct::create_std_gathers() {
 
     for (Direction d = e_x; d < NDIRS; ++d) {
 
-        nn_comminfo[d].index = neighb[d]; // this is not really used for nn gathers
+        // nn_comminfo[d].index = neighb[d]; // this is not really used for nn gathers
 
         comm_node_struct &from_node = nn_comminfo[d].from_node;
         // we can do the opposite send during another pass of the sites.
@@ -760,7 +743,6 @@ void lattice_struct::create_std_gathers() {
     }
 }
 
-
 /************************************************************************/
 
 /* this formats the wait_array, used by forallsites_waitA()site_neighbour
@@ -796,6 +778,131 @@ void lattice_struct::initialize_wait_arrays() {
 #endif
 }
 
+#else // now not EVEN_SITES_FIRST
+
+void lattice_struct::create_std_gathers() {
+
+    size_t c_offset = mynode.volume; // current offset in field-arrays
+
+    // We set the communication and the neigbour-array here
+    int too_large_node = 0;
+
+    for (Direction d = e_x; d < NDIRS; ++d) {
+
+        comm_node_struct &from_node = nn_comminfo[d].from_node;
+        // we can do the opposite send during another pass of the sites.
+        // This is just the gather inverted
+        // NOTE: this is not the send to Direction d, but to -d!
+        comm_node_struct &to_node = nn_comminfo[-d].to_node;
+
+        from_node.init();
+        to_node.init();
+
+        halo_offset[d] = c_offset;
+        halo_depth[d] = HALO_DEPTH;
+        c_offset += halo_depth[d] * mynode.volume / mynode.size[d];
+
+        // if there are no communications the rank is left as is
+
+        // first pass through the sites
+        // - set the neighb array, anything to communicate?
+
+        for (size_t i = 0; i < mynode.volume; i++) {
+            CoordinateVector ln, l;
+            l = coordinates(i);
+            // set ln to be the neighbour of the site
+            ln = (l + d).mod(l_size);
+
+            if (is_on_mynode(ln)) {
+                neighb[d][i] = site_index(ln);
+            } else {
+                // short-circuit neighbour array, for later handling
+                neighb[d][i] = mynode.volume;
+
+                // Now site is off-node, this leads to gathering
+                if (from_node.rank == mynode.rank) {
+                    from_node.rank = to_node.rank = node_rank(ln);
+                }
+
+                if (l.parity() == EVEN)
+                    from_node.evensites++;
+                else
+                    from_node.oddsites++;
+
+                // evensites / oddsites classified by the parity of receiving site
+                if (ln.parity() == EVEN)
+                    to_node.evensites++;
+                else
+                    to_node.oddsites++;
+            }
+        }
+
+        // store here the buffer index
+        from_node.buffer = c_offset;
+
+        from_node.sites = from_node.evensites + from_node.oddsites;
+        to_node.sites = to_node.evensites + to_node.oddsites;
+
+        assert(from_node.sites == to_node.sites);
+
+        if (to_node.sites > 0) {
+
+            // sitelist tells us which sites to send
+            to_node.sitelist = (unsigned *)memalloc(to_node.sites * sizeof(unsigned));
+
+            // set the remaining neighbour array indices and sitelists in another go
+            // over sites. temp counters NOTE: ordering is automatically right: with a
+            // given parity, neighbour node indices come in ascending order of host node
+            // index - no sorting needed
+            size_t to_even = 0, to_odd = 0, from_even = 0, from_odd = 0;
+
+            for (size_t i = 0; i < mynode.volume; i++) {
+                if (neighb[d][i] == mynode.volume) {
+                    CoordinateVector l, ln;
+                    l = coordinates(i);
+
+                    if (l.parity() == EVEN) {
+                        neighb[d][i] = c_offset + from_even;
+                        ++from_even;
+
+                    } else {
+                        neighb[d][i] = c_offset + from_node.evensites + from_odd;
+                        ++from_odd;
+                    }
+
+                    ln = (l + d).mod(l_size);
+                    if (ln.parity() == EVEN) {
+                        to_node.sitelist[to_even++] = i;
+                    } else {
+                        to_node.sitelist[(to_odd++) + to_node.evensites] = i;
+                    }
+                }
+            }
+
+#if defined(CUDA) || defined(HIP)
+            auto p = copy_array_to_gpu(to_node.sitelist, to_node.sites);
+            free(to_node.sitelist);
+            to_node.sitelist = p;
+#endif
+        }
+
+        // and advance offset for next direction
+        c_offset += from_node.sites;
+
+        if (c_offset >= (1ULL << 32))
+            too_large_node = 1;
+
+    } /* directions */
+
+    /* Finally, set the site to the final offset (better be right!) */
+    mynode.field_alloc_size = c_offset;
+
+    if (hila::reduce_node_sum(too_large_node) > 0) {
+        report_too_large_node();
+    }
+}
+
+#endif // not EVEN_SITES_FIRST
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
 

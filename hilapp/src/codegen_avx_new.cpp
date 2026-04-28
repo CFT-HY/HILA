@@ -20,9 +20,6 @@
 #include "toplevelvisitor.h"
 #include "stringops.h"
 
-extern std::string looping_var;
-extern std::string parity_name;
-
 /// An AST walker for finding and handling variable declarations
 /// in a loop function
 class LoopFunctionHandler : public GeneralVisitor, public RecursiveASTVisitor<LoopFunctionHandler> {
@@ -638,15 +635,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
 
     // Handle calls to special in-loop functions
     for (special_function_call &sfc : special_function_call_list) {
-        std::string repl = sfc.replace_expression; // comes with ( now
-        if (sfc.add_loop_var) {
-            repl += looping_var;
-            if (sfc.argsExpr != nullptr)
-                repl += ',';
-            if (sfc.args_string.size() > 0)
-                repl += ", " + sfc.args_string;
-        }
-        loopBuf.replace(sfc.replace_range, repl);
+        loopBuf.replace(sfc.replace_range, sfc.replace_expression);
     }
 
     // Vector reductions must be in the sames scope as the loop body. Otherwise the

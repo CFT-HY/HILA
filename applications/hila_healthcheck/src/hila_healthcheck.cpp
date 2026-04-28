@@ -927,7 +927,7 @@ void test_extended() {
 
     report_pass("ExtendedPrecision comparison ops", ok ? 0 : 1, 1e-20);
 
-    for (double mag = 1e8; mag <= 1e+32; mag *= 1e8) {
+    for (double mag = 1e4; mag <= 1e+128; mag *= 1e20) {
 
         size_t nsqr = 0, nmag = 0, n1 = 0;
 

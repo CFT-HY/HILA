@@ -32,7 +32,7 @@
 // to the Field content.  In practice this does not seem to gain anything except in
 // trivial test cases.  Probably will be removed at some point.
 //
-//#define FIELD_COPY_ON_WRITE
+// #define FIELD_COPY_ON_WRITE
 
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
@@ -604,6 +604,28 @@ class Field {
 
 #endif
 
+    /**
+     * @internal
+     * @brief Checks that Field is appropriately initialized in loop
+     * @details If init is incorrect, print error message. 
+     * @param name name of Field
+     * @param f filename 
+     * @param line line in file
+     */
+
+    void check_init(const char *name, Parity p, const char *f, unsigned line) const {
+        if (p != Parity::none && !is_initialized(p)) {
+            hila::out0 << "\nERROR: File " << f << " on line " << line << " : Field \"" << name
+                       << "\" is not properly initialized\n";
+            hila::terminate(1);
+        }
+
+        if (is_allocated() && fs->mylattice.ptr() != lattice.ptr()) {
+            hila::out0 << "\nERROR: File " << f << " on line " << line << " : Field \"" << name
+                       << "\" initialized on a lattice of different size\n";
+            hila::terminate(1);
+        }
+    }
 
     /**
      * @internal

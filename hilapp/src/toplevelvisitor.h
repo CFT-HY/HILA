@@ -207,12 +207,14 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Starting point for new code
     void generate_code(Stmt *S);
 
-    void generate_parity_code(std::stringstream &code, std::string &parity_name);
+    void generate_parity_code(std::stringstream &code, const std::string &parity_name);
     void generate_selection_code(std::stringstream &code);
 
     void handle_field_info(std::stringstream &code, bool is_cow, Stmt *S);
 
     std::string get_filename_and_line(Stmt *S);
+    std::string get_filename(Stmt *S);
+    unsigned get_linenumber(Stmt *S);
 
     void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par,
                                    std::string &tail);
