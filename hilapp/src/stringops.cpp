@@ -304,8 +304,8 @@ std::string get_includes_from_gcc(std::vector<const char *> &av) {
         // NOTE: this relies on the compiler identifying the path lines starting
         // with " /" at the beginning of each line.
         // This is the case for g++ or clang
-        std::string pipecmd =
-            "echo | " + compiler + " -c -xc++ --std=" + cpp_standard + " -Wp,-v - 2>&1 | grep '^ /'";
+        std::string pipecmd = "echo | " + compiler + " -c -xc++ --std=" + cpp_standard +
+                              " -Wp,-v - 2>&1 | grep '^ /'";
 
         // std::cerr << pipecmd << '\n';
         pipe = popen(pipecmd.c_str(), "r");
@@ -348,7 +348,7 @@ std::string handle_cmdline_args(int argc, const char **argv, std::vector<const c
     // av[argc + 1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
     static char ddash[3] = "--"; // needs to be static because ptrs
     int ddashloc = 0;
-    const char * cppstd = "-std=c++17";
+    const char *cppstd = "-std=c++17";
 
     avvect.clear();
 

@@ -817,20 +817,28 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     return get_elements(clist, bcast);
 }
 
+template <typename T>
+std::pair<CoordinateVector, CoordinateVector>
+Field<T>::get_range_from_slice(const CoordinateVector &slice) const {
+
+    CoordinateVector cmin, cmax;
+    foralldir (d) {
+        if (slice[d] < 0) {
+            cmin[d] = 0;
+            cmax[d] = fs->mylattice.size(d) - 1;
+        } else {
+            cmin[d] = cmax[d] = slice[d];
+        }
+    }
+    return std::make_pair(cmin, cmax);
+}
 
 /// Get a slice (subvolume)
 template <typename T>
 std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
 
     assert_all_ranks_present();
-    CoordinateVector cmin, cmax;
-    foralldir (d)
-        if (c[d] < 0) {
-            cmin[d] = 0;
-            cmax[d] = lattice.size(d) - 1;
-        } else {
-            cmin[d] = cmax[d] = c[d];
-        }
+    auto [cmin,cmax] = get_range_from_slice(c);
     return get_subvolume(cmin, cmax, bcast);
 }
 
