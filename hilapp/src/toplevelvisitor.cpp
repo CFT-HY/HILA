@@ -1437,7 +1437,7 @@ bool TopLevelVisitor::handle_constexpr_if(Stmt *s) {
             st = ifstmt->getElse();
             // llvm::errs() << " REMOVE ELSE\n";
         }
-    } else if (nondiscarded == nullptr || ifstmt->getElse() == nondiscarded) {
+    } else if (nondiscarded.value() == nullptr || ifstmt->getElse() == nondiscarded) {
         st = ifstmt->getThen();
         // llvm::errs() << " REMOVE THEN\n";
         if (ifstmt->getElse()) {
