@@ -437,7 +437,7 @@ void Field<T>::write_subvolume_internal(std::ofstream &outputfile, const Coordin
                                 *(fp++) = hila::get_number_in_var(buffer[k], l);
                             }
                         }
-                        outputfile.write((char *)floatbuf, fp - floatbuf);
+                        outputfile.write((char *)floatbuf, (fp - floatbuf)*sizeof(float));
                     }
                 }
             }
