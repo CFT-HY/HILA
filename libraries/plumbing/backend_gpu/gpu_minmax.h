@@ -26,26 +26,8 @@ using keyvalueindexT = int;
 
 
 template <typename T>
-T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
-
-    // skip the cub/hipcub bits in hilapp, not needed
-
-    const lattice_struct &mylat = fs->mylattice.ref();
-
-#ifdef GPU_OVERLAP_COMM
-    hila::iter_range_t _hila_ranges;
-    int _hila_loops = mylat.loop_ranges(par, 0, _hila_ranges);
-    int _hila_loop_begin = _hila_ranges.min[0];
-    int _hila_loop_end = _hila_ranges.max[0];
-#else
-    int _hila_loop_begin = mylat.loop_begin(par);
-    int _hila_loop_end = mylat.loop_end(par);
-#endif
-    int64_t num_items = _hila_loop_end - _hila_loop_begin;
-
-    // Declare, allocate, and initialize device-accessible pointers
-    // for input and output
-    T *data_in = this->field_buffer() + _hila_loop_begin; // ptr to data
+gpucub::KeyValuePair<keyvalueindexT, T> gpu_minmax_argreduce_range(bool is_min, const T *data_in,
+                                                                    int64_t num_items) {
     gpucub::KeyValuePair<keyvalueindexT, T> *result_p, result;
 
     gpuMalloc(&result_p, sizeof(gpucub::KeyValuePair<keyvalueindexT, T>));
@@ -63,7 +45,6 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     }
 
     // Allocate temporary storage
-    // hila::out0 << "gpu_minmax: alloc " << temp_storage_bytes << " bytes\n";
     gpuMalloc(&d_temp_storage, temp_storage_bytes);
 
     // Run argmin-reduction
@@ -82,8 +63,49 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     gpuFree(result_p);
 
+    return result;
+}
+
+template <typename T>
+T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
+
+
+    const lattice_struct &mylat = fs->mylattice.ref();
+
+#ifdef GPU_OVERLAP_COMM
+    hila::iter_range_t _hila_ranges;
+    int _hila_loops = mylat.loop_ranges(par, 0, _hila_ranges);
+
+    T *base = this->field_buffer();
+    auto result =
+        gpu_minmax_argreduce_range(is_min, base + _hila_ranges.min[0],
+                                   _hila_ranges.max[0] - _hila_ranges.min[0]);
+    int loop_begin = _hila_ranges.min[0];
+
+    if (_hila_loops == 2) {
+        auto result2 =
+            gpu_minmax_argreduce_range(is_min, base + _hila_ranges.min[1],
+                                       _hila_ranges.max[1] - _hila_ranges.min[1]);
+        bool take_2 = is_min ? (result2.value < result.value) : (result2.value > result.value);
+        if (take_2) {
+            result = result2;
+            loop_begin = _hila_ranges.min[1];
+        }
+    }
+
+    loc = mylat.coordinates(result.key + loop_begin);
+    return result.value;
+#else
+    int _hila_loop_begin = mylat.loop_begin(par);
+    int _hila_loop_end = mylat.loop_end(par);
+    int64_t num_items = _hila_loop_end - _hila_loop_begin;
+
+    T *data_in = this->field_buffer() + _hila_loop_begin; // ptr to data
+    auto result = gpu_minmax_argreduce_range(is_min, data_in, num_items);
+
     loc = mylat.coordinates(result.key + _hila_loop_begin);
     return result.value;
+#endif
 }
 
 #endif // ! HILAPP

@@ -423,15 +423,10 @@ typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Pa
  */
 template <typename T>
 dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
-#if (defined(CUDA) || defined(HIP)) && !defined(GPU_CCL) && defined(GPU_COMM_OVERLAP)
-    pack_buffers(d, p);
-    auto &halo_stream = hila::halo_stream();
-    auto &halo_event = hila::halo_event();
-    gpuEventRecord(halo_event, halo_stream);
-    gpuEventSynchronize(halo_event);
-#endif
-
-#if !defined(GPU_CCL)
+#if defined(GPU_OVERLAP_COMM)
+    return 0;
+#elif !defined(GPU_CCL)
+    // Non-overlap path: start_communication handles packing internally.
     return start_communication(d, p);
 #else
     return 0;
@@ -570,10 +565,39 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
-/// @internal
+template <typename T>
+Parity Field<T>::resolve_started_parity(Direction d, Parity p, int &n_wait) const {
+
+    Parity par;
+    n_wait = 1;
+    if (p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)) {
+        par = ALL;
+    } else if (is_gather_started(d, p))
+        par = p; // standard match
+    else if (p != ALL) {
+        if (is_gather_started(d, ALL))
+            par = ALL; // if all is running wait for it
+        else {
+            exit(1);
+        }
+    } else {
+        if (is_gathered(d, EVEN) && is_gather_started(d, ODD))
+            par = ODD;
+        else if (is_gathered(d, ODD) && is_gather_started(d, EVEN))
+            par = EVEN;
+        else if (is_gather_started(d, EVEN) && is_gather_started(d, ODD)) {
+            n_wait = 2; // need to wait for both!
+            par = EVEN; // will be flipped
+        } else {
+            exit(1);
+        }
+    }
+
+    return par;
+}
+
 ///  wait_gather(): Wait for communication at parity par from
 ///  Direction d completes the communication in the function.
-///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
@@ -602,36 +626,9 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
     // Note: the move can be Parity p OR ALL -- need to wait for it in any case
     // set par to be the "sum" over both parities
-    // There never should be ongoing ALL and other parity gather -- start_gather takes
-    // care
 
-    // check here consistency, this should never happen
-    assert(!(p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)));
-
-    Parity par;
-    int n_wait = 1;
-    // what par to wait for?
-    if (is_gather_started(d, p))
-        par = p; // standard match
-    else if (p != ALL) {
-        if (is_gather_started(d, ALL))
-            par = ALL; // if all is running wait for it
-        else {
-            exit(1);
-        }
-    } else {
-        // now p == ALL and ALL is not running
-        if (is_gathered(d, EVEN) && is_gather_started(d, ODD))
-            par = ODD;
-        else if (is_gathered(d, ODD) && is_gather_started(d, EVEN))
-            par = EVEN;
-        else if (is_gather_started(d, EVEN) && is_gather_started(d, ODD)) {
-            n_wait = 2; // need to wait for both!
-            par = EVEN; // will be flipped
-        } else {
-            exit(1);
-        }
-    }
+    int n_wait;
+    Parity par = resolve_started_parity(d, p, n_wait);
 
     for (int wait_i = 0; wait_i < n_wait; ++wait_i) {
 
@@ -645,7 +642,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
             wait_receive_timer.stop();
 
-#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_COMM_OVERLAP)
+#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
                                     hila::bulk_stream());
 #endif
@@ -658,10 +655,9 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             MPI_Wait(&fs->send_request[par_i][d], &status);
             wait_send_timer.stop();
         }
-
-        // Mark the parity gathered from Direction dir
+#if !defined(GPU_OVERLAP_COMM)
         mark_gathered(d, par);
-
+#endif
         // Keep count of communications
         hila::n_gather_done += 1;
 
@@ -699,7 +695,7 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
         fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node,
                                  hila::halo_stream());
     }
-#if !defined(GPU_COMM_OVERLAP)
+#if !defined(GPU_OVERLAP_COMM)
     mark_gather_started(d, p);
 #endif
     return get_dir_mask(d);
@@ -725,7 +721,7 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) co
         fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, stream);
     }
 
-#if !defined(GPU_COMM_OVERLAP)
+#if !defined(GPU_OVERLAP_COMM)
     mark_gather_started(d, p);
 #endif
     return get_dir_mask(d);
@@ -743,35 +739,52 @@ template <typename T>
 void Field<T>::unpack_buffers(Direction d, Parity p) const {
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
-    if (!is_gather_started(d, p))
-        return;
 
-    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
-        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node,
-                                hila::halo_stream());
+    if (p == ALL) {
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
+            !is_gather_started(d, ODD))
+            return;
+    } else if (!is_gather_started(d, p)) {
+        return;
     }
-#if !defined(GPU_COMM_OVERLAP)
-    mark_gathered(d, p);
-#endif
+
+    int n_wait;
+    Parity par = resolve_started_parity(d, p, n_wait);
+
+    for (int i = 0; i < n_wait; ++i) {
+        if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
+                                    hila::halo_stream());
+        }
+        mark_gathered(d, par);
+        par = opp_parity(par);
+    }
 }
 
 template <typename T>
 void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
-    const lattice_struct::comm_node_struct &to_node = ci.to_node;
 
-    if (!is_gather_started(d, p)) {
+    if (p == ALL) {
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
+            !is_gather_started(d, ODD))
+            return;
+    } else if (!is_gather_started(d, p)) {
         return;
     }
 
-    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
-        fs->place_comm_elements(d, p, fs->get_receive_buffer(d, p, from_node), from_node, stream);
-    }
+    int n_wait;
+    Parity par = resolve_started_parity(d, p, n_wait);
 
-#if !defined(GPU_COMM_OVERLAP)
-    mark_gathered(d, p);
-#endif
+    for (int i = 0; i < n_wait; ++i) {
+        if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
+                                    stream);
+        }
+        mark_gathered(d, par);
+        par = opp_parity(par);
+    }
 }
 #endif // CUDA or HIP
 
@@ -1012,7 +1025,6 @@ std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const 
 
 
 //////////////////////////////////////////////////////////////////////////////////
-/// @internal
 /// Copy the local (mpi process) data to a "logical array"
 /// on gpu code, copies to host
 
@@ -1047,7 +1059,6 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
-/// @internal
 /// set the local data from an array
 
 template <typename T>

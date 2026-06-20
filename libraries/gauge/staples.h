@@ -91,8 +91,6 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1,
 
         // anticipate that these are needed
         // not really necessary, but may be faster
-        U[d2].start_gather(d1, ALL);
-        U[d1].start_gather(d2, par);
 
         // calculate first lower 'U' of the staple sum
         // do it on opp parity

@@ -1378,10 +1378,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // Run reduction
         if (r.reduction_type == reduction::SUM) {
             code << r.reduction_name << " = gpu_reduce_sum( dev_" << r.reduction_name
-                 << ", N_blocks" << ");\n";
+                 << ", N_blocks" << ", bulk_stream);\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             code << r.reduction_name << " = gpu_reduce_product( dev_" << r.reduction_name
-                 << ", N_blocks" << ");\n";
+                 << ", N_blocks" << ", bulk_stream);\n";
         }
         // Free memory allocated for the reduction
         code << "gpuFree(dev_" << r.reduction_name << ");\n";

@@ -1350,6 +1350,7 @@ class Field {
 
     // Communication routines. These are all internal.
     gather_status_t check_communication(Direction d, Parity &p) const;
+    Parity resolve_started_parity(Direction d, Parity p, int &n_wait) const;
     dir_mask_t start_communication(Direction d, Parity p = ALL) const;
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
     dir_mask_t stream_gather(Direction d, Parity p) const;
