@@ -373,8 +373,16 @@ void initialize_gccl_communication() {
 #include <nvshmemx.h>
 void initialize_nvshmem_communication() {
     int rank, size;
+
+    {
+        int n_devices;
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        gpuSetDevice(lattice->mynode.rank % n_devices);
+    }
+
     nvshmemx_init_attr_t attr;
-    attr.mpi_comm = lattice->mpi_comm_lat;
+    attr.mpi_comm = &lattice.ptr()->mpi_comm_lat;
     nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM, &attr);
     rank = nvshmem_my_pe();
     size = nvshmem_n_pes();

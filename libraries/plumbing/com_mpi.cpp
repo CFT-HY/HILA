@@ -160,7 +160,18 @@ void hila::initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
     if (!mpi_initialized) {
 
-#ifndef OPENMP
+#if defined(GPU_SHMEM)
+
+        int provided;
+        MPI_Init_thread(&argc, argv, MPI_THREAD_MULTIPLE, &provided);
+        if (provided < MPI_THREAD_MULTIPLE) {
+            if_rank0 ()
+                hila::out << "MPI could not provide MPI_THREAD_MULTIPLE, required for GPU_SHMEM, exiting\n";
+            MPI_Finalize();
+            exit(1);
+        }
+
+#elif !defined(OPENMP)
         MPI_Init(&argc, argv);
 
 #else
