@@ -406,6 +406,8 @@ class GaugeField {
                 }
             }
 
+            gpuDeviceSynchronize();
+
             lattice.switch_to(currentlat);
             (*this)[d].clear();
 
@@ -415,6 +417,7 @@ class GaugeField {
                 Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
                 (*this)[d][X] = buf[cv.dot(size_factor)];
             }
+            gpuDeviceSynchronize();
         } // directions
 
         d_free(buf);
