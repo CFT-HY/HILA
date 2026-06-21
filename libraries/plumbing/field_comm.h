@@ -425,8 +425,7 @@ template <typename T>
 dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 #if defined(GPU_OVERLAP_COMM)
     return 0;
-#elif !defined(GPU_CCL)
-    // Non-overlap path: start_communication handles packing internally.
+#elif !defined(GPU_CCL) && !defined(GPU_SHMEM)
     return start_communication(d, p);
 #else
     return 0;

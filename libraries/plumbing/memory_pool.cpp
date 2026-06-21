@@ -102,6 +102,7 @@ void *hila::memory_pool::alloc(size_t req_size) {
             gpuMallocDirect(&(a.ptr), req_size);
         } else if (type == pool_type::SHARED) {
 #if defined(GPU_SHMEM)
+            gpuDeviceSynchronize();
             gpuMallocSharedDirect(&(a.ptr), req_size);
 #else
             // Fallback or Error if SHARED requested but SHMEM not compiled
