@@ -262,7 +262,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 } else {
                     if (!code_generated) {
                         code_generated = true;
-                        code << "gcclGroupStart();\n";
+                        if (gpu_ccl)
+                            code << "gcclGroupStart();\n";
                     }
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
@@ -1280,7 +1281,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 } else {
                     if (!code_generated) {
                         code_generated = true;
-                        code << "gcclGroupStart();\n";
+                        if (gpu_ccl)
+                            code << "gcclGroupStart();\n";
                     }
                     code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
                             "++HILA_dir_) {\n"
