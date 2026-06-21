@@ -1,0 +1,23 @@
+# Build directories (all variants)
+build_*/
+build/
+
+# Debug run dirs
+debug_*/
+gdb_bt_*/
+
+# Slurm output artefacts
+slurm_errors*/
+slurm_output*/
+
+# Local build/test helpers
+Makefile.test
+*.mk
+
+# Per-rank wrappers and batch scripts generated at runtime
+wrap_*.sh
+batch*.sh
+debug_*.sh
+
+# Built binaries
+hila_healthcheck_*
