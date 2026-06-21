@@ -228,6 +228,16 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
 void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
 
+#ifndef HILAPP
+#if defined(GPU_CCL) || defined(GPU_SHMEM)
+    {
+        int n_devices;
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        gpuSetDevice(lat.mynode.rank % n_devices);
+    }
+#endif
+#endif
 
 #ifdef EVEN_SITES_FIRST
 
@@ -325,6 +335,12 @@ void initialize_gccl_communication() {
     int size = lattice->nodes.number;
     std::cout << "pre set device " << "rank: " << rank << " num ranks " << size << std::endl;
 
+    {
+        int n_devices;
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        gpuSetDevice(rank % n_devices);
+    }
     // gpuSetDevice(rank);
     std::cout << "Post set device " << "rank: " << rank << " num ranks " << size << std::endl;
     gcclComm_t communicator;
