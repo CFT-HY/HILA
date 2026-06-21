@@ -695,7 +695,7 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
         fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node,
                                  hila::halo_stream());
     }
-#if !defined(GPU_OVERLAP_COMM)
+#if !defined(GPU_OVERLAP_COMM) || defined(GPU_CCL) || defined(GPU_SHMEM)
     mark_gather_started(d, p);
 #endif
     return get_dir_mask(d);
@@ -721,7 +721,7 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) co
         fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, stream);
     }
 
-#if !defined(GPU_OVERLAP_COMM)
+#if !defined(GPU_OVERLAP_COMM) || defined(GPU_CCL) || defined(GPU_SHMEM)
     mark_gather_started(d, p);
 #endif
     return get_dir_mask(d);
