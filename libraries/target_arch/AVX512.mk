@@ -42,6 +42,6 @@ LDFLAGS :=
 
 # These variables must be defined here
 #
-HILAPP_OPTS := -target:AVX $(STD_INCLUDE_DIRS)
+HILAPP_OPTS := -target:AVX512 $(STD_INCLUDE_DIRS)
 HILA_OPTS := -DAVX
 

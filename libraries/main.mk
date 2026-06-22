@@ -160,6 +160,8 @@ HILA_OPTS += -DGPU_AWARE_COMM=0
 endif
 endif
 
+# Use default c++17, can be overruled in Makefile or make command
+CPPSTD := c++17 
 
 # Use all headers inside libraries for dependencies
 HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h $(HILA_DIR)/libraries/*/*/*.h)
@@ -171,7 +173,7 @@ ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing -I$(HILA_INCLUDE_DIR)/datatypes -I$(HILA_INCLUDE_DIR)/tools
 
 # Add the (possible) std. includes for hilapp
-HILAPP_OPTS += $(CUSTOM_HILAPP_OPTS)
+HILAPP_OPTS += $(CUSTOM_HILAPP_OPTS) -std=$(CPPSTD)
 
 APP_OPTS += $(OPTS)
 

@@ -12,12 +12,15 @@ $(info Target puhti_cuda:  remember to )
 $(info   module load gcc/11.3.0 openmpi/4.1.4-cuda cuda fftw )
 $(info ########################################################################)
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler
 CC = nvcc
 LD = nvcc -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
 
 # Define compilation flags
-CXXFLAGS_NOOPT = -dc -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --restrict 
+CXXFLAGS_NOOPT = -dc -std=$(CPPSTD) -x cu -gencode arch=compute_70,code=sm_70 --restrict 
 CXXFLAGS = $(CXXFLAGS_NOOPT) -O3 --use_fast_math
 # 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
 # it allows definition of a function in multiple compilation units as required by c++ standard!!  

@@ -8,58 +8,6 @@
 #include "../coordinates.h"
 #include "defs.h"
 
-/// Replaces basetypes with vectors in a given templated class
-
-/// First base definition for replace_type, which recursively looks for the
-/// base type and replaces it in the end
-/// General template, never matched
-template <typename A, int vector_size, class Enable = void>
-struct vectorize_struct {};
-
-/// A is a basic type, so just return the matching vector type
-template <typename A, int vector_size>
-struct vectorize_struct<A, vector_size, typename std::enable_if_t<hila::is_arithmetic<A>::value>> {
-    using type = typename hila::vector_base_type<A, vector_size>::type;
-};
-
-// B is a templated class, so construct a vectorized type
-template <template <typename B> class C, typename B, int vector_size>
-struct vectorize_struct<C<B>, vector_size> {
-    using vectorized_B = typename vectorize_struct<B, vector_size>::type;
-    using type = C<vectorized_B>;
-};
-
-template <template <int a, typename B> class C, int a, typename B, int vector_size>
-struct vectorize_struct<C<a, B>, vector_size> {
-    using vectorized_B = typename vectorize_struct<B, vector_size>::type;
-    using type = C<a, vectorized_B>;
-};
-
-template <template <int a, int b, typename B> class C, int a, int b, typename B, int vector_size>
-struct vectorize_struct<C<a, b, B>, vector_size> {
-    using vectorized_B = typename vectorize_struct<B, vector_size>::type;
-    using type = C<a, b, vectorized_B>;
-};
-
-/// Match coordinate vectors explicitly
-// template<>
-// struct vectorize_struct<CoordinateVector, 4> {
-//   using type = std::array<Vec4i, NDIM>;
-// };
-
-// template<>
-// struct vectorize_struct<CoordinateVector, 8> {
-//   using type = std::array<Vec8i, NDIM>;
-// };
-
-// template<>
-// struct vectorize_struct<CoordinateVector, 16> {
-//   using type = std::array<Vec16i, NDIM>;
-// };
-
-/// Short version of mapping type to longest possible vector
-template <typename T>
-using vector_type = typename vectorize_struct<T, hila::vector_info<T>::vector_size>::type;
 
 template <typename T>
 void field_storage<T>::allocate_field(const Lattice lattice) {

@@ -138,15 +138,6 @@ llvm::cl::opt<bool> cmdline::c_openmp("target:openmp", llvm::cl::desc("Hybrid Op
 
 // Debug and Utility arguments
 
-// llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
-//       llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-//       llvm::cl::cat(HilappCategory));
-
-llvm::cl::opt<bool>
-    cmdline::slow_gpu_reduce("gpu-slow-reduce",
-                             llvm::cl::desc("Use slow (but memory economical) reduction on gpus"),
-                             llvm::cl::cat(HilappCategory));
-
 llvm::cl::opt<int> cmdline::verbosity("verbosity",
                                       llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
                                       llvm::cl::cat(HilappCategory));
@@ -162,10 +153,9 @@ llvm::cl::opt<bool>
                              llvm::cl::desc("Comment out '#pragma hila' -pragmas in output"),
                              llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::insert_includes(
-    "insert-includes",
-    llvm::cl::desc("Insert all project #include files in .cpt -files (portable)"),
-    llvm::cl::cat(HilappCategory));
+llvm::cl::opt<std::string> cmdline::cppstd("std", llvm::cl::desc("c++ standard, e.g. -std=c++17"),
+                                   llvm::cl::cat(HilappCategory));
+
 
 llvm::cl::opt<bool> cmdline::no_include(
     "no-include",
@@ -1210,7 +1200,7 @@ class MyFrontendAction : public ASTFrontendAction {
                 file_id_list.clear();
 
                 for (file_buffer &fb : file_buffer_list) {
-                    if (fb.sbuf.is_modified() || cmdline::insert_includes)
+                    if (fb.sbuf.is_modified())
                         set_fid_modified(fb.fid);
                 }
 
@@ -1272,7 +1262,7 @@ int main(int argc, const char **argv) {
     std::vector<const char *> av;
     std::string compiler = handle_cmdline_args(argc, argv, av);
 
-    argc = av.size() - 1;  // last is nullptr;
+    argc = av.size() - 1; // last is nullptr;
     OptionsParser op(argc, av.data(), HilappCategory);
     ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
@@ -1284,11 +1274,11 @@ int main(int argc, const char **argv) {
 
     if (cmdline::show_includes) {
         llvm::errs() << "----- hilapp include file paths ";
-        if (compiler.size() > 0) 
+        if (compiler.size() > 0)
             llvm::errs() << "(with compiler " << compiler << ")";
         llvm::errs() << '\n';
-        for (const char * p : av) {
-            if (p && p[0] == '-' && p[1] == 'I') 
+        for (const char *p : av) {
+            if (p && p[0] == '-' && p[1] == 'I')
                 llvm::errs() << "    " << p + 2 << '\n';
         }
     }

@@ -16,6 +16,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "srcbuf.h"
+#include "llvm_hilapp_compat.h"
 
 // set namespaces globally
 using namespace clang;
@@ -24,17 +25,20 @@ using namespace clang::tooling;
 
 // constant names for program
 const std::string program_name("hilapp");
-const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string out_only_keyword("out_only");
 const std::string const_function_keyword("const_function");
 
 const std::string name_prefix("HILA_");
-const std::string var_name_prefix(name_prefix + "var_");
-const std::string field_name_prefix(name_prefix + "field_");
-const std::string type_name_prefix(name_prefix + "type_");
-const std::string kernel_name_prefix(name_prefix + "kernel_");
+const std::string var_name_prefix(name_prefix + "_var_");
+const std::string field_name_prefix(name_prefix + "_field_");
+const std::string type_name_prefix(name_prefix + "_type_");
+const std::string kernel_name_prefix(name_prefix + "_kernel_");
 
+const std::string looping_var(name_prefix + "_index");
+const std::string parity_var_name(name_prefix + "_parity");
+
+const std::string looping_cv(name_prefix + "_loop_cv");
 
 enum class reduction { NONE, SUM, PRODUCT }; // TBD:  MIN MAX MINLOC MAXLOC
 enum class Parity { none, even, odd, all };
@@ -77,15 +81,13 @@ extern llvm::cl::opt<bool> AVX;
 extern llvm::cl::opt<bool> SSE;
 extern llvm::cl::opt<bool> openacc;
 extern llvm::cl::opt<bool> c_openmp;
-// extern llvm::cl::opt<bool> func_attribute;
 extern llvm::cl::opt<int> vectorize;
 extern llvm::cl::opt<bool> no_interleaved_comm;
 // extern llvm::cl::opt<bool> no_mpi;
 extern llvm::cl::opt<int> verbosity;
 extern llvm::cl::opt<int> avx_info;
 extern llvm::cl::opt<bool> comment_pragmas;
-extern llvm::cl::opt<bool> insert_includes;
-extern llvm::cl::opt<bool> slow_gpu_reduce;
+extern llvm::cl::opt<std::string> cppstd;
 
 extern llvm::cl::opt<bool> allow_func_globals;
 
@@ -387,10 +389,7 @@ struct special_function_call {
     std::string full_expr;
     std::string name;
     std::string replace_expression;
-    std::string args_string;
-    Expr *argsExpr;
     SourceRange replace_range;
-    bool add_loop_var;
     int scope;
 };
 
@@ -412,11 +411,13 @@ struct loop_info_struct {
     bool has_conditional;                     // if, for, while, switch, ternary in loop
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
+    bool need_loop_coordinate; // this is used for typewriter order
 
     SourceRange range;
 
     inline void clear_except_external() { // do not remove parity values, may be set in loop init
-        has_site_dependent_cond_or_index = contains_random = has_conditional = false;
+        has_site_dependent_cond_or_index = contains_random = has_conditional =
+            need_loop_coordinate = false;
         conditional_vars.clear();
         condExpr = nullptr;
     }

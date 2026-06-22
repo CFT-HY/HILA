@@ -1443,11 +1443,11 @@ auto cast_to(const Array<n, m, T> &mat) {
 } // namespace hila
 
 /// @brief Array1d is alias to Array where m = 1
-template <int n, typename T = double>
+template <int n, typename T>
 using Array1d = Array<n, 1, T>;
 
 /// @brief Array2d is simply alias of Array
-template <int n, int m, typename T = double>
+template <int n, int m, typename T>
 using Array2d = Array<n, m, T>;
 
 #endif

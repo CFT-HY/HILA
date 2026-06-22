@@ -14,6 +14,9 @@ $(info ########################################################################)
 
 ### Define compiler and options
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler - use cray CC wrapper
 CC := hipcc
 LD := hipcc
@@ -22,7 +25,7 @@ LD := hipcc
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc -Wno-cuda-compat
+CXXFLAGS := -std=$(CPPSTD) -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc -Wno-cuda-compat
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
 CXXFLAGS_NOOPT := $(CXXFLAGS)
 CXXFLAGS += -O3
@@ -33,7 +36,7 @@ CXXFLAGS += -O3
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=$(CPPSTD) -Wp,-v - 2>&1 | grep "^ "))
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include

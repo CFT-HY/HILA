@@ -22,13 +22,16 @@ $(info ########################################################################)
 
 ### Define compiler and options
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler - use cray CC wrapper
 CC := CC
 LD := CC
 
 # Define compilation flags
-CXXFLAGS  := -Ofast -flto=auto -x c++ --std=c++17 -fno-rtti
-CXXFLAGS_NOOPT := -O1 -flto=auto -x c++ --std=c++17 -fno-rtti
+CXXFLAGS  := -Ofast -flto=auto -x c++ --std=$(CPPSTD) -fno-rtti
+CXXFLAGS_NOOPT := -O1 -flto=auto -x c++ --std=$(CPPSTD) -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
@@ -42,7 +45,7 @@ CXXFLAGS_NOOPT := -O1 -flto=auto -x c++ --std=c++17 -fno-rtti
 # Then the good practice to get HILAPP_INCLUDE_LIST is call CC -xc++ --std=c++17 -Wp,-v - otherthan us g++
 
 # HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | CC -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | CC -xc++ --std=$(CPPSTD) -Wp,-v - 2>&1 | grep "^ "))
 
 
 # stddef.h again!

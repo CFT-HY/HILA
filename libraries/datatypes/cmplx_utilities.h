@@ -4,11 +4,7 @@
 // This header file is meant to be included from cmplx.h
 /**
  * @file cmplx_utilities.h
-<<<<<<< Updated upstream
  * @brief defines complex template utilities, in namespace hila::
-=======
- * @brief defines complex template utilities, in namespace hila
->>>>>>> Stashed changes
  *
  */
 

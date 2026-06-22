@@ -47,7 +47,9 @@ void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RE
             if (!antiperiodic) {
                 payload.gather_elements(buffer, index_list, n, lattice);
             } else {
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
                 payload.gather_elements_negated(buffer, index_list, n, lattice);
+#endif
             }
         } else {
             // without it, can do the full block
@@ -60,7 +62,9 @@ void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RE
         if (!antiperiodic)
             payload.gather_elements(buffer, index_list, n, lattice);
         else {
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
             payload.gather_elements_negated(buffer, index_list, n, lattice);
+#endif
         }
     }
 #endif
@@ -1005,20 +1009,28 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     return get_elements(clist, bcast);
 }
 
+template <typename T>
+std::pair<CoordinateVector, CoordinateVector>
+Field<T>::get_range_from_slice(const CoordinateVector &slice) const {
+
+    CoordinateVector cmin, cmax;
+    foralldir (d) {
+        if (slice[d] < 0) {
+            cmin[d] = 0;
+            cmax[d] = fs->mylattice.size(d) - 1;
+        } else {
+            cmin[d] = cmax[d] = slice[d];
+        }
+    }
+    return std::make_pair(cmin, cmax);
+}
 
 /// Get a slice (subvolume)
 template <typename T>
 std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
 
     assert_all_ranks_present();
-    CoordinateVector cmin, cmax;
-    foralldir (d)
-        if (c[d] < 0) {
-            cmin[d] = 0;
-            cmax[d] = lattice.size(d) - 1;
-        } else {
-            cmin[d] = cmax[d] = c[d];
-        }
+    auto [cmin,cmax] = get_range_from_slice(c);
     return get_subvolume(cmin, cmax, bcast);
 }
 
@@ -1253,6 +1265,14 @@ void Field<T>::block_from(Field<T> &orig) {
     lattice_struct *parentlat = orig.fs->mylattice.ptr();
     lattice_struct *currentlat = lattice.ptr();
 
+    if (blocklat == parentlat) {
+        // No blocking, just copy
+        lattice.switch_to(blocklat);
+        (*this) = orig;
+        lattice.switch_to(currentlat);
+        return;
+    }
+
     assert(blocklat->parent == parentlat && "blocking must happen from parent lattice Field");
 
     // If no sites on this node there's nothing to do
@@ -1300,15 +1320,23 @@ void Field<T>::block_from(Field<T> &orig) {
 template <typename T>
 void Field<T>::unblock_to(Field<T> &target) const {
     assert(this->is_initialized(ALL) && "unblock_to()-method field is not initialized");
-    target.check_alloc();
 
     assert_all_ranks_present();
 
     lattice_struct *blocklat = this->fs->mylattice.ptr();
-    lattice_struct *parentlat = target.fs->mylattice.ptr();
     lattice_struct *currentlat = lattice.ptr();
+    lattice_struct *parentlat = blocklat->parent;
 
-    assert(blocklat->parent == parentlat && "unblocking must happen to parent lattice Field");
+    assert((!target.is_allocated() || target.fs->mylattice.ptr() == parentlat) &&
+           "unblocking must happen to parent lattice Field");
+
+    if (blocklat == parentlat) {
+        // just a straight copy in this case
+        lattice.switch_to(blocklat);
+        target = *this;
+        lattice.switch_to(currentlat);
+        return;
+    }
 
     // If no sites on this node there's nothing to do
     if (blocklat->mynode.volume == 0)

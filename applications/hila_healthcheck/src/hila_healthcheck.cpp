@@ -331,7 +331,7 @@ void test_set_elements_and_select() {
     std::vector<Complex<double>> vals;
 
 
-    if (hila::myrank() == 0) {
+    if_rank0 () {
         int k = 1;
         for (int i = 0; i <= 50; i++) {
             foralldir (d)
@@ -474,7 +474,7 @@ void test_subvolumes() {
             auto slice = f.get_slice(c);
 
             vol /= lattice.size(d);
-            if (hila::myrank() == 0) {
+            if_rank0 () {
 
                 report_pass(hila::prettyprint(NDIM - (int)d - 1) + "-dimensional slice size " +
                                 hila::prettyprint(vol),
@@ -912,7 +912,6 @@ void test_element_operations() {
  */
 void test_extended() {
 
-#if NDIM > 1
     // ExtendedPrecision type test with T = double
     Field<double> g;
 
@@ -927,86 +926,42 @@ void test_extended() {
 
     report_pass("ExtendedPrecision comparison ops", ok ? 0 : 1, 1e-20);
 
-    for (double mag = 1e8; mag <= 1e+32; mag *= 1e8) {
+    double power = 150.0 / lattice.volume();
 
-        size_t nsqr = 0, nmag = 0, n1 = 0;
+    onsites (ALL) {
+        auto i = SiteIndex(X.coordinates()).value;
+        g[X] = exp(-(i * power));
+    }
 
-        onsites (ALL) {
-            if (X.x() % 2 == 0) {
-                if (X.y() % 2 == 0) {
-                    g[X] = sqr(mag);
-                    nsqr += 1;
-                } else {
-                    g[X] = mag;
-                    nmag += 1;
-                }
-            } else {
-                g[X] = 1;
-                n1 += 1;
-            }
-        }
-        ExtendedPrecision ev = 0;
-        double s = 0;
+    ExtendedPrecision ev = 0;
+    double s = 0;
+    float f = 0;
+
+    for (int i = 0; i < 100; i++) {
         onsites (ALL) {
             ev += g[X];
             s += g[X];
+            f += g[X];
         }
-
-        double result = n1 + nmag * mag + nsqr * sqr(mag);
-
-        // ev -= lattice.volume() / 2;
-        // ev -= mag * (lattice.volume() / 4);
-        // ev -= sqr(mag) * (lattice.volume() / 4);
-
-        // above multiplication loses precision!  Subtracting
-        // here step-by-step
-
-        ExtendedPrecision res = 0, r;
-        r = sqr(mag);
-        r *= nsqr;
-        res = r;
-
-        r = mag;
-        r *= nmag;
-        res += r;
-
-        r = 1;
-        r *= n1;
-        res += r;
-
-        ev -= res;
-        s -= res.to_double();
-
-
-        // for (int i = 0; i < n1; i++) {
-        //     ev -= 1;
-        //     s -= 1;
-        // }
-
-
-        // for (int i = 0; i < lattice.volume() / 4; i++) {
-        //     ev -= mag;
-        //     ev -= sqr(mag);
-        //     s -= mag;
-        //     s -= sqr(mag);
-        // }
-
-        // s -= sqr(mag) * lattice.volume() / 4;
-        // s -= mag * lattice.volume() / 4;
-        // s -= lattice.volume() / 2;
-
-        // hila::out0 << "RES " << ev.value << " + " << ev.compensation << " + " <<
-        // ev.compensation2
-        //           << '\n';
-
-
-        std::stringstream ssres;
-        ssres << "Extended reduction residual w. delta " << mag << " : " << ev.to_double() / result
-              << " (double " << s / result << ")";
-
-        report_pass(ssres.str(), ev.to_double() / result, 1e-20);
     }
-#endif
+
+    double result = ev.to_double();
+
+    for (int i = 0; i < 100; i++) {
+        onsites (ALL) {
+            ev += -g[X];
+            s += -g[X];
+            f += -g[X];
+        }
+    }
+
+    // hila::out0 << ev.value << ' ' << ev.compensation << ' ' << ev.compensation2 << '\n';
+
+    std::stringstream ssres;
+    ssres << "ExtendedPrecision reduction: residual " << ev.to_double() / result << " (double "
+          << s / result << ", float " << f / result << ")";
+
+    report_pass(ssres.str(), ev.to_double() / result, 1e-25);
 }
 
 
@@ -1112,8 +1067,6 @@ void test_clusters() {
 #endif
 
 #endif
-
-
     }
 }
 //--------------------------------------------------------------------------------

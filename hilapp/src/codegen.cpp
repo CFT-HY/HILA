@@ -12,9 +12,6 @@
 #include "toplevelvisitor.h"
 #include "stringops.h"
 
-std::string looping_var;
-std::string parity_name;
-
 /// Used in lattice loop generation
 std::string parity_str(Parity p) {
     switch (p) {
@@ -105,12 +102,23 @@ void TopLevelVisitor::create_reduction_list(std::list<var_info> &vi_list,
 /// Helper for printing filename and line on the file
 ///////////////////////////////////////////////////////////////////////////////
 
+std::string TopLevelVisitor::get_filename(Stmt *S) {
+    auto nameref = srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin());
+    auto rp = nameref.rfind('/');
+    if (rp != StringRef::npos)
+        nameref = nameref.substr(rp + 1);
+    return nameref.str();
+}
+
+unsigned TopLevelVisitor::get_linenumber(Stmt *S) {
+    return srcMgr.getSpellingLineNumber(get_real_range(S->getSourceRange()).getBegin());
+}
+
 std::string TopLevelVisitor::get_filename_and_line(Stmt *S) {
-    std::stringstream result;
-    result << "File " << srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin()).str()
-           << " on line "
-           << srcMgr.getSpellingLineNumber(get_real_range(S->getSourceRange()).getBegin());
-    return result.str();
+    std::string result;
+
+    result = "File \"" + get_filename(S) + "\" on line " + std::to_string(get_linenumber(S));
+    return result;
 }
 
 
@@ -155,10 +163,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         code << "hila::check_that_rng_is_initialized();\n";
     }
 
-    looping_var = "HILA_index_";
-    parity_name = "HILA_parity_";
-
-    generate_parity_code(code, parity_name);
+    generate_parity_code(code, parity_var_name);
     generate_selection_code(code);
 
     // then, generate new names for field variables in loop
@@ -209,7 +214,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::generate_parity_code(std::stringstream &code, std::string &parity_name) {
+void TopLevelVisitor::generate_parity_code(std::stringstream &code,
+                                           const std::string &parity_name) {
 
     if (loop_info.parity_value == Parity::none) {
         // now unknown
@@ -221,8 +227,12 @@ void TopLevelVisitor::generate_parity_code(std::stringstream &code, std::string 
         }
         loop_info.parity_str = parity_name;
 
-    } else
+        loop_info.need_loop_coordinate = true;
+    } else {
         loop_info.parity_str = parity_str(loop_info.parity_value);
+        if (loop_info.parity_value != Parity::all)
+            loop_info.need_loop_coordinate = true;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -270,17 +280,21 @@ void TopLevelVisitor::handle_field_info(std::stringstream &code, bool is_cow, St
             }
         }
 
-    for (field_info &l : field_info_list) {
-        code << "if (" << l.new_name << ".fs->mylattice.ptr() != lattice.ptr()) {"
-             << "hila::out0 << \"" << get_filename_and_line(S) << ": Field " << l.old_name
-             << " initialized on different lattice\\n\";\n"
-             << "hila::terminate(1);\n}\n";
-    }
+    // for (field_info &l : field_info_list) {
+
+    //     code << "if (" << l.new_name << ".fs->mylattice.ptr() != lattice.ptr()) {"
+    //          << "hila::out0 << \"" << get_filename_and_line(S) << ": Field " << l.old_name
+    //          << " initialized on different lattice\\n\";\n"
+    //          << "hila::terminate(1);\n}\n";
+    // }
+
+    code << "const char * hila_this_file = \"" << get_filename(S) << "\";\n";
 
     // Check that read fields are initialized
     for (field_info &l : field_info_list) {
+        std::string init_par{"Parity::none"};
+
         if (l.is_read_nb || l.is_read_atX) {
-            std::string init_par;
             if (loop_info.parity_value == Parity::all || (l.is_read_nb && l.is_read_atX)) {
                 init_par = "ALL";
             } else {
@@ -295,14 +309,17 @@ void TopLevelVisitor::handle_field_info(std::stringstream &code, bool is_cow, St
             // be initialized
             // actually, we do now -- the "out_only" keyword
 
-            if (cmdline::check_initialization) {
+            // if (cmdline::check_initialization) {
 
-                code << "if (!" << l.new_name << ".is_initialized(" << init_par << ")) {\n";
-                code << "hila::out0 << \"" << get_filename_and_line(S) << ":\\n Variable "
-                     << l.old_name << " is not properly initialized\\n\";\n";
-                code << "hila::terminate(1);\n}\n";
-            }
+            //     code << "if (!" << l.new_name << ".is_initialized(" << init_par << ")) {\n";
+            //     code << "hila::out0 << \"" << get_filename_and_line(S) << ":\\n Variable "
+            //          << l.old_name << " is not properly initialized\\n\";\n";
+            //     code << "hila::terminate(1);\n}\n";
+            // }
         }
+
+        code << l.new_name << ".check_init(\"" << l.old_name << "\", " << init_par
+             << ", hila_this_file, " << get_linenumber(S) << ");\n";
     }
 }
 

@@ -721,6 +721,12 @@ std::string prettyprint(const Algebra<SU2<T>> &A, int prec = 8) {
 }
 } // namespace hila
 
+// type helpers
+template <typename group>
+struct is_su2 : std::false_type {};
+
+template <typename T>
+struct is_su2<SU2<T>> : std::true_type {};
 
 // SU2 matrix multiplication routines ------------------------
 //#define nn_a(x, y) (x.d * y.a + x.a * y.d - x.b * y.c + x.c * y.b)

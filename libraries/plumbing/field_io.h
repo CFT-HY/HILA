@@ -6,6 +6,12 @@
 
 #include "plumbing/field.h"
 
+#if defined(USE_FMT)
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
+// #include <print>
+#endif
+
 namespace hila {
 // Define this as template, in order to avoid code generation if the function is not needed -
 // a bit crazy
@@ -75,6 +81,48 @@ bool close_file(const std::string &filename, S &fstream) {
 
 //////////////////////////////////////////////////////////////////////////////////
 
+#if defined(USE_FMT)
+
+/// Write the field to a file stream
+template <typename T>
+void Field<T>::write(std::FILE *outputfile, int precision) const {
+
+    constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
+    constexpr size_t write_size = sites_per_write * sizeof(T);
+
+    assert_all_ranks_present();
+
+    std::vector<CoordinateVector> coord_list(sites_per_write);
+    T *buffer = nullptr;
+    if_rank0 ()
+        buffer = (T *)memalloc(write_size);
+
+    auto mylat = fs->mylattice;
+    CoordinateVector size = mylat.size();
+
+    for (size_t i = 0; i < mylat.volume(); i += sites_per_write) {
+        size_t sites = std::min(sites_per_write, mylat.volume() - i);
+        for (size_t j = 0; j < sites; j++)
+            coord_list[j] = mylat->global_coordinates(i + j);
+
+        if (sites < sites_per_write)
+            coord_list.resize(sites);
+
+        fs->gather_elements(buffer, coord_list);
+        if_rank0 () {
+            for (size_t j = 0; j < sites; j++) {
+                // outputfile << buffer[j] << '\n';
+                fmt::print(outputfile, "{}\n", buffer[j]);
+            }
+        }
+    }
+
+    if_rank0 ()
+        std::free(buffer);
+}
+
+#endif
+
 /// Write the field to a file stream
 template <typename T>
 void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) const {
@@ -87,7 +135,10 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
         outputfile.precision(precision);
 
     std::vector<CoordinateVector> coord_list(sites_per_write);
-    T *buffer = (T *)memalloc(write_size);
+    T *buffer = nullptr;
+    if (hila::myrank() == 0)
+        buffer = (T *)memalloc(write_size);
+
     auto mylat = fs->mylattice;
     CoordinateVector size = mylat.size();
 
@@ -111,16 +162,36 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
         }
     }
 
-    std::free(buffer);
+    if (hila::myrank() == 0)
+        std::free(buffer);
 }
+
 
 /// Write the Field to a named file replacing the file
 template <typename T>
 void Field<T>::write(const std::string &filename, bool binary, int precision) const {
+
+#if !defined(USE_FMT)
     std::ofstream outputfile;
     hila::open_output_file(filename, outputfile, binary);
     write(outputfile, binary, precision);
     hila::close_file(filename, outputfile);
+#else
+    std::FILE *outputfile = nullptr;
+    if_rank0 () {
+        outputfile = std::fopen(filename.c_str(), "w");
+    }
+    bool ok = (outputfile != nullptr);
+    hila::broadcast(ok);
+    if (!ok) {
+        hila::error("Could not open file " + filename);
+    }
+
+    write(outputfile, precision);
+    if_rank0 () {
+        fclose(outputfile);
+    }
+#endif
 }
 
 /// Write a list of fields into an output stream
@@ -160,7 +231,10 @@ void Field<T>::read(std::ifstream &inputfile) {
     mark_changed(ALL);
 
     std::vector<CoordinateVector> coord_list(sites_per_read);
-    T *buffer = (T *)memalloc(read_size);
+    T *buffer = nullptr;
+    if (hila::myrank() == 0)
+        buffer = (T *)memalloc(read_size);
+
     auto mylat = fs->mylattice;
     CoordinateVector size = mylat.size();
 
@@ -178,7 +252,8 @@ void Field<T>::read(std::ifstream &inputfile) {
         fs->scatter_elements(buffer, coord_list);
     }
 
-    std::free(buffer);
+    if (hila::myrank() == 0)
+        std::free(buffer);
 }
 
 /// Read the Field from a stream
@@ -195,7 +270,9 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
     mark_changed(ALL);
 
     std::vector<CoordinateVector> coord_list(sites_per_read);
-    T *buffer = (T *)memalloc(read_size);
+    T *buffer = nullptr;
+    if_rank0 ()
+        buffer = (T *)memalloc(read_size);
 
     CoordinateVector lsize = lattice.size();
     int scalef[NDIM];
@@ -243,7 +320,8 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
         }
     }
 
-    std::free(buffer);
+    if_rank0 ()
+        std::free(buffer);
 }
 
 // Read Field contents from the beginning of a file
@@ -283,9 +361,11 @@ static void read_fields(const std::string &filename, fieldtypes &...fields) {
 /// Each element is written on a single line
 /// TODO: more formatting?
 
+
 template <typename T>
-void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                               const CoordinateVector &cmax, int precision) const {
+void Field<T>::write_subvolume_internal(std::ofstream &outputfile, const CoordinateVector &cmin,
+                                        const CoordinateVector &cmax, int precision, bool binary,
+                                        bool to_float) const {
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
 
@@ -305,13 +385,26 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
     size_t n_write = std::min(sites_per_write, sites);
 
     std::vector<CoordinateVector> coord_list(n_write);
-    T *buffer = (T *)memalloc(n_write * sizeof(T));
+    T *buffer = nullptr;
+    if_rank0 ()
+        buffer = (T *)memalloc(n_write * sizeof(T));
+
+    // check if need to convert to float
+    bool convert_to_float = false;
+    float *floatbuf = nullptr;
+    if (binary && to_float && !std::is_same<hila::arithmetic_type<T>, float>::value) {
+        convert_to_float = true;
+
+        if_rank0 ()
+            floatbuf = (float *)memalloc(n_write * sizeof(T) / sizeof(hila::arithmetic_type<T>) *
+                                         sizeof(float));
+    }
 
     CoordinateVector c;
 
     size_t i = 0, j = 0;
 
-    if_rank0 () {
+    if (hila::myrank() == 0 && !binary) {
         outputfile.precision(precision);
     }
 
@@ -326,52 +419,80 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
             fs->gather_elements(buffer, coord_list);
 
             if_rank0 () {
-                for (size_t k = 0; k < i; k++) {
-                    for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
-                        outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
+                if (!binary) {
+                    for (size_t k = 0; k < i; k++) {
+                        for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
+                            outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
+                        }
+                        outputfile << '\n';
                     }
-                    outputfile << '\n';
+                } else {
+                    if (!convert_to_float) {
+                        outputfile.write((char *)buffer, i * sizeof(T));
+
+                    } else {
+                        float *fp = floatbuf;
+                        for (size_t k = 0; k < i; k++) {
+                            for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
+                                *(fp++) = hila::get_number_in_var(buffer[k], l);
+                            }
+                        }
+                        outputfile.write((char *)floatbuf, (fp - floatbuf)*sizeof(float));
+                    }
                 }
             }
             i = 0;
         }
     }
+    if_rank0 () {
+        std::free(buffer);
+        if (convert_to_float)
+            std::free(floatbuf);
+    }
 }
 
-
 template <typename T>
-void Field<T>::write_subvolume(const std::string &filename, const CoordinateVector &cmin,
-                               const CoordinateVector &cmax, int precision) const {
+void Field<T>::write_subvolume_internal(const std::string &filename, const CoordinateVector &cmin,
+                                        const CoordinateVector &cmax, int precision, bool binary,
+                                        bool to_float) const {
 
     std::ofstream out;
     hila::open_output_file(filename, out, false);
-    write_subvolume(out, cmin, cmax, precision);
+    write_subvolume_internal(out, cmin, cmax, precision, binary, to_float);
     hila::close_file(filename, out);
 }
 
-// Write a subspace (slice) of the original lattice.  Here
-// slice[d] = fixed coordinate value, or < 0: run the dimension through.
-// For example, slice = {5,2,-1,0}; prints the line along z-axis at (x,y,t) = (5,2,0)
-// Outf is either filename or ofstream
+template <typename T>
+template <typename Outf>
+void Field<T>::write_subvolume(Outf &&output, const CoordinateVector &cmin,
+                               const CoordinateVector &cmax, int precision) const {
+    write_subvolume_internal(output, cmin, cmax, precision, false, false);
+}
+
+
+template <typename T>
+template <typename Outf>
+void Field<T>::write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
+                                      const CoordinateVector &cmax, bool to_float) const {
+    write_subvolume_internal(output, cmin, cmax, 0, true, to_float);
+}
+
+
+template <typename T>
+template <typename Outf>
+void Field<T>::write_slice(Outf &&outf, const CoordinateVector &slice, int precision) const {
+
+    auto [cmin, cmax] = get_range_from_slice(slice);
+    write_subvolume(outf, cmin, cmax, precision);
+}
 
 template <typename T>
 template <typename outf_type>
-void Field<T>::write_slice(outf_type &outf, const CoordinateVector &slice, int precision) const {
+void Field<T>::write_slice_binary(outf_type &&outf, const CoordinateVector &slice,
+                                  bool to_float) const {
 
-    static_assert(std::is_same<outf_type, std::string>::value ||
-                      std::is_same<outf_type, std::ofstream>::value,
-                  "file name / output stream argument in write_slice()?");
-
-    CoordinateVector cmin, cmax;
-    foralldir (d) {
-        if (slice[d] < 0) {
-            cmin[d] = 0;
-            cmax[d] = fs->mylattice.size(d) - 1;
-        } else {
-            cmin[d] = cmax[d] = slice[d];
-        }
-    }
-    write_subvolume(outf, cmin, cmax, precision);
+    auto [cmin, cmax] = get_range_from_slice(slice);
+    write_subvolume_binary(outf, cmin, cmax, to_float);
 }
 
 

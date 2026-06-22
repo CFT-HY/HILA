@@ -7,12 +7,15 @@
 
 ### Define compiler and options
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler
 CC := mpic++
 LD := mpic++
 
 # Define compilation flags
-CXXFLAGS_NOOPT := -x c++ --std=c++17 -fno-rtti -march=native -fopenmp 
+CXXFLAGS_NOOPT := -x c++ --std=$(CPPSTD) -fno-rtti -march=native -fopenmp 
 CXXFLAGS := $(CXXFLAGS_NOOPT) -Ofast -mavx2 -mfma
 # CXXFLAGS := -g -x c++ --std=c++17
 

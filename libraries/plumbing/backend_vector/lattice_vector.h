@@ -432,7 +432,7 @@ struct backend_lattice_struct {
     vectorized_lattice_struct<vector_size> *get_vectorized_lattice() {
         // Create one if not already created
 
-        assert(lattice.ptr() == defined_lattices.at(0) &&
+        assert(lattice.ptr() == hila::defined_lattices.at(0) &&
                "Vectorized lattice layout only possible with main (original) lattice");
 
 

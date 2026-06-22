@@ -19,14 +19,17 @@ else
 	CC := nvcc
 endif	
 
-LD := $(CC) -std c++17
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
+LD := $(CC) -std $(CPPSTD)
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
 ifndef CUDA_ARCH
 	CUDA_ARCH = 61
 endif
 
-CXXFLAGS := -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --restrict
+CXXFLAGS := -dc -x cu -std $(CPPSTD) -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --restrict
 CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
  
 ifndef DEBUG

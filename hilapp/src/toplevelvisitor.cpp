@@ -870,7 +870,7 @@ bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
 bool TopLevelVisitor::handle_constant_ref(Expr *E) {
 
     APValue val;
-    if (!E->isCXX11ConstantExpr(*Context, &val, nullptr))
+    if (!E->isCXX11ConstantExpr(HILAPP_ARGS_isCXX11ConstantExpr(*Context, &val, nullptr)))
         return false; // nothing
 
     // no need to do anything if not kernelized
@@ -1334,6 +1334,12 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // This reached only if s is not Expr
 
+    if (handle_constexpr_if(s)) {
+        parsing_state.skip_children = 1;
+        return true;
+    }
+
+
     // start {...} -block or other compound
     if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s) || isa<WhileStmt>(s) ||
         isa<DoStmt>(s) || isa<SwitchStmt>(s) || isa<ConditionalOperator>(s)) {
@@ -1398,6 +1404,66 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     return true;
 }
+
+////////////////////////////////////////////////////////////////////////////
+///  Handle if constexpr () -statements
+///  Comment out the non-selected branch completely, otherwise
+///  can cause problems because it is not traversed in templates
+///
+////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::handle_constexpr_if(Stmt *s) {
+
+    IfStmt *ifstmt = dyn_cast<IfStmt>(s);
+    if (!(ifstmt && ifstmt->isConstexpr()))
+        return false;
+
+    auto nondiscarded = ifstmt->getNondiscardedCase(*Context);
+    if (!nondiscarded.has_value())
+        return false;
+
+    // llvm::errs() << "Got if constexpr()\n";
+    Stmt *st = nullptr;
+
+    if (ifstmt->getInit())
+        TraverseStmt(ifstmt->getInit());
+
+    if (ifstmt->getCond())
+        TraverseStmt(ifstmt->getCond());
+
+    if (ifstmt->getThen() == nondiscarded) {
+        TraverseStmt(ifstmt->getThen());
+        if (ifstmt->getElse()) {
+            st = ifstmt->getElse();
+            // llvm::errs() << " REMOVE ELSE\n";
+        }
+    } else if (nondiscarded.value() == nullptr || ifstmt->getElse() == nondiscarded) {
+        st = ifstmt->getThen();
+        // llvm::errs() << " REMOVE THEN\n";
+        if (ifstmt->getElse()) {
+            TraverseStmt(ifstmt->getElse());
+        }
+    }
+
+    if (st != nullptr) {
+        SourceRange r =  getRangeWithSemicolon(st->getSourceRange(),false);
+        writeBuf->insert(r.getBegin(), "{}\n#if 0  // hilapp commented out\n", true, false);
+        writeBuf->insert_after(getSourceLocationAtEndOfRange(r), "\n#endif // end commented out\n", true, false);
+
+    }
+
+    // if (ifstmt->getInit())
+    //     llvm::errs() << " INIT: " << get_stmt_str(ifstmt->getInit()) << '\n';
+    // if (ifstmt->getCond())
+    //     llvm::errs() << " COND: " << get_stmt_str(ifstmt->getCond()) << '\n';
+    // if (ifstmt->getThen())
+    //     llvm::errs() << " THEN: " << get_stmt_str(ifstmt->getThen()) << '\n';
+    // if (ifstmt->getElse())
+    //     llvm::errs() << " ELSE: " << get_stmt_str(ifstmt->getElse()) << '\n';
+
+    return true;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////
 ///  List Field<> specializations
@@ -1647,7 +1713,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                         no_errors = false;
                         found_error = true;
 
-                    } else if (loop_info.parity_value == Parity::none) {
+                    } else if (false && loop_info.parity_value == Parity::none) {
                         reportDiag(DiagnosticsEngine::Level::Remark,
                                    p->parityExpr->getSourceRange().getBegin(),
                                    "simultaneous access '%0' and assignment to '%1' is "
@@ -2429,7 +2495,8 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
     //     llvm::errs() << "*** GOT PROTO # " << prototype_vector.size() << ": " <<
     //     f->getNameAsString(); SourceRange sr = f->getSourceRange(); unsigned linenumber =
     //     srcMgr.getSpellingLineNumber(sr.getBegin()); std::string name =
-    //     srcMgr.getFilename(sr.getBegin()).str(); llvm::errs() << "   -- on line " << linenumber
+    //     srcMgr.getFilename(sr.getBegin()).str(); llvm::errs() << "   -- on line " <<
+    //     linenumber
     //     << "   file " << name << '\n';
 
 
@@ -2812,8 +2879,8 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 int a = typ.find("<");
                 int b = typ.rfind(">");
                 if (b == std::string::npos) {
-                    llvm::errs()
-                        << "hilapp: error in global variable type scan, should never happen..\n";
+                    llvm::errs() << "hilapp: error in global variable type scan, should never "
+                                    "happen..\n";
                     llvm::errs() << " on " << sr.printToString(srcMgr) << '\n';
                     exit(1);
                 }

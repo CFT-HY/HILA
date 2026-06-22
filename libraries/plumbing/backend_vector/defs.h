@@ -45,16 +45,16 @@ inline void synchronize_threads() {}
 /// it's own basic types (such as AVX vectors)
 template <class T>
 struct is_avx_vector
-    : std::integral_constant<
-          bool, std::is_same<T, Vec4d>::value || std::is_same<T, Vec4q>::value ||
-                    std::is_same<T, Vec8f>::value || std::is_same<T, Vec8i>::value ||
-                    std::is_same<T, Vec8d>::value || std::is_same<T, Vec8q>::value ||
-                    std::is_same<T, Vec16f>::value || std::is_same<T, Vec16i>::value> {
+    : std::integral_constant<bool,
+                             std::is_same<T, Vec4d>::value || std::is_same<T, Vec4q>::value ||
+                                 std::is_same<T, Vec8f>::value || std::is_same<T, Vec8i>::value ||
+                                 std::is_same<T, Vec8d>::value || std::is_same<T, Vec8q>::value ||
+                                 std::is_same<T, Vec16f>::value || std::is_same<T, Vec16i>::value> {
 };
 
 template <class T>
-struct is_arithmetic : std::integral_constant<bool, std::is_arithmetic<T>::value ||
-                                                        is_avx_vector<T>::value> {};
+struct is_arithmetic
+    : std::integral_constant<bool, std::is_arithmetic<T>::value || is_avx_vector<T>::value> {};
 
 template <class T>
 struct avx_vector_type_info {
@@ -115,24 +115,19 @@ struct avx_vector_type_info<Vec16i> {
 template <class T, class U>
 struct is_assignable
     : std::integral_constant<
-          bool,
-          std::is_assignable<T, U>::value ||
-              (is_avx_vector<U>::value &&
-               ((!is_avx_vector<T>::value &&
-                 std::is_assignable<T,
-                                    typename avx_vector_type_info<U>::type>::value) ||
-                (is_avx_vector<T>::value &&
-                 (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
-                 (avx_vector_type_info<T>::elements ==
-                  avx_vector_type_info<U>::elements))))> {};
+          bool, std::is_assignable<T, U>::value ||
+                    (is_avx_vector<T>::value && is_avx_vector<U>::value &&
+                     std::is_assignable<typename avx_vector_type_info<T>::type,
+                                        typename avx_vector_type_info<U>::type>::value &&
+                     (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
+                     (avx_vector_type_info<T>::elements == avx_vector_type_info<U>::elements))> {};
 
 
 template <class T>
 struct is_floating_point
     : std::integral_constant<
-          bool,
-          std::is_floating_point<T>::value ||
-              std::is_floating_point<typename hila::avx_vector_type_info<T>::type>::value> {};
+          bool, std::is_floating_point<T>::value ||
+                    std::is_floating_point<typename hila::avx_vector_type_info<T>::type>::value> {};
 
 } // namespace hila
 
@@ -321,8 +316,7 @@ inline double reduce_prod(Vec8q v) {
 template <typename base_t, typename vector_t, typename T, typename vecT>
 T reduce_sum_in_vector(const vecT &vt) {
     constexpr int nvec = sizeof(vecT) / sizeof(vector_t);
-    static_assert(nvec == sizeof(T) / sizeof(base_t),
-                  "Mismatch in vectorized type sizes");
+    static_assert(nvec == sizeof(T) / sizeof(base_t), "Mismatch in vectorized type sizes");
     T res;
     auto *vptr = (const vector_t *)(&vt);
     base_t *bptr = (base_t *)(&res);

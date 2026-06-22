@@ -21,6 +21,9 @@ $(info ########################################################################)
 
 ### Define compiler and options
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler - use cray CC wrapper
 CC := CC
 LD := CC
@@ -29,7 +32,7 @@ LD := CC
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
+CXXFLAGS := -std=$(CPPSTD) -fno-rtti -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
 CXXFLAGS += -D__HIP_PLATFORM_AMD__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 -xhip
 

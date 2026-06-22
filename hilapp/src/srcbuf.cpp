@@ -560,9 +560,9 @@ int srcBuf::comment_range(int a, int b) {
 
     for (int i = a; i <= b; i++)
         if (buf[i] == '\n')
-            insert(i + 1, "// ", true, false);
-    insert(a, "\n// ", true, false);
-    insert(b + 1,"\n", true, false);
+            insert(i + 1, "// ", true, true);
+    insert(a, "\n// ", true, true);
+    insert(b + 1,"\n", true, true);
     return b + 1;
 }
 

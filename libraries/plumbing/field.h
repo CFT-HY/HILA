@@ -608,6 +608,28 @@ class Field {
 
 #endif
 
+    /**
+     * @internal
+     * @brief Checks that Field is appropriately initialized in loop
+     * @details If init is incorrect, print error message.
+     * @param name name of Field
+     * @param f filename
+     * @param line line in file
+     */
+
+    void check_init(const char *name, Parity p, const char *f, unsigned line) const {
+        if (p != Parity::none && !is_initialized(p)) {
+            hila::out0 << "\nERROR: File " << f << " on line " << line << " : Field \"" << name
+                       << "\" is not properly initialized\n";
+            hila::terminate(1);
+        }
+
+        if (is_allocated() && fs->mylattice.ptr() != lattice.ptr()) {
+            hila::out0 << "\nERROR: File " << f << " on line " << line << " : Field \"" << name
+                       << "\" initialized on a lattice of different size\n";
+            hila::terminate(1);
+        }
+    }
 
     /**
      * @internal
@@ -1468,6 +1490,9 @@ class Field {
 
     std::vector<T> get_slice(const CoordinateVector &c, bool broadcast = false) const;
 
+    std::pair<CoordinateVector, CoordinateVector>
+    get_range_from_slice(const CoordinateVector &slice) const;
+
     void copy_local_data(std::vector<T> &buffer) const;
     void set_local_data(const std::vector<T> &buffer);
 
@@ -1601,19 +1626,57 @@ class Field {
 
     // Writes the Field to disk
     void write(std::ofstream &outputfile, bool binary = true, int precision = 8) const;
+    // this is libfmt version
+    void write(std::FILE *outputfile, int precision = 8) const;
     void write(const std::string &filename, bool binary = true, int precision = 8) const;
 
     void read(std::ifstream &inputfile);
     void read(std::ifstream &inputfile, const CoordinateVector &insize);
     void read(const std::string &filename);
 
-    void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax, int precision = 6) const;
-    void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax, int precision = 6) const;
+    /// @internal
+    void write_subvolume_internal(std::ofstream &out, const CoordinateVector &cmin,
+                                  const CoordinateVector &cmax, int precision, bool binary,
+                                  bool to_float) const;
 
-    template <typename Out>
-    void write_slice(Out &outputfile, const CoordinateVector &slice, int precision = 6) const;
+    /// @internal
+    void write_subvolume_internal(const std::string &filename, const CoordinateVector &cmin,
+                                  const CoordinateVector &cmax, int precision, bool binary,
+                                  bool to_float) const;
+    /**
+     * @brief write out subvolume defined by subvolume corners cmin and cmax.
+     * Each element is on one line, ordered so that the x runs fastest, then y etc.
+     * @param Outf is either filename (std::string) or output stream of open file
+     * (std::ofstream)
+     */
+    template <typename Outf>
+    void write_subvolume(Outf &&output, const CoordinateVector &cmin, const CoordinateVector &cmax,
+                         int precision = 6) const;
+
+    /**
+     * @brief write subvolume as a binary file.
+     * @details Numbers are ordered so that the internal values are fastest, followed by
+     * x,y,etc. coordinates.  Param to_float = true converts double values to float, saving space.
+     */
+    template <typename Outf>
+    void write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
+                                const CoordinateVector &cmax, bool to_float = false) const;
+
+    /**
+     * @brief Write subspace (slice) of the original field.
+     * @details parameter slice (CoordinateVector) is either
+     * a fixed coordinate value >= 0 or negative value, implying that this coordinate is run
+     * through. 
+     * For example, slice = {5,2,-1,0}; prints the line along z-axis at (x,y,t) = (5,2,0)
+     * @param Outf is either filename (std::string) or output stream of open file
+     * (std::ofstream)
+     */
+    template <typename Outf>
+    void write_slice(Outf &&output, const CoordinateVector &slice, int precision = 6) const;
+
+    template <typename Outf>
+    void write_slice_binary(Outf &&output, const CoordinateVector &slice,
+                            bool to_float = false) const;
 
     /**
      * @brief Sum reduction of Field

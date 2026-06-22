@@ -19,12 +19,15 @@ $(info ########################################################################)
 #CC = nvcc -v -ccbin /appl/spack/v016/install-tree/gcc-4.8.5/gcc-10.3.0-viumsx/bin/g++
 #LD = nvcc -ccbin /appl/spack/v016/install-tree/gcc-4.8.5/gcc-10.3.0-viumsx/bin/gcc -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler
 CC = nvcc 
 LD = nvcc -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict
 
 # Define compilation flags  -  80 for Ampere
-CXXFLAGS_NOOPT := -dc -std=c++17 -x cu -gencode arch=compute_80,code=sm_80 --restrict 
+CXXFLAGS_NOOPT := -dc -std=$(CPPSTD) -x cu -gencode arch=compute_80,code=sm_80 --restrict 
 CXXFLAGS := $(CXXFLAGS_NOOPT) -O3 --use_fast_math 
 # 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
 # it allows definition of a function in multiple compilation units as required by c++ standard!!  

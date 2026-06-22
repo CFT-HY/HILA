@@ -645,80 +645,87 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
         if (is_X_index_type || objtype.find("Lattice") != std::string::npos) {
             // now it is a method of X
 
+            bool evenfirst = is_macro_defined("EVEN_SITES_FIRST");
+
             // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
 
             special_function_call sfc;
             sfc.fullExpr = Call;
             sfc.scope = parsing_state.scope_level;
             sfc.name = name;
-            sfc.argsExpr = nullptr;
-            sfc.args_string.clear();
 
             SourceLocation sl = findChar(Call->getSourceRange().getBegin(), '(');
             if (sl.isInvalid()) {
                 reportDiag(DiagnosticsEngine::Level::Fatal, Call->getSourceRange().getBegin(),
                            "open parens '(' not found, internal error");
-                exit(1);
+                return false;
             }
             sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
 
-            // for non-cuda code replace only cases which are needed
+            // Now the replace_range contains X.smth(a) including the open paren
+
+            // for non-GPU code replace only cases which are needed
             bool replace_this = true;
 
-            std::string l_lattice;
+            // needed for non-evenfirst
+            if (is_X_index_type)
+                loop_info.need_loop_coordinate = true;
 
-            if (target.kernelize)
-                l_lattice = "get_dev_";
-            else
-                l_lattice = "hila_loop_lattice.";
+            std::string call_start;
+
+            if (evenfirst) {
+                if (target.kernelize)
+                    call_start = "get_dev_";
+                else
+                    call_start = "hila_loop_lattice.";
+            }
 
             if (name == "coordinates") {
-                sfc.replace_expression = l_lattice + "coordinates(";
-                sfc.add_loop_var = true;
-
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "coordinates(" + looping_var;
+                else {
+                    // need to adjust the replace range, because the closing paren must also be removed
+                    sfc.replace_range = sfc.fullExpr->getSourceRange();
+                    sfc.replace_expression = looping_cv;
+                }
             } else if (name == "parity") {
-                sfc.replace_expression = l_lattice + "site_parity(";
-                sfc.add_loop_var = true;
-
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "site_parity(" + looping_var;
+                else
+                    sfc.replace_expression = looping_cv + ".parity(";
             } else if (name == "coordinate") {
-                sfc.replace_expression = l_lattice + "coordinate(";
-                sfc.argsExpr = MCall->getArg(0);
-                sfc.add_loop_var = true;
-
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ',';
+                else
+                    sfc.replace_expression = looping_cv + ".e(";
             } else if (name == "x") {
-                sfc.replace_expression = l_lattice + "coordinate(";
-                sfc.args_string = "e_x";
-                sfc.add_loop_var = true;
-
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_x";
+                else
+                    sfc.replace_expression = looping_cv + ".e(e_x";
             } else if (name == "y") {
-                sfc.replace_expression = l_lattice + "coordinate(";
-                sfc.args_string = "e_y";
-                sfc.add_loop_var = true;
-
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_y";
+                else
+                    sfc.replace_expression = looping_cv + ".e(e_y";
             } else if (name == "z") {
-                sfc.replace_expression = l_lattice + "coordinate(";
-                sfc.args_string = "e_z";
-                sfc.add_loop_var = true;
-
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_z";
+                else
+                    sfc.replace_expression = looping_cv + ".e(e_z";
             } else if (name == "t") {
-                sfc.replace_expression = l_lattice + "coordinate(";
-                sfc.args_string = "e_t";
-                sfc.add_loop_var = true;
+                if (evenfirst)
+                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_t";
+                else
+                    sfc.replace_expression = looping_cv + ".e(e_t";
 
-                // } else if (name == "random") {
-                //     sfc.replace_expression = "hila::random(";
-                //     sfc.add_loop_var = false;
-
+            // these two are lattice. -methods
             } else if (name == "size") {
                 sfc.replace_expression = "hila_loop_lattice_size(";
-                sfc.add_loop_var = false;
                 replace_this = target.kernelize;
-
             } else if (name == "volume") {
                 sfc.replace_expression = "hila_loop_lattice_volume(";
-                sfc.add_loop_var = false;
                 replace_this = target.kernelize;
-
             } else {
                 if (is_X_index_type) {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
@@ -749,12 +756,10 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             // llvm::errs() << get_stmt_str(Call) << '\n';
             special_function_call sfc;
             sfc.fullExpr = Call;
-            sfc.argsExpr = nullptr;
             sfc.scope = parsing_state.scope_level;
             sfc.name = name;
             sfc.replace_expression = "hila::random()";
             sfc.replace_range = Call->getSourceRange(); // replace full range
-            sfc.add_loop_var = false;
             special_function_call_list.push_back(sfc);
             return true;
         }

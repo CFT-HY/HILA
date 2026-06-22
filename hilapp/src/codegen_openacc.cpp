@@ -21,9 +21,6 @@
 #include "toplevelvisitor.h"
 #include "stringops.h"
 
-extern std::string looping_var;
-extern std::string parity_name;
-
 // add pragma
 void GeneralVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
 

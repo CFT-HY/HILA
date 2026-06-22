@@ -12,7 +12,10 @@ $(info ########################################################################)
 CC := hipcc
 LD := hipcc
 
-HILA_CPP_STD := --std=c++20
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
+HILA_CPP_STD := --std=$(CPPSTD)
 
 # "Base" HILA CXX and link flags. Need -xhip because .cpt is nonstandard so the compiler doesn't know how to deal with them otherwise
 CXXFLAGS := -x hip $(HILA_CPP_STD) -fno-rtti -fgpu-rdc

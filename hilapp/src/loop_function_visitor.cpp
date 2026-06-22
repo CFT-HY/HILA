@@ -125,7 +125,6 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
 
         // flag assignments from Stmt
         if (is_assignment_expr(s, &assignment_op, is_compound_assign)) {
-            // This checks the "element<> -style assigns which we do not want now!
             assign_stmt = s;
             is_assignment = true;
             // next visit to declrefexpr will be to the assigned to variable
@@ -373,7 +372,6 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
                 special_function_call sfc;
                 sfc.fullExpr = Call;
                 sfc.name = name;
-                sfc.argsExpr = nullptr;
 
                 SourceLocation sl = findChar(Call->getSourceRange().getBegin(), '(');
                 if (sl.isInvalid()) {
@@ -386,11 +384,9 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
                 bool replace_this = true; // for non-cuda code replace only cases which are needed
                 if (name == "size") {
                     sfc.replace_expression = "hila_loop_lattice_size(";
-                    sfc.add_loop_var = false;
                     replace_this = target.kernelize;
                 } else if (name == "volume") {
                     sfc.replace_expression = "hila_loop_lattice_volume(";
-                    sfc.add_loop_var = false;
                     replace_this = target.kernelize;
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),

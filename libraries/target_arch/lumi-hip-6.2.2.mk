@@ -11,6 +11,9 @@ $(info ########################################################################)
 
 ### Define compiler and options
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++20
+
 # Define compiler - use cray CC wrapper
 CC := hipcc
 LD := hipcc
@@ -19,7 +22,7 @@ LD := hipcc
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -x hip --hip-link --std=c++20 --stdlib=libc++ -fno-rtti --rocm-path=${ROCM_PATH} -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
+CXXFLAGS := -x hip --hip-link --std=$(CPPSTD) --stdlib=libc++ -fno-rtti --rocm-path=${ROCM_PATH} -fgpu-rdc --offload-arch=gfx90a -D__HIP_PLATFORM_AMD__=1
 CXXFLAGS += -D__HIP_PLATFORM_AMD__=1 
 CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1 
 GCC_CXX_INCLUDES := \
@@ -49,7 +52,7 @@ CXXFLAGS += -O3
 # is inface Clang 17.0.1, whcih know the pathes of Clang c++ 17 std include files.
 # Then the good practice to get HILAPP_INCLUDE_LIST is call CC -xc++ --std=c++17 -Wp,-v - otherthan us g++
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | CC -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | CC -xc++ --std=$(CPPSTD) -Wp,-v - 2>&1 | grep "^ "))
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include

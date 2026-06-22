@@ -5,19 +5,22 @@
 #
 #
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
 ifndef CUDA_VERSION
 	CUDA_VERSION = 11.8
 endif
 CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
 # CC = /usr/bin/nvcc
-LD := $(CC) -std c++17
+LD := $(CC) -std $(CPPSTD)
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
 ifndef CUDA_ARCH
 	CUDA_ARCH = 86
 endif
-CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
+CXXFLAGS := -O3 -dc -x cu -std $(CPPSTD) -DCUDA 
 CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --use_fast_math --restrict
 
 CXXFLAGS_NOOPT := -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}

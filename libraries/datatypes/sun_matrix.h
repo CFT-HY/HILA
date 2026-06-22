@@ -734,6 +734,20 @@ void project_to_algebra_bilinear(const MT (&w)[N][N],
     project_to_algebra_bilinear(w, omat, genlist);
 }
 
+/// $U^\dagger E U$ transport up
+template <int N, typename T>
+inline Algebra<SU<N, T>> right_conjugation(const SU<N, T> &U, const Algebra<SU<N, T>> &E) {
+    Algebra<SU<N, T>> res = (U.dagger() * E.expand() * U).project_to_algebra();
+    return res;
+}
+
+/// $U E U^\dagger$ transport down
+template <int N, typename T>
+inline Algebra<SU<N, T>> left_conjugation(const SU<N, T> &U, const Algebra<SU<N, T>> &E) {
+    Algebra<SU<N, T>> res = (U * E.expand() * U.dagger()).project_to_algebra();
+    return res;
+}
+
 namespace hila {
 
 ///

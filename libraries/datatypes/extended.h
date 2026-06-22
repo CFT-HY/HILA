@@ -182,14 +182,14 @@ class ExtendedPrecision {
      * @return double
      */
     explicit operator double() const {
-        return value + (compensation + compensation2);
+        return (value + compensation) + compensation2;
     }
 
     /**
      * @brief Returns the compensated value as double
      */
     double to_double() const {
-        return value + (compensation + compensation2);
+        return (value + compensation) + compensation2;
     }
 };
 

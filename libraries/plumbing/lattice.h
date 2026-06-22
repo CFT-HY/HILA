@@ -32,7 +32,7 @@ enum class bc { PERIODIC, ANTIPERIODIC, DIRICHLET };
 
 // Struct to pass the iteration ranges for loop traversal
 struct iter_range_t {
-    unsigned min[2],max[2];
+    unsigned min[2], max[2];
 };
 
 /// False if we have b.c. which does not require communication
@@ -233,11 +233,17 @@ class lattice_struct {
     /// nearest neighbour comminfo struct
     std::array<nn_comminfo_struct, NDIRS> nn_comminfo;
 
+#ifdef EVEN_SITES_FIRST
     /// Main neighbour index array
     unsigned *RESTRICT neighb[NDIRS];
 
     /// implement waiting using mask_t - unsigned char is good for up to 4 dim.
     dir_mask_t *RESTRICT wait_arr_;
+#else
+    // offsets to halos, halo depth
+    size_t halo_offset[NDIRS];
+    size_t halo_depth[NDIM];
+#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
@@ -260,7 +266,7 @@ class lattice_struct {
     // pointer to fft data associated with lattice
     hila::fftdata_struct *fftdata = nullptr;
 
-    
+
     void setup_base_lattice(const CoordinateVector &siz);
 
     void setup_layout();
@@ -334,7 +340,7 @@ class lattice_struct {
 #else // Now not EVEN_SITES_FIRST
 
     unsigned loop_begin(Parity P) const {
-        assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
+        // assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
         return 0;
     }
     unsigned loop_end(Parity P) const {
@@ -346,9 +352,9 @@ class lattice_struct {
     // each coordinate is c[d] = (idx/size_factor[d]) % size[d] + min[d], but
     // do it like below to avoid the mod
 
-    inline const CoordinateVector coordinates(unsigned idx) const {
+    inline CoordinateVector coordinates(size_t idx) const {
         CoordinateVector c;
-        unsigned vdiv, ndiv;
+        size_t vdiv, ndiv;
 
         vdiv = idx;
         for (int d = 0; d < NDIM - 1; ++d) {
@@ -361,11 +367,11 @@ class lattice_struct {
         return c;
     }
 
-    inline int coordinate(unsigned idx, Direction d) const {
+    inline int coordinate(size_t idx, Direction d) const {
         return (idx / mynode.size_factor[d]) % mynode.size[d] + mynode.min[d];
     }
 
-    inline Parity site_parity(unsigned idx) const {
+    inline Parity site_parity(size_t idx) const {
         return coordinates(idx).parity();
     }
 
@@ -389,11 +395,6 @@ class lattice_struct {
         return site;
     }
 
-    int id() const {
-        return l_label;
-    }
-
-
     bool is_this_odd_boundary(Direction d) const;
 
     lattice_struct *block_by_factor(const CoordinateVector &blocking_factor);
@@ -407,12 +408,14 @@ class lattice_struct {
 };
 
 
+namespace hila {
 /**
  * @brief global vector of defined lattice pointers
  */
 
 extern std::vector<lattice_struct *> defined_lattices;
 
+}
 
 /**
  * @brief main interface class to lattices.
@@ -611,6 +614,20 @@ class Lattice {
     }
 
     /**
+     * @brief block the lattice by constant factor to all directions
+     */
+    Lattice block(int factor) {
+
+        if (!(factor == 0 || factor == 1)) {
+            CoordinateVector cv;
+
+            cv.fill(factor);
+            lat_ptr->block_by_factor(cv);
+        }
+        return *this;
+    }
+
+    /**
      * @brief Unblock lattice, returning to parent. Current lattice must be a blocked lattice
      * @returns lattice_struct * to new lattice
      */
@@ -631,7 +648,7 @@ class Lattice {
      */
 
     bool is_base() const {
-        return lat_ptr == defined_lattices.front();
+        return lat_ptr == hila::defined_lattices.front();
     }
 
     /**
@@ -640,7 +657,7 @@ class Lattice {
      */
 
     Lattice switch_to_base() {
-        return switch_to(defined_lattices.front());
+        return switch_to(hila::defined_lattices.front());
     }
 };
 

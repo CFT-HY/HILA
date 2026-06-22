@@ -99,6 +99,12 @@ bool TopLevelVisitor::VisitTypeAliasDecl(TypeAliasDecl *ta) {
         std::string type_name = ta->getUnderlyingType().getCanonicalType().getAsString(PP);
 
         number_type nt = get_number_type(type_name);
+
+        // llvm::errs() << " CLASS NAME " << class_name << " TYPE " << type_name << '\n';
+
+        if (class_name.find("hila::vector_info<") != std::string::npos)
+            return true; // vector_info type, we don't want it here
+
         if (nt == number_type::UNKNOWN)
             return true; // Unknown number type, we'll do nothing
 
@@ -137,7 +143,8 @@ bool TopLevelVisitor::VisitTypeAliasDecl(TypeAliasDecl *ta) {
 
 bool GeneralVisitor::is_vectorizable_type(const QualType &QT, vectorization_info &vi) {
     PrintingPolicy pp(Context->getLangOpts());
-    std::string tname = QT.getCanonicalType().getAsString(pp);
+    std::string tname =
+        QT.getCanonicalType().getUnqualifiedType().getAsString(pp);
     return is_vectorizable_type(tname, vi);
 }
 
@@ -146,8 +153,16 @@ bool GeneralVisitor::is_vectorizable_type(const std::string &type_name, vectoriz
     // Note: the std types are included in vectorizable_types
     // vectorizable_type vector filled in by VisitTypeAliasDecl above
 
+    std::string name;
+    // remove const from name
+    if (type_name.find("const") == 0) {
+        name = type_name.substr(6);
+    } else {
+        name = type_name;
+    }
+
     for (auto &n : vectorizable_types)
-        if (type_name.compare(n.classname) == 0) {
+        if (name.compare(n.classname) == 0) {
             // found it
             vi.basetype = n.ntype;
 
@@ -190,8 +205,8 @@ bool GeneralVisitor::is_vectorizable_type(const std::string &type_name, vectoriz
                 // replace the old type in the type name
                 vi.vectorized_type = type_name;
 
-                // llvm::errs() << "REPLACING VECTOR TYPE " << vi.vectorized_type
-                //              << " (" << old_t << ") with " << new_t << '\n';
+                // llvm::errs() << "REPLACING VECTOR TYPE " << vi.vectorized_type << " (" << old_t
+                //              << ") with " << new_t << '\n';
 
                 int i = find_word(vi.vectorized_type, old_t);
                 if (i == std::string::npos) {
@@ -221,7 +236,7 @@ bool GeneralVisitor::is_vectorizable_type(const std::string &type_name, vectoriz
                 } else
                     return vi.is_vectorizable = false; // not known vectorizable type
             }
-        }                              // for loop
+        } // for loop
     return vi.is_vectorizable = false; // not found
 }
 
@@ -253,7 +268,7 @@ vectorization_info TopLevelVisitor::inspect_field_type(Expr *fE) {
 
     vectorization_info einfo;
 
-    QualType QT = tal.get(0).getAsType();
+    QualType QT = tal.get(0).getAsType().getUnqualifiedType().getCanonicalType();
 
     if (is_vectorizable_type(QT, einfo)) {
         // llvm::errs() << "Type " << QT.getCanonicalType().getAsString()

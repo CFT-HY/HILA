@@ -10,24 +10,91 @@
 #include "gauge/clover_action.h"
 #include "gauge/log_clover_action.h"
 
-#ifdef GFLOWACTION
-#define GFLOWS GFLOWACTION
-#else
-#define GFLOWS 3
-#endif
-
-#if GFLOWS == 1
 #include "gauge/bulk_prevention_action.h"
-#elif GFLOWS > 1
-#if GFLOWS < 5
 #include "gauge/improved_action.h"
-#else
 #include "gauge/log_plaquette_action.h"
-#endif
-#endif
 
 #include "tools/string_format.h"
 
+enum GradientFlowAction {
+    Wilson = 0,
+    Bulk_Prevention = 1,
+    Luscher_Weisz = 2,
+    Iwasaki = 3,
+    DBW2 = 4,
+    Log_Plaq = 5,
+    Zeuthen = 6,
+    N_GradientFlowAction,
+};
+
+// Make it possible to select the gradient flow action either at compile time or at run time.
+//
+// if GFLOWACTION is defined action is selected at compile time.
+//
+// Otherwise the user code must declare and set the global variable `g_GF_action` somewhere at run
+// time to select the used action.
+#ifdef GFLOWACTION
+constexpr GradientFlowAction g_GF_action = static_cast<GradientFlowAction>(GFLOWACTION);
+static_assert((0 < GFLOWACTION) && (GFLOWACTION < N_GradientFlowAction),
+              "Unknown GradientFlowAction");
+#else
+extern GradientFlowAction g_GF_action;
+#endif
+
+/// print info about used flow action to stdout from rank 0.
+static inline void print0_gf_info() {
+    switch (g_GF_action) {
+    case GradientFlowAction::Wilson: // = 0
+        hila::out0 << "GFINFO using Wilson's plaquette action\n";
+        break;
+    case GradientFlowAction::Bulk_Prevention: // = 1
+        hila::out0 << "GFINFO using bulk-prevention action\n";
+        break;
+    case GradientFlowAction::Luscher_Weisz: // = 2
+        hila::out0 << "GFINFO using Luscher-Weisz action\n";
+        break;
+    case GradientFlowAction::Iwasaki: // = 3
+        hila::out0 << "GFINFO using Iwasaki action\n";
+        break;
+    case GradientFlowAction::DBW2: // = 4
+        hila::out0 << "GFINFO using DBW2 action\n";
+        break;
+    case GradientFlowAction::Log_Plaq: // = 5
+        hila::out0 << "GFINFO using log-plaquette action\n";
+        break;
+    case GradientFlowAction::Zeuthen: // = 6
+        hila::out0 << "GFINFO using Zeuthen flow\n";
+        break;
+    default:
+        assert(false && "Unknown GradientFlowAction");
+    }
+}
+
+template <typename group, typename atype = hila::arithmetic_type<group>>
+void get_zeuthen_flow_force(const GaugeField<group> &U, VectorField<Algebra<group>> &E,
+                            atype eps = 1.0) {
+
+    // first get the Luscher-Weisz improved force
+    VectorField<Algebra<group>> F_LW;
+    atype c12 = -1.0 / 12.0; // rectangle weight
+    atype c11 = 5.0 / 3.0;   // plaquette weight
+    get_force_impr(U, F_LW, eps * c11, eps * c12);
+
+    // Zeuthen flow force = (1 + 1/12 D_\mu D_\mu^* ) F_LW
+
+    foralldir (d) {
+        onsites (ALL) {
+            E[d][X] =
+                F_LW[d][X] +
+                (1.0 / 12.0) * ( // calculate gradient term improvement
+                                 // (\mu=d, no sum) D_\mu D_\mu^* F_LW(X)
+                                   left_conjugation(U[d][X], F_LW[d][X])            // U F U^\dagger
+                                   - 2.0 * F_LW[d][X]                               //
+                                   + right_conjugation(U[d][X - d], F_LW[d][X - d]) // U^dagger F U
+                               );
+        }
+    }
+}
 
 template <typename group, typename atype = hila::arithmetic_type<group>>
 void get_gf_force(const GaugeField<group> &U, VectorField<Algebra<group>> &E) {
@@ -40,26 +107,37 @@ void get_gf_force(const GaugeField<group> &U, VectorField<Algebra<group>> &E) {
                      // note: when switching to factor 2.0, remember to change also the stability
                      // limit in the do_gradient_flow_adapt() below
 
-#if GFLOWS == 1 // Bulk-Prevention (BP)
-    get_force_bp(U, E, eps);
-#elif GFLOWS == 2 // Luscher-Weisz (LW)
-    atype c12 = -1.0 / 12.0;     // rectangle weight
-    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    get_force_impr(U, E, eps * c11, eps * c12);
-#elif GFLOWS == 3 // IWASAKI
-    atype c12 = -0.331;          // rectangle weight
-    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    get_force_impr(U, E, eps * c11, eps * c12);
-#elif GFLOWS == 4 // DBW2
-    atype c12 = -1.4088;         // rectangle weight
-    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    get_force_impr(U, E, eps * c11, eps * c12);
-#elif GFLOWS == 5 // LOG-PLAQUETTE
-    get_force_log_plaq(U, E, eps);
-#else             // WILSON
-    get_force_wplaq(U, E, eps);
-#endif
-
+    switch (g_GF_action) {
+    case GradientFlowAction::Wilson: { // = 0
+        get_force_wplaq(U, E, eps);
+    } break;
+    case GradientFlowAction::Bulk_Prevention: { // = 1
+        get_force_bp(U, E, eps);
+    } break;
+    case GradientFlowAction::Luscher_Weisz: { // = 2
+        atype c12 = -1.0 / 12.0;              // rectangle weight
+        atype c11 = 1.0 - 8.0 * c12;          // plaquette weight
+        get_force_impr(U, E, eps * c11, eps * c12);
+    } break;
+    case GradientFlowAction::Iwasaki: { // = 3
+        atype c12 = -0.331;             // rectangle weight
+        atype c11 = 1.0 - 8.0 * c12;    // plaquette weight
+        get_force_impr(U, E, eps * c11, eps * c12);
+    } break;
+    case GradientFlowAction::DBW2: { // = 4
+        atype c12 = -1.4088;         // rectangle weight
+        atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+        get_force_impr(U, E, eps * c11, eps * c12);
+    } break;
+    case GradientFlowAction::Log_Plaq: { // = 5
+        get_force_log_plaq(U, E, eps);
+    } break;
+    case GradientFlowAction::Zeuthen: { // = 6
+        get_zeuthen_flow_force(U, E, eps);
+    } break;
+    default:
+        assert(false && "Unknown GradientFlowAction");
+    }
     // 2/9*BP+7/9*Wilson
     // get_force_bp(U,E,eps*2.0/9.0);
     // get_force_wplaq_add(U,E,eps*7.0/9.0);
@@ -69,26 +147,36 @@ template <typename group, typename atype = hila::arithmetic_type<group>>
 atype measure_gf_s(const GaugeField<group> &U) {
     // wrapper for gauge action computation routine
     // (for gauge action that is used to evolve the flow)
-#if GFLOWS == 1 // BP
-    atype res = measure_s_bp(U);
-#elif GFLOWS == 2 // LW
-    atype c12 = -1.0 / 12.0;     // rectangle weight
-    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    atype res = measure_s_impr(U, c11, c12);
-#elif GFLOWS == 3 // IWASAKI
-    atype c12 = -0.331;          // rectangle weight
-    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    atype res = measure_s_impr(U, c11, c12);
-#elif GFLOWS == 4 // DBW2
-    atype c12 = -1.4088;         // rectangle weight
-    atype c11 = 1.0 - 8.0 * c12; // plaquette weight
-    atype res = measure_s_impr(U, c11, c12);
-#elif GFLOWS == 5 // LOG-PLAQUETTE
-    atype res = measure_s_log_plaq(U);
-#else             // WILSON
-    atype res = measure_s_wplaq(U);
-#endif
-
+    atype res;
+    switch (g_GF_action) {
+    case GradientFlowAction::Wilson: { // = 0
+        res = measure_s_wplaq(U);
+    } break;
+    case GradientFlowAction::Bulk_Prevention: { // = 1
+        res = measure_s_bp(U);
+    } break;
+    case GradientFlowAction::Zeuthen:         // = 6
+    case GradientFlowAction::Luscher_Weisz: { // = 2
+        atype c12 = -1.0 / 12.0;              // rectangle weight
+        atype c11 = 1.0 - 8.0 * c12;          // plaquette weight
+        res = measure_s_impr(U, c11, c12);
+    } break;
+    case GradientFlowAction::Iwasaki: { // = 3
+        atype c12 = -0.331;             // rectangle weight
+        atype c11 = 1.0 - 8.0 * c12;    // plaquette weight
+        res = measure_s_impr(U, c11, c12);
+    } break;
+    case GradientFlowAction::DBW2: { // = 4
+        atype c12 = -1.4088;         // rectangle weight
+        atype c11 = 1.0 - 8.0 * c12; // plaquette weight
+        res = measure_s_impr(U, c11, c12);
+    } break;
+    case GradientFlowAction::Log_Plaq: { // = 5
+        res = measure_s_log_plaq(U);
+    } break;
+    default:
+        assert(false && "Unknown GradientFlowAction");
+    }
     // 2/9*BP+7/9*Wilson
     // atype res=measure_s_bp(U,E,eps*2.0/9.0)+measure_s_wplaq(U,E,eps*7.0/9.0);
 
@@ -102,8 +190,8 @@ atype measure_dE_wplaq_dt(const GaugeField<group> &U) {
     VectorField<Algebra<group>> K, Kc;
     get_gf_force(U, K);
     get_force_wplaq(U, Kc, -2.0);
-    foralldir(d) {
-        onsites(ALL) {
+    foralldir (d) {
+        onsites (ALL) {
             de += Kc[d][X].dot(K[d][X]);
         }
     }
@@ -117,8 +205,8 @@ atype measure_dE_clov_dt(const GaugeField<group> &U) {
     VectorField<Algebra<group>> K, Kc;
     get_gf_force(U, K);
     get_force_clover(U, Kc, -2.0);
-    foralldir(d) {
-        onsites(ALL) {
+    foralldir (d) {
+        onsites (ALL) {
             de += Kc[d][X].dot(K[d][X]);
         }
     }
@@ -132,8 +220,8 @@ atype measure_dE_log_dt(const GaugeField<group> &U) {
     VectorField<Algebra<group>> K, Kc;
     get_gf_force(U, K);
     get_force_log(U, Kc, -2.0);
-    foralldir(d) {
-        onsites(ALL) {
+    foralldir (d) {
+        onsites (ALL) {
             de += Kc[d][X].dot(K[d][X]);
         }
     }
@@ -147,20 +235,7 @@ void measure_gradient_flow_stuff(const GaugeField<group> &V, atype flow_l, atype
     // and print results in formatted form to standard output
     static bool first = true;
     if (first) {
-        // print info about used flow action
-#if GFLOWS == 1 // BP
-        hila::out0 << "GFINFO using bulk-prevention action\n";
-#elif GFLOWS == 2 // LW
-        hila::out0 << "GFINFO using Luscher-Weisz action\n";
-#elif GFLOWS == 3 // IWASAKI
-        hila::out0 << "GFINFO using Iwasaki action\n";
-#elif GFLOWS == 4 // DBW2
-        hila::out0 << "GFINFO using DBW2 action\n";
-#elif GFLOWS == 5 // LOG-PLAQUETTE
-        hila::out0 << "GFINFO using log-plaquette action\n";
-#else             // WILSON
-        hila::out0 << "GFINFO using Wilson's plaquette action\n";
-#endif
+        print0_gf_info();
         // print legend for flow measurement output
         hila::out0 << "LGFLMEAS  l(ambda)        S-flow        S-plaq        E_plaq    dE_plaq/dl  "
                       "       E_clv     dE_clv/dl     Qtopo_clv         E_log     dE_log/dl     "
@@ -214,13 +289,13 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
     // arXiv:2101.05320 for derivation of this Runge-Kutta method)
     // and embedded RK2 for adaptive step size
 
-    atype esp = 3.0; // expected single step error scaling power: err ~ step^(esp)
-                     //   - for RK3 with embedded RK2: esp \approx 3.0
+    atype esp = 3.0;        // expected single step error scaling power: err ~ step^(esp)
+                            //   - for RK3 with embedded RK2: esp \approx 3.0
     atype iesp = 1.0 / esp; // inverse single step error scaling power
 
     atype stepmf = 1.0;
-    atype maxstepmf = 10.0;  // max. growth factor of adaptive step size
-    atype minstepmf = 0.1; // min. growth factor of adaptive step size
+    atype maxstepmf = 10.0; // max. growth factor of adaptive step size
+    atype minstepmf = 0.1;  // min. growth factor of adaptive step size
 
     // translate flow scale interval [l_start,l_end] to corresponding
     // flow time interval [t,tmax] :
@@ -275,12 +350,12 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
         // get max. local gauge force:
         get_gf_force(V, tk);
         atype maxtk = 0.0;
-        foralldir(d) {
-            onsites(ALL) {
+        foralldir (d) {
+            onsites (ALL) {
                 reldiff[X] = (tk[d][X].squarenorm());
             }
             atype tmaxtk = reldiff.max();
-            if(tmaxtk>maxtk) {
+            if (tmaxtk > maxtk) {
                 maxtk = tmaxtk;
             }
         }
@@ -314,42 +389,45 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
         }
 
         get_gf_force(V, k1);
-        foralldir(d) onsites(ALL) {
-            // first steps of RK3 and RK2 are the same :
-            V[d][X] = chexp(k1[d][X] * (step * a11)) * V[d][X];
-        }
+        foralldir (d)
+            onsites (ALL) {
+                // first steps of RK3 and RK2 are the same :
+                V[d][X] = chexp(k1[d][X] * (step * a11)) * V[d][X];
+            }
 
         get_gf_force(V, k2);
-        foralldir(d) onsites(ALL) {
-            // second step of RK2 :
-            // (tk[d][X] will be used for rel. error computation)
-            tk[d][X] = k2[d][X];
-            tk[d][X] *= (step * b22);
-            tk[d][X] += k1[d][X] * (step * b21);
-            V2[d][X] = chexp(tk[d][X]) * V[d][X];
+        foralldir (d)
+            onsites (ALL) {
+                // second step of RK2 :
+                // (tk[d][X] will be used for rel. error computation)
+                tk[d][X] = k2[d][X];
+                tk[d][X] *= (step * b22);
+                tk[d][X] += k1[d][X] * (step * b21);
+                V2[d][X] = chexp(tk[d][X]) * V[d][X];
 
-            // second step of RK3 :
-            k2[d][X] *= (step * a22);
-            k2[d][X] += k1[d][X] * (step * a21);
-            V[d][X] = chexp(k2[d][X]) * V[d][X];
-        }
+                // second step of RK3 :
+                k2[d][X] *= (step * a22);
+                k2[d][X] += k1[d][X] * (step * a21);
+                V[d][X] = chexp(k2[d][X]) * V[d][X];
+            }
 
         get_gf_force(V, k1);
-        foralldir(d) onsites(ALL) {
-            // third step of RK3 :
-            k1[d][X] *= (step * a33);
-            k1[d][X] -= k2[d][X];
-            V[d][X] = chexp(k1[d][X]) * V[d][X];
-        }
+        foralldir (d)
+            onsites (ALL) {
+                // third step of RK3 :
+                k1[d][X] *= (step * a33);
+                k1[d][X] -= k2[d][X];
+                V[d][X] = chexp(k1[d][X]) * V[d][X];
+            }
 
         // determine maximum difference between RK3 and RK2,
         // relative to desired accuracy :
         atype relerr = 0.0;
-        foralldir(d) {
-            onsites(ALL) {
+        foralldir (d) {
+            onsites (ALL) {
                 reldiff[X] = (V2[d][X] * V[d][X].dagger()).project_to_algebra().norm() /
                              (tatol + rtol * tk[d][X].norm() / step);
-                // note: we divide tk.norm() by step to have consistent leading stepsize dependency  
+                // note: we divide tk.norm() by step to have consistent leading stepsize dependency
                 // no mather whether relative or absolute error tollerance dominates
             }
             atype trelerr = reldiff.max();
@@ -375,7 +453,7 @@ atype do_gradient_flow_adapt(GaugeField<group> &V, atype l_start, atype l_end, a
             stepmf = minstepmf;
         } else if (stepmf >= maxstepmf) {
             stepmf = maxstepmf;
-        } 
+        }
 
         // adjust step size :
         step = min((atype)0.9 * stepmf * step, ubstep);

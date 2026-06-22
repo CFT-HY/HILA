@@ -302,7 +302,7 @@ class input {
      * @param label key to fetch value for
      * @param bcast default true. If true the value will be broadcasted to all nodes
      * @return true Returns true on success
-     * @return false Returns false if return value is correct only on node 0.
+     * @return false Returns false if there is i/o error
      */
     template <typename T>
     bool get_value(T &val, const std::string &label, bool bcast = true) {

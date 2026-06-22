@@ -19,7 +19,7 @@
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t;
 
-template <const int n, const int m, typename T = double>
+template <const int n, const int m, typename T>
 class Array;
 
 template <int n, int m, typename T>

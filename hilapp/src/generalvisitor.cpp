@@ -346,10 +346,9 @@ bool GeneralVisitor::isStmtWithSemicolon(Stmt *S) {
 /////////////////////////////////////////////////////////////////
 
 Parity GeneralVisitor::get_parity_val(const Expr *pExpr) {
-    SourceLocation SL;
     APValue APV;
 
-    if (pExpr->isCXX11ConstantExpr(*Context, &APV, &SL)) {
+    if (pExpr->isCXX11ConstantExpr(HILAPP_ARGS_isCXX11ConstantExpr(*Context, &APV, nullptr))) {
         // Parity is now constant
         int64_t val = (APV.getInt().getExtValue());
         Parity p;
@@ -602,11 +601,6 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
 
     vi.type = type.getAsString(PP);
     vi.type = remove_extra_whitespace(vi.type);
-    // bool is_elem = (vi.type.find("element<") == 0);
-    // vi.type = type.getAsString(PP);
-    // if (is_elem)
-    //     vi.type = "element<" + vi.type + ">";
-    // llvm::errs() << " + Got " << vi.type << '\n';
 
     // check if it's a lambda var ref
     if (Expr *E = vi.decl->getInit()) {
@@ -813,7 +807,13 @@ std::string GeneralVisitor::generate_constant_var_name(DeclRefExpr *DRE) {
     std::string nspace;
 
     if (DRE->hasQualifier()) {
+
+#if (LLVM_VERSION_MAJOR > 22) || (LLVM_VERSION_MAJOR == 22 && LLVM_VERSION_MINOR >= 1)
+        auto *NSP = DRE->getQualifier().getAsNamespaceAndPrefix().Namespace->getNamespace();
+#else
         auto *NSP = DRE->getQualifier()->getAsNamespace();
+#endif
+
         if (NSP) {
             NSP = NSP->getCanonicalDecl();
 

@@ -9,6 +9,9 @@ $(info ############################################################## )
 $(info Use "/opt/local/cuda-aware-mpi/bin/mpirun" to run MPI program! )
 $(info ############################################################## )
 
+# c++ standard level, can be set in makefile or command line
+CPPSTD := c++17
+
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
 ifndef CUDA_VERSION
 	CUDA_VERSION = 12
@@ -22,10 +25,10 @@ LD := $(CC) -std c++17
 ifndef CUDA_ARCH
 	CUDA_ARCH = 86
 endif
-CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
+CXXFLAGS := -O3 -dc -x cu -std $(CPPSTD) -DCUDA 
 CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --use_fast_math --restrict
 
-CXXFLAGS_NOOPT := -O1 -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
+CXXFLAGS_NOOPT := -O1 -dc -x cu -std $(CPPSTD) -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
 
 #
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
@@ -46,7 +49,7 @@ MPI_LIBS := -L/opt/local/cuda-aware-mpi/lib -lmpi
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=$(CPPSTD) -Wp,-v - 2>&1 | grep "^ "))
 
 # Write hilapp includes to a file 0hilapp_incl_dirs
 $(shell mkdir -p build; echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
