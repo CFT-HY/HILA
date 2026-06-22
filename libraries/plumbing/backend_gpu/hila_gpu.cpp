@@ -63,12 +63,17 @@ gpuEvent_t &hila::halo_event() {
 }
 
 gpuStream_t &hila::bulk_stream() {
+#if defined(GPU_OVERLAP_COMM)
     static gpuStream_t instance = [] {
         gpuStream_t stream;
         gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
         return stream;
     }();
     return instance;
+#else
+    static gpuStream_t instance = 0;
+    return instance;
+#endif
 }
 
 gpuEvent_t &hila::bulk_event() {
