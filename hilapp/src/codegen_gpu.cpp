@@ -1318,7 +1318,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                  << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
         }
 
-    } else if (gpu_ccl) {
+    } else if (gpu_ccl || gpu_shmem) {
         code << "gpuEventRecord(bulk_event, bulk_stream);\n"
              << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
     }
