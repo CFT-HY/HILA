@@ -1323,6 +1323,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
              << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
     }
 
+    if (gpu_overlap_comm || gpu_ccl || gpu_shmem) {
+        code << "gpuStreamWaitEvent(0, bulk_event, 0);\n";
+    }
+
 
     // If arrays were copied free memory
 
