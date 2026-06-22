@@ -14,19 +14,24 @@
 
 template <typename T>
 void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                                  const lattice_struct::comm_node_struct &to_node,
-                                                  gpuStream_t stream) const {
+                                                  const lattice_struct::comm_node_struct &to_node
+#if defined(CUDA) || defined(HIP)
+                                                  ,
+                                                  gpuStream_t stream
+#endif
+) const {
 #ifndef VECTORIZED
+    bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // note: -d in is_on_edge, because we're about to send stuff to that
     // Direction (gathering from Direction +d)
-    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, true, stream);
-    } else {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, false, stream);
-    }
+    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
+        antiperiodic = true;
+#endif
+#if defined(CUDA) || defined(HIP)
+    payload.gather_comm_elements(buffer, to_node, par, lattice, antiperiodic, stream);
 #else
-    payload.gather_comm_elements(buffer, to_node, par, lattice, false, stream);
+    payload.gather_comm_elements(buffer, to_node, par, lattice, antiperiodic);
 #endif
 
 #else
@@ -75,8 +80,12 @@ void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RE
 
 template <typename T>
 void Field<T>::field_struct::place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                                 const lattice_struct::comm_node_struct &from_node,
-                                                 gpuStream_t stream) {
+                                                 const lattice_struct::comm_node_struct &from_node
+#if defined(CUDA) || defined(HIP)
+                                                 ,
+                                                 gpuStream_t stream
+#endif
+) {
 
 #ifdef VECTORIZED
     if constexpr (hila::is_vectorizable_type<T>::value) {
@@ -91,7 +100,11 @@ void Field<T>::field_struct::place_comm_elements(Direction d, Parity par, T *RES
     }
 #else
     // this one is only for CUDA
+#if defined(CUDA) || defined(HIP)
     payload.place_comm_elements(d, par, buffer, from_node, lattice, stream);
+#else
+    payload.place_comm_elements(d, par, buffer, from_node, lattice);
+#endif
 #endif
     // #endif
 }
@@ -436,6 +449,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 #endif
 }
 
+#if defined(CUDA) || defined(HIP)
 template <typename T>
 dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
     const auto &ci = lattice->nn_comminfo[d];
@@ -465,6 +479,7 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) c
     hila::n_gather_done += 1;
     return get_dir_mask(d);
 }
+#endif
 /// start_gather(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the Direction mask bits where something is happening
@@ -538,7 +553,11 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
 #if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
+#if defined(CUDA) || defined(HIP)
         fs->gather_comm_elements(d, par, send_buffer, to_node, hila::bulk_stream());
+#else
+        fs->gather_comm_elements(d, par, send_buffer, to_node);
+#endif
 #endif
 
         size_t n = sites * size;
@@ -646,8 +665,12 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             wait_receive_timer.stop();
 
 #if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
+#if defined(CUDA) || defined(HIP)
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
                                     hila::bulk_stream());
+#else
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
+#endif
 #endif
         }
 

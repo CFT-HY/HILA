@@ -277,16 +277,24 @@ class Field {
          * @brief Gather boundary elements for communication
          */
         void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                  const lattice_struct::comm_node_struct &to_node,
-                                  gpuStream_t stream) const;
+                                  const lattice_struct::comm_node_struct &to_node
+#if defined(CUDA) || defined(HIP)
+                                  ,
+                                  gpuStream_t stream
+#endif
+        ) const;
 
         /**
          * @internal
          * @brief Place boundary elements from neighbour
          */
         void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                 const lattice_struct::comm_node_struct &from_node,
-                                 gpuStream_t stream);
+                                 const lattice_struct::comm_node_struct &from_node
+#if defined(CUDA) || defined(HIP)
+                                 ,
+                                 gpuStream_t stream
+#endif
+        );
 
         /**
          * @internal
@@ -1375,13 +1383,17 @@ class Field {
     Parity resolve_started_parity(Direction d, Parity p, int &n_wait) const;
     dir_mask_t start_communication(Direction d, Parity p = ALL) const;
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
+#if defined(CUDA) || defined(HIP)
     dir_mask_t stream_gather(Direction d, Parity p) const;
     dir_mask_t stream_gather(Direction d, Parity p, gpuStream_t &stream) const;
     dir_mask_t pack_buffers(Direction d, Parity p) const;
     dir_mask_t pack_buffers(Direction d, Parity p, gpuStream_t &stream) const;
+#endif
     void wait_gather(Direction d, Parity p) const;
+#if defined(CUDA) || defined(HIP)
     void unpack_buffers(Direction d, Parity p) const;
     void unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const;
+#endif
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
 

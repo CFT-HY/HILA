@@ -115,7 +115,7 @@ template <typename T>
 void field_storage<T>::gather_comm_elements(T *RESTRICT buffer,
                                             const lattice_struct::comm_node_struct &to_node,
                                             Parity par, const Lattice lattice,
-                                            bool antiperiodic, gpuStream_t stream) const {
+                                            bool antiperiodic) const {
     int n;
     const unsigned *index_list = to_node.get_sitelist(par, n);
 
