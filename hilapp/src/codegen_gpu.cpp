@@ -127,8 +127,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     code << "dir_mask_t  _dir_mask_ = 0;\n";
 
-    code << "auto& bulk_stream = hila::bulk_stream();\n";
-    code << "auto& bulk_event = hila::bulk_event();\n";
+    code << "auto& compute_stream = hila::compute_stream();\n";
+    code << "auto& compute_event = hila::compute_event();\n";
 
     if (gpu_overlap_comm || gpu_ccl || gpu_shmem) {
         code << "auto& halo_stream = hila::halo_stream();\n";
@@ -288,7 +288,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 }
             }
             code << "gpuEventRecord(halo_event, halo_stream);\n"
-                 << "gpuStreamWaitEvent(bulk_stream, halo_event, 0);\n";
+                 << "gpuStreamWaitEvent(compute_stream, halo_event, 0);\n";
         }
     }
 
@@ -540,7 +540,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 
     kernel_launch =
-        kernel_name + "<<< N_blocks, N_threads,0, bulk_stream>>>( _hila_loop_begin, _hila_loop_end";
+        kernel_name + "<<< N_blocks, N_threads,0, compute_stream>>>( _hila_loop_begin, _hila_loop_end";
 
     // print field call list
     int i = 0;
@@ -1228,7 +1228,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
             code << "}\n";
             code << "gpuEventRecord(halo_event, halo_stream);\n";
-            code << "gpuStreamWaitEvent(bulk_stream, halo_event, 0);\n";
+            code << "gpuStreamWaitEvent(compute_stream, halo_event, 0);\n";
             code << "if (_hila_loops == 2) {\n"
                  << "    int _hila_loop_begin = _hila_ranges.min[1];\n"
                  << "    int _hila_loop_end = _hila_ranges.max[1];\n"
@@ -1244,8 +1244,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
 
             code << "    " << kernel_launch << "}\n";
-            code << "gpuEventRecord(bulk_event, bulk_stream);\n"
-                 << "gpuEventSynchronize(bulk_event);\n";
+            code << "gpuEventRecord(compute_event, compute_stream);\n"
+                 << "gpuEventSynchronize(compute_event);\n";
 
         } else { // GPU_CCL with overlap
             bool code_generated = false;
@@ -1299,7 +1299,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 }
             }
             code << "gpuEventRecord(halo_event, halo_stream);\n";
-            code << "gpuStreamWaitEvent(bulk_stream, halo_event, 0);\n";
+            code << "gpuStreamWaitEvent(compute_stream, halo_event, 0);\n";
             code << "if (_hila_loops == 2) {\n"
                  << "    int _hila_loop_begin = _hila_ranges.min[1];\n"
                  << "    int _hila_loop_end = _hila_ranges.max[1];\n"
@@ -1314,17 +1314,17 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                      << ") N_blocks = " << thread_block_number << ";\n";
             }
             code << "    " << kernel_launch << "}\n";
-            code << "gpuEventRecord(bulk_event, bulk_stream);\n"
-                 << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
+            code << "gpuEventRecord(compute_event, compute_stream);\n"
+                 << "gpuStreamWaitEvent(halo_stream, compute_event, 0);\n";
         }
 
     } else if (gpu_ccl || gpu_shmem) {
-        code << "gpuEventRecord(bulk_event, bulk_stream);\n"
-             << "gpuStreamWaitEvent(halo_stream, bulk_event, 0);\n";
+        code << "gpuEventRecord(compute_event, compute_stream);\n"
+             << "gpuStreamWaitEvent(halo_stream, compute_event, 0);\n";
     }
 
     if (gpu_overlap_comm || gpu_ccl || gpu_shmem) {
-        code << "gpuStreamWaitEvent(0, bulk_event, 0);\n";
+        code << "gpuStreamWaitEvent(0, compute_event, 0);\n";
     }
 
 
@@ -1369,10 +1369,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // Run reduction
         if (r.reduction_type == reduction::SUM) {
             code << r.reduction_name << " = gpu_reduce_sum( dev_" << r.reduction_name
-                 << ", N_blocks" << ", bulk_stream);\n";
+                 << ", N_blocks" << ", compute_stream);\n";
         } else if (r.reduction_type == reduction::PRODUCT) {
             code << r.reduction_name << " = gpu_reduce_product( dev_" << r.reduction_name
-                 << ", N_blocks" << ", bulk_stream);\n";
+                 << ", N_blocks" << ", compute_stream);\n";
         }
         // Free memory allocated for the reduction
         code << "gpuFree(dev_" << r.reduction_name << ");\n";

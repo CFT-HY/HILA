@@ -554,7 +554,7 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 
 #if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
 #if defined(CUDA) || defined(HIP)
-        fs->gather_comm_elements(d, par, send_buffer, to_node, hila::bulk_stream());
+        fs->gather_comm_elements(d, par, send_buffer, to_node, hila::compute_stream());
 #else
         fs->gather_comm_elements(d, par, send_buffer, to_node);
 #endif
@@ -563,8 +563,8 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
         size_t n = sites * size;
 
 #ifdef GPU_AWARE_COMM
-        gpuEventRecord(hila::bulk_event(), hila::bulk_stream());
-        gpuEventSynchronize(hila::bulk_event());
+        gpuEventRecord(hila::compute_event(), hila::compute_stream());
+        gpuEventSynchronize(hila::compute_event());
         // gpuDeviceSynchronize();
 #endif
 
@@ -667,7 +667,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 #if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
 #if defined(CUDA) || defined(HIP)
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
-                                    hila::bulk_stream());
+                                    hila::compute_stream());
 #else
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
 #endif

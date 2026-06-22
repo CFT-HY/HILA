@@ -369,9 +369,9 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, co
                       n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
             unsigned N_blocks = n / N_threads + 1;
-            set_local_boundary_elements_kernel<<<N_blocks, N_threads, 0, hila::bulk_stream()>>>(
+            set_local_boundary_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
                 *this, offset, d_site_index, n, lattice->mynode.field_alloc_size);
-            gpuStreamSynchronize(hila::bulk_stream());
+            gpuStreamSynchronize(hila::compute_stream());
 
             gpuFree(d_site_index);
         } else {

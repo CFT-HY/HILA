@@ -366,8 +366,8 @@ namespace hila {
 gpuStreamPool &stream_pool();
 gpuStream_t &halo_stream();
 gpuEvent_t &halo_event();
-gpuStream_t &bulk_stream();
-gpuEvent_t &bulk_event();
+gpuStream_t &compute_stream();
+gpuEvent_t &compute_event();
 } // namespace hila
 
 
@@ -433,7 +433,7 @@ inline gpuStream_t& halo_stream() {
     return dummy;
 }
 
-inline gpuStream_t& bulk_stream() {
+inline gpuStream_t& compute_stream() {
     static gpuStream_t dummy = nullptr;
     return dummy;
 }
@@ -443,7 +443,7 @@ inline gpuStream_t& halo_event() {
     return dummy;
 }
 
-inline gpuStream_t& bulk_event() {
+inline gpuStream_t& compute_event() {
     static gpuStream_t dummy = nullptr;
     return dummy;
 }

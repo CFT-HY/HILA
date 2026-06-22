@@ -62,7 +62,7 @@ gpuEvent_t &hila::halo_event() {
     return instance;
 }
 
-gpuStream_t &hila::bulk_stream() {
+gpuStream_t &hila::compute_stream() {
 #if defined(GPU_OVERLAP_COMM)
     static gpuStream_t instance = [] {
         gpuStream_t stream;
@@ -76,7 +76,7 @@ gpuStream_t &hila::bulk_stream() {
 #endif
 }
 
-gpuEvent_t &hila::bulk_event() {
+gpuEvent_t &hila::compute_event() {
     static gpuEvent_t instance = [] {
         gpuEvent_t e;
         gpuEventCreate(&e);
@@ -379,12 +379,12 @@ void initialize_gccl_communication() {
 
     // gcclGroupStart();
     // gcclAllReduce(broadcast_val, recieve, 2048 * 200, gccl_type<double>::value, ncclSum,
-    //               communicator, hila::bulk_stream());
+    //               communicator, hila::compute_stream());
     //// gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size,
-    /// communicator, / hila::bulk_stream()); gcclRecv(recieve, 2048*200, gccl_type<double>::value,
-    //// (rank-size/2+size)%size, communicator, hila::bulk_stream());
+    /// communicator, / hila::compute_stream()); gcclRecv(recieve, 2048*200, gccl_type<double>::value,
+    //// (rank-size/2+size)%size, communicator, hila::compute_stream());
     // gcclGroupEnd();
-    // gpuStreamSynchronize(hila::bulk_stream());
+    // gpuStreamSynchronize(hila::compute_stream());
     // gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
     // std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host << std::endl;
 }
