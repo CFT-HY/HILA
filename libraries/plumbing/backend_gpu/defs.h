@@ -368,6 +368,9 @@ gpuStream_t &halo_stream();
 gpuEvent_t &halo_event();
 gpuStream_t &compute_stream();
 gpuEvent_t &compute_event();
+// Report the comm/compute overlap stream configuration (mode + green-context SM
+// split) and the env vars that control it, to the given stream (rank-0 banner).
+void report_overlap_config(std::ostream &out);
 } // namespace hila
 
 
@@ -447,6 +450,8 @@ inline gpuStream_t& compute_event() {
     static gpuStream_t dummy = nullptr;
     return dummy;
 }
+
+inline void report_overlap_config(std::ostream &) {}
 
 
 void initialize_gccl_communication();

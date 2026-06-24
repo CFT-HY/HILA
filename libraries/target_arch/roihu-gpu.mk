@@ -38,6 +38,7 @@ NVHPC_MPI_DIR = $(NVHPC_ROOT)/comm_libs/13.1/hpcx/hpcx-2.25.1/ompi
 
 _shmem = $(findstring GPU_SHMEM,$(APP_OPTS))
 _ccl   = $(findstring GPU_CCL,$(APP_OPTS))
+_green = $(findstring GPU_GREEN_CTX,$(APP_OPTS))
 
 # Define compiler -- nvhpc's bundled nvcc for GPU_SHMEM, system nvcc otherwise.
 NVCC_BIN = $(if $(_shmem),$(NVHPC_NVCC),nvcc)
@@ -66,6 +67,8 @@ MPI_LIBS = $(if $(_shmem),-L$(NVHPC_MPI_DIR)/lib -lmpi,-lmpi)
 LDLIBS = -lcufft -lm $(MPI_LIBS)
 LDLIBS += $(if $(_ccl),-lnccl)
 LDLIBS += $(if $(_shmem),-L$(NVSHMEM_DIR)/lib -lnvshmem_host -lnvshmem_device)
+# GPU_GREEN_CTX: green-context SM split uses the CUDA driver API (cuGreenCtx*) -> -lcuda
+LDLIBS += $(if $(_green),-lcuda)
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_gpu.o

@@ -563,9 +563,12 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
         size_t n = sites * size;
 
 #ifdef GPU_AWARE_COMM
+#ifdef GPU_OVERLAP_COMM
+        gpuStreamSynchronize(hila::halo_stream());
+#else
         gpuEventRecord(hila::compute_event(), hila::compute_stream());
         gpuEventSynchronize(hila::compute_event());
-        // gpuDeviceSynchronize();
+#endif
 #endif
 
         start_send_timer.start();
