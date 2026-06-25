@@ -83,6 +83,8 @@ LDFLAGS += -L${MPICH_DIR}/lib -L${CRAY_MPICH_ROOTDIR}/gtl/lib
 
 # libraries flags of amdhip, rocm-fft, mpich
 LDLIBS := -lamdhip64 -lhipfft -lmpi
+# USE_NVTX (kernel-level profiler ranges): HIP path uses roctx (<roctracer/roctx.h>).
+LDLIBS += $(if $(findstring USE_NVTX,$(APP_OPTS)),-lroctx64)
 
 # These variables must be defined here
 #

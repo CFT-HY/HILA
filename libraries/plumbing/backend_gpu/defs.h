@@ -38,6 +38,29 @@ void free_device_rng();
 } // namespace hila
 
 
+////////////////////////////////////////////////////////////////////////////////////
+// Kernel-level profiler ranges (opt-in via -DUSE_NVTX).
+// hilapp emits HILA_NVTX_RANGE_PUSH/POP around each generated kernel launch so a
+// profiler can attribute GPU time per loop, and (under GPU_OVERLAP_COMM) tell the
+// bulk and boundary halves of the split kernel apart. CUDA -> nvtx3 (header-only),
+// HIP -> roctx (link -lroctx64). No-op unless USE_NVTX is set. The !HILAPP guard
+// keeps hilapp's clang from trying to find the real headers during its pass; the
+// ranges only ever appear in the generated .cpt that nvcc/hipcc compiles.
+////////////////////////////////////////////////////////////////////////////////////
+#if defined(USE_NVTX) && defined(CUDA) && !defined(HILAPP)
+#include <nvtx3/nvToolsExt.h>
+#define HILA_NVTX_RANGE_PUSH(name) nvtxRangePushA(name)
+#define HILA_NVTX_RANGE_POP() nvtxRangePop()
+#elif defined(USE_NVTX) && defined(HIP) && !defined(HILAPP)
+#include <roctracer/roctx.h>
+#define HILA_NVTX_RANGE_PUSH(name) roctxRangePush(name)
+#define HILA_NVTX_RANGE_POP() roctxRangePop()
+#else
+#define HILA_NVTX_RANGE_PUSH(name) ((void)0)
+#define HILA_NVTX_RANGE_POP() ((void)0)
+#endif
+
+
 #ifndef HILAPP
 
 // GPU specific definitions

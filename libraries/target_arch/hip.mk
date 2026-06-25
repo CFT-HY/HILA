@@ -34,6 +34,8 @@ MPI_INCLUDE_DIRS := -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openm
 MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
 
 LDLIBS += -lrocrand -lrocfft -lhipfft -lhiprand $(MPI_LIBS)
+# USE_NVTX (kernel-level profiler ranges): HIP path uses roctx (<roctracer/roctx.h>).
+LDLIBS += $(if $(findstring USE_NVTX,$(APP_OPTS)),-L$(ROCM_PATH)/lib -lroctx64)
 
 HIP_PATH ?= $(shell hipconfig --path)
 HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/hiprand/include -I$(HIP_PATH)/hipfft/include -I$(HIP_PATH)/rocrand/include -I$(HIP_PATH)/rocfft/include -I$(HIP_PATH)/hipcub/include

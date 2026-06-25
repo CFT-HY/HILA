@@ -39,6 +39,10 @@ NVHPC_MPI_DIR = $(NVHPC_ROOT)/comm_libs/13.1/hpcx/hpcx-2.25.1/ompi
 _shmem = $(findstring GPU_SHMEM,$(APP_OPTS))
 _ccl   = $(findstring GPU_CCL,$(APP_OPTS))
 _green = $(findstring GPU_GREEN_CTX,$(APP_OPTS))
+# USE_NVTX (kernel-level profiler ranges): nvtx3 is header-only and bundled with
+# the CUDA toolkit, so nvcc finds <nvtx3/nvToolsExt.h> with no extra -I and there
+# is no library to link. -DUSE_NVTX flows in via APP_OPTS, so nothing else is needed.
+_nvtx  = $(findstring USE_NVTX,$(APP_OPTS))
 
 # Define compiler -- nvhpc's bundled nvcc for GPU_SHMEM, system nvcc otherwise.
 NVCC_BIN = $(if $(_shmem),$(NVHPC_NVCC),nvcc)

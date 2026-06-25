@@ -1171,7 +1171,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 
     kernel_launch += ");\n\n"; // finishes kernel call
+    // Profiler range around the launch (no-op unless -DUSE_NVTX). Under overlap this
+    // is the bulk-region launch; the boundary-region launch below gets its own range.
+    std::string bulk_range_name = gpu_overlap_comm ? (kernel_name + "_bulk") : kernel_name;
+    code << "HILA_NVTX_RANGE_PUSH(\"" << bulk_range_name << "\");\n";
     code << kernel_launch;
+    code << "HILA_NVTX_RANGE_POP();\n";
     code << "check_device_error(\"" << kernel_name << "\");\n";
 
     if (gpu_overlap_comm) {
@@ -1243,7 +1248,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                      << ") N_blocks = " << thread_block_number << ";\n";
             }
 
-            code << "    " << kernel_launch << "}\n";
+            code << "    HILA_NVTX_RANGE_PUSH(\"" << kernel_name << "_boundary\");\n";
+            code << "    " << kernel_launch;
+            code << "    HILA_NVTX_RANGE_POP();\n";
+            code << "}\n";
             code << "gpuEventRecord(compute_event, compute_stream);\n"
                  << "gpuEventSynchronize(compute_event);\n";
 
@@ -1313,7 +1321,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 code << "if (N_blocks > " << thread_block_number
                      << ") N_blocks = " << thread_block_number << ";\n";
             }
-            code << "    " << kernel_launch << "}\n";
+            code << "    HILA_NVTX_RANGE_PUSH(\"" << kernel_name << "_boundary\");\n";
+            code << "    " << kernel_launch;
+            code << "    HILA_NVTX_RANGE_POP();\n";
+            code << "}\n";
             code << "gpuEventRecord(compute_event, compute_stream);\n"
                  << "gpuStreamWaitEvent(halo_stream, compute_event, 0);\n";
         }
