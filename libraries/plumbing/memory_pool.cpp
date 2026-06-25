@@ -20,6 +20,13 @@
 static_assert(0 && "HIP or CUDA must be defined");
 #endif
 
+#if defined(GPU_SHMEM)
+#define gpuMallocSharedDirect(a, b)                                                                \
+    do {                                                                                           \
+        *(a) = nvshmem_malloc(b);                                                                  \
+    } while (0)
+#define gpuFreeSharedDirect(a) nvshmem_free(a)
+#endif
 #endif
 
 
@@ -91,10 +98,21 @@ void *hila::memory_pool::alloc(size_t req_size) {
         // alloc failure caught by gpuMalloc
         allocation a;
 #if defined(CUDA) || defined(HIP)
-        gpuMallocDirect(&(a.ptr), req_size);
+        if (type == pool_type::STANDARD) {
+            gpuMallocDirect(&(a.ptr), req_size);
+        } else if (type == pool_type::SHARED) {
+#if defined(GPU_SHMEM)
+            gpuDeviceSynchronize();
+            gpuMallocSharedDirect(&(a.ptr), req_size);
+#else
+            // Fallback or Error if SHARED requested but SHMEM not compiled
+            hila::out << "Error: SHARED pool requested but GPU_SHMEM not defined\n";
+            hila::terminate(1);
+#endif
+        }
 #else
         a.ptr = memalloc(req_size);
-#endif
+#endif // GPU_SHMEM
         a.size = req_size;
         a.in_use = true;
         blocklist.push_back(a);
@@ -105,7 +123,7 @@ void *hila::memory_pool::alloc(size_t req_size) {
 #ifdef POOL_DEBUG
         hila::out << "GPU MEMORY: request " << req_size << " NEW allocation, current total "
                   << total_size << '\n';
-#endif
+#endif // CUDA OR HIP
         return a.ptr;
     }
 }
@@ -145,10 +163,21 @@ void hila::memory_pool::purge() {
     for (auto it = blocklist.begin(); it != blocklist.end(); it++) {
         if (it->in_use == false) {
 #if defined(CUDA) || defined(HIP)
-            gpuFreeDirect(it->ptr);
+            if (type == pool_type::STANDARD) {
+                gpuFreeDirect(it->ptr);
+            } else if (type == pool_type::SHARED) {
+#if defined(GPU_SHMEM)
+                gpuFreeSharedDirect(it->ptr);
+#else
+                // This path should technically be unreachable if alloc() failed correctly,
+                // but we keep it for safety.
+                hila::out << "Error: Attempting to purge SHARED block without GPU_SHMEM\n";
+                hila::terminate(1);
+#endif // GPU_SHMEM
+            }
 #else
             free(it->ptr);
-#endif
+#endif // CUDA OR HIP
             p.total_size -= it->size;
 
 #ifdef POOL_DEBUG
@@ -195,6 +224,34 @@ void gpu_memory_pool_report() {
     }
 }
 
+#ifdef GPU_SHMEM
+static hila::memory_pool gpu_shared_pool(hila::pool_type::SHARED);
 
-#endif
+void gpu_shared_memory_pool_alloc(void **p, size_t req_size) {
+    *p = gpu_shared_pool.alloc(req_size);
+}
+
+void gpu_shared_memory_pool_free(void *ptr) {
+    gpu_shared_pool.free(ptr);
+}
+
+void gpu_shared_memory_pool_purge() {
+    gpu_shared_pool.purge();
+}
+
+void gpu_shared_memory_pool_report() {
+    auto p = gpu_shared_pool.status();
+    if_rank0 () {
+        hila::out << "\nGPU SHARED Memory pool statistics from node 0:\n";
+        hila::out << "   Total pool size " << ((double)p.total_size) / (1024 * 1024) << " MB in "
+                  << gpu_shared_pool.size() << " blocks\n";
+        hila::out << "   # of allocations " << p.n_allocs << "  real allocs "
+                  << std::setprecision(2) << ((double)p.n_true_allocs) / p.n_allocs * 100 << "%\n";
+        hila::out << "   Average block list search " << (double)p.blocklist_avg_search / p.n_allocs
+                  << " steps\n\n";
+    }
+}
+#endif // GPU_SHMEM
+
+#endif // GPU_MEMORY_POOL
 #endif // !HILAPP

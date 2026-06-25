@@ -181,7 +181,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         generate_wait_loops = true;
 
     // generate field comm and access code
-    generate_field_code(code, generate_wait_loops);
+    // generate_field_code(code, generate_wait_loops);
 
     // make the reduction expr list from variables and loop const expressions
     create_reduction_list(var_info_list, loop_const_expr_ref_list);

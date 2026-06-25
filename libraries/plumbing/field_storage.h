@@ -74,7 +74,12 @@ class field_storage {
 #endif
 
     void gather_comm_elements(T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node,
-                              Parity par, const Lattice lattice, bool antiperiodic) const;
+                              Parity par, const Lattice lattice, bool antiperiodic
+#if defined(CUDA) || defined(HIP)
+                              ,
+                              gpuStream_t stream
+#endif
+    ) const;
 
     void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
                          const Lattice lattice) const;
@@ -85,7 +90,12 @@ class field_storage {
     /// Place boundary elements from neighbour
     void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                              const lattice_struct::comm_node_struct &from_node,
-                             const Lattice lattice);
+                             const Lattice lattice
+#if defined(CUDA) || defined(HIP)
+                             ,
+                             gpuStream_t stream
+#endif
+    );
     void place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
                         const Lattice lattice);
     /// Place boundary elements from local lattice (used in vectorized version)

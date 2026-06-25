@@ -257,41 +257,40 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
 template <typename T>
 void field_storage<T>::gather_comm_elements(T *buffer,
                                             const lattice_struct::comm_node_struct &to_node,
-                                            Parity par, const Lattice lattice,
-                                            bool antiperiodic) const {
+                                            Parity par, const Lattice lattice, bool antiperiodic,
+                                            gpuStream_t stream) const {
     int n;
     const unsigned *d_site_index = to_node.get_sitelist(par, n);
     T *d_buffer;
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
     // The buffer is already on the device
     d_buffer = buffer;
 #else
     // Allocate a buffer on the device
     gpuMalloc(&(d_buffer), n * sizeof(T));
 #endif
-
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     if (antiperiodic) {
 
         if constexpr (hila::has_unary_minus<T>::value) {
-            gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(
+            gather_comm_elements_negated_kernel<<<N_blocks, N_threads, 0, stream>>>(
                 *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
         }
 
     } else {
-        gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                             lattice->mynode.field_alloc_size);
+        gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
+            *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
     }
 #else
-    gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                         lattice->mynode.field_alloc_size);
+    gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
+        *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 #endif
 
-#ifndef GPU_AWARE_MPI
-    // Copy the result to the host
+#ifndef GPU_AWARE_COMM
+    gpuStreamSynchronize(stream);
     gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
     gpuFree(d_buffer);
 #endif
@@ -369,8 +368,9 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, co
                       n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
             unsigned N_blocks = n / N_threads + 1;
-            set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
+            set_local_boundary_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
                 *this, offset, d_site_index, n, lattice->mynode.field_alloc_size);
+            gpuStreamSynchronize(hila::compute_stream());
 
             gpuFree(d_site_index);
         } else {
@@ -405,12 +405,12 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer, un
 template <typename T>
 void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
                                            const lattice_struct::comm_node_struct &from_node,
-                                           const Lattice lattice) {
+                                           const Lattice lattice, gpuStream_t stream) {
 
     unsigned n = from_node.n_sites(par);
     T *d_buffer;
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
     // MPI buffer is on device
     d_buffer = buffer;
 #else
@@ -420,25 +420,33 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 #endif
 
     unsigned N_blocks = n / N_threads + 1;
-    place_comm_elements_kernel<<<N_blocks, N_threads>>>((*this), d_buffer, from_node.offset(par), n,
-                                                        lattice->mynode.field_alloc_size);
+    place_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
+        (*this), d_buffer, from_node.offset(par), n, lattice->mynode.field_alloc_size);
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     gpuFree(d_buffer);
 #endif
 }
 
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
 
 template <typename T>
 void field_storage<T>::free_mpi_buffer(T *d_buffer) {
+#ifdef GPU_SHMEM
+    gpuFreeShared(d_buffer);
+#else
     gpuFree(d_buffer);
+#endif // GPU_SHMEM
 }
 
 template <typename T>
 T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     T *d_buffer;
+#ifdef GPU_SHMEM
+    gpuMallocShared(&(d_buffer), n * sizeof(T));
+#else
     gpuMalloc(&(d_buffer), n * sizeof(T));
+#endif // GPU_SHMEM
     return d_buffer;
 }
 

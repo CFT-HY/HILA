@@ -15,6 +15,7 @@ using gpufftHandle = cufftHandle;
 using gpufftResult = cufftResult;
 #define gpufftExecC2C cufftExecC2C
 #define gpufftExecZ2Z cufftExecZ2Z
+#define gpufftSetStream cufftSetStream
 #define gpufftPlan1d cufftPlan1d
 #define gpufftDestroy cufftDestroy
 #define gpufftCreate cufftCreate
@@ -40,6 +41,7 @@ using gpufftDoubleComplex = hipfftDoubleComplex;
 using gpufftHandle = hipfftHandle;
 #define gpufftExecC2C hipfftExecC2C
 #define gpufftExecZ2Z hipfftExecZ2Z
+#define gpufftSetStream hipfftSetStream
 #define gpufftPlan1d hipfftPlan1d
 #define gpufftDestroy hipfftDestroy
 #define gpufftCreate hipfftCreate
@@ -238,12 +240,14 @@ using fft_cmplx_t = typename std::conditional<sizeof(gpufftComplex) == sizeof(cm
 
 template <typename cmplx_t, std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftComplex), int> = 0>
 inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+    gpufftSetStream(plan, hila::compute_stream());
     gpufftExecC2C(plan, (gpufftComplex *)buf, (gpufftComplex *)buf, direction);
 }
 
 template <typename cmplx_t,
           std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftDoubleComplex), int> = 0>
 inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+    gpufftSetStream(plan, hila::compute_stream());
     gpufftExecZ2Z(plan, (gpufftDoubleComplex *)buf, (gpufftDoubleComplex *)buf, direction);
 }
 
@@ -303,7 +307,7 @@ void hila_fft<cmplx_t>::transform() {
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
 #if defined(CUDA)
-    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
+    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
                                                              lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
@@ -329,7 +333,7 @@ void hila_fft<cmplx_t>::transform() {
     fft_buffer_timer.start();
 
 #if defined(CUDA)
-    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
+    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
                                                               lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
@@ -363,7 +367,7 @@ void hila_fft<cmplx_t>::gather_data() {
     std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
     std::vector<MPI_Status> stat(n_comms);
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     std::vector<cmplx_t *> send_p(n_comms);
     std::vector<cmplx_t *> receive_p(n_comms);
 #endif
@@ -372,7 +376,7 @@ void hila_fft<cmplx_t>::gather_data() {
     int j = 0;
 
     // this synchronization should be enough for all MPI's in the
-    gpuStreamSynchronize(0);
+    gpuStreamSynchronize(hila::compute_stream());
 
     size_t mpi_type_size;
     MPI_Datatype mpi_type = get_MPI_complex_type<cmplx_t>(mpi_type_size);
@@ -387,7 +391,7 @@ void hila_fft<cmplx_t>::gather_data() {
                 hila::terminate(1);
             }
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
             cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(siz);
 #else
             cmplx_t *p = rec_p[j];
@@ -408,8 +412,8 @@ void hila_fft<cmplx_t>::gather_data() {
             cmplx_t *p = send_buf + fn.column_offset * elements;
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
-#ifndef GPU_AWARE_MPI
-            // now not GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
+            // now not GPU_AWARE_COMM
             send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(send_p[i], p, n, gpuMemcpyDeviceToHost);
             p = send_p[i];
@@ -426,7 +430,7 @@ void hila_fft<cmplx_t>::gather_data() {
         MPI_Waitall(n_comms, recreq.data(), stat.data());
         MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
         i = j = 0;
 
         for (auto &fn : fft.hila_pencil_comms[dir]) {
@@ -467,7 +471,7 @@ void hila_fft<cmplx_t>::scatter_data() {
     std::vector<MPI_Request> sendreq(n_comms), recreq(n_comms);
     std::vector<MPI_Status> stat(n_comms);
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
     std::vector<cmplx_t *> send_p(n_comms);
     std::vector<cmplx_t *> receive_p(n_comms);
 #endif
@@ -477,13 +481,13 @@ void hila_fft<cmplx_t>::scatter_data() {
     size_t mpi_type_size;
     MPI_Datatype mpi_type = get_MPI_complex_type<cmplx_t>(mpi_type_size);
 
-    gpuStreamSynchronize(0);
+    gpuStreamSynchronize(hila::compute_stream());
 
     for (auto &fn : fft.hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
             cmplx_t *p = send_buf + fn.column_offset * elements;
 #else
             cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(n);
@@ -502,9 +506,9 @@ void hila_fft<cmplx_t>::scatter_data() {
         if (fn.node != hila::myrank()) {
 
             size_t n = fn.recv_buf_size * elements * sizeof(cmplx_t);
-#ifdef GPU_AWARE_MPI
+#ifdef GPU_AWARE_COMM
             cmplx_t *p = rec_p[j];
-//             gpuStreamSynchronize(0);
+//             gpuStreamSynchronize(hila::compute_stream());
 #else
             cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(p, rec_p[j], n, gpuMemcpyDeviceToHost);
@@ -522,7 +526,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         MPI_Waitall(n_comms, recreq.data(), stat.data());
         MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
-#ifndef GPU_AWARE_MPI
+#ifndef GPU_AWARE_COMM
         i = 0;
         for (auto &fn : fft.hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {
@@ -602,7 +606,7 @@ void hila_fft<cmplx_t>::reflect() {
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
 #if defined(CUDA)
-    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
+    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
                                                              lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
@@ -612,7 +616,7 @@ void hila_fft<cmplx_t>::reflect() {
 
 #if defined(CUDA)
     hila_reflect_dir_kernel<cmplx_t>
-        <<<N_blocks, N_threads>>>(fft_wrk, lattice.size(dir), n_columns);
+        <<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_reflect_dir_kernel<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, lattice.size(dir), n_columns);
@@ -620,7 +624,7 @@ void hila_fft<cmplx_t>::reflect() {
 
 
 #if defined(CUDA)
-    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
+    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
                                                               lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),

@@ -24,6 +24,62 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     //     // if there is no field in loop at all
     //     code << "const lattice_struct * RESTRICT hila_loop_lattice = lattice;\n";
     // }
+    bool first = true;
+    if (cmdline::no_interleaved_comm)
+        generate_wait_loops = false;
+    else
+        generate_wait_loops = true;
+
+    for (field_info &l : field_info_list) {
+        // If neighbour references exist, communicate them
+        if (!l.is_loop_local_dir) {
+            // "normal" dir references only here
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    if (!generate_wait_loops) {
+                        code << l.new_name << ".gather(" << d.direxpr_s << ", "
+                             << loop_info.parity_str << ");\n";
+                    } else {
+                        if (first)
+                            code << "dir_mask_t  _dir_mask_ = 0;\n";
+                        first = false;
+
+                        code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
+                             << ", " << loop_info.parity_str << ");\n";
+                    }
+                }
+        } else {
+            // now loop local dirs - gather all neighbours!
+            // TODO: restrict dirs
+            if (!generate_wait_loops) {
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
+                     << ");\n}\n";
+            } else {
+                if (first)
+                    code << "dir_mask_t  _dir_mask_ = 0;\n";
+                first = false;
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
+                     << loop_info.parity_str << ");\n}\n";
+            }
+        }
+    }
+
+    // write wait gathers here also
+    if (!generate_wait_loops)
+        for (field_info &l : field_info_list)
+            if (l.is_loop_local_dir) {
+                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                        "++HILA_dir_) {\n"
+                     << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
+                     << ");\n}\n";
+            }
+
+    if (first)
+        generate_wait_loops = false; // no communication needed in the 1st place
 
     bool boundary_layer = is_macro_defined("BOUNDARY_LAYER_LAYOUT");
     bool evenfirst = is_macro_defined("EVEN_SITES_FIRST");

@@ -13,20 +13,25 @@
 /// Gather boundary elements for communication
 
 template <typename T>
-void Field<T>::field_struct::gather_comm_elements(
-    Direction d, Parity par, T *RESTRICT buffer,
-    const lattice_struct::comm_node_struct &to_node) const {
+void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
+                                                  const lattice_struct::comm_node_struct &to_node
+#if defined(CUDA) || defined(HIP)
+                                                  ,
+                                                  gpuStream_t stream
+#endif
+) const {
 #ifndef VECTORIZED
+    bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // note: -d in is_on_edge, because we're about to send stuff to that
     // Direction (gathering from Direction +d)
-    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, true);
-    } else {
-        payload.gather_comm_elements(buffer, to_node, par, lattice, false);
-    }
+    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
+        antiperiodic = true;
+#endif
+#if defined(CUDA) || defined(HIP)
+    payload.gather_comm_elements(buffer, to_node, par, lattice, antiperiodic, stream);
 #else
-    payload.gather_comm_elements(buffer, to_node, par, lattice, false);
+    payload.gather_comm_elements(buffer, to_node, par, lattice, antiperiodic);
 #endif
 
 #else
@@ -74,9 +79,13 @@ void Field<T>::field_struct::gather_comm_elements(
 /// Place boundary elements from neighbour
 
 template <typename T>
-void Field<T>::field_struct::place_comm_elements(
-    Direction d, Parity par, T *RESTRICT buffer,
-    const lattice_struct::comm_node_struct &from_node) {
+void Field<T>::field_struct::place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
+                                                 const lattice_struct::comm_node_struct &from_node
+#if defined(CUDA) || defined(HIP)
+                                                 ,
+                                                 gpuStream_t stream
+#endif
+) {
 
 #ifdef VECTORIZED
     if constexpr (hila::is_vectorizable_type<T>::value) {
@@ -91,7 +100,11 @@ void Field<T>::field_struct::place_comm_elements(
     }
 #else
     // this one is only for CUDA
+#if defined(CUDA) || defined(HIP)
+    payload.place_comm_elements(d, par, buffer, from_node, lattice, stream);
+#else
     payload.place_comm_elements(d, par, buffer, from_node, lattice);
+#endif
 #endif
     // #endif
 }
@@ -370,11 +383,108 @@ void Field<T>::clear_buffered_shifts() const {
 
 #endif // NAIVE_SHIFT
 
+template <typename T>
+typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Parity &p) const {
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &from_node = ci.from_node;
+    const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
+    if (is_gathered(d, p)) {
+        hila::n_gather_avoided++;
+        return gather_status_t::DONE; // nothing to wait for
+    }
+
+    // No comms to do, nothing to wait for -- we'll use the is_gathered
+    // status to keep track of vector boundary shuffle anyway
+
+    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
+        fs->set_local_boundary_elements(d, p);
+        mark_gathered(d, p);
+        return gather_status_t::DONE;
+    }
+
+    // if this parity or ALL-type gather is going on nothing to be done
+    if (!gather_not_done(d, p) || !gather_not_done(d, ALL)) {
+        hila::n_gather_avoided++;
+        return gather_status_t::STARTED; // nothing to do, but still need to wait
+    }
+
+    // if p is ALL but ODD or EVEN is going on/done, turn off parity which is not needed
+    // corresponding wait must do the same thing
+    if (p == ALL) {
+        if (!gather_not_done(d, EVEN) && !gather_not_done(d, ODD)) {
+            // even and odd are going on or ready, nothing to be done
+            hila::n_gather_avoided++;
+            return gather_status_t::STARTED;
+        }
+        if (!gather_not_done(d, EVEN))
+            p = ODD;
+        else if (!gather_not_done(d, ODD))
+            p = EVEN;
+        // if neither is the case par = ALL
+    }
+
+    return gather_status_t::NOT_DONE;
+}
+
+
+/**
+ * @internal
+ * @brief Wrapper function around start_communication. In the case of GPU simulations we want to
+ * explicitly call the packing kernels becuase start_communication does not call them for GPU.
+ *
+ * @tparam T
+ * @param d Direction
+ * @param p Parity
+ */
+template <typename T>
+dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
+#if defined(GPU_OVERLAP_COMM)
+    return 0;
+#elif !defined(GPU_CCL) && !defined(GPU_SHMEM)
+    return start_communication(d, p);
+#else
+    return 0;
+#endif
+}
+
+#if defined(CUDA) || defined(HIP)
+template <typename T>
+dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
+    const auto &ci = lattice->nn_comminfo[d];
+    if (!is_gather_started(d, p))
+        return 0;
+
+    unsigned sites = ci.to_node.n_sites(p);
+    size_t n_bytes = sites * sizeof(T);
+    if (n_bytes == 0)
+        return 0;
+
+    T *send_ptr = fs->send_buffer[d] + ci.to_node.offset(p);
+    T *recv_ptr = fs->get_receive_buffer(d, p, ci.from_node);
+
+#if defined(GPU_SHMEM)
+    nvshmemx_putmem_nbi_on_stream(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
+
+#elif defined(GPU_CCL)
+    using scalar_t = hila::arithmetic_type<T>;
+    size_t n_elems = sites * (sizeof(T) / sizeof(scalar_t));
+    auto g_type = gccl_type<scalar_t>::value;
+
+    gcclSend(send_ptr, n_elems, g_type, ci.to_node.rank, lattice->gccl_comm_lat, stream);
+    gcclRecv(recv_ptr, n_elems, g_type, ci.from_node.rank, lattice->gccl_comm_lat, stream);
+#endif
+
+    hila::n_gather_done += 1;
+    return get_dir_mask(d);
+}
+#endif
 /// start_gather(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the Direction mask bits where something is happening
 template <typename T>
-dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
+dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 
     assert_all_ranks_present();
 
@@ -390,41 +500,14 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
     // check if this is done - either gathered or no comm to be done in the 1st place
 
-    if (is_gathered(d, p)) {
-        hila::n_gather_avoided++;
-        return 0; // nothing to wait for
-    }
-
-    // No comms to do, nothing to wait for -- we'll use the is_gathered
-    // status to keep track of vector boundary shuffle anyway
-
-    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
-        fs->set_local_boundary_elements(d, p);
-        mark_gathered(d, p);
-        return 0;
-    }
-
-    // if this parity or ALL-type gather is going on nothing to be done
-    if (!gather_not_done(d, p) || !gather_not_done(d, ALL)) {
-        hila::n_gather_avoided++;
-        return get_dir_mask(d); // nothing to do, but still need to wait
-    }
-
     Parity par = p;
-    // if p is ALL but ODD or EVEN is going on/done, turn off parity which is not needed
-    // corresponding wait must do the same thing
-    if (p == ALL) {
-        if (!gather_not_done(d, EVEN) && !gather_not_done(d, ODD)) {
-            // even and odd are going on or ready, nothing to be done
-            hila::n_gather_avoided++;
-            return get_dir_mask(d);
-        }
-        if (!gather_not_done(d, EVEN))
-            par = ODD;
-        else if (!gather_not_done(d, ODD))
-            par = EVEN;
-        // if neither is the case par = ALL
-    }
+
+    gather_status_t gather_status = check_communication(d, par);
+
+    if (gather_status == gather_status_t::DONE)
+        return 0;
+    else if (gather_status == gather_status_t::STARTED)
+        return get_dir_mask(d);
 
     mark_gather_started(d, par);
 
@@ -433,7 +516,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     int par_i = static_cast<int>(par) - 1; // index to dim-3 arrays
 
     constexpr size_t size = sizeof(T);
-
     T *receive_buffer;
     T *send_buffer;
 
@@ -470,15 +552,23 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
-#ifndef MPI_BENCHMARK_TEST
+#if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
+#if defined(CUDA) || defined(HIP)
+        fs->gather_comm_elements(d, par, send_buffer, to_node, hila::compute_stream());
+#else
         fs->gather_comm_elements(d, par, send_buffer, to_node);
+#endif
 #endif
 
         size_t n = sites * size;
 
-#ifdef GPU_AWARE_MPI
-        gpuStreamSynchronize(0);
-        // gpuDeviceSynchronize();
+#ifdef GPU_AWARE_COMM
+#ifdef GPU_OVERLAP_COMM
+        gpuStreamSynchronize(hila::halo_stream());
+#else
+        gpuEventRecord(hila::compute_event(), hila::compute_stream());
+        gpuEventSynchronize(hila::compute_event());
+#endif
 #endif
 
         start_send_timer.start();
@@ -500,10 +590,39 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
-/// @internal
+template <typename T>
+Parity Field<T>::resolve_started_parity(Direction d, Parity p, int &n_wait) const {
+
+    Parity par;
+    n_wait = 1;
+    if (p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)) {
+        par = ALL;
+    } else if (is_gather_started(d, p))
+        par = p; // standard match
+    else if (p != ALL) {
+        if (is_gather_started(d, ALL))
+            par = ALL; // if all is running wait for it
+        else {
+            exit(1);
+        }
+    } else {
+        if (is_gathered(d, EVEN) && is_gather_started(d, ODD))
+            par = ODD;
+        else if (is_gathered(d, ODD) && is_gather_started(d, EVEN))
+            par = EVEN;
+        else if (is_gather_started(d, EVEN) && is_gather_started(d, ODD)) {
+            n_wait = 2; // need to wait for both!
+            par = EVEN; // will be flipped
+        } else {
+            exit(1);
+        }
+    }
+
+    return par;
+}
+
 ///  wait_gather(): Wait for communication at parity par from
 ///  Direction d completes the communication in the function.
-///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
@@ -532,36 +651,9 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
     // Note: the move can be Parity p OR ALL -- need to wait for it in any case
     // set par to be the "sum" over both parities
-    // There never should be ongoing ALL and other parity gather -- start_gather takes
-    // care
 
-    // check here consistency, this should never happen
-    assert(!(p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)));
-
-    Parity par;
-    int n_wait = 1;
-    // what par to wait for?
-    if (is_gather_started(d, p))
-        par = p; // standard match
-    else if (p != ALL) {
-        if (is_gather_started(d, ALL))
-            par = ALL; // if all is running wait for it
-        else {
-            exit(1);
-        }
-    } else {
-        // now p == ALL and ALL is not running
-        if (is_gathered(d, EVEN) && is_gather_started(d, ODD))
-            par = ODD;
-        else if (is_gathered(d, ODD) && is_gather_started(d, EVEN))
-            par = EVEN;
-        else if (is_gather_started(d, EVEN) && is_gather_started(d, ODD)) {
-            n_wait = 2; // need to wait for both!
-            par = EVEN; // will be flipped
-        } else {
-            exit(1);
-        }
-    }
+    int n_wait;
+    Parity par = resolve_started_parity(d, p, n_wait);
 
     for (int wait_i = 0; wait_i < n_wait; ++wait_i) {
 
@@ -575,8 +667,13 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
             wait_receive_timer.stop();
 
-#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST)
+#if !defined(VANILLA) && !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
+#if defined(CUDA) || defined(HIP)
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
+                                    hila::compute_stream());
+#else
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
+#endif
 #endif
         }
 
@@ -587,10 +684,9 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             MPI_Wait(&fs->send_request[par_i][d], &status);
             wait_send_timer.stop();
         }
-
-        // Mark the parity gathered from Direction dir
+#if !defined(GPU_OVERLAP_COMM)
         mark_gathered(d, par);
-
+#endif
         // Keep count of communications
         hila::n_gather_done += 1;
 
@@ -598,6 +694,128 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
     }
 }
 
+#if (defined(CUDA) || defined(HIP))
+/**
+ * @internal
+ * @brief Pack GPU buffers. Only used when packing needs to run before bulk computation and MPI.
+ * Additionally checks if the gather is already done via check_communication
+ *
+ * @tparam T
+ * @param d Direction
+ * @param p Parity
+ */
+template <typename T>
+dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
+
+    gather_status_t gather_status = check_communication(d, p);
+    if (gather_status == gather_status_t::DONE) {
+        return 0;
+    } else if (gather_status == gather_status_t::STARTED) {
+        mark_gather_started(d, p);
+        return get_dir_mask(d);
+    }
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
+    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
+        if (fs->send_buffer[d] == nullptr)
+            fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node,
+                                 hila::halo_stream());
+    }
+#if !defined(GPU_OVERLAP_COMM) || defined(GPU_CCL) || defined(GPU_SHMEM)
+    mark_gather_started(d, p);
+#endif
+    return get_dir_mask(d);
+}
+
+template <typename T>
+dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
+
+    gather_status_t gather_status = check_communication(d, p);
+    if (gather_status == gather_status_t::DONE) {
+        return 0;
+    } else if (gather_status == gather_status_t::STARTED) {
+        mark_gather_started(d, p);
+        return get_dir_mask(d);
+    }
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &to_node = ci.to_node;
+
+    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
+        if (fs->send_buffer[d] == nullptr)
+            fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+        fs->gather_comm_elements(d, p, fs->send_buffer[d] + to_node.offset(p), to_node, stream);
+    }
+
+#if !defined(GPU_OVERLAP_COMM) || defined(GPU_CCL) || defined(GPU_SHMEM)
+    mark_gather_started(d, p);
+#endif
+    return get_dir_mask(d);
+}
+
+/**
+ * @internal
+ * @brief Unpack GPU buffers. Only used when unpacking needs to run after bulk computation and MPI
+ *
+ * @tparam T
+ * @param d
+ * @param p
+ */
+template <typename T>
+void Field<T>::unpack_buffers(Direction d, Parity p) const {
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &from_node = ci.from_node;
+
+    if (p == ALL) {
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
+            !is_gather_started(d, ODD))
+            return;
+    } else if (!is_gather_started(d, p)) {
+        return;
+    }
+
+    int n_wait;
+    Parity par = resolve_started_parity(d, p, n_wait);
+
+    for (int i = 0; i < n_wait; ++i) {
+        if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
+                                    hila::halo_stream());
+        }
+        mark_gathered(d, par);
+        par = opp_parity(par);
+    }
+}
+
+template <typename T>
+void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const lattice_struct::comm_node_struct &from_node = ci.from_node;
+
+    if (p == ALL) {
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
+            !is_gather_started(d, ODD))
+            return;
+    } else if (!is_gather_started(d, p)) {
+        return;
+    }
+
+    int n_wait;
+    Parity par = resolve_started_parity(d, p, n_wait);
+
+    for (int i = 0; i < n_wait; ++i) {
+        if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
+                                    stream);
+        }
+        mark_gathered(d, par);
+        par = opp_parity(par);
+    }
+}
+#endif // CUDA or HIP
 
 /// Gather a list of elements to a single node
 /// coord_list must be same on all nodes, buffer is needed only on "root"
@@ -844,7 +1062,6 @@ std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const 
 
 
 //////////////////////////////////////////////////////////////////////////////////
-/// @internal
 /// Copy the local (mpi process) data to a "logical array"
 /// on gpu code, copies to host
 
@@ -863,7 +1080,7 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
     T *data = buffer.data();
 #endif
 
-    #pragma hila novector direct_access(data)
+#pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
@@ -879,7 +1096,6 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
-/// @internal
 /// set the local data from an array
 
 template <typename T>
@@ -899,7 +1115,7 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
     T *data = buffer.data();
 #endif
 
-    #pragma hila novector direct_access(data)
+#pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
@@ -942,7 +1158,7 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
         node_max[d] = lattice->mynode.min[d] + lattice->mynode.size[d] - 1;
     }
 
-    #pragma hila novector direct_access(data)
+#pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         CoordinateVector c = X.coordinates();
@@ -1005,8 +1221,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
     T *data = buffer.data();
 #endif
 
-    // now collect bulk
-    #pragma hila novector direct_access(data)
+// now collect bulk
+#pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
@@ -1101,7 +1317,7 @@ void Field<T>::block_from(Field<T> &orig) {
     CoordinateVector cvmin = blocklat->mynode.min;
     auto size_factor = blocklat->mynode.size_factor;
 
-    #pragma hila direct_access(buf)
+#pragma hila direct_access(buf)
     onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
@@ -1112,7 +1328,7 @@ void Field<T>::block_from(Field<T> &orig) {
 
     lattice.switch_to(blocklat);
 
-    #pragma hila direct_access(buf)
+#pragma hila direct_access(buf)
     onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
@@ -1162,7 +1378,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     lattice.switch_to(blocklat);
 
-    #pragma hila direct_access(buf)
+#pragma hila direct_access(buf)
     onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
@@ -1171,7 +1387,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     lattice.switch_to(parentlat);
 
-    #pragma hila direct_access(buf)
+#pragma hila direct_access(buf)
     onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
@@ -1217,7 +1433,7 @@ void Field<T>::block_to_current_lattice() {
     CoordinateVector cvmin = currentlat->mynode.min;
     auto size_factor = currentlat->mynode.size_factor;
 
-    #pragma hila direct_access(buf)
+#pragma hila direct_access(buf)
     onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
@@ -1229,7 +1445,7 @@ void Field<T>::block_to_current_lattice() {
     lattice.switch_to(currentlat);
     (*this).clear();
 
-    #pragma hila direct_access(buf)
+#pragma hila direct_access(buf)
     onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;

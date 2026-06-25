@@ -277,14 +277,24 @@ class Field {
          * @brief Gather boundary elements for communication
          */
         void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                  const lattice_struct::comm_node_struct &to_node) const;
+                                  const lattice_struct::comm_node_struct &to_node
+#if defined(CUDA) || defined(HIP)
+                                  ,
+                                  gpuStream_t stream
+#endif
+        ) const;
 
         /**
          * @internal
          * @brief Place boundary elements from neighbour
          */
         void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                 const lattice_struct::comm_node_struct &from_node);
+                                 const lattice_struct::comm_node_struct &from_node
+#if defined(CUDA) || defined(HIP)
+                                 ,
+                                 gpuStream_t stream
+#endif
+        );
 
         /**
          * @internal
@@ -470,8 +480,10 @@ class Field {
      */
     void clear() {
         if (fs != nullptr && !hila::about_to_finish) {
+#if !defined(GPU_CCL)
             for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
+#endif
 #ifdef FIELD_COPY_ON_WRITE
             fs->refcount--;
             if (fs->refcount > 0) {
@@ -1367,8 +1379,21 @@ class Field {
     }
 
     // Communication routines. These are all internal.
+    gather_status_t check_communication(Direction d, Parity &p) const;
+    Parity resolve_started_parity(Direction d, Parity p, int &n_wait) const;
+    dir_mask_t start_communication(Direction d, Parity p = ALL) const;
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
+#if defined(CUDA) || defined(HIP)
+    dir_mask_t stream_gather(Direction d, Parity p) const;
+    dir_mask_t stream_gather(Direction d, Parity p, gpuStream_t &stream) const;
+    dir_mask_t pack_buffers(Direction d, Parity p) const;
+    dir_mask_t pack_buffers(Direction d, Parity p, gpuStream_t &stream) const;
+#endif
     void wait_gather(Direction d, Parity p) const;
+#if defined(CUDA) || defined(HIP)
+    void unpack_buffers(Direction d, Parity p) const;
+    void unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const;
+#endif
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
 
@@ -2220,7 +2245,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v) const {
 ///  are not needed.
 template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
-
+#if !defined(GPU_CCL)
     if (hila::is_comm_initialized()) {
         if (is_gather_started(d, ALL)) {
             drop_comms_timer.start();
@@ -2246,6 +2271,7 @@ void Field<T>::drop_comms(Direction d, Parity p) const {
             }
         }
     }
+#endif
 }
 
 
@@ -2378,5 +2404,4 @@ inline void ensure_field_operators_exist() {
 }
 
 #endif
-
 #endif // FIELD_H

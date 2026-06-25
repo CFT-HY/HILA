@@ -127,7 +127,10 @@ __global__ void gpu_reduce_sum_kernel(T *vector, int vector_size, int new_size, 
 }
 
 template <typename T>
-T gpu_reduce_sum(T *vector, int N) {
+T gpu_reduce_sum(T *vector, int N, gpuStream_t stream = 0) {
+    if (stream != 0)
+        gpuStreamSynchronize(stream);
+
     const int reduce_step = 32;
     T sum = 0;
     T *host_vector = (T *)memalloc(N * sizeof(T));
@@ -170,7 +173,9 @@ __global__ void gpu_reduce_product_kernel(T *vector, int vector_size, int new_si
 }
 
 template <typename T>
-T gpu_reduce_product(T *vector, int N) {
+T gpu_reduce_product(T *vector, int N, gpuStream_t stream = 0) {
+    if (stream != 0)
+        gpuStreamSynchronize(stream);
     const int reduce_step = 32;
     T prod;
     prod = 1;

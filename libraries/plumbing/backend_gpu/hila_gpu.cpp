@@ -39,6 +39,223 @@ using gpurandState = hiprandState_t;
 
 #endif
 
+#if defined(CUDA) && defined(GPU_OVERLAP_COMM)
+// EXPERIMENT (exp-overlap-aware-sync): runtime-selectable overlap stream strategy.
+//   HILA_OVERLAP_STREAM_MODE = default | priority | green   (unset -> priority)
+//     default  : plain non-blocking streams (original behaviour; the comparison baseline)
+//     priority : halo_stream at greatest priority, so the comm kernel (NCCL SendRecv /
+//                NVSHMEM proxy) is scheduled onto SMs as compute waves retire
+//     green    : split the SMs into two green contexts -- comm on HILA_GREEN_SM SMs
+//                (default 32), compute on the rest -- so they run on DISJOINT SMs.
+//                Green requires the CUDA driver API and is compiled in only when
+//                GPU_GREEN_CTX is defined (pulls in -lcuda); otherwise a green
+//                request falls back to priority with a warning.
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#ifdef GPU_GREEN_CTX
+#include <cuda.h> // CUDA driver API: green contexts (SM partitioning)
+#endif
+namespace {
+enum class OverlapStreamMode { Default, Priority, Green };
+OverlapStreamMode overlap_stream_mode() {
+    static OverlapStreamMode mode = [] {
+        OverlapStreamMode m = OverlapStreamMode::Priority; // default when env unset
+        const char *e = getenv("HILA_OVERLAP_STREAM_MODE");
+        if (e) {
+            if (strcmp(e, "default") == 0) m = OverlapStreamMode::Default;
+            else if (strcmp(e, "priority") == 0) m = OverlapStreamMode::Priority;
+            else if (strcmp(e, "green") == 0) {
+#ifdef GPU_GREEN_CTX
+                m = OverlapStreamMode::Green;
+#else
+                fprintf(stderr, "HILA_OVERLAP_STREAM_MODE=green requested but not "
+                                "compiled in (rebuild with GPU_GREEN_CTX) -> priority\n");
+                m = OverlapStreamMode::Priority;
+#endif
+            }
+            else fprintf(stderr, "HILA_OVERLAP_STREAM_MODE: unknown '%s' -> priority\n", e);
+        }
+        return m;
+    }();
+    return mode;
+}
+const char *overlap_stream_mode_name(OverlapStreamMode m) {
+    return m == OverlapStreamMode::Default ? "default"
+         : m == OverlapStreamMode::Green   ? "green"
+                                           : "priority";
+}
+#ifdef GPU_GREEN_CTX
+// Requested green-context comm-SM count (HILA_GREEN_SM, default 32). The realized
+// split after granularity rounding is reported by green_streams() on first use.
+int green_sm_request() {
+    int comm_sm = 32;
+    if (const char *e = getenv("HILA_GREEN_SM")) {
+        int v = atoi(e);
+        if (v > 0) comm_sm = v;
+    }
+    return comm_sm;
+}
+
+struct GreenStreams {
+    gpuStream_t compute;
+    gpuStream_t halo;
+};
+// Single fixed SM split (comm on HILA_GREEN_SM SMs, compute on the rest), built once.
+// NOTE: an adaptive per-kernel load balancer over a pool of splits was prototyped and
+// dropped -- see agent/HILA.md "Green-context overlap TODO". This is the user-pinned
+// split only.
+GreenStreams &green_streams() {
+    static GreenStreams gs = [] {
+        GreenStreams r{};
+        int comm_sm = green_sm_request(); // HILA_GREEN_SM overrides (default 32)
+#define HILA_DRV(x)                                                                          \
+    do {                                                                                     \
+        CUresult _e = (x);                                                                   \
+        if (_e != CUDA_SUCCESS) {                                                            \
+            const char *_s = nullptr;                                                        \
+            cuGetErrorString(_e, &_s);                                                       \
+            fprintf(stderr, "green-ctx: %s -> %s\n", #x, _s ? _s : "?");                     \
+            abort();                                                                         \
+        }                                                                                    \
+    } while (0)
+        HILA_DRV(cuInit(0));
+        int devId;
+        GPU_CHECK(cudaGetDevice(&devId));
+        CUdevice dev;
+        HILA_DRV(cuDeviceGet(&dev, devId));
+        CUdevResource sm;
+        HILA_DRV(cuDeviceGetDevResource(dev, &sm, CU_DEV_RESOURCE_TYPE_SM));
+        CUdevResource comm_res, compute_res;
+        unsigned int nb = 1;
+        HILA_DRV(cuDevSmResourceSplitByCount(&comm_res, &nb, &sm, &compute_res, 0, comm_sm));
+        CUdevResourceDesc comm_desc, compute_desc;
+        HILA_DRV(cuDevResourceGenerateDesc(&comm_desc, &comm_res, 1));
+        HILA_DRV(cuDevResourceGenerateDesc(&compute_desc, &compute_res, 1));
+        CUgreenCtx comm_g, compute_g;
+        HILA_DRV(cuGreenCtxCreate(&comm_g, comm_desc, dev, CU_GREEN_CTX_DEFAULT_STREAM));
+        HILA_DRV(cuGreenCtxCreate(&compute_g, compute_desc, dev, CU_GREEN_CTX_DEFAULT_STREAM));
+        int lo, hi;
+        cudaDeviceGetStreamPriorityRange(&lo, &hi);
+        CUstream cs, hs;
+        HILA_DRV(cuGreenCtxStreamCreate(&cs, compute_g, CU_STREAM_NON_BLOCKING, 0));
+        HILA_DRV(cuGreenCtxStreamCreate(&hs, comm_g, CU_STREAM_NON_BLOCKING, hi));
+        r.compute = (gpuStream_t)cs;
+        r.halo = (gpuStream_t)hs;
+        if (hila::myrank() == 0)
+            fprintf(stderr, "green-ctx: comm=%u SMs  compute=%u SMs\n",
+                    comm_res.sm.smCount, compute_res.sm.smCount);
+#undef HILA_DRV
+        return r;
+    }();
+    return gs;
+}
+#endif // GPU_GREEN_CTX
+} // namespace
+#endif
+
+void hila::report_overlap_config(std::ostream &out) {
+#if defined(GPU_OVERLAP_COMM)
+#if defined(CUDA)
+    OverlapStreamMode m = overlap_stream_mode();
+    out << "Overlap stream mode   : " << overlap_stream_mode_name(m)
+#ifdef GPU_GREEN_CTX
+        << "  (HILA_OVERLAP_STREAM_MODE=default|priority|green)\n";
+    if (m == OverlapStreamMode::Green)
+        out << "Green-ctx comm SMs    : " << green_sm_request()
+            << " requested  (HILA_GREEN_SM; realized split logged at first use)\n";
+#else
+        << "  (HILA_OVERLAP_STREAM_MODE=default|priority; green needs GPU_GREEN_CTX)\n";
+#endif
+#elif defined(HIP)
+    out << "Overlap stream mode   : priority (fixed; high-priority halo_stream)\n";
+#endif
+#endif
+}
+
+gpuStreamPool &hila::stream_pool() {
+    static gpuStreamPool instance;
+    return instance;
+}
+
+gpuStream_t &hila::halo_stream() {
+#if defined(CUDA) && defined(GPU_OVERLAP_COMM)
+    // runtime lever: green -> dedicated green-context stream; priority -> greatest
+    // priority; default -> plain non-blocking (the comparison baseline)
+#ifdef GPU_GREEN_CTX
+    if (overlap_stream_mode() == OverlapStreamMode::Green)
+        return green_streams().halo;
+#endif
+    static gpuStream_t instance = [] {
+        gpuStream_t stream;
+        if (overlap_stream_mode() == OverlapStreamMode::Priority) {
+            int lo, hi;
+            cudaDeviceGetStreamPriorityRange(&lo, &hi);
+            GPU_CHECK(cudaStreamCreateWithPriority(&stream, cudaStreamNonBlocking, hi));
+        } else { // Default
+            GPU_CHECK(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+        }
+        return stream;
+    }();
+    return instance;
+#elif defined(HIP) && defined(GPU_OVERLAP_COMM)
+    static gpuStream_t instance = [] {
+        gpuStream_t stream;
+        int lo, hi;
+        hipDeviceGetStreamPriorityRange(&lo, &hi);
+        GPU_CHECK(hipStreamCreateWithPriority(&stream, hipStreamNonBlocking, hi));
+        return stream;
+    }();
+    return instance;
+#else
+    static gpuStream_t instance = [] {
+        gpuStream_t stream;
+        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        return stream;
+    }();
+    return instance;
+#endif
+}
+
+gpuEvent_t &hila::halo_event() {
+    static gpuEvent_t instance = [] {
+        gpuEvent_t e;
+        gpuEventCreate(&e);
+        return e;
+    }();
+    return instance;
+}
+
+gpuStream_t &hila::compute_stream() {
+#if defined(GPU_OVERLAP_COMM)
+#if defined(CUDA) && defined(GPU_GREEN_CTX)
+    // green mode runs the bulk compute on the (larger) compute green context;
+    // default/priority use a normal full-GPU non-blocking stream
+    if (overlap_stream_mode() == OverlapStreamMode::Green)
+        return green_streams().compute;
+#endif
+    static gpuStream_t instance = [] {
+        gpuStream_t stream;
+        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        return stream;
+    }();
+    return instance;
+#else
+    static gpuStream_t instance = 0;
+    return instance;
+#endif
+}
+
+gpuEvent_t &hila::compute_event() {
+    static gpuEvent_t instance = [] {
+        gpuEvent_t e;
+        gpuEventCreate(&e);
+        return e;
+    }();
+    return instance;
+}
+
+
 // // Save "constants" lattice size and volume here
 // __constant__ int64_t _d_volume;
 // // __constant__ int _d_size[NDIM];
@@ -151,8 +368,8 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
         if (special_neighb != lat.neighb[d]) {
             gpuMalloc(&(d_neighb_special[d]), lat.mynode.volume * sizeof(unsigned));
-            gpuMemcpy(d_neighb_special[d], special_neighb,
-                      lat.mynode.volume * sizeof(unsigned), gpuMemcpyHostToDevice);
+            gpuMemcpy(d_neighb_special[d], special_neighb, lat.mynode.volume * sizeof(unsigned),
+                      gpuMemcpyHostToDevice);
         } else {
             d_neighb_special[d] = d_neighb[d];
         }
@@ -186,13 +403,23 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
 void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
 
-    
+#ifndef HILAPP
+#if defined(GPU_CCL) || defined(GPU_SHMEM)
+    {
+        int n_devices;
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        gpuSetDevice(lat.mynode.rank % n_devices);
+    }
+#endif
+#endif
+
 #ifdef EVEN_SITES_FIRST
 
     gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
                       gpuMemcpyHostToDevice);
 #endif
-    
+
     gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
                       gpuMemcpyHostToDevice);
 
@@ -269,6 +496,96 @@ void initialize_gpu(int rank, int device) {
 #endif
 }
 
+// if using NCCL or RCCL or NVSHMEM
+namespace hila {
+
+#ifdef GPU_CCL
+/**
+ * @brief initialize nccl/rccl communicator for GPU communication
+ * @details Uses same mapping as MPI communicator (gpu per task)
+ *
+ */
+void initialize_gccl_communication() {
+    int rank = lattice->mynode.rank;
+    int size = lattice->nodes.number;
+    std::cout << "pre set device " << "rank: " << rank << " num ranks " << size << std::endl;
+
+    {
+        int n_devices;
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        gpuSetDevice(rank % n_devices);
+    }
+    // gpuSetDevice(rank);
+    std::cout << "Post set device " << "rank: " << rank << " num ranks " << size << std::endl;
+    gcclComm_t communicator;
+    std::cout << "Post gcclComm_t constructor " << "rank: " << rank << " num ranks " << size
+              << std::endl;
+
+    gcclUniqueId unique_id;
+    std::cout << "Post gcclUniqueId constructor " << "rank: " << rank << " num ranks " << size
+              << std::endl;
+
+    if (rank == 0) {
+        gcclGetUniqueId(&unique_id);
+    }
+    std::cout << "Post get unique id " << "rank: " << rank << " num ranks " << size << std::endl;
+
+    MPI_Bcast(&unique_id, sizeof(unique_id), MPI_BYTE, 0, lattice->mpi_comm_lat);
+    std::cout << "Post Bcast" << "rank: " << rank << " num ranks " << size << std::endl;
+
+    gcclCommInitRank(&communicator, size, unique_id, rank);
+    std::cout << "Post Init comm rank" << "rank: " << rank << " num ranks " << size << std::endl;
+
+    lattice.ptr()->gccl_comm_lat = communicator;
+    // double *broadcast_val;
+    // double *recieve;
+    // double recieve_host;
+    // gpuMalloc(&recieve, sizeof(double) * 2048 * 200);
+    // gpuMalloc(&broadcast_val, sizeof(double) * 2048 * 200);
+
+    // double val = 2.718281828459045;
+    // gpuMemcpy(broadcast_val, &val, sizeof(double), gpuMemcpyHostToDevice);
+
+    // gcclGroupStart();
+    // gcclAllReduce(broadcast_val, recieve, 2048 * 200, gccl_type<double>::value, ncclSum,
+    //               communicator, hila::compute_stream());
+    //// gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size,
+    /// communicator, / hila::compute_stream()); gcclRecv(recieve, 2048*200, gccl_type<double>::value,
+    //// (rank-size/2+size)%size, communicator, hila::compute_stream());
+    // gcclGroupEnd();
+    // gpuStreamSynchronize(hila::compute_stream());
+    // gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
+    // std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host << std::endl;
+}
+#endif // GPU_CCL
+#ifdef GPU_SHMEM
+#include <nvshmem.h>
+#include <nvshmemx.h>
+void initialize_nvshmem_communication() {
+    int rank, size;
+
+    {
+        int n_devices;
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        gpuSetDevice(lattice->mynode.rank % n_devices);
+    }
+
+    nvshmemx_init_attr_t attr;
+    attr.mpi_comm = &lattice.ptr()->mpi_comm_lat;
+    nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM, &attr);
+    rank = nvshmem_my_pe();
+    size = nvshmem_n_pes();
+    std::cout << "NVSHMEM initialized. Rank: " << rank << " Size: " << size << std::endl;
+}
+
+void finalize_nvshmem_communication() {}
+
+#endif // GPU_SHMEM
+} // namespace hila
+
+
 #ifdef CUDA
 
 #ifdef OPEN_MPI
@@ -277,7 +594,7 @@ void initialize_gpu(int rank, int device) {
 #endif
 
 void gpu_device_info() {
-    if_rank0() {
+    if_rank0 () {
         const int kb = 1024;
         const int mb = kb * kb;
 
@@ -313,6 +630,12 @@ void gpu_device_info() {
 
         hila::out << "Thread block size used: " << N_threads << '\n';
 
+
+        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
+                  << ") may exceed available shared memory (" << props.sharedMemPerBlock
+                  << " bytes). Consider reducing it.\n";
+
+
 // Following should be OK in open MPI
 #ifdef OPEN_MPI
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
@@ -321,14 +644,14 @@ void gpu_device_info() {
             hila::out << "  Runtime library supports CUDA-Aware MPI\n";
         else {
             hila::out << "  Runtime library does not support CUDA-Aware MPI!\n";
-#if defined(GPU_AWARE_MPI)
-            hila::out << "GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#if defined(GPU_AWARE_COMM)
+            hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
 #endif
         }
 #else
         hila::out << "OpenMPI library does not support CUDA-Aware MPI\n";
-#if defined(GPU_AWARE_MPI)
-        hila::out << "GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#if defined(GPU_AWARE_COMM)
+        hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
 #endif
 #endif // MPIX
 #endif // OPEN_MPI
@@ -339,7 +662,7 @@ void gpu_device_info() {
 #ifdef HIP
 
 void gpu_device_info() {
-    if_rank0() {
+    if_rank0 () {
         const int kb = 1024;
         const int mb = kb * kb;
 
@@ -367,6 +690,10 @@ void gpu_device_info() {
         hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                   << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
         hila::out << "Thread block size used: " << N_threads << '\n';
+
+        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
+                  << ") may exceed available shared memory (" << props.sharedMemPerBlock
+                  << " bytes). Consider reducing it.\n";
     }
 }
 

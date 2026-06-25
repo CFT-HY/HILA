@@ -5,6 +5,10 @@
 #include "plumbing/com_mpi.h"
 #include "plumbing/timing.h"
 
+#ifdef GPU_CCL
+#include "plumbing/backend_gpu/defs.h"
+#endif
+
 #include "datatypes/extended.h"
 
 
@@ -156,7 +160,18 @@ void hila::initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
     if (!mpi_initialized) {
 
-#ifndef OPENMP
+#if defined(GPU_SHMEM)
+
+        int provided;
+        MPI_Init_thread(&argc, argv, MPI_THREAD_MULTIPLE, &provided);
+        if (provided < MPI_THREAD_MULTIPLE) {
+            if_rank0 ()
+                hila::out << "MPI could not provide MPI_THREAD_MULTIPLE, required for GPU_SHMEM, exiting\n";
+            MPI_Finalize();
+            exit(1);
+        }
+
+#elif !defined(OPENMP)
         MPI_Init(&argc, argv);
 
 #else
@@ -172,6 +187,7 @@ void hila::initialize_communications(int &argc, char ***argv) {
 
 #endif
 
+
         mpi_initialized = true;
 
         // global var lattice exists, assign the mpi comms there
@@ -179,6 +195,13 @@ void hila::initialize_communications(int &argc, char ***argv) {
 
         MPI_Comm_rank(lattice->mpi_comm_lat, &lattice.ptr()->mynode.rank);
         MPI_Comm_size(lattice->mpi_comm_lat, &lattice.ptr()->nodes.number);
+
+#ifdef GPU_CCL
+        hila::initialize_gccl_communication();
+#endif
+#ifdef GPU_SHMEM
+        hila::initialize_nvshmem_communication();
+#endif
     }
 }
 

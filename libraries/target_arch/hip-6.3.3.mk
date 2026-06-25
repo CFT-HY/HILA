@@ -1,6 +1,6 @@
 # Platform specific makefile for HIP code, on linux with hipcc (ROCm) installed
 #
-# this is included from main.mk -file, which is in turn included from 
+# this is included from main.mk -file, which is in turn included from
 # application makefile
 #
 #
@@ -11,7 +11,7 @@ CC := hipcc
 # CC = /usr/bin/nvcc
 #LD := $(CC) --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
 GPU_ARCH=gfx1030
-LD := $(CC) -O3 --std=c++17 --stdlib=libc++ --offload-arch=${GPU_ARCH} -fgpu-rdc --hip-link 
+LD := $(CC) -O3 --std=c++17 --stdlib=libc++ --offload-arch=${GPU_ARCH} -fgpu-rdc
 
 #-gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52
 
@@ -19,14 +19,14 @@ LD := $(CC) -O3 --std=c++17 --stdlib=libc++ --offload-arch=${GPU_ARCH} -fgpu-rdc
 CXXFLAGS := --std=c++17 -x hip --stdlib=libc++ --offload-arch=${GPU_ARCH} -fgpu-rdc --hip-link -D__HIP_PLATFORM_AMD__=1
 #-nogpulib
 CXXFLAGS_NOOPT := $(CXXFLAGS) -O1
-CXXFLAGS += -O3 
+CXXFLAGS += -O3
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!
 # CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"
-#CXXFLAGS = -g -x c++ --std=c++17 
+#CXXFLAGS = -g -x c++ --std=c++17
 
 
-#LDLIBS := -L/usr/local/cuda-11.2/targets/x86_64-linux/lib/ -lcufft -lm 
+#LDLIBS := -L/usr/local/cuda-11.2/targets/x86_64-linux/lib/ -lcufft -lm
 LDLIBS := -lm -L/opt/rocm-6.3.3/lib -L/opt/rocm-6.3.3/hiprand/lib -L/opt/rocm-6.3.3/hipfft/lib -L/opt/rocm-6.3.3/hipcub/lib
 #LDLIBS := -L/opt/rocm-5.3.0/hip/lib/ -L/opt/rocm-5.3.0/lib/ -L/opt/rocm-5.3.0/rocfft/lib -L/opt/rocm-5.3.0/rocrand/lib
 
@@ -43,7 +43,7 @@ HIP_INCLUDE_DIRS := -I$(HIP_PATH) -I$(HIP_PATH)/hiprand/include -I$(HIP_PATH)/hi
 #HIP_INCLUDE_DIRS += -I$(HIP_PATH)/rocrand/include -I$(HIP_PATH)/rocfft/include
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o 
+HILA_OBJECTS += build/hila_gpu.o
 
 ################
 

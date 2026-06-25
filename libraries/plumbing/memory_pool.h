@@ -10,6 +10,8 @@
 
 namespace hila {
 
+enum class pool_type { STANDARD, SHARED };
+
 struct memory_pool_status {
     size_t total_size = 0;
     size_t n_allocs = 0;
@@ -28,11 +30,15 @@ class memory_pool {
         bool in_use;
     };
 
+    hila::pool_type type = hila::pool_type::STANDARD;
+
     memory_pool_status p;
 
     std::vector<allocation> blocklist = {};
 
   public:
+    memory_pool(pool_type t = pool_type::STANDARD) : type(t) {}
+
     void *alloc(size_t req_size);
     void free(void *ptr);
     void purge();

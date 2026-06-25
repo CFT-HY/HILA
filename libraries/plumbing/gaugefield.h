@@ -406,6 +406,10 @@ class GaugeField {
                 }
             }
 
+#if defined(CUDA) || defined(HIP)
+            gpuDeviceSynchronize();
+#endif
+
             lattice.switch_to(currentlat);
             (*this)[d].clear();
 
@@ -415,6 +419,9 @@ class GaugeField {
                 Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
                 (*this)[d][X] = buf[cv.dot(size_factor)];
             }
+#if defined(CUDA) || defined(HIP)
+            gpuDeviceSynchronize();
+#endif
         } // directions
 
         d_free(buf);

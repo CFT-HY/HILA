@@ -1,0 +1,30 @@
+# Build directories (all variants)
+build_*/
+build/
+
+# Benchmark / tuning run trees
+bench/
+
+# Debug and network test run dirs
+debug_*/
+gdb_bt_*/
+net_*/
+
+# Slurm output artefacts
+slurm_errors*/
+slurm_output*/
+
+# Local build/test helpers
+Makefile.test
+*.mk
+parameters_local
+run_local_test.sh
+
+# Per-rank wrappers and batch scripts generated at runtime
+wrap_*.sh
+batch*.sh
+nsys_repro.sh
+debug_shmem.sh
+
+# Core dumps
+core.*
