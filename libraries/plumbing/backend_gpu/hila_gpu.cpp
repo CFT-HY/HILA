@@ -18,6 +18,7 @@
 
 using gpurandState = curandState_t;
 #define gpurand_init curand_init
+#define gpurand_uint32 curand
 #define gpurand_uniform curand_uniform
 #define gpuGetDeviceCount(a) GPU_CHECK(cudaGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(cudaSetDevice(dev))
@@ -31,6 +32,7 @@ using gpurandState = curandState_t;
 
 using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
+#define gpurand_uint32 hiprand
 #define gpurand_uniform hiprand_uniform
 #define gpuGetDeviceCount(a) GPU_CHECK(hipGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(hipSetDevice(dev))
@@ -63,8 +65,10 @@ OverlapStreamMode overlap_stream_mode() {
         OverlapStreamMode m = OverlapStreamMode::Priority; // default when env unset
         const char *e = getenv("HILA_OVERLAP_STREAM_MODE");
         if (e) {
-            if (strcmp(e, "default") == 0) m = OverlapStreamMode::Default;
-            else if (strcmp(e, "priority") == 0) m = OverlapStreamMode::Priority;
+            if (strcmp(e, "default") == 0)
+                m = OverlapStreamMode::Default;
+            else if (strcmp(e, "priority") == 0)
+                m = OverlapStreamMode::Priority;
             else if (strcmp(e, "green") == 0) {
 #ifdef GPU_GREEN_CTX
                 m = OverlapStreamMode::Green;
@@ -73,8 +77,8 @@ OverlapStreamMode overlap_stream_mode() {
                                 "compiled in (rebuild with GPU_GREEN_CTX) -> priority\n");
                 m = OverlapStreamMode::Priority;
 #endif
-            }
-            else fprintf(stderr, "HILA_OVERLAP_STREAM_MODE: unknown '%s' -> priority\n", e);
+            } else
+                fprintf(stderr, "HILA_OVERLAP_STREAM_MODE: unknown '%s' -> priority\n", e);
         }
         return m;
     }();
@@ -82,7 +86,7 @@ OverlapStreamMode overlap_stream_mode() {
 }
 const char *overlap_stream_mode_name(OverlapStreamMode m) {
     return m == OverlapStreamMode::Default ? "default"
-         : m == OverlapStreamMode::Green   ? "green"
+           : m == OverlapStreamMode::Green ? "green"
                                            : "priority";
 }
 #ifdef GPU_GREEN_CTX
@@ -92,7 +96,8 @@ int green_sm_request() {
     int comm_sm = 32;
     if (const char *e = getenv("HILA_GREEN_SM")) {
         int v = atoi(e);
-        if (v > 0) comm_sm = v;
+        if (v > 0)
+            comm_sm = v;
     }
     return comm_sm;
 }
@@ -109,15 +114,15 @@ GreenStreams &green_streams() {
     static GreenStreams gs = [] {
         GreenStreams r{};
         int comm_sm = green_sm_request(); // HILA_GREEN_SM overrides (default 32)
-#define HILA_DRV(x)                                                                          \
-    do {                                                                                     \
-        CUresult _e = (x);                                                                   \
-        if (_e != CUDA_SUCCESS) {                                                            \
-            const char *_s = nullptr;                                                        \
-            cuGetErrorString(_e, &_s);                                                       \
-            fprintf(stderr, "green-ctx: %s -> %s\n", #x, _s ? _s : "?");                     \
-            abort();                                                                         \
-        }                                                                                    \
+#define HILA_DRV(x)                                                                                \
+    do {                                                                                           \
+        CUresult _e = (x);                                                                         \
+        if (_e != CUDA_SUCCESS) {                                                                  \
+            const char *_s = nullptr;                                                              \
+            cuGetErrorString(_e, &_s);                                                             \
+            fprintf(stderr, "green-ctx: %s -> %s\n", #x, _s ? _s : "?");                           \
+            abort();                                                                               \
+        }                                                                                          \
     } while (0)
         HILA_DRV(cuInit(0));
         int devId;
@@ -143,8 +148,8 @@ GreenStreams &green_streams() {
         r.compute = (gpuStream_t)cs;
         r.halo = (gpuStream_t)hs;
         if (hila::myrank() == 0)
-            fprintf(stderr, "green-ctx: comm=%u SMs  compute=%u SMs\n",
-                    comm_res.sm.smCount, compute_res.sm.smCount);
+            fprintf(stderr, "green-ctx: comm=%u SMs  compute=%u SMs\n", comm_res.sm.smCount,
+                    compute_res.sm.smCount);
 #undef HILA_DRV
         return r;
     }();
@@ -334,11 +339,35 @@ void hila::free_device_rng() {
     }
 }
 
-/* Generate random numbers on device or host */
+/* Generate random numbers on device or host. Values are in range [0,1) */
 __device__ __host__ double hila::random() {
 #ifdef _GPU_DEVICE_COMPILE_
     unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
-    return gpurand_uniform(&d_gpurandstateptr[x]);
+
+    // ---
+    // Method 1: convert 32-bit unsigned int directly to double,
+    // i.e. return  uint32 * 2^(-32)
+    // This number below is 2^(-32) in double
+    // THERE SHOULD BE NO REASON TO USE THIS
+    //
+    // return gpurand_uint32(&d_gpurandstateptr[x]) * 2.3283064365386963e-10;
+
+    // ---
+
+    // Method 2: use 2 32-bit unsigned random ints to generate a 53-bit random value,
+    // which is then converted to double by multiplying by 2^(-53)
+    // This should be the preferred method
+    unsigned u1 = gpurand_uint32(&d_gpurandstateptr[x]);
+    unsigned u2 = gpurand_uint32(&d_gpurandstateptr[x]);
+    unsigned long long z = ((unsigned long long)u1) ^ ((unsigned long long)u2 << (53 - 32));
+    return z * 1.1102230246251565e-16; // = 2^(-53)
+
+    // ---
+
+    // This below is std cuda/hip uniform rng
+    // DO NOT USE, GIVES WRONG RANGE (0,1], AND ACTUALLY RETURNS FLOATS
+    // return gpurand_uniform(&d_gpurandstateptr[x]);
+
 #else
     return hila::host_random();
 #endif
@@ -551,7 +580,8 @@ void initialize_gccl_communication() {
     // gcclAllReduce(broadcast_val, recieve, 2048 * 200, gccl_type<double>::value, ncclSum,
     //               communicator, hila::compute_stream());
     //// gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size,
-    /// communicator, / hila::compute_stream()); gcclRecv(recieve, 2048*200, gccl_type<double>::value,
+    /// communicator, / hila::compute_stream()); gcclRecv(recieve, 2048*200,
+    /// gccl_type<double>::value,
     //// (rank-size/2+size)%size, communicator, hila::compute_stream());
     // gcclGroupEnd();
     // gpuStreamSynchronize(hila::compute_stream());
