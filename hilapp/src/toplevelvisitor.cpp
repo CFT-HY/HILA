@@ -1431,13 +1431,13 @@ bool TopLevelVisitor::handle_constexpr_if(Stmt *s) {
     if (ifstmt->getCond())
         TraverseStmt(ifstmt->getCond());
 
-    if (ifstmt->getThen() == nondiscarded) {
+    if (ifstmt->getThen() == nondiscarded.value()) {
         TraverseStmt(ifstmt->getThen());
         if (ifstmt->getElse()) {
             st = ifstmt->getElse();
             // llvm::errs() << " REMOVE ELSE\n";
         }
-    } else if (nondiscarded.value() == nullptr || ifstmt->getElse() == nondiscarded) {
+    } else if (nondiscarded.value() == nullptr || ifstmt->getElse() == nondiscarded.value()) {
         st = ifstmt->getThen();
         // llvm::errs() << " REMOVE THEN\n";
         if (ifstmt->getElse()) {
@@ -1446,10 +1446,10 @@ bool TopLevelVisitor::handle_constexpr_if(Stmt *s) {
     }
 
     if (st != nullptr) {
-        SourceRange r =  getRangeWithSemicolon(st->getSourceRange(),false);
+        SourceRange r = getRangeWithSemicolon(st->getSourceRange(), false);
         writeBuf->insert(r.getBegin(), "{}\n#if 0  // hilapp commented out\n", true, false);
-        writeBuf->insert_after(getSourceLocationAtEndOfRange(r), "\n#endif // end commented out\n", true, false);
-
+        writeBuf->insert_after(getSourceLocationAtEndOfRange(r), "\n#endif // end commented out\n",
+                               true, false);
     }
 
     // if (ifstmt->getInit())
