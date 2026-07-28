@@ -141,7 +141,7 @@ $(LASTMAKE): $(MAKEFILE_LIST)
 
 # Then generic makefile options
 ifdef EVEN_SITES_FIRST
-ifeq (EVEN_SITES_FIRST,0)
+ifeq ($(EVEN_SITES_FIRST),0)
 HILA_OPTS += -DEVEN_SITES_FIRST=0
 endif
 endif
@@ -155,7 +155,7 @@ HILA_OPTS += -DGPU_SYNCHRONIZE_TIMERS
 endif
 
 ifdef GPU_AWARE_COMM
-ifeq (GPU_AWARE_COMM,0)
+ifeq ($(GPU_AWARE_COMM),0)
 HILA_OPTS += -DGPU_AWARE_COMM=0
 endif
 endif
