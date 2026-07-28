@@ -16,7 +16,8 @@
 
 #include <curand_kernel.h>
 
-using gpurandState = curandState_t;
+//using gpurandState = curandState_t;
+using gpurandState = curandStateXORWOW_t;
 #define gpurand_init curand_init
 #define gpurand_uint32 curand
 #define gpurand_uniform curand_uniform
@@ -30,7 +31,8 @@ using gpurandState = curandState_t;
 #include <hip/hip_runtime.h>
 #include <hiprand/hiprand_kernel.h>
 
-using gpurandState = hiprandState_t;
+//using gpurandState = hiprandState_t;
+using gpurandState = hiprandStateXORWOW_t;
 #define gpurand_init hiprand_init
 #define gpurand_uint32 hiprand
 #define gpurand_uniform hiprand_uniform
@@ -272,7 +274,7 @@ gpuEvent_t &hila::compute_event() {
 // #endif
 
 /* Random number generator */
-static gpurandState *gpurandstateptr;
+static gpurandState *gpurandstateptr = nullptr;
 __constant__ gpurandState *d_gpurandstateptr;
 
 // check if rng on device is OK
@@ -286,11 +288,22 @@ __global__ void seed_random_kernel(unsigned long long seed) {
     unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
     //  d_gpurandstateptr set now using memcpyToSymbol
     //  d_gpurandstateptr = state;
-    gpurand_init(seed + x, 0, 0, &d_gpurandstateptr[x]);
+    gpurand_init(seed + x, x, 0, &d_gpurandstateptr[x]);
 }
 
 /* Set seed on device and host */
 void hila::initialize_device_rng(uint64_t seed) {
+
+#if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS < 0
+    hila::out0 << "GPU RANDOM NUMBERS DISABLED, GPU_RNG_THREAD_BLOCKS < 0\n";
+    return;
+
+#else
+
+    if (is_device_rng_on()) {
+        hila::out0 << "Reseeding GPU random numbers, new seed " << seed << '\n';
+    }
+
     unsigned long n_blocks = (lattice->mynode.volume + N_threads - 1) / N_threads;
 
 #if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS > 0
@@ -299,24 +312,28 @@ void hila::initialize_device_rng(uint64_t seed) {
         n_blocks = GPU_RNG_THREAD_BLOCKS;
     }
 
-    hila::out0 << "GPU random number generator initialized\n";
-    hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads
-               << " threads\n";
-#elif defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS < 0
-    hila::out0 << "GPU RANDOM NUMBERS DISABLED, GPU_RNG_THREAD_BLOCKS < 0\n";
+    if (!is_device_rng_on()) {
+        hila::out0 << "Initializing GPU random number generator\n";
+        hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads
+                   << " threads\n";
+    }
 #else
-    hila::out0 << "GPU random number generator initialized\n";
-    hila::out0
-        << "GPU random numbers: using on generator/site (GPU_RNG_THREAD_BLOCKS = 0 or undefined)\n";
+    if (!is_device_rng_on()) {
+        hila::out0 << "Initializing GPU random number generator\n";
+        hila::out0 << "GPU random numbers: using one generator/site (GPU_RNG_THREAD_BLOCKS = 0 or "
+                      "undefined)\n";
+    }
 #endif
 
     unsigned long long n_sites = n_blocks * N_threads;
     unsigned long long myseed = seed + hila::myrank() * n_sites;
 
-    // allocate random state and copy the ptr to d_gpurandstateptr
-    gpuMalloc(&gpurandstateptr, n_sites * sizeof(gpurandState));
-    gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
-                      gpuMemcpyHostToDevice);
+    if (!is_device_rng_on()) {
+        // allocate random state and copy the ptr to d_gpurandstateptr
+        gpuMalloc(&gpurandstateptr, n_sites * sizeof(gpurandState));
+        gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
+                          gpuMemcpyHostToDevice);
+    }
 
 #ifdef CUDA
     seed_random_kernel<<<n_blocks, N_threads>>>(myseed);
@@ -324,10 +341,13 @@ void hila::initialize_device_rng(uint64_t seed) {
     hipLaunchKernelGGL(seed_random_kernel, dim3(n_blocks), dim3(N_threads), 0, 0, myseed);
 #endif
     check_device_error("seed_random kernel");
+
+#endif
+
 }
 
 void hila::free_device_rng() {
-    if (gpurandstateptr != nullptr) {
+    if (is_device_rng_on()) {
         gpuFree(gpurandstateptr);
         gpurandstateptr = nullptr;
         // set d_gpurandstateptr <- nullptr.
@@ -427,193 +447,196 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
 #endif // not HILAPP
 
-// set some gobal variables, visible on GPUs
-// thus, hilapp needs to see this definition
+    // set some gobal variables, visible on GPUs
+    // thus, hilapp needs to see this definition
 
-void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
+    void backend_lattice_struct::set_device_globals(const lattice_struct &lat) {
 
 #ifndef HILAPP
 #if defined(GPU_CCL) || defined(GPU_SHMEM)
-    {
-        int n_devices;
-        gpuGetDeviceCount(&n_devices);
-        check_device_error("Could not get device count");
-        gpuSetDevice(lat.mynode.rank % n_devices);
-    }
+        {
+            int n_devices;
+            gpuGetDeviceCount(&n_devices);
+            check_device_error("Could not get device count");
+            gpuSetDevice(lat.mynode.rank % n_devices);
+        }
 #endif
 #endif
 
 #ifdef EVEN_SITES_FIRST
 
-    gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
-                      gpuMemcpyHostToDevice);
+        gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
+                          gpuMemcpyHostToDevice);
 #endif
 
-    gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
-                      gpuMemcpyHostToDevice);
+        gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
+                          gpuMemcpyHostToDevice);
 
-    _d_volume = lat.l_volume;
-    _d_size = lat.l_size;
+        _d_volume = lat.l_volume;
+        _d_size = lat.l_size;
 
 #ifndef EVEN_SITES_FIRST
 
-    _d_nodesize = lat.mynode.size;
-    _d_nodemin = lat.mynode.min;
-    _d_nodefactor = lat.mynode.size_factor;
+        _d_nodesize = lat.mynode.size;
+        _d_nodemin = lat.mynode.min;
+        _d_nodefactor = lat.mynode.size_factor;
 
-    // foralldir(d) s[d] = lat.mynode.size[d];
-    // gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+        // foralldir(d) s[d] = lat.mynode.size[d];
+        // gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
-    // foralldir(d) s[d] = lat.mynode.min[d];
-    // gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+        // foralldir(d) s[d] = lat.mynode.min[d];
+        // gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
-    // foralldir(d) s[d] = lat.mynode.size_factor[d];
-    // gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+        // foralldir(d) s[d] = lat.mynode.size_factor[d];
+        // gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
 #endif
-}
+    }
 
 #ifndef HILAPP
-// again, hilapp can skip this part
+    // again, hilapp can skip this part
 
-void initialize_gpu(int rank, int device) {
-    int n_devices, my_device;
+    void initialize_gpu(int rank, int device) {
+        int n_devices, my_device;
 
-    gpuGetDeviceCount(&n_devices);
-    check_device_error("Could not get device count");
-    // This assumes that each node has the same number of mpi ranks and GPUs
-    // TODO:generalize (if needed)
-    if (device > 0 && hila::number_of_nodes() == 1) {
-        if (device >= n_devices) {
-            hila::out0 << "-device " << device << ": too large device number, maximum "
-                       << n_devices - 1 << " on this machine\n";
-            hila::terminate(0);
+        gpuGetDeviceCount(&n_devices);
+        check_device_error("Could not get device count");
+        // This assumes that each node has the same number of mpi ranks and GPUs
+        // TODO:generalize (if needed)
+        if (device > 0 && hila::number_of_nodes() == 1) {
+            if (device >= n_devices) {
+                hila::out0 << "-device " << device << ": too large device number, maximum "
+                           << n_devices - 1 << " on this machine\n";
+                hila::terminate(0);
+            }
+
+            my_device = device;
+        } else {
+            my_device = rank % n_devices;
         }
 
-        my_device = device;
-    } else {
-        my_device = rank % n_devices;
-    }
 
+        hila::out0 << "GPU devices accessible from node 0: " << n_devices << '\n';
 
-    hila::out0 << "GPU devices accessible from node 0: " << n_devices << '\n';
-
-    // TODO: this only for node 0?
-    if (n_devices > 1 && rank < 6) {
-        hila::out << "GPU: MPI rank " << rank << " choosing device " << my_device << std::endl;
-        if (hila::number_of_nodes() > 6) {
-            hila::out0 << "  + " << hila::number_of_nodes() - 6 << " more nodes\n";
+        // TODO: this only for node 0?
+        if (n_devices > 1 && rank < 6) {
+            hila::out << "GPU: MPI rank " << rank << " choosing device " << my_device << std::endl;
+            if (hila::number_of_nodes() > 6) {
+                hila::out0 << "  + " << hila::number_of_nodes() - 6 << " more nodes\n";
+            }
         }
-    }
 
-    gpuSetDevice(my_device);
+        gpuSetDevice(my_device);
 
-    // set gpu rng state to "off", to prevent accidental use
-    gpurandstateptr = nullptr;
-    // set d_gpurandstateptr <- nullptr.
-    gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
-                      gpuMemcpyHostToDevice);
+        // set gpu rng state to "off", to prevent accidental use
+        gpurandstateptr = nullptr;
+        // set d_gpurandstateptr <- nullptr.
+        gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
+                          gpuMemcpyHostToDevice);
 
 
 #if defined(CUDA_MALLOC_ASYNC)
-    // set memory pool
-    cudaMemPool_t mempool;
-    cudaDeviceGetDefaultMemPool(&mempool, my_device);
-    uint64_t threshold = UINT64_MAX;
-    cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+        // set memory pool
+        cudaMemPool_t mempool;
+        cudaDeviceGetDefaultMemPool(&mempool, my_device);
+        uint64_t threshold = UINT64_MAX;
+        cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
 
 #endif
-}
+    }
 
-// if using NCCL or RCCL or NVSHMEM
-namespace hila {
+    // if using NCCL or RCCL or NVSHMEM
+    namespace hila {
 
 #ifdef GPU_CCL
-/**
- * @brief initialize nccl/rccl communicator for GPU communication
- * @details Uses same mapping as MPI communicator (gpu per task)
- *
- */
-void initialize_gccl_communication() {
-    int rank = lattice->mynode.rank;
-    int size = lattice->nodes.number;
-    std::cout << "pre set device " << "rank: " << rank << " num ranks " << size << std::endl;
+    /**
+     * @brief initialize nccl/rccl communicator for GPU communication
+     * @details Uses same mapping as MPI communicator (gpu per task)
+     *
+     */
+    void initialize_gccl_communication() {
+        int rank = lattice->mynode.rank;
+        int size = lattice->nodes.number;
+        std::cout << "pre set device " << "rank: " << rank << " num ranks " << size << std::endl;
 
-    {
-        int n_devices;
-        gpuGetDeviceCount(&n_devices);
-        check_device_error("Could not get device count");
-        gpuSetDevice(rank % n_devices);
+        {
+            int n_devices;
+            gpuGetDeviceCount(&n_devices);
+            check_device_error("Could not get device count");
+            gpuSetDevice(rank % n_devices);
+        }
+        // gpuSetDevice(rank);
+        std::cout << "Post set device " << "rank: " << rank << " num ranks " << size << std::endl;
+        gcclComm_t communicator;
+        std::cout << "Post gcclComm_t constructor " << "rank: " << rank << " num ranks " << size
+                  << std::endl;
+
+        gcclUniqueId unique_id;
+        std::cout << "Post gcclUniqueId constructor " << "rank: " << rank << " num ranks " << size
+                  << std::endl;
+
+        if (rank == 0) {
+            gcclGetUniqueId(&unique_id);
+        }
+        std::cout << "Post get unique id " << "rank: " << rank << " num ranks " << size
+                  << std::endl;
+
+        MPI_Bcast(&unique_id, sizeof(unique_id), MPI_BYTE, 0, lattice->mpi_comm_lat);
+        std::cout << "Post Bcast" << "rank: " << rank << " num ranks " << size << std::endl;
+
+        gcclCommInitRank(&communicator, size, unique_id, rank);
+        std::cout << "Post Init comm rank" << "rank: " << rank << " num ranks " << size
+                  << std::endl;
+
+        lattice.ptr()->gccl_comm_lat = communicator;
+        // double *broadcast_val;
+        // double *recieve;
+        // double recieve_host;
+        // gpuMalloc(&recieve, sizeof(double) * 2048 * 200);
+        // gpuMalloc(&broadcast_val, sizeof(double) * 2048 * 200);
+
+        // double val = 2.718281828459045;
+        // gpuMemcpy(broadcast_val, &val, sizeof(double), gpuMemcpyHostToDevice);
+
+        // gcclGroupStart();
+        // gcclAllReduce(broadcast_val, recieve, 2048 * 200, gccl_type<double>::value, ncclSum,
+        //               communicator, hila::compute_stream());
+        //// gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size,
+        /// communicator, / hila::compute_stream()); gcclRecv(recieve, 2048*200,
+        /// gccl_type<double>::value,
+        //// (rank-size/2+size)%size, communicator, hila::compute_stream());
+        // gcclGroupEnd();
+        // gpuStreamSynchronize(hila::compute_stream());
+        // gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
+        // std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host <<
+        // std::endl;
     }
-    // gpuSetDevice(rank);
-    std::cout << "Post set device " << "rank: " << rank << " num ranks " << size << std::endl;
-    gcclComm_t communicator;
-    std::cout << "Post gcclComm_t constructor " << "rank: " << rank << " num ranks " << size
-              << std::endl;
-
-    gcclUniqueId unique_id;
-    std::cout << "Post gcclUniqueId constructor " << "rank: " << rank << " num ranks " << size
-              << std::endl;
-
-    if (rank == 0) {
-        gcclGetUniqueId(&unique_id);
-    }
-    std::cout << "Post get unique id " << "rank: " << rank << " num ranks " << size << std::endl;
-
-    MPI_Bcast(&unique_id, sizeof(unique_id), MPI_BYTE, 0, lattice->mpi_comm_lat);
-    std::cout << "Post Bcast" << "rank: " << rank << " num ranks " << size << std::endl;
-
-    gcclCommInitRank(&communicator, size, unique_id, rank);
-    std::cout << "Post Init comm rank" << "rank: " << rank << " num ranks " << size << std::endl;
-
-    lattice.ptr()->gccl_comm_lat = communicator;
-    // double *broadcast_val;
-    // double *recieve;
-    // double recieve_host;
-    // gpuMalloc(&recieve, sizeof(double) * 2048 * 200);
-    // gpuMalloc(&broadcast_val, sizeof(double) * 2048 * 200);
-
-    // double val = 2.718281828459045;
-    // gpuMemcpy(broadcast_val, &val, sizeof(double), gpuMemcpyHostToDevice);
-
-    // gcclGroupStart();
-    // gcclAllReduce(broadcast_val, recieve, 2048 * 200, gccl_type<double>::value, ncclSum,
-    //               communicator, hila::compute_stream());
-    //// gcclSend(broadcast_val, 2048*200, gccl_type<double>::value, (rank+size/2)%size,
-    /// communicator, / hila::compute_stream()); gcclRecv(recieve, 2048*200,
-    /// gccl_type<double>::value,
-    //// (rank-size/2+size)%size, communicator, hila::compute_stream());
-    // gcclGroupEnd();
-    // gpuStreamSynchronize(hila::compute_stream());
-    // gpuMemcpy(&recieve_host, recieve, sizeof(double), gpuMemcpyDeviceToHost);
-    // std::cout << "Post Broadcast " << "rank: " << rank << " num " << recieve_host << std::endl;
-}
 #endif // GPU_CCL
 #ifdef GPU_SHMEM
 #include <nvshmem.h>
 #include <nvshmemx.h>
-void initialize_nvshmem_communication() {
-    int rank, size;
+    void initialize_nvshmem_communication() {
+        int rank, size;
 
-    {
-        int n_devices;
-        gpuGetDeviceCount(&n_devices);
-        check_device_error("Could not get device count");
-        gpuSetDevice(lattice->mynode.rank % n_devices);
+        {
+            int n_devices;
+            gpuGetDeviceCount(&n_devices);
+            check_device_error("Could not get device count");
+            gpuSetDevice(lattice->mynode.rank % n_devices);
+        }
+
+        nvshmemx_init_attr_t attr;
+        attr.mpi_comm = &lattice.ptr()->mpi_comm_lat;
+        nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM, &attr);
+        rank = nvshmem_my_pe();
+        size = nvshmem_n_pes();
+        std::cout << "NVSHMEM initialized. Rank: " << rank << " Size: " << size << std::endl;
     }
 
-    nvshmemx_init_attr_t attr;
-    attr.mpi_comm = &lattice.ptr()->mpi_comm_lat;
-    nvshmemx_init_attr(NVSHMEMX_INIT_WITH_MPI_COMM, &attr);
-    rank = nvshmem_my_pe();
-    size = nvshmem_n_pes();
-    std::cout << "NVSHMEM initialized. Rank: " << rank << " Size: " << size << std::endl;
-}
-
-void finalize_nvshmem_communication() {}
+    void finalize_nvshmem_communication() {}
 
 #endif // GPU_SHMEM
-} // namespace hila
+    } // namespace hila
 
 
 #ifdef CUDA
@@ -623,131 +646,133 @@ void finalize_nvshmem_communication() {}
 #include "mpi-ext.h"
 #endif
 
-void gpu_device_info() {
-    if_rank0 () {
-        const int kb = 1024;
-        const int mb = kb * kb;
+    void gpu_device_info() {
+        if_rank0 () {
+            const int kb = 1024;
+            const int mb = kb * kb;
 
-        int driverVersion, rtVersion;
-        GPU_CHECK(cudaDriverGetVersion(&driverVersion));
-        GPU_CHECK(cudaRuntimeGetVersion(&rtVersion));
-        hila::out << "CUDA driver version: " << driverVersion << ", runtime " << rtVersion << '\n';
-        hila::out << "CUDART_VERSION " << CUDART_VERSION << '\n';
+            int driverVersion, rtVersion;
+            GPU_CHECK(cudaDriverGetVersion(&driverVersion));
+            GPU_CHECK(cudaRuntimeGetVersion(&rtVersion));
+            hila::out << "CUDA driver version: " << driverVersion << ", runtime " << rtVersion
+                      << '\n';
+            hila::out << "CUDART_VERSION " << CUDART_VERSION << '\n';
 #if defined(CUDA_MALLOC_ASYNC)
-        if (CUDART_VERSION >= 11020) {
-            hila::out << "Using cudaMallocAsync() to allocate memory\n";
-        }
+            if (CUDART_VERSION >= 11020) {
+                hila::out << "Using cudaMallocAsync() to allocate memory\n";
+            }
 #endif
 
-        cudaDeviceProp props;
-        int my_device;
-        GPU_CHECK(cudaGetDevice(&my_device));
-        GPU_CHECK(cudaGetDeviceProperties(&props, my_device));
-        hila::out << "Device on node rank 0 device " << my_device << ":\n";
-        hila::out << "  " << props.name << "  capability: " << props.major << "." << props.minor
-                  << '\n';
-        hila::out << "  Global memory:   " << props.totalGlobalMem / mb << "MB" << '\n';
-        hila::out << "  Shared memory:   " << props.sharedMemPerBlock / kb << "kB" << '\n';
-        hila::out << "  Constant memory: " << props.totalConstMem / kb << "kB" << '\n';
-        hila::out << "  Block registers: " << props.regsPerBlock << '\n';
+            cudaDeviceProp props;
+            int my_device;
+            GPU_CHECK(cudaGetDevice(&my_device));
+            GPU_CHECK(cudaGetDeviceProperties(&props, my_device));
+            hila::out << "Device on node rank 0 device " << my_device << ":\n";
+            hila::out << "  " << props.name << "  capability: " << props.major << "." << props.minor
+                      << '\n';
+            hila::out << "  Global memory:   " << props.totalGlobalMem / mb << "MB" << '\n';
+            hila::out << "  Shared memory:   " << props.sharedMemPerBlock / kb << "kB" << '\n';
+            hila::out << "  Constant memory: " << props.totalConstMem / kb << "kB" << '\n';
+            hila::out << "  Block registers: " << props.regsPerBlock << '\n';
 
-        hila::out << "  Warp size:         " << props.warpSize << '\n';
-        hila::out << "  Threads per block: " << props.maxThreadsPerBlock << '\n';
-        hila::out << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", "
-                  << props.maxThreadsDim[1] << ", " << props.maxThreadsDim[2] << " ]" << '\n';
-        hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
-                  << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
+            hila::out << "  Warp size:         " << props.warpSize << '\n';
+            hila::out << "  Threads per block: " << props.maxThreadsPerBlock << '\n';
+            hila::out << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", "
+                      << props.maxThreadsDim[1] << ", " << props.maxThreadsDim[2] << " ]" << '\n';
+            hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
+                      << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
 
-        hila::out << "Thread block size used: " << N_threads << '\n';
+            hila::out << "Thread block size used: " << N_threads << '\n';
 
 
-        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
-                  << ") may exceed available shared memory (" << props.sharedMemPerBlock
-                  << " bytes). Consider reducing it.\n";
+            hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
+                      << ") may exceed available shared memory (" << props.sharedMemPerBlock
+                      << " bytes). Consider reducing it.\n";
 
 
 // Following should be OK in open MPI
 #ifdef OPEN_MPI
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-        hila::out << "OpenMPI library supports CUDA-Aware MPI\n";
-        if (MPIX_Query_cuda_support() == 1)
-            hila::out << "  Runtime library supports CUDA-Aware MPI\n";
-        else {
-            hila::out << "  Runtime library does not support CUDA-Aware MPI!\n";
+            hila::out << "OpenMPI library supports CUDA-Aware MPI\n";
+            if (MPIX_Query_cuda_support() == 1)
+                hila::out << "  Runtime library supports CUDA-Aware MPI\n";
+            else {
+                hila::out << "  Runtime library does not support CUDA-Aware MPI!\n";
+#if defined(GPU_AWARE_COMM)
+                hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
+#endif
+            }
+#else
+            hila::out << "OpenMPI library does not support CUDA-Aware MPI\n";
 #if defined(GPU_AWARE_COMM)
             hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
 #endif
-        }
-#else
-        hila::out << "OpenMPI library does not support CUDA-Aware MPI\n";
-#if defined(GPU_AWARE_COMM)
-        hila::out << "GPU_AWARE_COMM is defined -- THIS MAY CRASH IN MPI\n";
-#endif
 #endif // MPIX
 #endif // OPEN_MPI
+        }
     }
-}
 #endif
 
 #ifdef HIP
 
-void gpu_device_info() {
-    if_rank0 () {
-        const int kb = 1024;
-        const int mb = kb * kb;
+    void gpu_device_info() {
+        if_rank0 () {
+            const int kb = 1024;
+            const int mb = kb * kb;
 
-        int driverVersion, rtVersion;
-        GPU_CHECK(hipDriverGetVersion(&driverVersion));
-        GPU_CHECK(hipRuntimeGetVersion(&rtVersion));
-        hila::out << "HIP driver version: " << driverVersion << ", runtime " << rtVersion << '\n';
+            int driverVersion, rtVersion;
+            GPU_CHECK(hipDriverGetVersion(&driverVersion));
+            GPU_CHECK(hipRuntimeGetVersion(&rtVersion));
+            hila::out << "HIP driver version: " << driverVersion << ", runtime " << rtVersion
+                      << '\n';
 
-        hipDeviceProp_t props;
-        int my_device;
-        GPU_CHECK(hipGetDevice(&my_device));
-        GPU_CHECK(hipGetDeviceProperties(&props, my_device));
-        hila::out << "Device on node rank 0 device " << my_device << ":\n";
-        hila::out << "  " << props.name << "  capability: " << props.major << "." << props.minor
-                  << '\n';
-        hila::out << "  Global memory:   " << props.totalGlobalMem / mb << "MB" << '\n';
-        hila::out << "  Shared memory:   " << props.sharedMemPerBlock / kb << "kB" << '\n';
-        hila::out << "  Constant memory: " << props.totalConstMem / kb << "kB" << '\n';
-        hila::out << "  Block registers: " << props.regsPerBlock << '\n';
+            hipDeviceProp_t props;
+            int my_device;
+            GPU_CHECK(hipGetDevice(&my_device));
+            GPU_CHECK(hipGetDeviceProperties(&props, my_device));
+            hila::out << "Device on node rank 0 device " << my_device << ":\n";
+            hila::out << "  " << props.name << "  capability: " << props.major << "." << props.minor
+                      << '\n';
+            hila::out << "  Global memory:   " << props.totalGlobalMem / mb << "MB" << '\n';
+            hila::out << "  Shared memory:   " << props.sharedMemPerBlock / kb << "kB" << '\n';
+            hila::out << "  Constant memory: " << props.totalConstMem / kb << "kB" << '\n';
+            hila::out << "  Block registers: " << props.regsPerBlock << '\n';
 
-        hila::out << "  Warp size:         " << props.warpSize << '\n';
-        hila::out << "  Threads per block: " << props.maxThreadsPerBlock << '\n';
-        hila::out << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", "
-                  << props.maxThreadsDim[1] << ", " << props.maxThreadsDim[2] << " ]" << '\n';
-        hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
-                  << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
-        hila::out << "Thread block size used: " << N_threads << '\n';
+            hila::out << "  Warp size:         " << props.warpSize << '\n';
+            hila::out << "  Threads per block: " << props.maxThreadsPerBlock << '\n';
+            hila::out << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", "
+                      << props.maxThreadsDim[1] << ", " << props.maxThreadsDim[2] << " ]" << '\n';
+            hila::out << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
+                      << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]" << '\n';
+            hila::out << "Thread block size used: " << N_threads << '\n';
 
-        hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
-                  << ") may exceed available shared memory (" << props.sharedMemPerBlock
-                  << " bytes). Consider reducing it.\n";
+            hila::out << "WARNING: GPU_BLOCK_REDUCTION_THREADS (" << GPU_BLOCK_REDUCTION_THREADS
+                      << ") may exceed available shared memory (" << props.sharedMemPerBlock
+                      << " bytes). Consider reducing it.\n";
+        }
     }
-}
 
 #endif
 
-void gpu_exit_on_error(const char *msg, const char *file, int line) {
-    gpuError code = gpuGetLastError();
-    if (gpuSuccess != code) {
-        hila::out << GPUTYPESTR << " error: " << msg << " in file " << file << " line " << line
-                  << '\n';
-        hila::out << GPUTYPESTR << " error string: " << gpuGetErrorString(code) << "\n";
+    void gpu_exit_on_error(const char *msg, const char *file, int line) {
+        gpuError code = gpuGetLastError();
+        if (gpuSuccess != code) {
+            hila::out << GPUTYPESTR << " error: " << msg << " in file " << file << " line " << line
+                      << '\n';
+            hila::out << GPUTYPESTR << " error string: " << gpuGetErrorString(code) << "\n";
 
-        hila::terminate(0);
+            hila::terminate(0);
+        }
     }
-}
 
-void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int line) {
-    if (gpuSuccess != code) {
-        hila::out << GPUTYPESTR << " error in command: " << msg << " in file " << file << " line "
-                  << line << '\n';
-        hila::out << GPUTYPESTR << " error string: " << gpuGetErrorString(code) << "\n";
+    void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int line) {
+        if (gpuSuccess != code) {
+            hila::out << GPUTYPESTR << " error in command: " << msg << " in file " << file
+                      << " line " << line << '\n';
+            hila::out << GPUTYPESTR << " error string: " << gpuGetErrorString(code) << "\n";
 
-        hila::terminate(0);
+            hila::terminate(0);
+        }
     }
-}
 
 #endif // not HILAPP
