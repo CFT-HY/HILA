@@ -75,7 +75,7 @@ void hila::initialize(int argc, char **argv) {
 #endif
 
     // First, get the base lattice_struct - used for storing basic data
-    lattice_struct * base_lat = new lattice_struct;
+    lattice_struct *base_lat = new lattice_struct;
     lattice.set_lattice_pointer(base_lat);
 
     // initialize MPI so that hila::myrank() etc. works
@@ -96,7 +96,7 @@ void hila::initialize(int argc, char **argv) {
     hila::inittime();
 
     // open hila::out0 only for node 0
-    if_rank0()
+    if_rank0 ()
         hila::out0.rdbuf(std::cout.rdbuf());
 
     // Set the inbuilt command-line flags and their corresponding help texts
@@ -185,7 +185,7 @@ void hila::initialize(int argc, char **argv) {
     }
 
 
-    if_rank0() {
+    if_rank0 () {
         hila::print_dashed_line("HILA lattice framework");
         hila::out0 << "Running program " << argv[0] << "\n";
         hila::out0 << "with command line arguments '";
@@ -193,13 +193,23 @@ void hila::initialize(int argc, char **argv) {
             hila::out0 << argv[i] << ' ';
         hila::out0 << "'\n";
         hila::out0 << "Code version: ";
+
+#define hila_xstr(s) hila_makestr(s)
+#define hila_makestr(s) #s
+
 #if defined(GIT_SHA_VALUE)
-#define xstr(s) makestr(s)
-#define makestr(s) #s
-        hila::out0 << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
+        hila::out0 << "git SHA " << hila_xstr(GIT_SHA_VALUE) << '\n';
 #else
         hila::out0 << "no git information available\n";
 #endif
+
+        hila::out0 << "HILA version: ";
+#if defined(GIT_SHA_HILA_VALUE)
+        hila::out0 << "git SHA " << hila_xstr(GIT_SHA_HILA_VALUE) << '\n';
+#else
+        hila::out0 << "same as code version\n";
+#endif
+
         hila::out0 << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
 
         hila::out0 << "with options: EVEN_SITES_FIRST";
@@ -360,7 +370,7 @@ void setup_output() {
 
     bool do_exit = false;
 
-    if_rank0() {
+    if_rank0 () {
         if (hila::cmdline.flag_present("-o")) {
             // Quits if '-o' was left without an argument
             std::string name;
@@ -382,7 +392,7 @@ void setup_output() {
                     hila::out.rdbuf(
                         hila::output_file.rdbuf()); // output now points to output_redirect
 
-                    if_rank0()
+                    if_rank0 ()
                         hila::out0.rdbuf(hila::out.rdbuf());
                 }
             }
@@ -449,7 +459,7 @@ void setup_partitions() {
 #endif
 
     std::string dirname = partition_dir + std::to_string(hila::partitions.mylattice());
-    if_rank0() {
+    if_rank0 () {
         filesys_ns::create_directory(dirname);
     }
     hila::synchronize();
@@ -482,7 +492,7 @@ void setup_partitions() {
         if (!hila::check_input) {
             hila::out.rdbuf(hila::output_file.rdbuf());
             // output now points to output_redirect
-            if_rank0() {
+            if_rank0 () {
                 hila::out0.rdbuf(hila::out.rdbuf());
             }
         }
@@ -540,7 +550,7 @@ void vector_type_info() {
 void hila::print_dashed_line(const std::string &text) {
     static constexpr int linelength = 60;
 
-    if_rank0() {
+    if_rank0 () {
 
         if (text.size() == 0) {
             for (int i = 0; i < linelength; i++)

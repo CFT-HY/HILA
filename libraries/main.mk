@@ -181,11 +181,18 @@ APP_OPTS += $(OPTS)
 #  GIT VERSION: tricks to get correct git version and build date
 #  on the file
 
-GIT_SHA := $(shell git rev-parse --short=8 HEAD)
 
-ifneq "$(GIT_SHA)" "" 
-HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA)
-GIT_SHA_FILE := build/.git_sha_number_$(GIT_SHA)
+
+GIT_SHA_HILA := $(shell cd $(HILA_DIR) ; git rev-parse --short=10 HEAD)
+GIT_SHA_APP := $(shell git rev-parse --short=10 HEAD)
+
+ifneq "$(GIT_SHA_HILA)" "$(GIT_SHA_APP)"
+HILA_OPTS += -DGIT_SHA_HILA_VALUE=$(GIT_SHA_HILA)
+endif
+
+ifneq "$(GIT_SHA_APP)" ""
+HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA_APP)
+GIT_SHA_FILE := build/.git_sha_number_$(GIT_SHA_APP)
 
 # Force recompilation if git number has changed
 
