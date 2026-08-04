@@ -2,14 +2,18 @@ Bootstrap: docker
 From: ubuntu:24.04
 
 %files 
-    ../ HILA/
+    ../hilapp/Makefile HILA/hilapp/Makefile
+    ../hilapp/src HILA/hilapp/src
+    ../libraries/hila_signatures.h HILA/libraries/hila_signatures.h
 
 %post
+    export DEBIAN_FRONTEND=noninteractive
+
     apt-get -y update
     apt-get -y install --no-install-recommends git make libfftw3-dev
 
     #installing clang devel tools
-    export LLVM_VERSION=18
+    export LLVM_VERSION=20
     apt-get -y install clang-$LLVM_VERSION \
                        libclang-$LLVM_VERSION-dev
 
@@ -17,12 +21,14 @@ From: ubuntu:24.04
     
     cd /HILA/hilapp
     rm -rf build/*
-    make -j4
+    make -j6
     mv build/hilapp /
     cd /
     rm -rf /HILA
     apt-get -y remove make git
-    apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev libclang1-$LLVM_VERSION libclang-cpp$LLVM_VERSION || true
+    # apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev libclang1-$LLVM_VERSION libclang-cpp$LLVM_VERSION || true
+    apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev || true
+
     apt-get -y remove \
         perl \
         python3 \
@@ -32,7 +38,7 @@ From: ubuntu:24.04
         python3-yaml \
         python3.12 \
         python3.12-minimal || true
-
+    apt autoremove -y || true
 
 %environment
     export LLVM_VERSION=18
