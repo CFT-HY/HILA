@@ -90,9 +90,12 @@ auto field_storage<T>::get_element(const unsigned i, const Lattice lattice) cons
     char *d_buffer;
     T value;
 
-    // Call the kernel to collect the element
+    // on compute_stream: it is non-blocking, so a default-stream launch here is
+    // not ordered after the onsites loop that wrote the field
     gpuMalloc(&(d_buffer), sizeof(T));
-    get_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->mynode.field_alloc_size);
+    get_element_kernel<<<1, 1, 0, hila::compute_stream()>>>(*this, d_buffer, i,
+                                                            lattice->mynode.field_alloc_size);
+    gpuStreamSynchronize(hila::compute_stream());
 
     // Copy the result to the host
     gpuMemcpy((char *)(&value), d_buffer, sizeof(T), gpuMemcpyDeviceToHost);
@@ -119,9 +122,13 @@ template <typename A>
 void field_storage<T>::set_element(A &value, const unsigned i, const Lattice lattice) {
     T t_value = value;
 
+    // on compute_stream, completed before returning: ordered against onsites
+    // loops on both sides
     if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE) {
         // pass element directly as arg
-        set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice->mynode.field_alloc_size);
+        set_element_kernel<<<1, 1, 0, hila::compute_stream()>>>(*this, t_value, i,
+                                                                lattice->mynode.field_alloc_size);
+        gpuStreamSynchronize(hila::compute_stream());
     } else {
         // This branch is used for large variables:
         // allocate space and copy the buffer to the device
@@ -130,7 +137,9 @@ void field_storage<T>::set_element(A &value, const unsigned i, const Lattice lat
         gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
         // call the kernel to set correct indexes
-        set_element_kernel_ptr<<<1, 1>>>(*this, d_buffer, i, lattice->mynode.field_alloc_size);
+        set_element_kernel_ptr<<<1, 1, 0, hila::compute_stream()>>>(
+            *this, d_buffer, i, lattice->mynode.field_alloc_size);
+        gpuStreamSynchronize(hila::compute_stream());
         gpuFree(d_buffer);
     }
 }
