@@ -686,6 +686,19 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
         }
 #if !defined(GPU_OVERLAP_COMM)
         mark_gathered(d, par);
+
+        // #if 1 && (defined(CUDA) || defined(HIP))
+        //         if (fs->send_buffer[d] != nullptr) {
+        //             fs->payload.free_mpi_buffer(fs->send_buffer[d]);
+        //             fs->send_buffer[d] = nullptr;
+        //         }
+        //         if (fs->receive_buffer[d] != nullptr) {
+        //             fs->payload.free_mpi_buffer(fs->receive_buffer[d]);
+        //             fs->receive_buffer[d] = nullptr;
+        //         }
+        //         // hila::out0 << "buffers freed!\n";
+        // #endif
+
 #endif
         // Keep count of communications
         hila::n_gather_done += 1;
@@ -770,8 +783,7 @@ void Field<T>::unpack_buffers(Direction d, Parity p) const {
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
 
     if (p == ALL) {
-        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
-            !is_gather_started(d, ODD))
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) && !is_gather_started(d, ODD))
             return;
     } else if (!is_gather_started(d, p)) {
         return;
@@ -796,8 +808,7 @@ void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const 
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
 
     if (p == ALL) {
-        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
-            !is_gather_started(d, ODD))
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) && !is_gather_started(d, ODD))
             return;
     } else if (!is_gather_started(d, p)) {
         return;
@@ -1056,7 +1067,7 @@ template <typename T>
 std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
 
     assert_all_ranks_present();
-    auto [cmin,cmax] = get_range_from_slice(c);
+    auto [cmin, cmax] = get_range_from_slice(c);
     return get_subvolume(cmin, cmax, bcast);
 }
 
@@ -1080,7 +1091,7 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
     T *data = buffer.data();
 #endif
 
-#pragma hila novector direct_access(data)
+    #pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
@@ -1115,7 +1126,7 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
     T *data = buffer.data();
 #endif
 
-#pragma hila novector direct_access(data)
+    #pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
@@ -1158,7 +1169,7 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
         node_max[d] = lattice->mynode.min[d] + lattice->mynode.size[d] - 1;
     }
 
-#pragma hila novector direct_access(data)
+    #pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         CoordinateVector c = X.coordinates();
@@ -1221,8 +1232,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
     T *data = buffer.data();
 #endif
 
-// now collect bulk
-#pragma hila novector direct_access(data)
+    // now collect bulk
+    #pragma hila novector direct_access(data)
     onsites (ALL) {
         Vector<NDIM, unsigned> nodec;
         nodec = X.coordinates() - nmin;
@@ -1317,7 +1328,7 @@ void Field<T>::block_from(Field<T> &orig) {
     CoordinateVector cvmin = blocklat->mynode.min;
     auto size_factor = blocklat->mynode.size_factor;
 
-#pragma hila direct_access(buf)
+    #pragma hila direct_access(buf)
     onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
@@ -1328,7 +1339,7 @@ void Field<T>::block_from(Field<T> &orig) {
 
     lattice.switch_to(blocklat);
 
-#pragma hila direct_access(buf)
+    #pragma hila direct_access(buf)
     onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
@@ -1378,7 +1389,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     lattice.switch_to(blocklat);
 
-#pragma hila direct_access(buf)
+    #pragma hila direct_access(buf)
     onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;
@@ -1387,7 +1398,7 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
     lattice.switch_to(parentlat);
 
-#pragma hila direct_access(buf)
+    #pragma hila direct_access(buf)
     onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
@@ -1433,7 +1444,7 @@ void Field<T>::block_to_current_lattice() {
     CoordinateVector cvmin = currentlat->mynode.min;
     auto size_factor = currentlat->mynode.size_factor;
 
-#pragma hila direct_access(buf)
+    #pragma hila direct_access(buf)
     onsites (ALL) {
         if (X.coordinates().is_divisible(blockfactor)) {
             // get blocked coords logically on this
@@ -1445,7 +1456,7 @@ void Field<T>::block_to_current_lattice() {
     lattice.switch_to(currentlat);
     (*this).clear();
 
-#pragma hila direct_access(buf)
+    #pragma hila direct_access(buf)
     onsites (ALL) {
         // get blocked coords logically on this node
         Vector<NDIM, unsigned> cv = X.coordinates() - cvmin;

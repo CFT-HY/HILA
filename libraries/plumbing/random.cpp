@@ -3,9 +3,11 @@
 
 /////////////////////////////////////////////////////////////////////////
 
-#include <random>
-
 // #ifndef OPENMP
+
+#ifndef USE_PHILOX_RNG
+
+#include <random>
 
 // static variable which holds the random state
 // Use 64-bit mersenne twister
@@ -30,6 +32,10 @@ double hila::random() {
 double hila::host_random() {
     return real_rnd_dist(mersenne_twister_gen);
 }
+
+#else
+/// philox defns
+#endif
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -132,20 +138,7 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 
 #else
 
-    // TODO: SITERAND is not yet implemented!
-    // This is usually used only for occasional benchmarking, where identical output
-    // independent of the node number is desired
-
-    hila::out0 << "*** SITERAND is in use!\n";
-
-    random_seed_arr = (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
-    forallsites(i) {
-        random_seed_arr[i][0] = (unsigned short)(seed + site[i].index);
-        random_seed_arr[i][1] = (unsigned short)(seed + 2 * site[i].index);
-        random_seed_arr[i][2] = (unsigned short)(seed + 3 * site[i].index);
-    }
-
-    random_seed_ptr = random_seed_arr[0];
+ 
 
 #endif
 }
@@ -162,9 +155,6 @@ void hila::seed_random(uint64_t seed, bool device_init) {
  */  
 void hila::free_device_rng() {}
 
-/**
- *@details Returns `true` on non-GPU archs.
- */
 
 /**
  *@details Returns `true` on non-GPU archs.
