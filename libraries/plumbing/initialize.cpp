@@ -59,7 +59,7 @@ int get_onoff(std::string flag) {
 
 void hila::initialize(int argc, char **argv) {
 
-#if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_) && !defined(CUDA) %% !defined(HIP)) // || defined(__bg__)
+#if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_) && !defined(CUDA) && !defined(HIP)) // || defined(__bg__)
     /* First, adjust malloc so that glibc free() does not
      * release space to the system, increasing the performance
      * of the glib malloc substantially.  The memory use is cyclic,
