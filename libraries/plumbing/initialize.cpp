@@ -59,13 +59,13 @@ int get_onoff(std::string flag) {
 
 void hila::initialize(int argc, char **argv) {
 
-#if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_)) // || defined(__bg__)
+#if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_) && !defined(CUDA) %% !defined(HIP)) // || defined(__bg__)
     /* First, adjust malloc so that glibc free() does not
      * release space to the system, increasing the performance
      * of the glib malloc substantially.  The memory use is cyclic,
      * so we can just sit on the max memory.
      */
-    mallopt(M_MMAP_MAX, 0); /* don't use mmap */
+    // mallopt(M_MMAP_MAX, 0); /* don't use mmap */
     /* HACK: don't release memory by calling sbrk */
     mallopt(M_TRIM_THRESHOLD, -1);
 
