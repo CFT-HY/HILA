@@ -107,13 +107,11 @@ class hila_fft {
 
         const hila::fftdata_struct &fft = *(lattice->fftdata);
 
-        buf_size = 1;
+        buf_size = local_volume;
         foralldir (d) {
             if (fft.pencil_recv_buf_size[d] > buf_size)
                 buf_size = fft.pencil_recv_buf_size[d];
         }
-        if (buf_size < local_volume)
-            buf_size = local_volume;
 
         // get fully aligned buffer space
         send_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
