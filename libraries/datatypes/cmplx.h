@@ -259,11 +259,12 @@ class Complex {
      * @brief Compute absolute value of Complex number
      * @details Essentially sqrt(squarenorm(z)):
      * \f{align}{ |z| = \sqrt{\Re(z)^2 + \Im(z)^2}\f}
-     *
+     * Using hypot(x,y) -function which avoids over/underflows
+     * 
      * @return T
      */
     inline T abs() const {
-        return sqrt(squarenorm());
+        return hypot(re,im);
     }
 
     /**
