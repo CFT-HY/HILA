@@ -1253,7 +1253,7 @@ class Matrix_t {
         auto maxv = a.max();
 
         if (maxv == 0.0)
-            return 0.0;
+            return static_cast<Rtype>(0);
 
         // we'll do the comp in double also in float
         double mulv = 1.0 / maxv;
