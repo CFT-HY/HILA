@@ -1250,16 +1250,24 @@ class Matrix_t {
                                       hila::arithmetic_type<T>, double>::type;
 
         auto a = (*this).abs();
-        auto maxv = a.max();
+        int maxi = 0;
+        auto maxv = a.c[0];
+        for (int i = 0; i < n * m; i++) {
+            if (maxv < a.c[i]) {
+                maxi = 1;
+                maxv = a.c[i];
+            }
+        }
 
         if (maxv == 0.0)
             return static_cast<Rtype>(0);
 
         // we'll do the comp in double also in float
         double mulv = 1.0 / maxv;
-        double sqrsum = sqr(a.c[0] * mulv);
-        for (int i = 1; i < n * m; i++) {
-            sqrsum += sqr(a.c[i] * mulv);
+        double sqrsum = 1.0;
+        for (int i = 0; i < n * m; i++) {
+            if (i != maxi)
+                sqrsum += sqr(a.c[i] * mulv);
         }
         return static_cast<Rtype>(maxv * sqrt(sqrsum));
     }
@@ -1321,7 +1329,7 @@ class Matrix_t {
     }
 
     /**
-     * @brief Find max of Vector and the location
+     * @brief Find min of Vector and the location
      */
     template <typename S = T,
               std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
