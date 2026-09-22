@@ -1254,7 +1254,7 @@ class Matrix_t {
         auto maxv = a.c[0];
         for (int i = 0; i < n * m; i++) {
             if (maxv < a.c[i]) {
-                maxi = 1;
+                maxi = i;
                 maxv = a.c[i];
             }
         }

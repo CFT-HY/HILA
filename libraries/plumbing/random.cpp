@@ -191,8 +191,8 @@ double hila::gaussrand2(double &out2) {
 
     // this should not really trigger
     do {
-        urnd = 1.0 - hila::random();
-    } while (urnd == 0.0);
+        urnd = hila::random();
+    } while (urnd <= 0.0 || urnd > 1.0);
 
     r = sqrt(-::log(urnd) * (2.0 * VARIANCE));
     out2 = r * cos(phi);
