@@ -304,7 +304,7 @@ std::string get_includes_from_gcc(std::vector<const char *> &av) {
         // NOTE: this relies on the compiler identifying the path lines starting
         // with " /" at the beginning of each line.
         // This is the case for g++ or clang
-        std::string pipecmd = "echo | " + compiler + " -c -xc++ --std=" + cpp_standard +
+        std::string pipecmd = "echo | " + compiler + " -xc++ --std=" + cpp_standard +
                               " -Wp,-v - 2>&1 | grep '^ /'";
 
         // std::cerr << pipecmd << '\n';
