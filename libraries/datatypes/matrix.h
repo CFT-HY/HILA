@@ -1252,7 +1252,7 @@ class Matrix_t {
         auto a = (*this).abs();
         int maxi = 0;
         auto maxv = a.c[0];
-        for (int i = 0; i < n * m; i++) {
+        for (int i = 1; i < n * m; i++) {
             if (maxv < a.c[i]) {
                 maxi = i;
                 maxv = a.c[i];
