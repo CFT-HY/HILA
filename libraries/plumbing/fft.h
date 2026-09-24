@@ -200,7 +200,7 @@ class hila_fft {
 
             T_union<T, cmplx_t> v;
             v.val = f[X];
-            int off = offset.dot(X.coordinates() - nmin);
+            auto off = offset.dot(X.coordinates() - nmin);
             for (int i = 0; i < elements; i++) {
                 sb[off + i * elem_offset] = v.c[i];
             }
@@ -232,7 +232,7 @@ class hila_fft {
 
             T_union<T, cmplx_t> v;
 
-            size_t off = offset.dot(X.coordinates() - nmin);
+            auto off = offset.dot(X.coordinates() - nmin);
             for (int i = 0; i < elements; i++) {
                 v.c[i] = rb[off + i * elem_offset];
             }
