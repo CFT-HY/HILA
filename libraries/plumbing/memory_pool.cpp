@@ -202,27 +202,22 @@ static hila::memory_pool gpu_pool;
 void gpu_memory_pool_alloc(void **p, size_t req_size) {
     *p = gpu_pool.alloc(req_size);
 }
-
 void gpu_memory_pool_free(void *ptr) {
     gpu_pool.free(ptr);
 }
 
-void gpu_memory_pool_purge() {
-    gpu_pool.purge();
+#ifdef GPU_AWARE_COMM
+
+static hila::memory_pool gpu_comm_pool;
+
+void gpu_comm_memory_pool_alloc(void **p, size_t req_size) {
+    *p = gpu_comm_pool.alloc(req_size);
+}
+void gpu_comm_memory_pool_free(void *ptr) {
+    gpu_comm_pool.free(ptr);
 }
 
-void gpu_memory_pool_report() {
-    auto p = gpu_pool.status();
-    if_rank0 () {
-        hila::out << "\nGPU Memory pool statistics from node 0:\n";
-        hila::out << "   Total pool size " << ((double)p.total_size) / (1024 * 1024) << " MB in "
-                  << gpu_pool.size() << " blocks\n";
-        hila::out << "   # of allocations " << p.n_allocs << "  real allocs "
-                  << std::setprecision(2) << ((double)p.n_true_allocs) / p.n_allocs * 100 << "%\n";
-        hila::out << "   Average block list search " << (double)p.blocklist_avg_search / p.n_allocs
-                  << " steps\n\n";
-    }
-}
+#endif // GPU_AWARE_COMM
 
 #ifdef GPU_SHMEM
 static hila::memory_pool gpu_shared_pool(hila::pool_type::SHARED);
@@ -230,28 +225,50 @@ static hila::memory_pool gpu_shared_pool(hila::pool_type::SHARED);
 void gpu_shared_memory_pool_alloc(void **p, size_t req_size) {
     *p = gpu_shared_pool.alloc(req_size);
 }
-
 void gpu_shared_memory_pool_free(void *ptr) {
     gpu_shared_pool.free(ptr);
 }
 
-void gpu_shared_memory_pool_purge() {
+#endif // GPU_SHMEM
+
+void gpu_memory_pool_purge() {
+    gpu_pool.purge();
+#ifdef GPU_AWARE_COMM
+    gpu_comm_pool.purge();
+#endif
+#ifdef GPU_SHMEM
     gpu_shared_pool.purge();
+#endif
 }
 
-void gpu_shared_memory_pool_report() {
-    auto p = gpu_shared_pool.status();
+static void pool_report(const hila::memory_pool &pool, const char name[]) {
+    const auto &p = pool.status();
     if_rank0 () {
-        hila::out << "\nGPU SHARED Memory pool statistics from node 0:\n";
+        hila::out << "\nGPU " << name << " memory pool statistics from node 0:\n";
         hila::out << "   Total pool size " << ((double)p.total_size) / (1024 * 1024) << " MB in "
-                  << gpu_shared_pool.size() << " blocks\n";
-        hila::out << "   # of allocations " << p.n_allocs << "  real allocs "
-                  << std::setprecision(2) << ((double)p.n_true_allocs) / p.n_allocs * 100 << "%\n";
-        hila::out << "   Average block list search " << (double)p.blocklist_avg_search / p.n_allocs
-                  << " steps\n\n";
+                  << pool.size() << " blocks\n";
+        hila::out << "   # of allocations " << p.n_allocs;
+        if (p.n_allocs > 0) {
+            hila::out << "  real allocs " << std::setprecision(2)
+                      << ((double)p.n_true_allocs) / p.n_allocs * 100 << "%\n";
+            hila::out << "   Average block list search "
+                      << (double)p.blocklist_avg_search / p.n_allocs << " steps";
+        }
+        hila::out << '\n';
     }
 }
-#endif // GPU_SHMEM
+
+void gpu_memory_pool_report() {
+    pool_report(gpu_pool, "GENERAL");
+#ifdef GPU_AWARE_COMM
+    pool_report(gpu_comm_pool, "COMMUNICATION");
+#endif
+#ifdef GPU_SHMEM
+    pool_report(gpu_shared_pool, "SHARED");
+#endif
+    hila::out0 << std::endl;
+}
+
 
 #endif // GPU_MEMORY_POOL
 #endif // !HILAPP

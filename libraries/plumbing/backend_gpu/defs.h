@@ -18,6 +18,13 @@ void gpu_memory_pool_free(void *ptr);
 void gpu_memory_pool_purge();
 void gpu_memory_pool_report();
 
+#ifdef GPU_AWARE_COMM
+void gpu_comm_memory_pool_alloc(void **p, size_t req_size);
+void gpu_comm_memory_pool_free(void *ptr);
+void gpu_comm_memory_pool_purge();
+void gpu_comm_memory_pool_report();
+#endif
+
 #ifdef GPU_SHMEM
 void gpu_shared_memory_pool_alloc(void **p, size_t req_size);
 void gpu_shared_memory_pool_free(void *ptr);
@@ -42,6 +49,20 @@ void free_device_rng();
 
 // GPU specific definitions
 
+#ifdef GPU_MEMORY_POOL
+#define gpuMalloc(a, b) gpu_memory_pool_alloc((void **)a, b)
+#define gpuFree(a) do { gpu_memory_pool_free(a); a = nullptr; } while(0)
+#define gpuMemPoolPurge() gpu_memory_pool_purge()
+#define gpuMemPoolReport() gpu_memory_pool_report()
+
+#ifdef GPU_AWARE_COMM
+#define gpuMallocComm(a, b) gpu_comm_memory_pool_alloc((void **)a, b)
+#define gpuFreeComm(a) do { gpu_comm_memory_pool_free(a); a = nullptr; } while(0)
+#endif
+
+#endif // GPU_MEMORY_POOL
+
+
 ////////////////////////////////////////////////////////////////////////////////////
 // Some cuda-specific definitions
 ////////////////////////////////////////////////////////////////////////////////////
@@ -56,21 +77,17 @@ using gpuError = cudaError;
 
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
+// clang-format off
+
 #ifdef GPU_MEMORY_POOL
-#define gpuMalloc(a, b) gpu_memory_pool_alloc((void **)a, b)
-#define gpuFree(a) gpu_memory_pool_free(a)
-#define gpuMemPoolPurge() gpu_memory_pool_purge()
-#define gpuMemPoolReport() gpu_memory_pool_report()
 #ifdef GPU_SHMEM
 #define gpuMallocShared(a, b) gpu_shared_memory_pool_alloc((void **)a, b)
 #define gpuFreeShared(a) gpu_shared_memory_pool_free(a)
-#define gpuMemPoolPurgeShared() gpu_shared_memory_pool_purge()
-#define gpuMemPoolReportShared() gpu_shared_memory_pool_report()
 #endif // GPU_SHMEM
-#else
+
+#else  // end of GPU_MEMORY_POOL
 // here std interfaces
 
-// clang-format off
 #define gpuMemPoolPurge()  do { } while (0)
 #define gpuMemPoolReport() do { } while (0)
 // clang-format on
@@ -140,12 +157,7 @@ using gpuError = hipError_t;
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
 #ifdef GPU_MEMORY_POOL
-#define gpuMalloc(a, b) gpu_memory_pool_alloc((void **)a, b)
-#define gpuFree(a) gpu_memory_pool_free(a)
-#define gpuMemPoolPurge() gpu_memory_pool_purge()
-#define gpuMemPoolReport() gpu_memory_pool_report()
-
-
+// moved to top
 #else
 // here std interfaces
 
@@ -396,6 +408,11 @@ using gpuError = int;
 
 #define gpuMemPoolPurge() do {} while(0)
 #define gpuMemPoolReport() do {} while(0)
+
+#ifdef GPU_AWARE_COMM
+#define gpuMallocComm(a, b) gpu_comm_memory_pool_alloc((void **)a, b)
+#define gpuFreeComm(a) do { gpu_comm_memory_pool_free(a); a = nullptr; } while(0)
+#endif
 
 #define check_device_error(msg) do {} while(0)
 #define check_device_error_code(code, msg) do {} while(0)
