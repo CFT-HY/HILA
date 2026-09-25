@@ -30,14 +30,16 @@ static_assert(0 && "HIP or CUDA must be defined");
 #endif
 
 
-// keep relatively large min allocation
-#define MIN_ALLOC_SIZE 128
+// keep relatively large min allocation - 64KB
+#define MIN_ALLOC_SIZE (64 * 1024)
 
 
 void *hila::memory_pool::alloc(size_t req_size) {
 
     if (req_size < MIN_ALLOC_SIZE) {
         req_size = MIN_ALLOC_SIZE;
+    } else {
+        req_size = ((req_size + (MIN_ALLOC_SIZE - 1)) / MIN_ALLOC_SIZE) * MIN_ALLOC_SIZE;
     }
 
     p.n_allocs++;

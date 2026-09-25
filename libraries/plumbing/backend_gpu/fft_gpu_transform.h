@@ -100,7 +100,7 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
 
 // Define datatype for saved plans
 
-#define GPUFFT_SHARE_PLAN_MEMORY
+// #define GPUFFT_SHARE_PLAN_MEMORY
 
 class hila_saved_fftplan_t {
   public:
