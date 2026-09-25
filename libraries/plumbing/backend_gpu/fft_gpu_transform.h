@@ -405,7 +405,7 @@ void hila_fft<cmplx_t>::gather_data() {
         j++;
     }
 
-    MPI_Barrier(lattice->mpi_comm_lat);
+    hila::barrier();
 
     i = 0;
     for (auto &fn : fft.hila_pencil_comms[dir]) {
@@ -502,7 +502,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         }
     }
 
-    MPI_Barrier(lattice->mpi_comm_lat);
+    hila::barrier();
 
     i = 0;
     int j = 0;
