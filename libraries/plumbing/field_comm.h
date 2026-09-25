@@ -140,7 +140,7 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
     if (receive_buffer[d] == nullptr) {
         receive_buffer[d] = payload.allocate_mpi_buffer(from_node.sites);
     }
-#if defined(GPU_AWARE_COMMS) && !defined(GPU_OVERLAP_COMM)
+#if defined(GPU_AWARE_COMM) && !defined(GPU_OVERLAP_COMM)
     return receive_buffer[d];
 #else
     unsigned offs = (par == ODD) ? from_node.evensites : 0;
