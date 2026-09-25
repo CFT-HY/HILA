@@ -511,6 +511,17 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
     else if (gather_status == gather_status_t::STARTED)
         return get_dir_mask(d);
 
+#if defined(GPU_AWARE_COMM) && !defined(GPU_OVERLAP_COMM)
+    // MPI buffers are allocated per direction and used from offset 0, thus only one of
+    // EVEN, ODD or ALL gathers can be in flight.  Note: check_communication() may have
+    // turned ALL into EVEN or ODD
+    if (par != ALL && is_gather_started(d, opp_parity(par))) {
+        hila::out << "ERROR: simultaneous EVEN and ODD gathers of a field in direction "
+                  << hila::prettyprint(d) << " not supported with GPU aware MPI\n";
+        hila::terminate(1);
+    }
+#endif
+
     mark_gather_started(d, par);
 
     // Communication hasn't been started yet, do it now
