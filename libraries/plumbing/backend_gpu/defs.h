@@ -111,6 +111,7 @@ using gpuError = cudaError;
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
 #define gpuMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
+#define gpuMemcpyAsync(a, b, c, d, s) GPU_CHECK(cudaMemcpyAsync(a, b, c, d, s))
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
 #define gpuStreamCreate(a) GPU_CHECK(cudaStreamCreate(a))
@@ -176,6 +177,7 @@ using gpuError = hipError_t;
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
 #define gpuMemcpyDeviceToDevice hipMemcpyDeviceToDevice
+#define gpuMemcpyAsync(a, b, c, d, s) GPU_CHECK(hipMemcpyAsync(a, b, c, d, s))
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 #define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
 #define gpuStreamCreate(a) GPU_CHECK(hipStreamCreate(a))
@@ -401,6 +403,7 @@ using gpuError = int;
 #define gpuMalloc(a, b) do {} while(0)
 #define gpuFree(a) do {} while(0)
 #define gpuMemcpy(a, b, siz, d) do {} while(0)
+#define gpuMemcpyAsync(a, b, siz, d, s) do {} while(0)
 #define gpuMemcpyHostToDevice 1
 #define gpuMemcpyDeviceToHost 2
 #define gpuMemset(a,b,c) do {} while(0)

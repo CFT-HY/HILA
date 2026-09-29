@@ -301,8 +301,10 @@ void hila_fft<cmplx_t>::transform() {
     cmplx_t **d_ptr = (cmplx_t **)d_malloc(sizeof(cmplx_t *) * rec_p.size());
     int *d_size = (int *)d_malloc(sizeof(int) * rec_p.size());
 
-    gpuMemcpy(d_ptr, rec_p.data(), rec_p.size() * sizeof(cmplx_t *), gpuMemcpyHostToDevice);
-    gpuMemcpy(d_size, rec_size.data(), rec_size.size() * sizeof(int), gpuMemcpyHostToDevice);
+    gpuMemcpyAsync(d_ptr, rec_p.data(), rec_p.size() * sizeof(cmplx_t *), gpuMemcpyHostToDevice,
+                   hila::compute_stream());
+    gpuMemcpyAsync(d_size, rec_size.data(), rec_size.size() * sizeof(int), gpuMemcpyHostToDevice,
+                   hila::compute_stream());
 
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
@@ -311,7 +313,7 @@ void hila_fft<cmplx_t>::transform() {
                                                              lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
@@ -337,7 +339,7 @@ void hila_fft<cmplx_t>::transform() {
                                                               lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
@@ -604,8 +606,10 @@ void hila_fft<cmplx_t>::reflect() {
     cmplx_t **d_ptr = (cmplx_t **)d_malloc(sizeof(cmplx_t *) * rec_p.size());
     int *d_size = (int *)d_malloc(sizeof(int) * rec_p.size());
 
-    gpuMemcpy(d_ptr, rec_p.data(), rec_p.size() * sizeof(cmplx_t *), gpuMemcpyHostToDevice);
-    gpuMemcpy(d_size, rec_size.data(), rec_size.size() * sizeof(int), gpuMemcpyHostToDevice);
+    gpuMemcpyAsync(d_ptr, rec_p.data(), rec_p.size() * sizeof(cmplx_t *), gpuMemcpyHostToDevice,
+                   hila::compute_stream());
+    gpuMemcpyAsync(d_size, rec_size.data(), rec_size.size() * sizeof(int), gpuMemcpyHostToDevice,
+                   hila::compute_stream());
 
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
@@ -614,7 +618,7 @@ void hila_fft<cmplx_t>::reflect() {
                                                              lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
@@ -623,7 +627,7 @@ void hila_fft<cmplx_t>::reflect() {
         <<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_reflect_dir_kernel<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, lattice.size(dir), n_columns);
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, lattice.size(dir), n_columns);
 #endif
 
 
@@ -632,7 +636,7 @@ void hila_fft<cmplx_t>::reflect() {
                                                               lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
