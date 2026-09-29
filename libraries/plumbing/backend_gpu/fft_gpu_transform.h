@@ -352,6 +352,56 @@ void hila_fft<cmplx_t>::transform() {
 
 
 ////////////////////////////////////////////////////////////////////
+/// With GPU aware MPI each message gets its own buffer from the comm memory pool,
+/// instead of pointing MPI into the large send_buf / receive_buf arrays.
+/// The pencil data received in gather_data stays in pencil_buf (rec_p points there)
+/// through the transform and is sent back from there in scatter_data.
+
+template <typename cmplx_t>
+void hila_fft<cmplx_t>::alloc_mpi_buffers() {
+#ifdef GPU_AWARE_COMM
+    const hila::fftdata_struct &fft = *(lattice->fftdata);
+
+    int n_comms = fft.hila_pencil_comms[dir].size() - 1;
+    slice_buf.resize(n_comms);
+    pencil_buf.resize(n_comms);
+
+    int i = 0;
+    int j = 0;
+    for (auto &fn : fft.hila_pencil_comms[dir]) {
+        if (fn.node != hila::myrank()) {
+            size_t slice_size =
+                fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
+            size_t pencil_size = fn.recv_buf_size * elements * sizeof(cmplx_t);
+
+            gpuMallocComm(&slice_buf[i], slice_size);
+            gpuMallocComm(&pencil_buf[i], pencil_size);
+            rec_p[j] = pencil_buf[i];
+            i++;
+        }
+        j++;
+    }
+#endif
+}
+
+template <typename cmplx_t>
+void hila_fft<cmplx_t>::free_mpi_buffers() {
+#ifdef GPU_AWARE_COMM
+    // the pool is not stream ordered: copies from slice_buf in scatter_data must be done
+    // before the buffers can be reused
+    if (slice_buf.size() > 0)
+        gpuStreamSynchronize(hila::compute_stream());
+
+    for (auto &p : slice_buf)
+        gpuFreeComm(p);
+    for (auto &p : pencil_buf)
+        gpuFreeComm(p);
+    slice_buf.clear();
+    pencil_buf.clear();
+#endif
+}
+
+////////////////////////////////////////////////////////////////////
 /// send column data to nodes
 
 template <typename cmplx_t>
@@ -376,6 +426,20 @@ void hila_fft<cmplx_t>::gather_data() {
 
     int i = 0;
     int j = 0;
+
+#ifdef GPU_AWARE_COMM
+    // copy my slices of send_buf to MPI buffers
+    i = 0;
+    for (auto &fn : fft.hila_pencil_comms[dir]) {
+        if (fn.node != hila::myrank()) {
+            size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
+            gpuMemcpyAsync(slice_buf[i], send_buf + fn.column_offset * elements, n,
+                           gpuMemcpyDeviceToDevice, hila::compute_stream());
+            i++;
+        }
+    }
+    i = 0;
+#endif
 
     // this synchronization should be enough for all MPI's in the
     gpuStreamSynchronize(hila::compute_stream());
@@ -413,14 +477,14 @@ void hila_fft<cmplx_t>::gather_data() {
     for (auto &fn : fft.hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            cmplx_t *p = send_buf + fn.column_offset * elements;
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
-#ifndef GPU_AWARE_COMM
+#ifdef GPU_AWARE_COMM
+            cmplx_t *p = slice_buf[i];
+#else
             // now not GPU_AWARE_COMM
-            send_p[i] = (cmplx_t *)memalloc(n);
-            gpuMemcpy(send_p[i], p, n, gpuMemcpyDeviceToHost);
-            p = send_p[i];
+            cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(n);
+            gpuMemcpy(p, send_buf + fn.column_offset * elements, n, gpuMemcpyDeviceToHost);
 #endif
 
             MPI_Isend(p, (int)(n / mpi_type_size), mpi_type, fn.node, WRK_GATHER_TAG,
@@ -492,7 +556,7 @@ void hila_fft<cmplx_t>::scatter_data() {
 
             size_t n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 #ifdef GPU_AWARE_COMM
-            cmplx_t *p = send_buf + fn.column_offset * elements;
+            cmplx_t *p = slice_buf[i];
 #else
             cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(n);
 #endif
@@ -532,7 +596,19 @@ void hila_fft<cmplx_t>::scatter_data() {
         MPI_Waitall(n_comms, recreq.data(), stat.data());
         MPI_Waitall(n_comms, sendreq.data(), stat.data());
 
-#ifndef GPU_AWARE_COMM
+#ifdef GPU_AWARE_COMM
+        // copy received slices back to send_buf.  Following kernels use the same stream
+        i = 0;
+        for (auto &fn : fft.hila_pencil_comms[dir]) {
+            if (fn.node != hila::myrank()) {
+                size_t n =
+                    fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
+                gpuMemcpyAsync(send_buf + fn.column_offset * elements, slice_buf[i], n,
+                               gpuMemcpyDeviceToDevice, hila::compute_stream());
+                i++;
+            }
+        }
+#else
         i = 0;
         for (auto &fn : fft.hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {

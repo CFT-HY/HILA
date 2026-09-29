@@ -92,6 +92,12 @@ class hila_fft {
     std::vector<cmplx_t *> rec_p;
     std::vector<int> rec_size;
 
+    // Separately allocated MPI message buffers, one per remote node, used with GPU aware MPI.
+    // slice_buf: my slice of the pencil data, sent in gather_data and received in scatter_data
+    // pencil_buf: received pencil data (rec_p points here), sent back in scatter_data
+    std::vector<cmplx_t *> slice_buf;
+    std::vector<cmplx_t *> pencil_buf;
+
     // initialize fft, allocate buffers
     hila_fft(int _elements, fft_direction _fftdir, bool _reflect = false) {
 
@@ -136,6 +142,10 @@ class hila_fft {
     // reflection using special call
     void reflect();
 
+    // allocate / free MPI message buffers for direction dir
+    void alloc_mpi_buffers();
+    void free_mpi_buffers();
+
     /////////////////////////////////////////////////////////////////////////
     /// Initialize fft to Direction dir.
 
@@ -171,6 +181,9 @@ class hila_fft {
             }
             i++;
         }
+
+        // with GPU aware MPI this redirects rec_p of remote nodes to MPI buffers
+        alloc_mpi_buffers();
     }
 
     /// Collect the data from field to send_buf for sending or fft'ing.
@@ -276,7 +289,9 @@ class hila_fft {
     }
 
     // free the work buffers
-    void cleanup() {}
+    void cleanup() {
+        free_mpi_buffers();
+    }
 
     // just swap the buf pointers
     void swap_buffers() {

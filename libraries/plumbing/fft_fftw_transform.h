@@ -13,6 +13,13 @@
 //     assert(0 && "Don't call this!");
 // }
 
+/// MPI buffers are separate only with GPU aware MPI
+template <typename cmplx_t>
+inline void hila_fft<cmplx_t>::alloc_mpi_buffers() {}
+
+template <typename cmplx_t>
+inline void hila_fft<cmplx_t>::free_mpi_buffers() {}
+
 template <typename cmplx_t>
 inline void hila_fft<cmplx_t>::transform() {
 
