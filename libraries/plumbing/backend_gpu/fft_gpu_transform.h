@@ -240,14 +240,18 @@ using fft_cmplx_t = typename std::conditional<sizeof(gpufftComplex) == sizeof(cm
 
 template <typename cmplx_t, std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftComplex), int> = 0>
 inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+#if defined(GPU_OVERLAP_COMM)
     gpufftSetStream(plan, hila::compute_stream());
+#endif
     gpufftExecC2C(plan, (gpufftComplex *)buf, (gpufftComplex *)buf, direction);
 }
 
 template <typename cmplx_t,
           std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftDoubleComplex), int> = 0>
 inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+#if defined(GPU_OVERLAP_COMM)
     gpufftSetStream(plan, hila::compute_stream());
+#endif
     gpufftExecZ2Z(plan, (gpufftDoubleComplex *)buf, (gpufftDoubleComplex *)buf, direction);
 }
 
