@@ -532,7 +532,45 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
     T *receive_buffer;
     T *send_buffer;
 
-    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+    bool do_receive = from_node.rank != hila::myrank() && boundary_need_to_communicate(d);
+    bool do_send = to_node.rank != hila::myrank() && boundary_need_to_communicate(-d);
+
+    if (do_send) {
+        // Copy Field elements on the boundary to a send buffer, sent below
+
+        if (fs->send_buffer[d] == nullptr)
+            fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+
+#if defined(GPU_AWARE_COMM) && !defined(GPU_OVERLAP_COMM)
+        send_buffer = fs->send_buffer[d];
+#else
+        send_buffer = fs->send_buffer[d] + to_node.offset(par);
+#endif
+
+#if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
+#if defined(CUDA) || defined(HIP)
+        fs->gather_comm_elements(d, par, send_buffer, to_node, hila::compute_stream());
+#else
+        fs->gather_comm_elements(d, par, send_buffer, to_node);
+#endif
+#endif
+    }
+
+#ifdef GPU_AWARE_COMM
+    // Synchronize before posting MPI receive or send on device buffers.  The send buffer must
+    // be filled, and the receive buffer may be a comm pool block just released by wait_gather()
+    // while a place_comm_elements kernel is still reading it - the pool is not stream ordered.
+    if (do_send || do_receive) {
+#ifdef GPU_OVERLAP_COMM
+        gpuStreamSynchronize(hila::halo_stream());
+#else
+        gpuEventRecord(hila::compute_event(), hila::compute_stream());
+        gpuEventSynchronize(hila::compute_event());
+#endif
+    }
+#endif
+
+    if (do_receive) {
 
         // HANDLE RECEIVES: get node which will send here
 
@@ -555,38 +593,10 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
         post_receive_timer.stop();
     }
 
-    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
-        // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
+    if (do_send) {
+        // HANDLE SENDS: buffer was filled above
 
-        unsigned sites = to_node.n_sites(par);
-
-        if (fs->send_buffer[d] == nullptr)
-            fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
-
-#if defined(GPU_AWARE_COMM) && !defined(GPU_OVERLAP_COMM)
-        send_buffer = fs->send_buffer[d];
-#else
-        send_buffer = fs->send_buffer[d] + to_node.offset(par);
-#endif
-
-#if !defined(MPI_BENCHMARK_TEST) && !defined(GPU_OVERLAP_COMM)
-#if defined(CUDA) || defined(HIP)
-        fs->gather_comm_elements(d, par, send_buffer, to_node, hila::compute_stream());
-#else
-        fs->gather_comm_elements(d, par, send_buffer, to_node);
-#endif
-#endif
-
-        size_t n = sites * size;
-
-#ifdef GPU_AWARE_COMM
-#ifdef GPU_OVERLAP_COMM
-        gpuStreamSynchronize(hila::halo_stream());
-#else
-        gpuEventRecord(hila::compute_event(), hila::compute_stream());
-        gpuEventSynchronize(hila::compute_event());
-#endif
-#endif
+        size_t n = to_node.n_sites(par) * size;
 
         start_send_timer.start();
 
@@ -710,8 +720,12 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
     }
 
 #if defined(GPU_AWARE_COMM) && !defined(GPU_OVERLAP_COMM)
-    gpuFreeComm(fs->send_buffer[d]);
-    gpuFreeComm(fs->receive_buffer[d]);
+    // place_comm_elements may still be reading receive_buffer: start_communication()
+    // synchronizes before the block can be used for a new MPI receive
+    if (fs->send_buffer[d] != nullptr)
+        gpuFreeComm(fs->send_buffer[d]);
+    if (fs->receive_buffer[d] != nullptr)
+        gpuFreeComm(fs->receive_buffer[d]);
 #endif
 
 }
