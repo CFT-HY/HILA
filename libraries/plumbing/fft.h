@@ -200,7 +200,11 @@ class hila_fft {
 
             T_union<T, cmplx_t> v;
             v.val = f[X];
-            auto off = offset.dot(X.coordinates() - nmin);
+            // compute offset in size_t, int dot product can overflow for large node volume
+            CoordinateVector cv = X.coordinates() - nmin;
+            size_t off = 0;
+            foralldir (d)
+                off += (size_t)offset[d] * cv[d];
             for (int i = 0; i < elements; i++) {
                 sb[off + i * elem_offset] = v.c[i];
             }
@@ -232,7 +236,11 @@ class hila_fft {
 
             T_union<T, cmplx_t> v;
 
-            auto off = offset.dot(X.coordinates() - nmin);
+            // compute offset in size_t, int dot product can overflow for large node volume
+            CoordinateVector cv = X.coordinates() - nmin;
+            size_t off = 0;
+            foralldir (d)
+                off += (size_t)offset[d] * cv[d];
             for (int i = 0; i < elements; i++) {
                 v.c[i] = rb[off + i * elem_offset];
             }
@@ -265,8 +273,11 @@ class hila_fft {
         #pragma hila novector direct_access(sb, rb)
         onsites (ALL) {
             CoordinateVector v = X.coordinates() - nmin;
-            size_t off_in = offset_in.dot(v);
-            size_t off_out = offset_out.dot(v);
+            size_t off_in = 0, off_out = 0;
+            foralldir (d) {
+                off_in += (size_t)offset_in[d] * v[d];
+                off_out += (size_t)offset_out[d] * v[d];
+            }
             for (int e = 0; e < elem; e++) {
                 sb[off_out + e * e_offset_out] = rb[off_in + e * e_offset_in];
             }

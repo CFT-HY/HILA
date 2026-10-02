@@ -67,11 +67,9 @@ __global__ void hila_fft_gather_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
-        int s = colsize * ind;
-
-        int k = s;
+        size_t k = (size_t)colsize * ind;
         for (int i = 0; i < n; i++) {
-            int offset = ind * d_size[i];
+            size_t offset = (size_t)ind * d_size[i];
             for (int j = 0; j < d_size[i]; j++, k++) {
                 data[k] = d_ptr[i][j + offset];
             }
@@ -86,11 +84,9 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
-        int s = colsize * ind;
-
-        int k = s;
+        size_t k = (size_t)colsize * ind;
         for (int i = 0; i < n; i++) {
-            int offset = ind * d_size[i];
+            size_t offset = (size_t)ind * d_size[i];
             for (int j = 0; j < d_size[i]; j++, k++) {
                 d_ptr[i][j + offset] = data[k];
             }
@@ -328,7 +324,7 @@ void hila_fft<cmplx_t>::transform() {
 
     for (int i = 0; i < n_fft; i++) {
 
-        cmplx_t *cp = fft_wrk + i * (batch * lattice.size(dir));
+        cmplx_t *cp = fft_wrk + (size_t)i * batch * lattice.size(dir);
 
         hila_gpufft_execute(plan, cp, direction);
         check_device_error("FFT execute");
@@ -575,11 +571,11 @@ __global__ void hila_reflect_dir_kernel(cmplx_t *RESTRICT data, const int colsiz
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
-        const int s = colsize * ind;
+        const size_t s = (size_t)colsize * ind;
 
         for (int i = 1; i < colsize / 2; i++) {
-            int i1 = s + i;
-            int i2 = s + colsize - i;
+            size_t i1 = s + i;
+            size_t i2 = s + colsize - i;
             cmplx_t tmp = data[i1];
             data[i1] = data[i2];
             data[i2] = tmp;
