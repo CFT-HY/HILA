@@ -387,6 +387,8 @@ inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateV
     static_assert(hila::contains_complex<T>::value,
                   "FFT_field argument fields must contain complex type");
 
+    assert(input.is_initialized(ALL) && "ERROR: Uninitialized field in FFT");
+
     // get the type of the complex number here
     using cmplx_t = Complex<hila::arithmetic_type<T>>;
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t);
@@ -496,6 +498,8 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 
     static_assert(hila::is_arithmetic<T>::value,
                   "FFT_real_to_complex can be applied only to Field<real-type> variable");
+    
+    assert(is_initialized(ALL) && "ERROR: Uninitialized field in FFT_real_to_complex");
 
     Field<Complex<T>> cf;
     cf[ALL] = Complex<T>((*this)[X], 0.0);
@@ -563,9 +567,12 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
 
+    assert(is_initialized(ALL) && "ERROR: uninitialized Field in FFT_complex_to_real");
+
     foralldir (d) {
         if (lattice.size(d) % 2 > 0) {
-            hila::out0 << "ERROR: FFT_complex_to_real works only with even lattice size to all directions";
+            hila::out0
+                << "ERROR: FFT_complex_to_real works only with even lattice size to all directions";
             hila::terminate(0);
         }
     }
@@ -630,6 +637,8 @@ template <typename T>
 Field<T> Field<T>::reflect(const CoordinateVector &dirs) const {
 
     constexpr int elements = 1;
+
+    assert(is_initialized(ALL) && "ERROR: uninitialized Field in reflect()");
 
     Field<T> result;
 

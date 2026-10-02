@@ -564,8 +564,7 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
 #ifdef GPU_OVERLAP_COMM
         gpuStreamSynchronize(hila::halo_stream());
 #else
-        gpuEventRecord(hila::compute_event(), hila::compute_stream());
-        gpuEventSynchronize(hila::compute_event());
+        gpuStreamSynchronize(hila::compute_stream());
 #endif
     }
 #endif
