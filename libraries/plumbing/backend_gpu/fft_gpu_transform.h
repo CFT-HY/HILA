@@ -293,8 +293,10 @@ void hila_fft<cmplx_t>::transform() {
     gpufftHandle plan = hila_saved_fftplan.get_plan(lattice.size(dir), batch, is_float);
     // hila::out0 << " Batch " << batch << " nfft " << n_fft << '\n';
 
-    // alloc work array
-    cmplx_t *fft_wrk = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
+    // alloc work array: n_columns full columns of length lattice.size(dir).  Note: this can be
+    // larger than buf_size * elements if node sizes to direction dir are not equal
+    cmplx_t *fft_wrk =
+        (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
 
     // Reorganize the data to form columns of a single element
     // move from receive_buf to fft_wrk
@@ -598,8 +600,10 @@ void hila_fft<cmplx_t>::reflect() {
 
     // reduce very large batch to smaller, avoid large buffer space
 
-    // alloc work array
-    cmplx_t *fft_wrk = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
+    // alloc work array: n_columns full columns of length lattice.size(dir).  Note: this can be
+    // larger than buf_size * elements if node sizes to direction dir are not equal
+    cmplx_t *fft_wrk =
+        (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
 
     // Reorganize the data to form columns of a single element
     // move from receive_buf to fft_wrk
