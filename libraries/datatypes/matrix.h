@@ -1240,20 +1240,36 @@ class Matrix_t {
 
     /**
      * @brief Calculate vector norm - sqrt of squarenorm
-     *
+     * Use balancing to avoid under/overflows
      * @tparam S
-     * @return hila::arithmetic_type<T>
+     * @return hila::arithmetic_type<T> or double if vec is int-type
      */
-    template <typename S = T,
-              std::enable_if_t<hila::is_floating_point<hila::arithmetic_type<S>>::value, int> = 0>
-    hila::arithmetic_type<T> norm() const {
-        return sqrt(squarenorm());
-    }
+    auto norm() const {
+        using Rtype =
+            typename std::conditional<hila::is_floating_point<hila::arithmetic_type<T>>::value,
+                                      hila::arithmetic_type<T>, double>::type;
 
-    template <typename S = T,
-              std::enable_if_t<!hila::is_floating_point<hila::arithmetic_type<S>>::value, int> = 0>
-    double norm() const {
-        return sqrt(static_cast<double>(squarenorm()));
+        auto a = (*this).abs();
+        int maxi = 0;
+        auto maxv = a.c[0];
+        for (int i = 1; i < n * m; i++) {
+            if (maxv < a.c[i]) {
+                maxi = i;
+                maxv = a.c[i];
+            }
+        }
+
+        if (maxv == 0.0)
+            return static_cast<Rtype>(0);
+
+        // we'll do the comp in double also in float
+        double mulv = 1.0 / maxv;
+        double sqrsum = 1.0;
+        for (int i = 0; i < n * m; i++) {
+            if (i != maxi)
+                sqrsum += sqr(a.c[i] * mulv);
+        }
+        return static_cast<Rtype>(maxv * sqrt(sqrsum));
     }
 
     /**
@@ -1298,7 +1314,7 @@ class Matrix_t {
     /**
      * @brief Find max of Vector and the location
      */
-    template <typename S = T, 
+    template <typename S = T,
               std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
     T max(int &elem) const {
         T res = c[0];
@@ -1313,9 +1329,9 @@ class Matrix_t {
     }
 
     /**
-     * @brief Find max of Vector and the location
+     * @brief Find min of Vector and the location
      */
-    template <typename S = T, 
+    template <typename S = T,
               std::enable_if_t<hila::is_arithmetic<S>::value && (n == 1 || m == 1), int> = 0>
     T min(int &elem) const {
         T res = c[0];
@@ -1357,7 +1373,8 @@ class Matrix_t {
      */
     auto sum() const {
         T res = 0;
-        for (int i=0; i<n*m; ++i) res += c[i];
+        for (int i = 0; i < n * m; ++i)
+            res += c[i];
         return res;
     }
 

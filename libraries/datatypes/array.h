@@ -629,11 +629,12 @@ class Array {
 
     /// calculate square norm - sum of squared elements
     hila::arithmetic_type<T> squarenorm() const {
-        hila::arithmetic_type<T> result = 0;
-        for (int i = 0; i < n * m; i++) {
-            result += ::squarenorm(c[i]);
-        }
-        return result;
+        return (*this).asMatrix().squarenorm();
+    }
+
+    /// calculate L2 norm - sum of squared elements
+    hila::arithmetic_type<T> norm() const {
+        return (*this).asMatrix().norm();
     }
 
     /**
@@ -1135,8 +1136,24 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
  * @return hila::arithmetic_type<T>
  */
 template <int n, int m, typename T>
-inline hila::arithmetic_type<T> squarenorm(const Array<n, m, T> &rhs) {
+inline auto squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
+}
+
+/**
+ * @brief Return L2 norm of Array
+ * @details Wrapper around Array::norm
+ *
+ * @tparam n Number of rows
+ * @tparam m Number of columns
+ * @tparam T Array element type
+ * @param rhs Array to compute norm of
+ * @return hila::arithmetic_type<T>
+ */
+
+template <int n, int m, typename T>
+inline auto norm(const Array<n, m, T> &rhs) {
+    return rhs.norm();
 }
 
 /** @name Arithmetic operations

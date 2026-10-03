@@ -494,8 +494,8 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    inline T dot(const CoordinateVector_t &v) const {
-        T res(0);
+    inline int64_t dot(const CoordinateVector_t &v) const {
+        int64_t res(0);
         foralldir (d)
             res += v.e(d) * this->e(d);
         return res;

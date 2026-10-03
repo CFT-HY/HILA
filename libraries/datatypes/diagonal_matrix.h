@@ -368,14 +368,11 @@ class DiagonalMatrix {
     }
 
     auto squarenorm() const {
-        hila::arithmetic_type<T> res(0);
-        for (int i = 0; i < n; i++)
-            res += ::squarenorm(c[i]);
-        return res;
+        return this->asVector().squarenorm();
     }
 
     hila::arithmetic_type<T> norm() const {
-        return sqrt(squarenorm());
+        return this->asVector().norm();
     }
 
     /**

@@ -67,11 +67,9 @@ __global__ void hila_fft_gather_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
-        int s = colsize * ind;
-
-        int k = s;
+        size_t k = (size_t)colsize * ind;
         for (int i = 0; i < n; i++) {
-            int offset = ind * d_size[i];
+            size_t offset = (size_t)ind * d_size[i];
             for (int j = 0; j < d_size[i]; j++, k++) {
                 data[k] = d_ptr[i][j + offset];
             }
@@ -86,11 +84,9 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
-        int s = colsize * ind;
-
-        int k = s;
+        size_t k = (size_t)colsize * ind;
         for (int i = 0; i < n; i++) {
-            int offset = ind * d_size[i];
+            size_t offset = (size_t)ind * d_size[i];
             for (int j = 0; j < d_size[i]; j++, k++) {
                 d_ptr[i][j + offset] = data[k];
             }
@@ -100,7 +96,7 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
 
 // Define datatype for saved plans
 
-#define GPUFFT_SHARE_PLAN_MEMORY
+// #define GPUFFT_SHARE_PLAN_MEMORY
 
 class hila_saved_fftplan_t {
   public:
@@ -240,14 +236,18 @@ using fft_cmplx_t = typename std::conditional<sizeof(gpufftComplex) == sizeof(cm
 
 template <typename cmplx_t, std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftComplex), int> = 0>
 inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+#if defined(GPU_OVERLAP_COMM)
     gpufftSetStream(plan, hila::compute_stream());
+#endif
     gpufftExecC2C(plan, (gpufftComplex *)buf, (gpufftComplex *)buf, direction);
 }
 
 template <typename cmplx_t,
           std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftDoubleComplex), int> = 0>
 inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+#if defined(GPU_OVERLAP_COMM)
     gpufftSetStream(plan, hila::compute_stream());
+#endif
     gpufftExecZ2Z(plan, (gpufftDoubleComplex *)buf, (gpufftDoubleComplex *)buf, direction);
 }
 
@@ -289,8 +289,10 @@ void hila_fft<cmplx_t>::transform() {
     gpufftHandle plan = hila_saved_fftplan.get_plan(lattice.size(dir), batch, is_float);
     // hila::out0 << " Batch " << batch << " nfft " << n_fft << '\n';
 
-    // alloc work array
-    cmplx_t *fft_wrk = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
+    // alloc work array: n_columns full columns of length lattice.size(dir).  Note: this can be
+    // larger than buf_size * elements if node sizes to direction dir are not equal
+    cmplx_t *fft_wrk =
+        (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
 
     // Reorganize the data to form columns of a single element
     // move from receive_buf to fft_wrk
@@ -322,7 +324,7 @@ void hila_fft<cmplx_t>::transform() {
 
     for (int i = 0; i < n_fft; i++) {
 
-        cmplx_t *cp = fft_wrk + i * (batch * lattice.size(dir));
+        cmplx_t *cp = fft_wrk + (size_t)i * batch * lattice.size(dir);
 
         hila_gpufft_execute(plan, cp, direction);
         check_device_error("FFT execute");
@@ -404,6 +406,8 @@ void hila_fft<cmplx_t>::gather_data() {
         }
         j++;
     }
+
+    hila::barrier();
 
     i = 0;
     for (auto &fn : fft.hila_pencil_comms[dir]) {
@@ -500,6 +504,8 @@ void hila_fft<cmplx_t>::scatter_data() {
         }
     }
 
+    hila::barrier();
+
     i = 0;
     int j = 0;
     for (auto &fn : fft.hila_pencil_comms[dir]) {
@@ -565,11 +571,11 @@ __global__ void hila_reflect_dir_kernel(cmplx_t *RESTRICT data, const int colsiz
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
-        const int s = colsize * ind;
+        const size_t s = (size_t)colsize * ind;
 
         for (int i = 1; i < colsize / 2; i++) {
-            int i1 = s + i;
-            int i2 = s + colsize - i;
+            size_t i1 = s + i;
+            size_t i2 = s + colsize - i;
             cmplx_t tmp = data[i1];
             data[i1] = data[i2];
             data[i2] = tmp;
@@ -590,8 +596,10 @@ void hila_fft<cmplx_t>::reflect() {
 
     // reduce very large batch to smaller, avoid large buffer space
 
-    // alloc work array
-    cmplx_t *fft_wrk = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
+    // alloc work array: n_columns full columns of length lattice.size(dir).  Note: this can be
+    // larger than buf_size * elements if node sizes to direction dir are not equal
+    cmplx_t *fft_wrk =
+        (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
 
     // Reorganize the data to form columns of a single element
     // move from receive_buf to fft_wrk

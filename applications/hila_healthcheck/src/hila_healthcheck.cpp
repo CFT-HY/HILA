@@ -584,7 +584,8 @@ void test_fft() {
 
         double eps = squarenorm_relative(p, p2);
 
-        report_pass("FFT Complex<float> constant field", eps, 1e-6 * sqrt(lattice.volume()));
+        // float rounding is larger for lattice sizes with large prime factors (e.g. 122 = 2*61)
+        report_pass("FFT Complex<float> constant field", eps, 5e-6 * sqrt(lattice.volume()));
 
         //-----------------------------------------------------------------
         // After two applications the field should be back to a constant * volume

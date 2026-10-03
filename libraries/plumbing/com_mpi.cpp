@@ -311,8 +311,8 @@ void hila::barrier() {
 ///  Get message tags cyclically -- defined outside classes, so that it is global and
 ///  unique
 
-#define MSG_TAG_MIN 100
-#define MSG_TAG_MAX (500) // standard says that at least 32767 tags available
+#define MSG_TAG_MIN 50
+#define MSG_TAG_MAX (100) // standard says that at least 32767 tags available
 
 int get_next_msg_tag() {
     static int tag = MSG_TAG_MIN;

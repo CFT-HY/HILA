@@ -107,13 +107,11 @@ class hila_fft {
 
         const hila::fftdata_struct &fft = *(lattice->fftdata);
 
-        buf_size = 1;
+        buf_size = local_volume;
         foralldir (d) {
             if (fft.pencil_recv_buf_size[d] > buf_size)
                 buf_size = fft.pencil_recv_buf_size[d];
         }
-        if (buf_size < local_volume)
-            buf_size = local_volume;
 
         // get fully aligned buffer space
         send_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
@@ -202,7 +200,11 @@ class hila_fft {
 
             T_union<T, cmplx_t> v;
             v.val = f[X];
-            int off = offset.dot(X.coordinates() - nmin);
+            // compute offset in size_t, int dot product can overflow for large node volume
+            CoordinateVector cv = X.coordinates() - nmin;
+            size_t off = 0;
+            foralldir (d)
+                off += (size_t)offset[d] * cv[d];
             for (int i = 0; i < elements; i++) {
                 sb[off + i * elem_offset] = v.c[i];
             }
@@ -234,7 +236,11 @@ class hila_fft {
 
             T_union<T, cmplx_t> v;
 
-            size_t off = offset.dot(X.coordinates() - nmin);
+            // compute offset in size_t, int dot product can overflow for large node volume
+            CoordinateVector cv = X.coordinates() - nmin;
+            size_t off = 0;
+            foralldir (d)
+                off += (size_t)offset[d] * cv[d];
             for (int i = 0; i < elements; i++) {
                 v.c[i] = rb[off + i * elem_offset];
             }
@@ -267,8 +273,11 @@ class hila_fft {
         #pragma hila novector direct_access(sb, rb)
         onsites (ALL) {
             CoordinateVector v = X.coordinates() - nmin;
-            size_t off_in = offset_in.dot(v);
-            size_t off_out = offset_out.dot(v);
+            size_t off_in = 0, off_out = 0;
+            foralldir (d) {
+                off_in += (size_t)offset_in[d] * v[d];
+                off_out += (size_t)offset_out[d] * v[d];
+            }
             for (int e = 0; e < elem; e++) {
                 sb[off_out + e * e_offset_out] = rb[off_in + e * e_offset_in];
             }
@@ -389,6 +398,8 @@ inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateV
     static_assert(hila::contains_complex<T>::value,
                   "FFT_field argument fields must contain complex type");
 
+    assert(input.is_initialized(ALL) && "ERROR: Uninitialized field in FFT");
+
     // get the type of the complex number here
     using cmplx_t = Complex<hila::arithmetic_type<T>>;
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t);
@@ -498,6 +509,8 @@ Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direc
 
     static_assert(hila::is_arithmetic<T>::value,
                   "FFT_real_to_complex can be applied only to Field<real-type> variable");
+    
+    assert(is_initialized(ALL) && "ERROR: Uninitialized field in FFT_real_to_complex");
 
     Field<Complex<T>> cf;
     cf[ALL] = Complex<T>((*this)[X], 0.0);
@@ -565,9 +578,12 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
 
+    assert(is_initialized(ALL) && "ERROR: uninitialized Field in FFT_complex_to_real");
+
     foralldir (d) {
         if (lattice.size(d) % 2 > 0) {
-            hila::out0 << "ERROR: FFT_complex_to_real works only with even lattice size to all directions";
+            hila::out0
+                << "ERROR: FFT_complex_to_real works only with even lattice size to all directions";
             hila::terminate(0);
         }
     }
@@ -632,6 +648,8 @@ template <typename T>
 Field<T> Field<T>::reflect(const CoordinateVector &dirs) const {
 
     constexpr int elements = 1;
+
+    assert(is_initialized(ALL) && "ERROR: uninitialized Field in reflect()");
 
     Field<T> result;
 

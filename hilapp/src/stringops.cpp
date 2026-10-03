@@ -304,7 +304,7 @@ std::string get_includes_from_gcc(std::vector<const char *> &av) {
         // NOTE: this relies on the compiler identifying the path lines starting
         // with " /" at the beginning of each line.
         // This is the case for g++ or clang
-        std::string pipecmd = "echo | " + compiler + " -c -xc++ --std=" + cpp_standard +
+        std::string pipecmd = "echo | " + compiler + " -xc++ --std=" + cpp_standard +
                               " -Wp,-v - 2>&1 | grep '^ /'";
 
         // std::cerr << pipecmd << '\n';
@@ -366,7 +366,7 @@ std::string handle_cmdline_args(int argc, const char **argv, std::vector<const c
             if (strcmp(avvect[i], "-std=c++17") == 0 || strcmp(avvect[i], "-std=c++20") == 0 ||
                 strcmp(avvect[i], "-std=c++23") == 0 || strcmp(avvect[i], "-std=c++26") == 0) {
                 cppstd = avvect[i];
-                cpp_standard = cppstd + 6;
+                cpp_standard = cppstd + 5;
             } else {
                 std::cerr << "ERROR: unknown c++ standard \'" << avvect[i] << "\'\n";
                 std::cerr << "allowed values -std=c++17, c++20, c++23, c++26\n";

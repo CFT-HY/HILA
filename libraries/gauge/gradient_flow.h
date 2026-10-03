@@ -27,6 +27,11 @@ enum GradientFlowAction {
     N_GradientFlowAction,
 };
 
+constexpr std::array<std::string_view, GradientFlowAction::N_GradientFlowAction>
+    GradientFlowAction_names{
+        "Wilson", "Bulk_Prevention", "Luscher_Weisz", "Iwasaki", "DBW2", "Log_Plaq", "Zeuthen",
+    };
+
 // Make it possible to select the gradient flow action either at compile time or at run time.
 //
 // if GFLOWACTION is defined action is selected at compile time.
