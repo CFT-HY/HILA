@@ -80,7 +80,7 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     auto result =
         gpu_minmax_argreduce_range(is_min, base + _hila_ranges.min[0],
                                    _hila_ranges.max[0] - _hila_ranges.min[0]);
-    int loop_begin = _hila_ranges.min[0];
+    int64_t loop_begin = _hila_ranges.min[0];
 
     if (_hila_loops == 2) {
         auto result2 =
@@ -96,8 +96,8 @@ T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     loc = mylat.coordinates(result.key + loop_begin);
     return result.value;
 #else
-    int _hila_loop_begin = mylat.loop_begin(par);
-    int _hila_loop_end = mylat.loop_end(par);
+    int64_t _hila_loop_begin = mylat.loop_begin(par);
+    int64_t _hila_loop_end = mylat.loop_end(par);
     int64_t num_items = _hila_loop_end - _hila_loop_begin;
 
     T *data_in = this->field_buffer() + _hila_loop_begin; // ptr to data
