@@ -49,6 +49,7 @@ void free_device_rng();
 
 // GPU specific definitions
 
+// clang-format off
 #ifdef GPU_MEMORY_POOL
 #define gpuMalloc(a, b) gpu_memory_pool_alloc((void **)a, b)
 #define gpuFree(a) do { gpu_memory_pool_free(a); a = nullptr; } while(0)
@@ -60,7 +61,15 @@ void free_device_rng();
 #define gpuFreeComm(a) do { gpu_comm_memory_pool_free(a); a = nullptr; } while(0)
 #endif
 
+#else  // now not GPU_MEMORY_POOL
+
+#ifdef GPU_AWARE_COMM
+#define gpuMallocComm(a, b) gpuMalloc(a, b)
+#define gpuFreeComm(a) gpuFree(a)
+#endif
+
 #endif // GPU_MEMORY_POOL
+// clang-format on
 
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -90,15 +99,17 @@ using gpuError = cudaError;
 
 #define gpuMemPoolPurge()  do { } while (0)
 #define gpuMemPoolReport() do { } while (0)
-// clang-format on
 
 #ifdef CUDA_MALLOC_ASYNC
 #define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
-#define gpuFree(a) GPU_CHECK(cudaFreeAsync(a, 0))
+#define gpuFree(a) do { GPU_CHECK(cudaFreeAsync(a, 0)); a = nullptr; } while(0)
 
 #else
 #define gpuMalloc(a, b) GPU_CHECK(cudaMalloc((void **)a, b))
-#define gpuFree(a) GPU_CHECK(cudaFree(a))
+#define gpuFree(a) do { GPU_CHECK(cudaFree(a)); a = nullptr; } while(0)
+
+// clang-format on
+
 
 #endif
 
@@ -167,7 +178,9 @@ using gpuError = hipError_t;
 // clang-format on
 
 #define gpuMalloc(a, b) GPU_CHECK(hipMalloc((void **)a, b))
-#define gpuFree(a) GPU_CHECK(hipFree(a))
+// clang-format off
+#define gpuFree(a) do { GPU_CHECK(hipFree(a)); a = nullptr; } while (0)
+// clang-format on
 
 #endif // ifdef memory pool
 

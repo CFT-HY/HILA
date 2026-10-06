@@ -172,7 +172,7 @@ class hila_saved_fftplan_t {
         pp->is_float = is_float;
 
 #if defined(GPUFFT_SHARE_PLAN_MEMORY)
-        
+
         gpufftCreate(&pp->plan);
         // turn off auto allocate
         gpufftSetAutoAllocation(pp->plan, 0);
@@ -205,8 +205,7 @@ class hila_saved_fftplan_t {
         }
 
         auto siz = work_area_size;
-        gpufftMakePlan1d(pp->plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch,
-                         &siz);
+        gpufftMakePlan1d(pp->plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch, &siz);
         check_device_error("FFT Plan make1d");
         assert(work_area_size >= siz && "GPU work area mismatch");
 
@@ -291,8 +290,7 @@ void hila_fft<cmplx_t>::transform() {
 
     // alloc work array: n_columns full columns of length lattice.size(dir).  Note: this can be
     // larger than buf_size * elements if node sizes to direction dir are not equal
-    cmplx_t *fft_wrk =
-        (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
+    cmplx_t *fft_wrk = (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
 
     // Reorganize the data to form columns of a single element
     // move from receive_buf to fft_wrk
@@ -309,8 +307,8 @@ void hila_fft<cmplx_t>::transform() {
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
 #if defined(CUDA)
-    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
-                                                             lattice.size(dir), n_columns);
+    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
@@ -335,8 +333,8 @@ void hila_fft<cmplx_t>::transform() {
     fft_buffer_timer.start();
 
 #if defined(CUDA)
-    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
-                                                              lattice.size(dir), n_columns);
+    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
@@ -598,8 +596,7 @@ void hila_fft<cmplx_t>::reflect() {
 
     // alloc work array: n_columns full columns of length lattice.size(dir).  Note: this can be
     // larger than buf_size * elements if node sizes to direction dir are not equal
-    cmplx_t *fft_wrk =
-        (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
+    cmplx_t *fft_wrk = (cmplx_t *)d_malloc((size_t)n_columns * lattice.size(dir) * sizeof(cmplx_t));
 
     // Reorganize the data to form columns of a single element
     // move from receive_buf to fft_wrk
@@ -614,8 +611,8 @@ void hila_fft<cmplx_t>::reflect() {
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
 #if defined(CUDA)
-    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
-                                                             lattice.size(dir), n_columns);
+    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
@@ -632,8 +629,8 @@ void hila_fft<cmplx_t>::reflect() {
 
 
 #if defined(CUDA)
-    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, d_ptr, d_size, rec_p.size(),
-                                                              lattice.size(dir), n_columns);
+    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
