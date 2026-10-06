@@ -1,6 +1,7 @@
 ///////////////////////////////////////////
 /// simple list-based alloc program for cuda/hip
 
+#include "plumbing/params.h"
 #include "plumbing/memory_pool.h"
 
 // Compile with make .. OPTS="-DPOOL_DEBUG"
@@ -27,8 +28,6 @@ static_assert(0 && "HIP or CUDA must be defined");
     } while (0)
 #define gpuFreeSharedDirect(a) nvshmem_free(a)
 #endif
-#endif
-
 
 // keep relatively large min allocation - 64KB
 #define MIN_ALLOC_SIZE (64 * 1024)
@@ -197,8 +196,6 @@ void hila::memory_pool::purge() {
 }
 
 
-#ifdef GPU_MEMORY_POOL
-
 static hila::memory_pool gpu_pool;
 
 void gpu_memory_pool_alloc(void **p, size_t req_size) {
@@ -271,6 +268,10 @@ void gpu_memory_pool_report() {
     hila::out0 << std::endl;
 }
 
+#else
+
+void gpu_memory_pool_purge() {}
+void gpu_memory_pool_report() {}
 
 #endif // GPU_MEMORY_POOL
 #endif // !HILAPP
