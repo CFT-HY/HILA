@@ -198,11 +198,15 @@ class Field {
          */
         void free_communication() {
             for (int d = 0; d < NDIRS; d++) {
-                if (send_buffer[d] != nullptr)
+                if (send_buffer[d] != nullptr) {
                     payload.free_mpi_buffer(send_buffer[d]);
+                    send_buffer[d] = nullptr;
+                }
 #ifndef VANILLA
-                if (receive_buffer[d] != nullptr)
+                if (receive_buffer[d] != nullptr) {
                     payload.free_mpi_buffer(receive_buffer[d]);
+                    receive_buffer[d] = nullptr;
+                }
 #endif
             }
         }

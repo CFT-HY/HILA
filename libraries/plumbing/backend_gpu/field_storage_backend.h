@@ -436,7 +436,7 @@ void field_storage<T>::free_mpi_buffer(T *d_buffer) {
 #ifdef GPU_SHMEM
     gpuFreeShared(d_buffer);
 #else
-    gpuFreeComm(d_buffer);
+    d_free_comm(d_buffer);
 #endif // GPU_SHMEM
 }
 
@@ -446,7 +446,7 @@ T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
 #ifdef GPU_SHMEM
     gpuMallocShared(&(d_buffer), n * sizeof(T));
 #else
-    gpuMallocComm(&(d_buffer), n * sizeof(T));
+    d_buffer = (T *)d_malloc_comm(n * sizeof(T));
 #endif // GPU_SHMEM
     return d_buffer;
 }
