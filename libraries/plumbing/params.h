@@ -75,6 +75,16 @@
 #define WRITE_BUFFER_SIZE 2000000
 #endif
 
+/// @brief USE_PHILOX_RNG enables philox 4x32-10 random number generator.
+/// This is the default now.  If it is defined, then the
+/// GPU_RNG_THREAD_BLOCKS below does nothing
+/// 
+
+#ifndef USE_PHILOX_RNG
+#define USE_PHILOX_RNG
+#elif USE_PHILOX_RNG == 0
+#undef USE_PHILOX_RNG
+#endif
 
 // boundary conditions are "off" by default -- no need to do anything here
 // #ifndef SPECIAL_BOUNDARY_CONDITIONS

@@ -2857,7 +2857,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                       << VD->getQualifiedNameAsString() << '\n';
                 cdecl << "// create unique type for specialization\n";
 
-                auto customtype = "TYPE" + dev_varname;
+                auto customtype = "TYPE_" + dev_varname;
 
                 // create unique typedef
                 cdecl << "struct " << customtype << " {};\n";

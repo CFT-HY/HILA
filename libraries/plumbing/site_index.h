@@ -36,7 +36,7 @@ class SiteIndex {
     SiteIndex(const CoordinateVector &cv) {
         value = 0;
         size_t m = 1;
-        foralldir(d) {
+        foralldir (d) {
             value += m * cv[d];
             m *= lattice.size(d);
         }
@@ -48,7 +48,7 @@ class SiteIndex {
     CoordinateVector coordinates() const {
         CoordinateVector res;
         size_t v = value;
-        foralldir(d) {
+        foralldir (d) {
             res.e(d) = v % lattice.size(d);
             v /= lattice.size(d);
         }

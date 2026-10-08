@@ -64,7 +64,6 @@ double random();
 // routine is not normally needed in user code, instead use standard hila::random().
 double host_random();
 
-
 /**
  * @brief Gaussian random generation routine
  */

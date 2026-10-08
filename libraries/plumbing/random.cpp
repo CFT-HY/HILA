@@ -1,11 +1,26 @@
 #include <cmath>
+
+#ifdef USE_PHILOX_RNG
+#define HILA_PHILOX_EXTERN    // define empty, to prevent defining it 
+#endif
+
 #include "hila.h"
 
 /////////////////////////////////////////////////////////////////////////
 
-// #ifndef OPENMP
+static bool rng_is_initialized = false;
 
-#ifndef USE_PHILOX_RNG
+#ifdef USE_PHILOX_RNG
+
+// anchor global philox numbers here
+// hila::global<uint32_t> philox_seed0, philox_seed1;
+
+double hila::host_random() {
+    
+}
+
+#else
+// Now philox is not defined
 
 #include <random>
 
@@ -33,13 +48,9 @@ double hila::host_random() {
     return real_rnd_dist(mersenne_twister_gen);
 }
 
-#else
-/// philox defns
-#endif
 
 /////////////////////////////////////////////////////////////////////////
 
-static bool rng_is_initialized = false;
 
 namespace hila {
 
@@ -77,12 +88,15 @@ void initialize_host_rng(uint64_t seed) {
 
 } // namespace hila
 
+// philox defns
+#endif
 
 /**
- *@details The optional 2nd argument indicates whether to initialize the RNG on GPU device:
+ * @details The optional 2nd argument indicates whether to initialize the RNG on GPU device:
  * `hila::device_rng::on` (default) or `hila::device_rng::off`.  This argument does nothing if no GPU
  * platform.  If `hila::device_rng::off` is used, `onsites()` -loops cannot contain random number calls
  * (Runtime error will be flagged and program exits).
+ * 
  * 
  * Seed is shuffled so that different nodes
  * get different rng seeds.  If `seed == 0`,
@@ -117,10 +131,10 @@ void hila::seed_random(uint64_t seed, bool device_init) {
     if (hila::partitions.number() > 1)
         seed = seed ^ ((static_cast<uint64_t>(hila::partitions.mylattice())) << 28);
 
-#ifndef SITERAND
+#ifndef USE_PHILOX_RNG
 
-    hila::out0 << "Using node random numbers, seed for node 0: " << seed << std::endl;
-
+    hila::out0 << "Using old (deprecated) random number generators\n";
+    
     hila::initialize_host_rng(seed);
 
 #if defined(CUDA) || defined(HIP)
@@ -134,20 +148,23 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 
 #endif
 
-    // taus_initialize();
-
 #else
+    // Now use PHILOX
+    philox_seed0 = static_cast<uint32_t>(seed);
+    philox_seed1 = static_cast<uint32_t>(seed >> 32);
 
- 
+    hila::out0 << "Using Philox 4x32-10 random number generator\n";
 
 #endif
+    hila::out0 << "RNG seed for node 0: " << seed << std::endl;
+
 }
 
 ////////////////////////////////////////////////////////////////////
 // Def here gpu rng functions for non-gpu
 ////////////////////////////////////////////////////////////////////
 
-#if !(defined(CUDA) || defined(HIP))
+#if !(defined(CUDA) || defined(HIP)) || defined(USE_PHILOX_RNG)
 
 /**
  *@details `hila::random()` does not work inside `onsites()` after this, 
@@ -160,7 +177,7 @@ void hila::free_device_rng() {}
  *@details Returns `true` on non-GPU archs.
  */
 bool hila::is_device_rng_on() {
-    return true;
+    return rng_is_initialized;
 }
 
 /**
@@ -252,11 +269,11 @@ bool hila::is_rng_seeded() {
 void hila::check_that_rng_is_initialized() {
 
     if (!rng_is_initialized) {
-        hila::out0 << "ERROR: trying to use random numbers without initializing the generator"
+        hila::out0 << "ERROR: trying to use random numbers without initialization"
                    << std::endl;
         hila::terminate(1);
     }
-#if defined(CUDA) || defined(HIP)
+#if !defined(USE_PHILOX_RNG) && (defined(CUDA) || defined(HIP))
     if (!hila::is_device_rng_on()) {
         hila::out0 << "ERROR: GPU random number generator is not initialized and onsites()-loop is "
                       "using random numbers"
