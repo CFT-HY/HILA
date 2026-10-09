@@ -273,6 +273,8 @@ gpuEvent_t &hila::compute_event() {
 // __constant__ int _d_nodefactor[NDIM];
 // #endif
 
+#ifndef USE_PHILOX_RNG
+
 /* Random number generator */
 static gpurandState *gpurandstateptr = nullptr;
 __constant__ gpurandState *d_gpurandstateptr;
@@ -393,6 +395,7 @@ __device__ __host__ double hila::random() {
 #endif
 }
 
+#endif // if not USE_PHILOX_RNG
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Setup the lattice struct on GPUs:
@@ -528,11 +531,13 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
         gpuSetDevice(my_device);
 
+#ifndef USE_PHILOX_RNG
         // set gpu rng state to "off", to prevent accidental use
         gpurandstateptr = nullptr;
         // set d_gpurandstateptr <- nullptr.
         gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
                           gpuMemcpyHostToDevice);
+#endif
 
 
 #if defined(CUDA_MALLOC_ASYNC)

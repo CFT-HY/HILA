@@ -163,6 +163,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // keep track of ending braces for options
     int ending_braces = 0;
 
+    extern bool use_philox_rng;
+
     // Start the loop
     code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
          << " < _hila_loop_end; ++" << looping_var << ") {\n";
@@ -173,10 +175,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         ending_braces++;
     }
 
+    if (use_philox_rng)
+        code << "hila::philox_setup(hila_philox_loop_counter, "
+                "SiteIndex(hila_loop_lattice.coordinates("
+             << looping_var << ")).value);\n";
+
     if (!evenfirst) {
         if (loop_info.need_loop_coordinate) {
-            code << "CoordinateVector " << looping_cv << " = hila_loop_lattice.coordinates(" << looping_var
-                 << ");\n";
+            code << "CoordinateVector " << looping_cv << " = hila_loop_lattice.coordinates("
+                 << looping_var << ");\n";
         }
 
         if (loop_info.parity_value != Parity::all) {

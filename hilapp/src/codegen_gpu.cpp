@@ -310,11 +310,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     static bool rng_threads_checked = false;
     static int rng_thread_block_number = 0;
+    extern bool use_philox_rng; // this is true if philox is in use
 
     bool use_thread_blocks = false;
     int thread_block_number = 0;
 
-    if (loop_info.contains_random) {
+    if (loop_info.contains_random && !use_philox_rng) {
 
         if (!rng_threads_checked) {
             // now check if the rng thread number is present
@@ -540,7 +541,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 
     kernel_launch =
-        kernel_name + "<<< N_blocks, N_threads,0, compute_stream>>>( _hila_loop_begin, _hila_loop_end";
+        kernel_name +
+        "<<< N_blocks, N_threads,0, compute_stream>>>( _hila_loop_begin, _hila_loop_end";
+
+    if (use_philox_rng) {
+        // add philox_loop_counter
+        kernel << ", uint32_t HILA_philox_loop_counter";
+        kernel_launch += ", hila_philox_loop_counter";
+    }
 
     // print field call list
     int i = 0;
@@ -834,6 +842,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    // First, reset philox loop counter
+
+    if (use_philox_rng) {
+        kernel << "// philox_setup_loopcount calls __syncthreads(); must be called by all threads\n";
+        kernel << "hila::philox_setup_loopcount(HILA_philox_loop_counter);\n";
+    }
 
     /////////////////////////////////////////////////////////////////////////////
     // Standard boilerplate in CUDA kernels: calculate site index
@@ -854,6 +869,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                << "; HILA_idx_l_ < _hila_loop_end; HILA_idx_l_ += N_threads * "
                << thread_block_number << ") {\n"
                << looping_var << " = HILA_idx_l_;\n";
+    }
+
+    if (use_philox_rng) {
+        // initialize philox - NOTE: contains __syncthreads(), so ALL THREADS MUST EXECUTE THIS!
+        kernel << "hila::philox_setup_index(SiteIndex(_dev_coordinates[" + looping_var +
+                      "]).value);\n";
     }
 
     // Create temporary field element variables

@@ -60,6 +60,12 @@ bool is_device_rng_on();
 #pragma hila contains_rng loop_function
 double random();
 
+#pragma hila contains_rng loop_function
+inline double random2(double &d2) {
+    d2 = hila::random();
+    return hila::random();
+}
+
 // alias for host (CPU) rng, used in GPU code generation. Must not be used inside onsites() {}. This
 // routine is not normally needed in user code, instead use standard hila::random().
 double host_random();

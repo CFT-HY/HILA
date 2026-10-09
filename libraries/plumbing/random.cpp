@@ -1,8 +1,6 @@
 #include <cmath>
 
-#ifdef USE_PHILOX_RNG
-#define HILA_PHILOX_EXTERN    // define empty, to prevent defining it 
-#endif
+#define IN_HILA_RANDOM 
 
 #include "hila.h"
 
@@ -10,14 +8,12 @@
 
 static bool rng_is_initialized = false;
 
+
 #ifdef USE_PHILOX_RNG
+// define global vars for philox
 
-// anchor global philox numbers here
-// hila::global<uint32_t> philox_seed0, philox_seed1;
-
-double hila::host_random() {
-    
-}
+// global index for this node/rank for non-onsites code
+static uint64_t hila_philox_my_index;
 
 #else
 // Now philox is not defined
@@ -149,9 +145,17 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 #endif
 
 #else
+
     // Now use PHILOX
     philox_seed0 = static_cast<uint32_t>(seed);
     philox_seed1 = static_cast<uint32_t>(seed >> 32);
+
+    hila::out0 << " SEED IS " << philox_seed0() << philox_seed1() << '\n';
+
+    hila_philox_loop_counter = 0;
+    hila_philox_my_index = std::numeric_limits<uint64_t>::max() - 1 - hila::myrank();
+
+    hila::philox_setup(hila_philox_loop_counter, hila_philox_my_index);
 
     hila::out0 << "Using Philox 4x32-10 random number generator\n";
 
@@ -160,11 +164,20 @@ void hila::seed_random(uint64_t seed, bool device_init) {
 
 }
 
+
+#ifdef USE_PHILOX_RNG
+
+void hila::philox_after_onsites() {
+    hila::philox_setup(++hila_philox_loop_counter, hila_philox_my_index);
+}
+
+#endif
+
 ////////////////////////////////////////////////////////////////////
 // Def here gpu rng functions for non-gpu
 ////////////////////////////////////////////////////////////////////
 
-#if !(defined(CUDA) || defined(HIP)) || defined(USE_PHILOX_RNG)
+#if !(defined(CUDA) || defined(HIP)) && !defined(USE_PHILOX_RNG)
 
 /**
  *@details `hila::random()` does not work inside `onsites()` after this, 
@@ -191,22 +204,23 @@ void hila::initialize_device_rng(uint64_t seed) {}
 
 #define VARIANCE 1.0
 
-double hila::gaussrand2(double &out2) {
+double hila::gaussrand2(out_only double &out2) {
 
-    double phi, urnd, r;
-    phi = 2.0 * M_PI * hila::random();
+    double urnd;
+    double phi = 2.0 * M_PI * hila::random2(urnd);
 
     // this should not really trigger
-    do {
+    while (urnd <= 0.0 || urnd > 1.0) {
         urnd = hila::random();
-    } while (urnd <= 0.0 || urnd > 1.0);
+    }
 
-    r = sqrt(-::log(urnd) * (2.0 * VARIANCE));
+    double r = sqrt(-::log(urnd) * (2.0 * VARIANCE));
     out2 = r * cos(phi);
     return r * sin(phi);
 }
 
-#if !defined(CUDA) && !defined(HIP)
+//#if !defined(CUDA) && !defined(HIP)
+#if 0
 
 /**
  * @details By default these gives random numbers with variance \f$1.0\f$ and expectation value \f$0.0\f$, i.e.
