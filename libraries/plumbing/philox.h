@@ -8,6 +8,49 @@
 
 #include "plumbing/globals.h"
 
+/**
+ * @file philox.h
+ * @brief This contains definition of the philox 4x32-10 pseudorandom number generator
+ * 
+ * @details 
+ * Philox is a stateless RNG, based on "cryptographic" function P_s:
+ * R = P_s(C), where input C is a 128-bit value, counter, and R 128-bit encryption of C,
+ * which is now taken as a 128-bit random number.  The function P_s also depends on 
+ * a 64-bit seed s, different seeds producing a different sequence.
+ * 
+ * The function P_s is implemented below in philox4x32_10.  The 128-bit values are
+ * implemented as 4 32-bit values (of type uint32_t).
+ * (see https://www.thesalmons.org/john/random123/papers/random123sc11.pdf)
+ * 
+ * From the 128-bit output we can construct e.g. 1 or 2 double precision values.
+ * 
+ * In hila the counter C is calculated as follows:
+ * 
+ * a: in onsites(), on each site:
+ *    - 64 bits for SiteIndex (x + nx*(y + ny*(z + nz*t)))
+ *    - 32 bits bits for "global" counter, which is incremented by one for each 
+ *      onsites-loop where random numbers are used 
+ *    - 32 bits for "local" counter for each site, which is set to 0 at the beginning
+ *      of onsites-block and incremented each time random number generator is called.
+ *    This scheme guarantees unique C for each call of the RNG on each site.
+ * 
+ * b: outside onsites():
+ *    - 64-bit SiteIndex is substituted by (max uint64_t - hila::myrank())
+ *    - the same 32-bit "global" counter as above
+ *    - 32-bit counter which is incremented for each RNG call between onsites-blocks.
+ * 
+ * The above scheme guarantees identical random numbers for each lattice size independent of the 
+ * node division or computing platform.
+ * 
+ * [with the exception of random values generated outside onsites in nodes !=0, which naturally
+ *  depend on the existence (number) of nodes.  It is recommended that random values outside onsites
+ *  are only generated on node 0 if independence on node division is the goal.]
+ * 
+ * On GPUs this uses (3*N_threads + 1)*sizeof(uint32_t) bytes __shared__ memory as a scratchpad
+ * in onsites-loops which use RNG. If RNG is not used no __shared__ memory is used.
+ */
+
+
 
 // Philox4x32 constant multipliers
 #define PHILOX_M0 0xD2511F53U
