@@ -89,7 +89,7 @@ void *hila::memory_pool::alloc(size_t req_size) {
 
 #ifdef POOL_DEBUG
         hila::out << "GPU MEMORY: request " << req_size << " gave block " << ptr->size
-                  << " current total " << total_size << '\n';
+                  << " current total " << p.total_size << '\n';
 #endif
         return (ptr->ptr);
 
@@ -123,7 +123,7 @@ void *hila::memory_pool::alloc(size_t req_size) {
 
 #ifdef POOL_DEBUG
         hila::out << "GPU MEMORY: request " << req_size << " NEW allocation, current total "
-                  << total_size << '\n';
+                  << p.total_size << '\n';
 #endif // CUDA OR HIP
         return a.ptr;
     }
@@ -146,7 +146,7 @@ void hila::memory_pool::free(void *ptr) {
 
 #ifdef POOL_DEBUG
             hila::out << "GPU MEMORY: FREE block of size " << it->size << ", current total "
-                      << total_size << '\n';
+                      << p.total_size << '\n';
 #endif
             return;
         }
@@ -159,6 +159,13 @@ void hila::memory_pool::free(void *ptr) {
 
 /// Release free memory to the system - avoids extra allocations
 void hila::memory_pool::purge() {
+
+#if defined(CUDA) || defined(HIP)
+    gpuDeviceSynchronize();
+#endif
+
+    auto orig_size = p.total_size;
+    auto orig_items = blocklist.size();
 
     auto ptr = blocklist.begin();
     for (auto it = blocklist.begin(); it != blocklist.end(); it++) {
@@ -182,8 +189,8 @@ void hila::memory_pool::purge() {
             p.total_size -= it->size;
 
 #ifdef POOL_DEBUG
-            hila::out << "GPU MEMORY: Purging " << it->size << ", bytes, total size " << total_size
-                      << '\n';
+            hila::out << "GPU MEMORY: Purging " << it->size << ", bytes, total size "
+                      << p.total_size << '\n';
 #endif
         } else {
             // copy blocks in use to the beginning of blocklist
@@ -193,6 +200,13 @@ void hila::memory_pool::purge() {
         }
     }
     blocklist.resize(ptr - blocklist.begin());
+
+    for (auto &r : blocklist)
+        assert(r.in_use && "Memory pool: blocklist purge error!");
+
+    hila::out0 << "Memory pool purge: freed " << orig_items - blocklist.size() << " elements, "
+               << (double)(orig_size - p.total_size) / sqr(1024) << " MB.  Current size "
+               << (double)p.total_size / sqr(1024) << " MB.\n";
 }
 
 

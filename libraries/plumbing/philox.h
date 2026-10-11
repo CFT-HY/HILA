@@ -11,45 +11,44 @@
 /**
  * @file philox.h
  * @brief This contains definition of the philox 4x32-10 pseudorandom number generator
- * 
- * @details 
+ *
+ * @details
  * Philox is a stateless RNG, based on "cryptographic" function P_s:
  * R = P_s(C), where input C is a 128-bit value, counter, and R 128-bit encryption of C,
- * which is now taken as a 128-bit random number.  The function P_s also depends on 
+ * which is now taken as a 128-bit random number.  The function P_s also depends on
  * a 64-bit seed s, different seeds producing a different sequence.
- * 
+ *
  * The function P_s is implemented below in philox4x32_10.  The 128-bit values are
  * implemented as 4 32-bit values (of type uint32_t).
  * (see https://www.thesalmons.org/john/random123/papers/random123sc11.pdf)
- * 
+ *
  * From the 128-bit output we can construct e.g. 1 or 2 double precision values.
- * 
+ *
  * In hila the counter C is calculated as follows:
- * 
+ *
  * a: in onsites(), on each site:
  *    - 64 bits for SiteIndex (x + nx*(y + ny*(z + nz*t)))
- *    - 32 bits bits for "global" counter, which is incremented by one for each 
- *      onsites-loop where random numbers are used 
+ *    - 32 bits bits for "global" counter, which is incremented by one for each
+ *      onsites-loop where random numbers are used
  *    - 32 bits for "local" counter for each site, which is set to 0 at the beginning
  *      of onsites-block and incremented each time random number generator is called.
  *    This scheme guarantees unique C for each call of the RNG on each site.
- * 
+ *
  * b: outside onsites():
  *    - 64-bit SiteIndex is substituted by (max uint64_t - hila::myrank())
  *    - the same 32-bit "global" counter as above
  *    - 32-bit counter which is incremented for each RNG call between onsites-blocks.
- * 
- * The above scheme guarantees identical random numbers for each lattice size independent of the 
+ *
+ * The above scheme guarantees identical random numbers for each lattice size independent of the
  * node division or computing platform.
- * 
+ *
  * [with the exception of random values generated outside onsites in nodes !=0, which naturally
  *  depend on the existence (number) of nodes.  It is recommended that random values outside onsites
  *  are only generated on node 0 if independence on node division is the goal.]
- * 
+ *
  * On GPUs this uses (3*N_threads + 1)*sizeof(uint32_t) bytes __shared__ memory as a scratchpad
  * in onsites-loops which use RNG. If RNG is not used no __shared__ memory is used.
  */
-
 
 
 // Philox4x32 constant multipliers
@@ -174,12 +173,12 @@ inline void philox_generate(uint32_t (&counter)[4]) {
         philox_loopcount[threadIdx.x] = 0;
         philox_index0[threadIdx.x] = counter[1];
         philox_index1[threadIdx.x] = counter[2];
-    
+
     } else {
         // separate initialization for global loop index
-        // Needs to be separate because __syncthreads() may cause 
+        // Needs to be separate because __syncthreads() may cause
         // trouble otherwise!
-        if (threadIdx.x == 0) 
+        if (threadIdx.x == 0)
             philox_global_loop = counter[3];
         __syncthreads();
     }
@@ -221,8 +220,20 @@ inline void philox_generate(uint32_t (&counter)[4]) {
 }
 
 /**
- * @brief philox_setup must be called at the beginning of each onsites-block if random numbers
- * are used there - note, on GPU loops we have 2 setup functions!
+ * @internal In GPU code, philox_setup_loopcount is called at the very beginning of the onsites()-
+ * block, followed by philox_setup_index on active sites.  hilapp takes care of this
+ */
+#pragma hila loop_function
+inline void philox_setup_loopcount(uint32_t loop) {
+    uint32_t counter[4];
+    counter[0] = 2;
+    counter[3] = loop;
+    philox_generate(counter);
+}
+
+/**
+ * @internal philox_setup_index is called on GPU code on all active sites (after possible site-ifs)
+ * (again, hilapp)
  */
 #pragma hila loop_function
 inline void philox_setup_index(uint64_t index) {
@@ -233,18 +244,11 @@ inline void philox_setup_index(uint64_t index) {
     philox_generate(counter);
 }
 
-/**
- * @brief philox_setup_loopcount must be called at the very beginning of each onsites-block if random numbers
- * are used there
- */
-#pragma hila loop_function
-inline void philox_setup_loopcount(uint32_t loop) {
-    uint32_t counter[4];
-    counter[0] = 2;
-    counter[3] = loop;
-    philox_generate(counter);
-}
 
+/**
+ * @internal philox_setup() is called by the CPU code on each iteration at onsites()
+ * This is
+ */
 inline void philox_setup(uint32_t loop, uint64_t index) {
     uint32_t counter[4];
     counter[0] = 1;
@@ -258,6 +262,9 @@ inline void philox_setup(uint32_t loop, uint64_t index) {
 /// to be called after onsites(), inserted by hilapp
 void philox_after_onsites();
 
+/**
+ *@brief Seed the RNG
+ */
 
 void seed_random(uint64_t seed, bool device_init = true);
 /**
@@ -265,10 +272,27 @@ void seed_random(uint64_t seed, bool device_init = true);
  */
 bool is_rng_seeded();
 
-/// Empty stub is fine for this
+/// These are not needed, define empty stubs for this
 inline void free_device_rng() {}
 inline bool is_device_rng_on() {
     return is_rng_seeded();
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+/// utilities converting from uint64 to double or uint32 to float
+//////////////////////////////////////////////////////////////////////////////////////////
+
+#pragma hila loop_function
+inline double u64_to_unit_double(uint64_t x) {
+    // Use 53 top bits for the conversion, assuming these are of better quality (should
+    // not matter for philox). Multiplication with 2^-53 gives identical bit pattern
+    // for double mantissa to the original uint64, and range[0,1).  Result is unbiased.
+    return (x >> 11) * 0x1.0p-53; // 2^-53
+}
+
+#pragma hila loop_function
+static inline float u32_to_unit_float(uint32_t x) {
+    return (x >> 8) * 0x1.0p-24f; // 0x1.0p-24f == 1.0f / 16777216
 }
 
 
@@ -287,7 +311,7 @@ inline double random() {
     philox_generate(counter);
     // make one 53 bit quantity for the double.
     uint64_t x = (static_cast<uint64_t>(counter[0]) << 32) | counter[1];
-    return (x >> 11) * 0x1.0p-53; // 2^-53
+    return u64_to_unit_double(x);
 }
 
 /**
@@ -301,9 +325,24 @@ inline double random2(out_only double &d2) {
     philox_generate(counter);
     // make one 53 bit quantity for the double.
     uint64_t x = (static_cast<uint64_t>(counter[0]) << 32) | counter[1];
-    d2 = (x >> 11) * 0x1.0p-53; // 2^-53
+    d2 = u64_to_unit_double(x);
     x = (static_cast<uint64_t>(counter[2]) << 32) | counter[3];
-    return (x >> 11) * 0x1.0p-53; // 2^-53
+    return u64_to_unit_double(x);
+}
+
+/**
+ * @brief return random float number in the interval [0,1)
+ *
+ * Note that using val = hila::random(); converts
+ * double to float, which may round to 1, whereas this
+ * function always gives < 1
+ */
+#pragma hila loop_function contains_rng
+inline double random_float() {
+    uint32_t counter[4];
+    counter[0] = 0;
+    philox_generate(counter);
+    return u32_to_unit_float(counter[1]);
 }
 
 /**
@@ -311,11 +350,17 @@ inline double random2(out_only double &d2) {
  */
 
 #pragma hila loop_function contains_rng
-inline double random_uint64() {
+inline uint64_t random_uint64() {
     uint32_t counter[4];
     counter[0] = 0;
     philox_generate(counter);
     return (static_cast<uint64_t>(counter[0]) << 32) | counter[1];
+}
+
+#pragma hila loop_function contains_rng
+inline void random_4x32(uint32_t (&counter)[4]) {
+    counter[0] = 0;
+    philox_generate(counter);
 }
 
 
@@ -358,7 +403,7 @@ void check_that_rng_is_initialized();
  */
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 T random(out_only T &val) {
-    val = hila::random();
+    val = hila::random<T>();
     return val;
 }
 
@@ -380,9 +425,15 @@ T &random(out_only T &val) {
  */
 template <typename T>
 T random() {
-    T val;
-    hila::random(val);
-    return val;
+    if constexpr (std::is_same<T, float>::value) {
+        return hila::random_float();
+    } else if constexpr (std::is_same<T, double>::value) {
+        return hila::random();
+    } else {
+        T val;
+        val.random();
+        return val;
+    }
 }
 
 /**
