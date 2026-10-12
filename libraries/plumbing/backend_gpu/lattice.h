@@ -3,6 +3,7 @@
 
 #include "coordinates.h"
 #include "globals.h"
+#include "plumbing/site_layout.h"
 
 /// Define some global variables
 
@@ -16,7 +17,8 @@
 /// Lattice related data that needs to be communicated
 /// to kernels
 struct backend_lattice_struct {
-    /// Storage for the neighbour indexes. Stored on device
+    /// Storage for the neighbour indexes. Stored on device.
+    /// nullptr if LAYOUT_ON_THE_FLY (indices computed from _d_layout)
     unsigned *d_neighb[NDIRS];
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -31,7 +33,7 @@ struct backend_lattice_struct {
     /// which may not be the clearest choice.)
     int loop_begin, loop_end;
 
-#ifdef EVEN_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
     /// Finally a pointer to the list of coordinates, stored on device
     CoordinateVector *d_coordinates;
 
@@ -62,6 +64,9 @@ struct backend_lattice_struct {
 // Define here some globals and inline functions
 
 HILA_GPU_EXTERN __constant__ unsigned _dev_field_alloc_size;
+
+#ifndef LAYOUT_ON_THE_FLY
+
 #ifdef EVEN_SITES_FIRST
 HILA_GPU_EXTERN __constant__ CoordinateVector *_dev_coordinates;
 #endif
@@ -90,6 +95,52 @@ inline __device__ Parity get_dev_site_parity(T idx) {
         return Parity::odd;
 }
 #endif
+
+#else // LAYOUT_ON_THE_FLY
+
+// site layout of the current lattice in __constant__ memory
+HILA_GPU_EXTERN hila::global<hila::site_layout_struct> _d_layout;
+
+#pragma hila loop_function
+inline hila::layout_site hila_dev_site(unsigned idx) {
+    const hila::site_layout_struct &layout = _d_layout();
+    return layout.site(idx);
+}
+
+/// neighbour index used by hilapp-generated kernels: nb is the field's neighbour array,
+/// nullptr unless special boundary conditions need it
+#pragma hila loop_function
+inline unsigned hila_dev_neighbour(const unsigned *nb, const hila::layout_site &s, unsigned idx,
+                                   int d) {
+    if (nb != nullptr)
+        return nb[idx];
+    const hila::site_layout_struct &layout = _d_layout();
+    return layout.neighbour(s, d);
+}
+
+#pragma hila loop_function
+inline CoordinateVector get_dev_coordinates(unsigned idx) {
+    const hila::site_layout_struct &layout = _d_layout();
+    hila::layout_site s = layout.site(idx);
+    CoordinateVector c;
+    for (int d = 0; d < NDIM; d++)
+        c.e(d) = s.lc[d] + layout.min[d];
+    return c;
+}
+
+#pragma hila loop_function
+inline int get_dev_coordinate(unsigned idx, int dir) {
+    const hila::site_layout_struct &layout = _d_layout();
+    return layout.site(idx).lc[dir] + layout.min[dir];
+}
+
+#pragma hila loop_function
+inline Parity get_dev_site_parity(unsigned idx) {
+    const hila::site_layout_struct &layout = _d_layout();
+    return idx < layout.evensites ? Parity::even : Parity::odd;
+}
+
+#endif // LAYOUT_ON_THE_FLY
 
 // Save "constants" lattice size and volume here
 HILA_GPU_EXTERN hila::global<int64_t> _d_volume;

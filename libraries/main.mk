@@ -23,6 +23,9 @@
 #%         sites. Default layout stores even lattice sites first, enabling efficient
 #%         looping over parities (EVEN/ODD).
 #%   NO_INTERLEAVE=1         - turn off compute during MPI communications (default: on)
+#%   LAYOUT_ON_THE_FLY=1     - compute neighbour indices and site coordinates instead of
+#%         storing them in per-site arrays (saves memory, esp. on GPUs). Requires
+#%         EVEN_SITES_FIRST, not with GPU_OVERLAP_COMM or AVX (default: off)
 #% GPU-relevant options:
 #%   GPU_AWARE_COMM=0        - turn off GPU aware MPI (default: on) former (GPU_AWARE_COMM)
 #%   GPU_CCL=1               - turn on NCCL/RCCL support for GPU communications (default: off)
@@ -143,6 +146,12 @@ $(LASTMAKE): $(MAKEFILE_LIST)
 ifdef EVEN_SITES_FIRST
 ifeq ($(EVEN_SITES_FIRST),0)
 HILA_OPTS += -DEVEN_SITES_FIRST=0
+endif
+endif
+
+ifdef LAYOUT_ON_THE_FLY
+ifneq ($(LAYOUT_ON_THE_FLY),0)
+HILA_OPTS += -DLAYOUT_ON_THE_FLY
 endif
 endif
 

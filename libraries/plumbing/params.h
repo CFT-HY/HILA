@@ -50,6 +50,19 @@
 #undef EVEN_SITES_FIRST
 #endif
 
+/**
+ * @brief LAYOUT_ON_THE_FLY: compute neighbour indices and site coordinates arithmetically
+ * (see site_layout.h) instead of storing per-site arrays lattice.neighb[] and coordinates
+ * (and their GPU copies).  Saves (4*NDIRS + 4*NDIM) bytes/site on GPUs.
+ * Requires EVEN_SITES_FIRST, and is not available with GPU_OVERLAP_COMM or vectorized (AVX)
+ * targets.  Off by default, enable with -DLAYOUT_ON_THE_FLY
+ */
+#ifdef LAYOUT_ON_THE_FLY
+#if LAYOUT_ON_THE_FLY == 0
+#undef LAYOUT_ON_THE_FLY
+#endif
+#endif
+
 /// NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK determine how MPI ranks are laid out on logical
 /// lattice.  TRIVIAL lays out the lattice on logical order where x-direction runs fastest etc.
 /// if NODE_LAYOUT_BLOCK is defined, NODE_LAYOUT_BLOCK consecutive MPI ranks are laid out so that

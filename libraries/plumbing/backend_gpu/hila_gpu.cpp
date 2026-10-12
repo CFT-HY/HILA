@@ -405,9 +405,14 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
     /* Setup neighbour fields in all directions */
     for (int d = 0; d < NDIRS; d++) {
         // For normal boundaries
+#ifndef LAYOUT_ON_THE_FLY
         gpuMalloc(&(d_neighb[d]), lat.mynode.volume * sizeof(unsigned));
         gpuMemcpy(d_neighb[d], lat.neighb[d], lat.mynode.volume * sizeof(unsigned),
                   gpuMemcpyHostToDevice);
+#else
+        // computed on the fly from _d_layout
+        d_neighb[d] = nullptr;
+#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // For special boundaries
@@ -425,7 +430,7 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 #endif
     }
 
-#ifdef EVEN_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
     /* Setup the location field */
     gpuMalloc(&(d_coordinates), lat.mynode.volume * sizeof(CoordinateVector));
     tmp = (CoordinateVector *)memalloc(lat.mynode.volume * sizeof(CoordinateVector));
@@ -463,10 +468,14 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 #endif
 #endif
 
-#ifdef EVEN_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
 
         gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
                           gpuMemcpyHostToDevice);
+#endif
+
+#ifdef LAYOUT_ON_THE_FLY
+        _d_layout = lat.mynode.layout;
 #endif
 
         gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,

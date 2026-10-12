@@ -167,9 +167,35 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
          << " < _hila_loop_end; ++" << looping_var << ") {\n";
 
-    if (evenfirst && generate_wait_loops && !boundary_layer) {
-        code << "if (((hila_loop_lattice.wait_arr_[" << looping_var
-             << "] & _dir_mask_) != 0) == _hila_wait_i) {\n";
+    // With LAYOUT_ON_THE_FLY neighbour indices are computed from the site coordinates,
+    // which are computed once per site
+    bool layout_on_the_fly = is_macro_defined("LAYOUT_ON_THE_FLY") && evenfirst && !target.vectorize;
+    bool any_read_nb = false;
+    for (field_info &l : field_info_list)
+        if (l.is_read_nb)
+            any_read_nb = true;
+
+    bool wait_loop = evenfirst && generate_wait_loops && !boundary_layer;
+
+    if (layout_on_the_fly && (any_read_nb || wait_loop))
+        code << "const hila::layout_site HILA_site_ = hila_loop_lattice.mynode.layout.site("
+             << looping_var << ");\n";
+
+    // expression for the index of the neighbour of fieldname to direction dirname
+    auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
+        if (layout_on_the_fly)
+            return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
+                   dirname + "], HILA_site_, " + looping_var + ", " + dirname + ")";
+        else
+            return fieldname + ".fs->neighbours[" + dirname + "][" + looping_var + "]";
+    };
+
+    if (wait_loop) {
+        if (layout_on_the_fly)
+            code << "if (((hila_loop_lattice.wait_mask(HILA_site_)";
+        else
+            code << "if (((hila_loop_lattice.wait_arr_[" << looping_var << "]";
+        code << " & _dir_mask_) != 0) == _hila_wait_i) {\n";
         ending_braces++;
     }
 
@@ -236,8 +262,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                              << ");\n";
                     } else {
                         // std neighbour accessor for scalars
-                        code << ".get_value_at(" << l.new_name << ".fs->neighbours[" << dirname
-                             << "][" << looping_var << "]);\n";
+                        code << ".get_value_at(" << nb_index(l.new_name, dirname) << ");\n";
                     }
 
                     // and replace references in loop body
@@ -263,8 +288,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                                                                dirname + ", " + looping_var + ")");
                         } else {
                             loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at(" +
-                                                               l.new_name + ".fs->neighbours[" +
-                                                               dirname + "][" + looping_var + "])");
+                                                               nb_index(l.new_name, dirname) +
+                                                               ")");
                         }
                     }
                 }

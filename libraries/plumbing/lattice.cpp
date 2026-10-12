@@ -55,6 +55,11 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     // set up the comm arrays
     create_std_gathers();
 
+#ifdef LAYOUT_ON_THE_FLY
+    hila::out0 << "Site layout: neighbour indices and coordinates computed on the fly "
+                  "(LAYOUT_ON_THE_FLY)\n";
+#endif
+
     // Initialize wait_array structures - has to be after std gathers()
     initialize_wait_arrays();
 
@@ -571,7 +576,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     // map site indexes to locations -- coordinates array
     // after the above site_index should work
 
-#ifdef EVEN_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
     coordinates.resize(volume);
     CoordinateVector l = min;
     for (unsigned i = 0; i < volume; i++) {
@@ -619,10 +624,18 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
 
 void lattice_struct::create_std_gathers() {
 
+    // arithmetic layout - with LAYOUT_ON_THE_FLY replaces neighb and coordinates arrays,
+    // otherwise used for consistency checks below
+    mynode.layout.setup(mynode.min, mynode.size, nodes.n_divisions);
+
     // allocate neighbour arrays
 
     for (int d = 0; d < NDIRS; d++) {
+#ifndef LAYOUT_ON_THE_FLY
         neighb[d] = (unsigned *)memalloc(((size_t)mynode.volume) * sizeof(unsigned));
+#else
+        neighb[d] = nullptr;
+#endif
     }
 
     size_t c_offset = mynode.volume; // current offset in field-arrays
@@ -655,10 +668,14 @@ void lattice_struct::create_std_gathers() {
             ln = (l + d).mod(l_size);
 
             if (is_on_mynode(ln)) {
+#ifndef LAYOUT_ON_THE_FLY
                 neighb[d][i] = site_index(ln);
+#endif
             } else {
+#ifndef LAYOUT_ON_THE_FLY
                 // short-circuit neighbour array, for later handling
                 neighb[d][i] = mynode.volume;
+#endif
 
                 // Now site is off-node, this leads to gathering
                 if (from_node.rank == mynode.rank) {
@@ -698,16 +715,24 @@ void lattice_struct::create_std_gathers() {
             size_t to_even = 0, to_odd = 0, from_even = 0, from_odd = 0;
 
             for (size_t i = 0; i < mynode.volume; i++) {
+#ifndef LAYOUT_ON_THE_FLY
                 if (neighb[d][i] == mynode.volume) {
+#else
+                if (mynode.layout.is_off_node(mynode.layout.site(i), d)) {
+#endif
                     CoordinateVector l, ln;
                     l = coordinates(i);
 
                     if (l.parity() == EVEN) {
+#ifndef LAYOUT_ON_THE_FLY
                         neighb[d][i] = c_offset + from_even;
+#endif
                         ++from_even;
 
                     } else {
+#ifndef LAYOUT_ON_THE_FLY
                         neighb[d][i] = c_offset + from_node.evensites + from_odd;
+#endif
                         ++from_odd;
                     }
 
@@ -727,6 +752,11 @@ void lattice_struct::create_std_gathers() {
 #endif
         }
 
+        // must agree with the arithmetic layout
+        assert((from_node.sites == 0 || (from_node.buffer == mynode.layout.halo_offset[d] &&
+                                         from_node.evensites == mynode.layout.halo_evensites[d])) &&
+               "halo layout mismatch with site_layout");
+
         // and advance offset for next direction
         c_offset += from_node.sites;
 
@@ -737,6 +767,7 @@ void lattice_struct::create_std_gathers() {
 
     /* Finally, set the site to the final offset (better be right!) */
     mynode.field_alloc_size = c_offset;
+    assert(c_offset == mynode.layout.halo_end && "halo size mismatch with site_layout");
 
     if (hila::reduce_node_sum(too_large_node) > 0) {
         report_too_large_node();
@@ -756,7 +787,7 @@ static_assert(NDIM <= 4 && "Dimensions at most 4 in dir_mask_t = unsigned char! 
 
 void lattice_struct::initialize_wait_arrays() {
 
-#if !(defined(CUDA) || defined(HIP))
+#if !(defined(CUDA) || defined(HIP)) && !defined(LAYOUT_ON_THE_FLY)
 
     /* Allocate here the mask array needed for forallsites_wait
      * This will contain a bit at location dir if the neighbour
@@ -1012,10 +1043,10 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
     int k = 0;
     for (int i = 0; i < mynode.volume; i++) {
         if (coordinate(i, abs(d)) != coord) {
-            special_boundaries[d].neighbours[i] = neighb[d][i];
+            special_boundaries[d].neighbours[i] = neighbour(i, d);
         } else {
             special_boundaries[d].neighbours[i] = offs++;
-            special_boundaries[d].move_index[k++] = neighb[d][i];
+            special_boundaries[d].move_index[k++] = neighbour(i, d);
         }
     }
 

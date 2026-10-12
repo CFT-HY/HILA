@@ -628,7 +628,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         std::string repl_string;
         repl_string = "{\n " + s.maskname + looping + " = 1;\n";
         repl_string +=
-            s.sitename + looping + " = SiteIndex(_dev_coordinates[" + looping_var + "]);\n";
+            s.sitename + looping + " = SiteIndex(get_dev_coordinates(" + looping_var + "));\n";
 
         if (s.assign_expr == nullptr) {
 
@@ -856,6 +856,26 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                << looping_var << " = HILA_idx_l_;\n";
     }
 
+    // With LAYOUT_ON_THE_FLY neighbour indices are computed from the site coordinates,
+    // which are computed once per site
+    bool layout_on_the_fly = is_macro_defined("LAYOUT_ON_THE_FLY");
+    bool any_read_nb = false;
+    for (field_info &l : field_info_list)
+        if (l.is_read_nb)
+            any_read_nb = true;
+
+    if (layout_on_the_fly && any_read_nb)
+        kernel << "const hila::layout_site HILA_site_ = hila_dev_site(" << looping_var << ");\n";
+
+    // expression for the index of the neighbour of fieldname to direction dirname
+    auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
+        if (layout_on_the_fly)
+            return "hila_dev_neighbour(" + fieldname + ".neighbours[" + dirname +
+                   "], HILA_site_, " + looping_var + ", " + dirname + ")";
+        else
+            return fieldname + ".neighbours[" + dirname + "][" + looping_var + "]";
+    };
+
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
         if (l.is_read_nb) {
@@ -879,8 +899,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     // Create the temp variable and call the getter
                     kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
-                           << l.new_name << ".get(" << l.new_name << ".neighbours[" << dirname
-                           << "][" << looping_var << "], _dev_field_alloc_size);\n";
+                           << l.new_name << ".get(" << nb_index(l.new_name, dirname)
+                           << ", _dev_field_alloc_size);\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -902,9 +922,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
                 kernel << "for (int HILA_dir_ = 0; HILA_dir_ < NDIRS; "
                           "++HILA_dir_) {\n"
-                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get(" << l.new_name
-                       << ".neighbours[HILA_dir_][" << looping_var
-                       << "], _dev_field_alloc_size);\n}\n";
+                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get("
+                       << nb_index(l.new_name, "HILA_dir_") << ", _dev_field_alloc_size);\n}\n";
 
                 // and replace references in loop body
                 for (dir_ptr &d : l.dir_list) {
@@ -932,10 +951,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                             loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + l.new_name +
-                                                           ".neighbours[" + dirname + "][" +
-                                                           looping_var +
-                                                           "], _dev_field_alloc_size)");
+                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" +
+                                                           nb_index(l.new_name, dirname) +
+                                                           ", _dev_field_alloc_size)");
                     }
                 }
 #endif
