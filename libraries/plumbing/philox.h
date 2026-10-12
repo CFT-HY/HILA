@@ -338,7 +338,7 @@ inline double random2(out_only double &d2) {
  * function always gives < 1
  */
 #pragma hila loop_function contains_rng
-inline double random_float() {
+inline float random_float() {
     uint32_t counter[4];
     counter[0] = 0;
     philox_generate(counter);
