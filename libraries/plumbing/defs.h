@@ -252,7 +252,12 @@ constexpr inline void swap(T &a, T &b) {
 #endif
 
 // this include has to be after the backend defs, because those define hila::random()
+
+#ifdef USE_PHILOX_RNG
+#include "plumbing/philox.h"
+#else
 #include "plumbing/random.h"
+#endif
 
 // This contains useful template tools
 #include "plumbing/type_tools.h"

@@ -20,15 +20,10 @@
 /// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible
 /// change is made.  This is the default below.
 
-#define HILA_SIGNATURE_NUMBER    9
+#define HILA_SIGNATURE_NUMBER    10
 
-// hilapp generates on-the-fly neighbour code for LAYOUT_ON_THE_FLY from signature 9 on.
-// Without it older hilapp is still fine.
-#ifdef LAYOUT_ON_THE_FLY
-#define MINIMUM_HILAPP_SIGNATURE 9
-#else
-#define MINIMUM_HILAPP_SIGNATURE 7
-#endif
-#define MINIMUM_HILA_SIGNATURE   8
+// 10: philox RNG and LAYOUT_ON_THE_FLY code generation
+#define MINIMUM_HILAPP_SIGNATURE 10
+#define MINIMUM_HILA_SIGNATURE   10
 
 #endif
