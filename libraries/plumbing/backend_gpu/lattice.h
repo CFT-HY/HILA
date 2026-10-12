@@ -123,8 +123,9 @@ inline CoordinateVector get_dev_coordinates(unsigned idx) {
     const hila::site_layout_struct &layout = _d_layout();
     hila::layout_site s = layout.site(idx);
     CoordinateVector c;
+    // direct access to storage, CoordinateVector methods may not be __device__ here
     for (int d = 0; d < NDIM; d++)
-        c.e(d) = s.lc[d] + layout.min[d];
+        c.c[d] = s.lc[d] + layout.min[d];
     return c;
 }
 

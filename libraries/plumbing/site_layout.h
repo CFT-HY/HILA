@@ -255,15 +255,17 @@ struct site_layout_struct {
     }
 
     //////////////////////////////////////////////////////////////////////////////////
-    /// CoordinateVector interface (host, and device via hilapp loop functions)
+    /// CoordinateVector interface (host, and device via hilapp loop functions).
+    /// Access CoordinateVector storage .c[] directly: its methods are __device__ only in
+    /// files where hilapp has seen them used in loops.
     //////////////////////////////////////////////////////////////////////////////////
 
 #pragma hila loop_function
     inline CoordinateVector coordinates(unsigned idx) const {
         layout_site s = site(idx);
         CoordinateVector c;
-        foralldir (d)
-            c.e(d) = s.lc[d] + min[d];
+        for (int d = 0; d < NDIM; d++)
+            c.c[d] = s.lc[d] + min[d];
         return c;
     }
 
@@ -271,8 +273,8 @@ struct site_layout_struct {
 #pragma hila loop_function
     inline unsigned site_index(const CoordinateVector &cv) const {
         int lc[NDIM];
-        foralldir (d)
-            lc[d] = cv[d] - min[d];
+        for (int d = 0; d < NDIM; d++)
+            lc[d] = cv.c[d] - min[d];
         return index_of(lc);
     }
 
