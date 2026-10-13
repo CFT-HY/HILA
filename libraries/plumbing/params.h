@@ -63,6 +63,18 @@
 #endif
 #endif
 
+/**
+ * @brief HALO_DEPTH: number of halo layers allocated for each communicated direction.
+ * @details Default 1 (nearest neighbours only).  With HALO_DEPTH = D > 1, layers 2..D are
+ * allocated after the nearest-neighbour halos (see site_layout.h), enabling direct access
+ * to f[X + k*d] with k <= D.  Nearest-neighbour halo layout is unchanged.  Costs
+ * (D-1) * (boundary surface) elements per field.  Requires EVEN_SITES_FIRST, not with
+ * GPU_OVERLAP_COMM or vectorized targets.  Local node size in divided directions must be >= D.
+ */
+#ifndef HALO_DEPTH
+#define HALO_DEPTH 1
+#endif
+
 /// NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK determine how MPI ranks are laid out on logical
 /// lattice.  TRIVIAL lays out the lattice on logical order where x-direction runs fastest etc.
 /// if NODE_LAYOUT_BLOCK is defined, NODE_LAYOUT_BLOCK consecutive MPI ranks are laid out so that

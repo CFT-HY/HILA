@@ -59,6 +59,9 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     hila::out0 << "Site layout: neighbour indices and coordinates computed on the fly "
                   "(LAYOUT_ON_THE_FLY)\n";
 #endif
+#if HALO_DEPTH > 1
+    hila::out0 << "Halo depth " << HALO_DEPTH << " layers\n";
+#endif
 
     // Initialize wait_array structures - has to be after std gathers()
     initialize_wait_arrays();
@@ -766,8 +769,25 @@ void lattice_struct::create_std_gathers() {
     } /* directions */
 
     /* Finally, set the site to the final offset (better be right!) */
-    mynode.field_alloc_size = c_offset;
     assert(c_offset == mynode.layout.halo_end && "halo size mismatch with site_layout");
+
+    // deeper halo layers (HALO_DEPTH > 1) after the nn halos.  Equal to c_offset if depth 1
+    mynode.field_alloc_size = mynode.layout.deep_halo_end;
+
+#if HALO_DEPTH > 1
+    // layers are fetched from the neighbour node only, so all node sizes in
+    // divided directions must be >= HALO_DEPTH
+    int too_small_node = 0;
+    foralldir (d) {
+        if (nodes.n_divisions[d] > 1 && mynode.size[d] < HALO_DEPTH)
+            too_small_node = 1;
+    }
+    if (hila::reduce_node_sum(too_small_node) > 0) {
+        hila::out0 << "Error: HALO_DEPTH " << HALO_DEPTH
+                   << " is larger than the node size in some divided direction\n";
+        hila::terminate(1);
+    }
+#endif
 
     if (hila::reduce_node_sum(too_large_node) > 0) {
         report_too_large_node();

@@ -28,6 +28,12 @@
 #endif
 #endif
 
+#if HALO_DEPTH > 1
+#if !defined(EVEN_SITES_FIRST) || defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT)
+#error "HALO_DEPTH > 1 requires EVEN_SITES_FIRST, not with GPU_OVERLAP_COMM or SUBNODE_LAYOUT"
+#endif
+#endif
+
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
 #define VECTOR_SIZE (256 / 8) // this is for AVX2

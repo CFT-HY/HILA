@@ -25,6 +25,13 @@
  *     (x fastest, the direction d skipped), and the parity is that of the site whose
  *     neighbour is fetched.  Same pairing argument as above.
  *     halo_offset[d] are allocated in the order of directions e_x, e_y, ..., e_x_down.
+ *   - deeper halo layers (HALO_DEPTH > 1): layer l = 1 .. halo_depth-1 (layer 0 is the
+ *     nearest-neighbour halo above) of direction d is at
+ *       deep_offset[d] + (l-1)*face_size[dim] + j
+ *     with j the full face lex index (no parity split, deep gathers are always ALL).
+ *     Layer l of direction e_x contains sites with local x = size[x] + l, of e_x_down
+ *     sites with x = -1 - l.  Deep layers follow all nn halos, in the order of directions,
+ *     so that nn halo indices are independent of the halo depth.
  *
  * All functions marked HILA_HOST_DEVICE use only plain int arrays, so that they can be
  * called from GPU kernels and host code.  The struct is trivially copyable and small, so
@@ -69,15 +76,25 @@ struct site_layout_struct {
     unsigned face_factor[NDIM][NDIM];
 
     unsigned halo_end;         // volume + all nn halos
-    unsigned field_alloc_size; // halo_end rounded up to a multiple of 256, as in lattice setup
-                               // (special boundary elements, if any, go after halo_end)
+    unsigned field_alloc_size; // deep_halo_end rounded up to a multiple of 256, as in lattice
+                               // setup (special boundary elements, if any, go after
+                               // deep_halo_end)
+
+    // deeper halo layers, used if halo_depth > 1
+    int halo_depth;                // number of halo layers, >= 1
+    unsigned face_size[NDIM];      // volume / size[d]
+    unsigned deep_offset[NDIRS];   // start of layers 1..halo_depth-1 for direction d
+    unsigned deep_halo_end;        // halo_end + all deep layers
 
     //////////////////////////////////////////////////////////////////////////////////
     /// Host setup.  ndiv[d] is the number of node divisions to direction d
     //////////////////////////////////////////////////////////////////////////////////
 
     void setup(const CoordinateVector &nmin, const CoordinateVector &nsize,
-               const CoordinateVector &ndiv) {
+               const CoordinateVector &ndiv, int depth = HALO_DEPTH) {
+
+        assert(depth >= 1 && "site_layout: halo depth must be >= 1");
+        halo_depth = depth;
 
         unsigned v = 1;
         unsigned ps = 0;
@@ -103,6 +120,7 @@ struct site_layout_struct {
         }
 
         foralldir (k) {
+            face_size[k] = volume / size[k];
             unsigned f = 1;
             foralldir (e) {
                 if (e == k) {
@@ -144,9 +162,21 @@ struct site_layout_struct {
                 offset += face;
             }
         }
-        assert(offset < (1ULL << 32) && "site_layout: too large node for 32-bit indices");
         halo_end = offset;
-        field_alloc_size = (halo_end + 255) / 256 * 256;
+
+        // deep layers after all nn halos
+        for (int d = 0; d < NDIRS; d++) {
+            int k = dim_of(d);
+            if (wrap[k] || halo_depth == 1) {
+                deep_offset[d] = 0;
+            } else {
+                deep_offset[d] = offset;
+                offset += (size_t)(halo_depth - 1) * face_size[k];
+            }
+        }
+        assert(offset < (1ULL << 32) && "site_layout: too large node for 32-bit indices");
+        deep_halo_end = offset;
+        field_alloc_size = (deep_halo_end + 255) / 256 * 256;
     }
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -233,13 +263,23 @@ struct site_layout_struct {
         return halo_index(s, d);
     }
 
-    /// Halo index of the off-node neighbour of boundary site s to direction d
-    HILA_HOST_DEVICE inline unsigned halo_index(const layout_site &s, int d) const {
-        int k = dim_of(d);
+    /// lex index of site s on the face perpendicular to dimension k (coordinate k skipped)
+    HILA_HOST_DEVICE inline unsigned face_lex(const layout_site &s, int k) const {
         unsigned j = 0;
         for (int e = 0; e < NDIM; e++)
             j += s.lc[e] * face_factor[k][e];
-        return halo_offset[d] + (s.parity ? halo_evensites[d] : 0) + (j >> 1);
+        return j;
+    }
+
+    /// Halo index of the off-node neighbour of boundary site s to direction d
+    HILA_HOST_DEVICE inline unsigned halo_index(const layout_site &s, int d) const {
+        return halo_offset[d] + (s.parity ? halo_evensites[d] : 0) + (face_lex(s, dim_of(d)) >> 1);
+    }
+
+    /// Index of halo layer l >= 1 (0 = nn halo) to direction d, at the face position of s
+    HILA_HOST_DEVICE inline unsigned deep_halo_index(const layout_site &s, int d, int l) const {
+        int k = dim_of(d);
+        return deep_offset[d] + (l - 1) * face_size[k] + face_lex(s, k);
     }
 
     /// true if the neighbour of s to direction d is off-node
@@ -252,6 +292,36 @@ struct site_layout_struct {
 
     HILA_HOST_DEVICE inline unsigned neighbour(unsigned idx, int d) const {
         return neighbour(site(idx), d);
+    }
+
+    /// Index of the site at offset k * d from site s, k >= 1.  k == 1 gives the same
+    /// result as neighbour(s, d), but use neighbour() for that - it is cheaper.
+    /// Off-node sites must be within the halo depth, k <= halo_depth (not checked here).
+    HILA_HOST_DEVICE inline unsigned neighbour_offset(const layout_site &s, int d, int k) const {
+        int dim = dim_of(d);
+        int x = s.lc[dim] + (is_up(d) ? k : -k);
+        if (x < 0 || x >= size[dim]) {
+            if (!wrap[dim]) {
+                // in halo: layer l = 0, 1, ...
+                int l = (x < 0) ? -1 - x : x - size[dim];
+                if (l == 0) {
+                    // nn halo, indexed by the parity of the boundary site at distance k-1
+                    layout_site b = s;
+                    b.parity ^= (k - 1) & 1;
+                    return halo_index(b, d);
+                }
+                return deep_halo_index(s, d, l);
+            }
+            x %= size[dim];
+            if (x < 0)
+                x += size[dim];
+        }
+        int dx = x - s.lc[dim];
+        return index_of(s.lex + dx * (int)size_factor[dim], s.parity ^ (dx & 1));
+    }
+
+    HILA_HOST_DEVICE inline unsigned neighbour_offset(unsigned idx, int d, int k) const {
+        return neighbour_offset(site(idx), d, k);
     }
 
     //////////////////////////////////////////////////////////////////////////////////

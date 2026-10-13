@@ -26,6 +26,8 @@
 #%   LAYOUT_ON_THE_FLY=1     - compute neighbour indices and site coordinates instead of
 #%         storing them in per-site arrays (saves memory, esp. on GPUs). Requires
 #%         EVEN_SITES_FIRST, not with GPU_OVERLAP_COMM or AVX (default: off)
+#%   HALO_DEPTH=<n>          - allocate n halo layers per communicated direction, enabling
+#%         direct access f[X + k*d], k <= n (default: 1)
 #% GPU-relevant options:
 #%   GPU_AWARE_COMM=0        - turn off GPU aware MPI (default: on) former (GPU_AWARE_COMM)
 #%   GPU_CCL=1               - turn on NCCL/RCCL support for GPU communications (default: off)
@@ -153,6 +155,10 @@ ifdef LAYOUT_ON_THE_FLY
 ifneq ($(LAYOUT_ON_THE_FLY),0)
 HILA_OPTS += -DLAYOUT_ON_THE_FLY
 endif
+endif
+
+ifdef HALO_DEPTH
+HILA_OPTS += -DHALO_DEPTH=$(HALO_DEPTH)
 endif
 
 ifdef NO_INTERLEAVE

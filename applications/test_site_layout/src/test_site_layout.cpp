@@ -1,7 +1,8 @@
 /**
  * Test plumbing/site_layout.h: on-the-fly coordinates, site indices and neighbour
  * indices must agree with the lattice arrays (coordinates, neighb, halo offsets)
- * on every site and direction.
+ * on every site and direction.  Also tests neighbour_offset() and deep halo layers
+ * (HALO_DEPTH > 1) for depths 1..4, independently of the compiled HALO_DEPTH.
  *
  * Lattice size is read from file "parameters" (key "lattice size").
  */
@@ -81,6 +82,124 @@ int main(int argc, char **argv) {
                 report("site " + std::to_string(i) + " dir " + std::to_string(d) +
                        " is_off_node differs");
         }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // neighbour_offset() and deep halo layers, for depths 1..4.
+    //  - on-node targets must agree with lattice site_index (incl. wrap on node)
+    //  - layer 0 halo must agree with following neighb[] k-1 steps and then 1 step
+    //  - (direction, global coordinate) <-> halo index must be one-to-one, indices
+    //    inside [halo_offset/deep_offset ranges] and below deep_halo_end
+    ///////////////////////////////////////////////////////////////////////////
+
+    const CoordinateVector lsz = lattice.size();
+    for (int depth = 1; depth <= 4; depth++) {
+        bool ok = true;
+        foralldir (d)
+            if (lattice->nodes.n_divisions[d] > 1 && node.size[d] < depth)
+                ok = false;
+        if (!ok)
+            continue;
+
+        hila::site_layout_struct lay;
+        lay.setup(node.min, node.size, lattice->nodes.n_divisions, depth);
+
+        if (depth == HALO_DEPTH && lay.field_alloc_size != node.field_alloc_size)
+            report("depth " + std::to_string(depth) + " field_alloc_size " +
+                   std::to_string(lay.field_alloc_size) + " vs " +
+                   std::to_string(node.field_alloc_size));
+        if (lay.halo_end != layout.halo_end)
+            report("depth " + std::to_string(depth) + " halo_end changed");
+
+        // halo index -> (direction, global coordinate), and reverse
+        std::vector<int> owner_dir(lay.deep_halo_end, -1);
+        std::vector<CoordinateVector> owner_c(lay.deep_halo_end);
+        size_t n_filled = 0;
+
+        for (unsigned i = 0; i < node.volume; i++) {
+            CoordinateVector c = lattice->coordinates(i);
+            auto s = lay.site(i);
+            for (int d = 0; d < NDIRS; d++) {
+                Direction dir = (Direction)d;
+                int dim = abs(dir);
+                for (int k = 1; k <= depth; k++) {
+                    unsigned nb = lay.neighbour_offset(s, d, k);
+                    if (k == 1 && nb != layout.neighbour(s, d))
+                        report("depth " + std::to_string(depth) + " site " + std::to_string(i) +
+                               " dir " + std::to_string(d) + " k=1 differs from neighbour()");
+
+                    CoordinateVector cg = c + k * dir;
+                    cg = cg.mod(lsz);
+
+                    CoordinateVector lc = cg - node.min;
+                    bool on_node = true;
+                    foralldir (e)
+                        if (lc[e] < 0 || lc[e] >= node.size[e])
+                            on_node = false;
+                    // with 2 divisions, wrapped target may be back on node, but it is
+                    // still fetched through the halo
+                    if (lay.wrap[dim]) {
+                        if (!on_node || nb != lattice->site_index(cg))
+                            report("depth " + std::to_string(depth) + " site " +
+                                   std::to_string(i) + " dir " + std::to_string(d) +
+                                   " k " + std::to_string(k) + " wrapped index " +
+                                   std::to_string(nb));
+                        continue;
+                    }
+
+                    int x = c[dim] - node.min[dim] + (is_up_dir(dir) ? k : -k);
+                    if (x >= 0 && x < node.size[dim]) {
+                        if (nb != lattice->site_index(cg))
+                            report("depth " + std::to_string(depth) + " site " +
+                                   std::to_string(i) + " dir " + std::to_string(d) +
+                                   " k " + std::to_string(k) + " on-node index " +
+                                   std::to_string(nb) + " vs " +
+                                   std::to_string(lattice->site_index(cg)));
+                        continue;
+                    }
+
+                    int l = (x < 0) ? -1 - x : x - node.size[dim];
+                    if (l == 0) {
+                        unsigned j = i;
+                        for (int m = 0; m < k; m++)
+                            j = lattice->neighb[d][j];
+                        if (nb != j)
+                            report("depth " + std::to_string(depth) + " site " +
+                                   std::to_string(i) + " dir " + std::to_string(d) +
+                                   " k " + std::to_string(k) + " nn halo " +
+                                   std::to_string(nb) + " vs " + std::to_string(j));
+                    } else {
+                        if (nb < lay.deep_offset[d] ||
+                            nb >= lay.deep_offset[d] + (depth - 1) * lay.face_size[dim])
+                            report("depth " + std::to_string(depth) + " site " +
+                                   std::to_string(i) + " dir " + std::to_string(d) +
+                                   " k " + std::to_string(k) + " deep index " +
+                                   std::to_string(nb) + " outside its range");
+                    }
+
+                    if (nb < node.volume || nb >= lay.deep_halo_end) {
+                        report("depth " + std::to_string(depth) + " halo index " +
+                               std::to_string(nb) + " out of range");
+                        continue;
+                    }
+                    if (owner_dir[nb] < 0) {
+                        owner_dir[nb] = d;
+                        owner_c[nb] = cg;
+                        n_filled++;
+                    } else if (owner_dir[nb] != d || owner_c[nb] != cg) {
+                        report("depth " + std::to_string(depth) + " halo index " +
+                               std::to_string(nb) + " used for two different sites");
+                    }
+                }
+            }
+        }
+
+        // every halo element must be used exactly by one (dir, coordinate):
+        // count of distinct targets == number of halo elements
+        if (n_filled != lay.deep_halo_end - node.volume)
+            report("depth " + std::to_string(depth) + " halo elements filled " +
+                   std::to_string(n_filled) + " vs " +
+                   std::to_string(lay.deep_halo_end - node.volume));
     }
 
     int64_t total = errors;
