@@ -56,6 +56,104 @@ static void check(const Field<double> &f, Direction d, int k, const CoordinateVe
     }
 }
 
+// h = field value at X + v
+static void expected(Field<double> &h, const CoordinateVector &v, const CoordinateVector &mult,
+                     double add) {
+    CoordinateVector lsz = lattice.size();
+    onsites(ALL) h[X] = (X.coordinates() + v).mod(lsz).dot(mult) + add;
+}
+
+static void loop_result(double err, const std::string &what) {
+    // err is a loop reduction, same on all ranks
+    if (err != 0 && hila::myrank() == 0)
+        report("loop " + what + ": error sum " + std::to_string(err));
+}
+
+// hilapp-generated loops with X + k*dir references
+static void test_loops(const CoordinateVector &mult) {
+    double add = 6.5;
+    Field<double> f, g, h, h2;
+    f[ALL] = X.coordinates().dot(mult) + add;
+    double err;
+
+    // constant directions, both signs, sum form
+    expected(h, 2 * e_x, mult, add);
+    err = 0;
+    onsites(ALL) err += fabs(f[X + 2 * e_x] - h[X]);
+    loop_result(err, "f[X + 2*e_x]");
+
+    expected(h, -2 * e_y, mult, add);
+    err = 0;
+    onsites(ODD) err += fabs(f[X - 2 * e_y] - h[X]);
+    loop_result(err, "f[X - 2*e_y]");
+
+    expected(h, e_z + e_z, mult, add);
+    err = 0;
+    onsites(EVEN) err += fabs(f[X + e_z + e_z] - h[X]);
+    loop_result(err, "f[X + e_z + e_z]");
+
+#if HALO_DEPTH >= 3
+    expected(h, 3 * e_x, mult, add);
+    err = 0;
+    onsites(ALL) err += fabs(f[X + e_x * 3] - h[X]);
+    loop_result(err, "f[X + e_x*3]");
+#endif
+
+    // variable direction, nn and deep refs of the same field in one loop
+    for (Direction d = (Direction)0; d < NDIRS; ++d) {
+        expected(h, 2 * d, mult, add);
+        expected(h2, 1 * d, mult, add);
+        err = 0;
+        onsites(ALL) {
+            err += fabs(f[X + 2 * d] - h[X]);
+            err += fabs(f[X + d] - h2[X]);
+            err += fabs(f[X] - (X.coordinates().dot(mult) + add));
+        }
+        loop_result(err, "f[X + 2*d] and f[X+d], d = " + std::to_string((int)d));
+
+        expected(h, -2 * d, mult, add);
+        err = 0;
+        onsites(EVEN) err += fabs(f[X - 2 * d] - h[X]);
+        loop_result(err, "f[X - 2*d], d = " + std::to_string((int)d));
+    }
+
+    // assignment to another field
+    expected(h, -2 * e_x, mult, add);
+    g[ALL] = f[X - 2 * e_x];
+    err = 0;
+    onsites(ALL) err += fabs(g[X] - h[X]);
+    loop_result(err, "g[ALL] = f[X - 2*e_x]");
+
+    // written field: must fall back to shift-copy (old values read).  Parity ALL, the
+    // shift-copy with EVEN/ODD is not correct on lattices with odd size
+    {
+        Field<double> f2 = f;
+        expected(h, 2 * e_y, mult, add);
+        f2[ALL] = f2[X + 2 * e_y];
+        err = 0;
+        onsites(ALL) err += fabs(f2[X] - h[X]);
+        loop_result(err, "f2[ALL] = f2[X + 2*e_y]");
+    }
+
+    // too deep, and diagonal: shift-copy
+    expected(h, (HALO_DEPTH + 1) * e_x, mult, add);
+    err = 0;
+    onsites(ALL) err += fabs(f[X + (HALO_DEPTH + 1) * e_x] - h[X]);
+    loop_result(err, "f[X + (HALO_DEPTH+1)*e_x]");
+
+    expected(h, 2 * e_x + e_y, mult, add);
+    err = 0;
+    onsites(ALL) err += fabs(f[X + 2 * e_x + e_y] - h[X]);
+    loop_result(err, "f[X + 2*e_x + e_y]");
+
+    // field changed after deep gather: halo must be refetched
+    f[ALL] = X.coordinates().dot(mult) + add + 1;
+    expected(h, 2 * e_x, mult, add + 1);
+    err = 0;
+    onsites(ALL) err += fabs(f[X + 2 * e_x] - h[X]);
+    loop_result(err, "f[X + 2*e_x] after change");
+}
+
 int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
@@ -155,6 +253,9 @@ int main(int argc, char **argv) {
         }
     }
 #endif
+
+    // 7: hilapp-generated loops
+    test_loops(mult);
 
     int64_t total = errors;
     hila::reduce_node_sum(total);

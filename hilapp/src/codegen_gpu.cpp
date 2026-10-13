@@ -130,6 +130,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     code << "auto& compute_stream = hila::compute_stream();\n";
     code << "auto& compute_event = hila::compute_event();\n";
 
+    // deep halo gathers (X + k*dir) are completed before the loop
+    generate_deep_gathers(code);
+
     if (gpu_overlap_comm || gpu_ccl || gpu_shmem) {
         code << "auto& halo_stream = hila::halo_stream();\n";
         code << "auto& halo_event = hila::halo_event();\n";
@@ -885,8 +888,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (l.is_read_nb)
             any_read_nb = true;
 
-    if (layout_on_the_fly && any_read_nb)
+    if ((layout_on_the_fly && any_read_nb) || has_deep_refs())
         kernel << "const hila::layout_site HILA_site_ = hila_dev_site(" << looping_var << ");\n";
+
+    // index of deep halo ref X + k*dir
+    auto deep_index = [&](const dir_ptr &d) -> std::string {
+        return "hila_dev_neighbour_offset(HILA_site_, " + deep_dir_string(d, loopBuf, true) +
+               ", " + std::to_string(d.deep_k) + ")";
+    };
 
     // expression for the index of the neighbour of fieldname to direction dirname
     auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
@@ -904,6 +913,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             if (!l.is_loop_local_dir) {
                 // "standard" loop extern neighb direction
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
+                               << l.new_name << ".get(" << deep_index(d)
+                               << ", _dev_field_alloc_size);\n";
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        continue;
+                    }
+
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
@@ -948,6 +966,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                 // and replace references in loop body
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                                                               ", _dev_field_alloc_size)");
+                        continue;
+                    }
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
@@ -964,6 +988,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                 // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                                                               ", _dev_field_alloc_size)");
+                        continue;
+                    }
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string

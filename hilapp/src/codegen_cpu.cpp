@@ -30,6 +30,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     else
         generate_wait_loops = true;
 
+    // deep halo gathers (X + k*dir) are completed before the loop
+    generate_deep_gathers(code);
+
     for (field_info &l : field_info_list) {
         // If neighbour references exist, communicate them
         if (!l.is_loop_local_dir) {
@@ -179,9 +182,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     bool wait_loop = evenfirst && generate_wait_loops && !boundary_layer;
 
-    if (layout_on_the_fly && (any_read_nb || wait_loop))
+    if ((layout_on_the_fly && (any_read_nb || wait_loop)) || has_deep_refs())
         code << "const hila::layout_site HILA_site_ = hila_loop_lattice.mynode.layout.site("
              << looping_var << ");\n";
+
+    // index of deep halo ref X + k*dir
+    auto deep_index = [&](const dir_ptr &d) -> std::string {
+        return "hila_loop_lattice.mynode.layout.neighbour_offset(HILA_site_, " +
+               deep_dir_string(d, loopBuf, true) + ", " + std::to_string(d.deep_k) + ")";
+    };
 
     // expression for the index of the neighbour of fieldname to direction dirname
     auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
@@ -250,6 +259,14 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             if (!l.is_loop_local_dir) {
                 // "standard" loop extern neighb direction
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        code << "const " << l.element_type << " " << d.name_with_dir << " = "
+                             << l.new_name << ".get_value_at(" << deep_index(d) << ");\n";
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        continue;
+                    }
+
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
@@ -282,6 +299,13 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
                 // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr,
+                                            l.new_name + ".get_value_at(" + deep_index(d) + ")");
+                        continue;
+                    }
+
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string

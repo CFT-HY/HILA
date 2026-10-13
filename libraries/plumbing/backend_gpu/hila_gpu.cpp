@@ -477,7 +477,7 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
                           gpuMemcpyHostToDevice);
 #endif
 
-#ifdef LAYOUT_ON_THE_FLY
+#if defined(LAYOUT_ON_THE_FLY) || HALO_DEPTH > 1
         _d_layout = lat.mynode.layout;
 #endif
 

@@ -143,6 +143,25 @@ inline Parity get_dev_site_parity(unsigned idx) {
 
 #endif // LAYOUT_ON_THE_FLY
 
+#if HALO_DEPTH > 1
+// deep halo access X + k*dir in hilapp-generated kernels, needs the site layout on device
+#ifndef LAYOUT_ON_THE_FLY
+HILA_GPU_EXTERN hila::global<hila::site_layout_struct> _d_layout;
+
+#pragma hila loop_function
+inline hila::layout_site hila_dev_site(unsigned idx) {
+    const hila::site_layout_struct &layout = _d_layout();
+    return layout.site(idx);
+}
+#endif
+
+#pragma hila loop_function
+inline unsigned hila_dev_neighbour_offset(const hila::layout_site &s, int d, int k) {
+    const hila::site_layout_struct &layout = _d_layout();
+    return layout.neighbour_offset(s, d, k);
+}
+#endif
+
 // Save "constants" lattice size and volume here
 HILA_GPU_EXTERN hila::global<int64_t> _d_volume;
 HILA_GPU_EXTERN hila::global<CoordinateVector> _d_size;

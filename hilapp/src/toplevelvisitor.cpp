@@ -219,6 +219,25 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                            "non-nearest neighbour reference cannot depend on variable "
                            "'%0' defined inside site loop",
                            frc.getLocalVarInfo()->name.c_str());
+            } else if (halo_depth() > 1 && !is_assign) {
+                // Is it an axis offset X + k*dir which can be read from the deep halo?
+                Expr *dirE;
+                int k;
+                std::vector<Expr *> atoms;
+                if (parse_axis_offset(lfe.parityExpr, dirE, k, atoms) && std::abs(k) >= 2 &&
+                    std::abs(k) <= halo_depth()) {
+
+                    lfe.is_offset = false;
+                    lfe.deep_k = std::abs(k);
+                    lfe.deep_dirExpr = dirE;
+                    lfe.deep_negate = (k < 0);
+
+                    // register the variables in the direction expression(s), these are
+                    // needed in the loop
+                    is_assign = false;
+                    for (Expr *a : atoms)
+                        TraverseStmt(a);
+                }
             }
 
         } else {
@@ -1655,14 +1674,16 @@ bool TopLevelVisitor::check_field_ref_list() {
             // TODO: use better method?
             bool found = false;
             for (dir_ptr &dp : fip->dir_list) {
-                if (p.is_constant_direction) {
+                if (dp.deep_k != p.deep_k) {
+                    found = false; // deep halo refs only with equal depth
+                } else if (p.is_constant_direction) {
                     found = (dp.is_constant_direction && dp.constant_value == p.constant_value);
                 } else {
                     found = is_duplicate_expr(dp.parityExpr, p.parityExpr);
                 }
 
                 if (found) {
-                    dp.count += (p.is_offset == false); // only nn in count
+                    dp.count += (p.is_offset == false && p.deep_k == 0); // only nn in count
                     dp.ref_list.push_back(&p);
                     break;
                 }
@@ -1671,8 +1692,11 @@ bool TopLevelVisitor::check_field_ref_list() {
             if (!found) {
                 dir_ptr dp;
                 dp.parityExpr = p.parityExpr;
-                dp.count = (p.is_offset == false);
+                dp.count = (p.is_offset == false && p.deep_k == 0);
                 dp.is_offset = p.is_offset;
+                dp.deep_k = p.deep_k;
+                dp.deep_dirExpr = p.deep_dirExpr;
+                dp.deep_negate = p.deep_negate;
                 dp.is_constant_direction = p.is_constant_direction;
                 dp.constant_value = p.constant_value;
                 dp.is_loop_local_dir = p.is_loop_local_dir;
@@ -1684,6 +1708,24 @@ bool TopLevelVisitor::check_field_ref_list() {
             }
         } // Direction
     } // p-loop
+
+    // Deep halo refs cannot be used if the field is written in the loop (the halo would
+    // be read while the field changes).  Use the shift-copy method for these.
+    for (field_info &l : field_info_list) {
+        if (l.is_written) {
+            for (dir_ptr &dp : l.dir_list) {
+                if (dp.deep_k > 0) {
+                    dp.deep_k = 0;
+                    dp.is_offset = true;
+                    for (field_ref *r : dp.ref_list) {
+                        r->deep_k = 0;
+                        r->is_offset = true;
+                    }
+                    l.is_read_offset = true;
+                }
+            }
+        }
+    }
 
     for (field_info &l : field_info_list) {
 
@@ -3195,4 +3237,145 @@ void TopLevelVisitor::make_mapping_lists(const TemplateParameterList *tpl,
 void TopLevelVisitor::set_writeBuf(const FileID fid) {
     writeBuf = get_file_buffer(TheRewriter, fid);
     toplevelBuf = writeBuf;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+/// Deep halo access: parse axis offsets X + k*dir (HALO_DEPTH > 1)
+/////////////////////////////////////////////////////////////////////////////
+
+/// value of HALO_DEPTH macro, 1 if deep halo access is not possible on this target
+int TopLevelVisitor::halo_depth() {
+    static int depth = -1;
+    if (depth < 0) {
+        depth = 1;
+        std::string arg;
+        if (is_macro_defined("HALO_DEPTH", &arg) && is_macro_defined("EVEN_SITES_FIRST") &&
+            !target.vectorize && !target.openacc) {
+            depth = std::atoi(arg.c_str());
+            if (depth < 1)
+                depth = 1;
+        }
+    }
+    return depth;
+}
+
+static Expr *strip_axis_expr(Expr *e) {
+    while (true) {
+        e = e->IgnoreParens()->IgnoreImplicit();
+        if (auto *ce = dyn_cast<CXXConstructExpr>(e)) {
+            if (ce->getNumArgs() == 1) {
+                e = ce->getArg(0);
+                continue;
+            }
+        }
+        if (auto *fc = dyn_cast<CXXFunctionalCastExpr>(e)) {
+            e = fc->getSubExpr();
+            continue;
+        }
+        return e;
+    }
+}
+
+/// Collect terms (k, Direction expr) of a sum of X, Directions, int*Direction and
+/// Direction*int, with + and - (binary and unary).  Return false if something else.
+bool TopLevelVisitor::collect_axis_offset_terms(Expr *e, int sign, bool &has_X,
+                                                std::vector<std::pair<int, Expr *>> &terms) {
+    e = strip_axis_expr(e);
+    std::string type = get_expr_type(e);
+
+    if (type == "X_index_type") {
+        if (has_X || sign < 0)
+            return false;
+        has_X = true;
+        return true;
+    }
+
+    if (auto *op = dyn_cast<CXXOperatorCallExpr>(e)) {
+        std::string ops = getOperatorSpelling(op->getOperator());
+        int nargs = op->getNumArgs();
+
+        if (ops == "-" && nargs == 1 && type != "Direction") {
+            return collect_axis_offset_terms(op->getArg(0), -sign, has_X, terms);
+        }
+        if ((ops == "+" || ops == "-") && nargs == 2) {
+            return collect_axis_offset_terms(op->getArg(0), sign, has_X, terms) &&
+                   collect_axis_offset_terms(op->getArg(1), (ops == "+") ? sign : -sign, has_X,
+                                             terms);
+        }
+        if (ops == "*" && nargs == 2) {
+            Expr *a = strip_axis_expr(op->getArg(0));
+            Expr *b = strip_axis_expr(op->getArg(1));
+            if (get_expr_type(a) == "Direction")
+                std::swap(a, b);
+            if (get_expr_type(b) != "Direction" || !a->isIntegerConstantExpr(*Context))
+                return false;
+#if defined(__clang_major__) && (__clang_major__ <= 15)
+            int k = a->getIntegerConstantExpr(*Context).getValue().getExtValue();
+#else
+            int k = a->getIntegerConstantExpr(*Context).value().getExtValue();
+#endif
+            terms.push_back({sign * k, b});
+            return true;
+        }
+    }
+
+    if (type == "Direction") {
+        // a Direction-valued expression, incl. -d
+        terms.push_back({sign, e});
+        return true;
+    }
+
+    return false;
+}
+
+/// Parse X + k*dir, where all Direction expressions are identical.  dirE gets the
+/// Direction expr, k the multiplier (can be negative), atoms all Direction subexpressions
+bool TopLevelVisitor::parse_axis_offset(Expr *e, Expr *&dirE, int &k,
+                                        std::vector<Expr *> &atoms) {
+    bool has_X = false;
+    std::vector<std::pair<int, Expr *>> terms;
+    if (!collect_axis_offset_terms(e, 1, has_X, terms) || !has_X || terms.size() == 0)
+        return false;
+
+    dirE = terms[0].second;
+    k = 0;
+    atoms.clear();
+    for (auto &t : terms) {
+        if (!is_duplicate_expr(dirE, t.second))
+            return false;
+        k += t.first;
+        atoms.push_back(t.second);
+    }
+    return true;
+}
+
+/// Direction string of a deep halo ref.  in_loop: use names mapped in the loop buffer
+std::string TopLevelVisitor::deep_dir_string(const dir_ptr &d, srcBuf &loopBuf, bool in_loop) {
+    std::string s;
+    if (in_loop)
+        s = loopBuf.get(d.deep_dirExpr->getSourceRange());
+    else
+        s = get_stmt_str(d.deep_dirExpr);
+    if (d.deep_negate)
+        s = "-(" + s + ")";
+    return s;
+}
+
+/// deep halo gathers before the loop - these are complete before the loop starts
+void TopLevelVisitor::generate_deep_gathers(std::stringstream &code) {
+    srcBuf dummy;
+    for (field_info &l : field_info_list)
+        for (dir_ptr &d : l.dir_list)
+            if (d.deep_k > 0)
+                code << l.new_name << ".gather_depth(" << deep_dir_string(d, dummy, false)
+                     << ", " << d.deep_k << ");\n";
+}
+
+bool TopLevelVisitor::has_deep_refs() {
+    for (field_info &l : field_info_list)
+        for (dir_ptr &d : l.dir_list)
+            if (d.deep_k > 0)
+                return true;
+    return false;
 }

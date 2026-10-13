@@ -144,6 +144,11 @@ struct field_ref {
     bool is_offset;             // true if dir is for offset instead of simple Direction
     bool is_loop_local_dir;     // if dir depends on loop local var - not known outside loop
     unsigned constant_value;
+    // axis offset X + k*dir read directly from deep halo (HALO_DEPTH > 1), k >= 2.
+    // deep_k == 0 if not
+    int deep_k;
+    Expr *deep_dirExpr; // the Direction expression
+    bool deep_negate;   // if true, the direction is -(deep_dirExpr)
 
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
@@ -152,6 +157,9 @@ struct field_ref {
         is_written = is_read = is_offset = is_direction = is_constant_direction =
             is_loop_local_dir = false;
         sequence = 0;
+        deep_k = 0;
+        deep_dirExpr = nullptr;
+        deep_negate = false;
     }
 
     ~field_ref() {
@@ -173,11 +181,17 @@ struct dir_ptr {
     bool is_constant_direction; // if constant nn
     unsigned constant_value;    // value of it
     std::string name_with_dir;  // new name for this Field[X+dir] -variable
+    int deep_k;                 // > 0 for axis offset X + k*dir from deep halo, see field_ref
+    Expr *deep_dirExpr;
+    bool deep_negate;
 
     dir_ptr() {
         ref_list = {};
         parityExpr = nullptr;
         count = 0;
+        deep_k = 0;
+        deep_dirExpr = nullptr;
+        deep_negate = false;
         is_offset = is_constant_direction = is_loop_local_dir = false;
         name_with_dir.clear();
         direxpr_s.clear();
