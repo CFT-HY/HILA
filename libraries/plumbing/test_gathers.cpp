@@ -7,7 +7,7 @@
 void gather_test() {
 
     int64_t s = 0;
-    onsites(ALL) {
+    onsites (ALL) {
         s += 1;
     }
 
@@ -18,17 +18,17 @@ void gather_test() {
     }
 
 
-    foralldir(d) {
+    foralldir (d) {
 
         CoordinateVector dif1 = 0, dif2 = 0;
         Field<CoordinateVector> f1, f2;
 
-        onsites(ALL) {
+        onsites (ALL) {
             f1[X] = X.coordinates();
             f2[X] = (X.coordinates() + d).mod(lattice.size());
         }
 
-        onsites(ALL) {
+        onsites (ALL) {
             dif1 += abs(f1[X + d] - f2[X]);
             dif2 += abs(f1[X] - f2[X - d]);
         }
@@ -46,7 +46,7 @@ void gather_test() {
         }
 
 #ifdef EVEN_SITES_FIRST
-        onsites(EVEN) {
+        onsites (EVEN) {
             dif1 += abs(f1[X + d] - f2[X]);
             dif2 += abs(f1[X] - f2[X - d]);
         }
@@ -90,13 +90,18 @@ void gather_test() {
 }
 
 void test_std_gathers() {
-    // gather_test<int>();
-    auto t0 = hila::gettime();
 
-#ifdef MPI_BENCHMARK_TEST
+#if defined(NO_GATHER_TEST)
+    hila::out0 << "NO_GATHER_TEST defined, skipping test" << std::endl;
+    return;
+
+#elif defined(MPI_BENCHMARK_TEST)
     hila::out0 << "MPI_BENCHMARK_TEST defined, not doing communication tests!\n";
     return;
-#endif
+
+#else
+
+    auto t0 = hila::gettime();
 
     gather_test();
 
@@ -110,6 +115,7 @@ void test_std_gathers() {
         hila::print_dashed_line();
     }
 
-    if_rank0()
+    if_rank0 ()
         hila::out.flush();
+#endif
 }
