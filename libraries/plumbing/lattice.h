@@ -32,6 +32,9 @@
 #if !defined(EVEN_SITES_FIRST) || defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT)
 #error "HALO_DEPTH > 1 requires EVEN_SITES_FIRST, not with GPU_OVERLAP_COMM or SUBNODE_LAYOUT"
 #endif
+#if defined(GPU_CCL) || defined(GPU_SHMEM)
+#error "HALO_DEPTH > 1 is not (yet) available with GPU_CCL or GPU_SHMEM"
+#endif
 #endif
 
 #ifdef SUBNODE_LAYOUT
@@ -255,6 +258,14 @@ class lattice_struct {
 
     /// nearest neighbour comminfo struct
     std::array<nn_comminfo_struct, NDIRS> nn_comminfo;
+
+#if HALO_DEPTH > 1
+    /// Sites sent for halo layers 1..HALO_DEPTH-1 of direction d (layer 0 is the nn halo,
+    /// nn_comminfo[d].to_node.sitelist), layer by layer in face lex order, see site_layout.h.
+    /// (HALO_DEPTH-1)*face_size elements, nullptr if direction is not divided.  Device
+    /// pointer on GPUs.
+    unsigned *deep_sitelist[NDIRS];
+#endif
 
 #ifdef EVEN_SITES_FIRST
     /// Main neighbour index array.  With LAYOUT_ON_THE_FLY these are nullptr, and the

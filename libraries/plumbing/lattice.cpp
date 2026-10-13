@@ -787,6 +787,41 @@ void lattice_struct::create_std_gathers() {
                    << " is larger than the node size in some divided direction\n";
         hila::terminate(1);
     }
+
+    // Send lists for deep halo layers.  Gather from direction d sends to node at -d:
+    // receiver's layer l of d is our coordinate l (d up) or size-1-l (d down), with the
+    // same transverse coordinates (node divisions are aligned)
+    for (int d = 0; d < NDIRS; d++) {
+        const auto &lay = mynode.layout;
+        int k = lay.dim_of(d);
+        if (lay.wrap[k]) {
+            deep_sitelist[d] = nullptr;
+            continue;
+        }
+        unsigned face = lay.face_size[k];
+        unsigned *list = (unsigned *)memalloc((size_t)(HALO_DEPTH - 1) * face * sizeof(unsigned));
+        for (int l = 1; l < HALO_DEPTH; l++) {
+            for (unsigned j = 0; j < face; j++) {
+                int lc[NDIM];
+                unsigned r = j;
+                foralldir (e) {
+                    if (e == k) {
+                        lc[e] = lay.is_up(d) ? l : lay.size[e] - 1 - l;
+                    } else {
+                        lc[e] = r % lay.size[e];
+                        r /= lay.size[e];
+                    }
+                }
+                list[(l - 1) * face + j] = lay.index_of(lc);
+            }
+        }
+#if defined(CUDA) || defined(HIP)
+        deep_sitelist[d] = copy_array_to_gpu(list, (HALO_DEPTH - 1) * face);
+        free(list);
+#else
+        deep_sitelist[d] = list;
+#endif
+    }
 #endif
 
     if (hila::reduce_node_sum(too_large_node) > 0) {
