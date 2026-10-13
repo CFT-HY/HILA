@@ -174,6 +174,24 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 } // end of get_receive_buffer
 
 
+/// Shift (and f[X + offset] access through shift-copy) with parity EVEN or ODD is not
+/// consistent if the lattice size is odd to a direction where the shift has a non-zero
+/// component: crossing the periodic boundary, the parity of the shifted site depends on the
+/// site.  Stop with an error in that case.
+inline void check_shift_parity(const CoordinateVector &v, Parity par) {
+    if (par == ALL)
+        return;
+    foralldir (d) {
+        if (v[d] != 0 && lattice.size(d) % 2 == 1) {
+            hila::out0 << "ERROR: shift or f[X + offset] access by " << v << " with parity "
+                       << par << " is not supported, lattice size " << lattice.size()
+                       << " is odd to direction " << hila::prettyprint(d)
+                       << ".  Use parity ALL.\n";
+            hila::terminate(1);
+        }
+    }
+}
+
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
 
@@ -181,6 +199,7 @@ template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
 
     assert_all_ranks_present();
+    check_shift_parity(v, par);
 
     // use this to store remaining moves
     CoordinateVector rem = v;
@@ -307,6 +326,8 @@ void Field<T>::buffered_shift_offsets(const CoordinateVector &v, Parity par) con
 
 template <typename T>
 const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity par) const {
+
+    check_shift_parity(v, par);
 
     int len = v.norm_L1();
     if (len == 0)
