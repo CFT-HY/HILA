@@ -178,6 +178,9 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 /// consistent if the lattice size is odd to a direction where the shift has a non-zero
 /// component: crossing the periodic boundary, the parity of the shifted site depends on the
 /// site.  Stop with an error in that case.
+/// Nearest-neighbour gathers f[X+d] with EVEN/ODD have the same issue but are left enabled
+/// on purpose: this allows odd-sized Euclidean time extents (finite temperature).  There user
+/// code must not rely on even/odd neighbours across the boundary (t = 0).
 inline void check_shift_parity(const CoordinateVector &v, Parity par) {
     if (par == ALL)
         return;
