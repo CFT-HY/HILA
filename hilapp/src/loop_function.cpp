@@ -674,20 +674,30 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             else
                 call_start = "hila_loop_lattice.";
 
+            // In CPU loops with the lexicographic layout use the site HILA_site_ computed for
+            // the loop (incrementally if possible), see codegen_cpu.cpp
+            std::string site_arg = looping_var;
+            if (!target.kernelize && !target.vectorize && !is_macro_defined("EVEN_SITES_FIRST"))
+                site_arg = "HILA_site_";
+
+            if (name == "coordinates" || name == "parity" || name == "coordinate" ||
+                name == "x" || name == "y" || name == "z" || name == "t")
+                loop_info.need_loop_coordinate = true;
+
             if (name == "coordinates") {
-                sfc.replace_expression = call_start + "coordinates(" + looping_var;
+                sfc.replace_expression = call_start + "coordinates(" + site_arg;
             } else if (name == "parity") {
-                sfc.replace_expression = call_start + "site_parity(" + looping_var;
+                sfc.replace_expression = call_start + "site_parity(" + site_arg;
             } else if (name == "coordinate") {
-                sfc.replace_expression = call_start + "coordinate(" + looping_var + ',';
+                sfc.replace_expression = call_start + "coordinate(" + site_arg + ',';
             } else if (name == "x") {
-                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_x";
+                sfc.replace_expression = call_start + "coordinate(" + site_arg + ",e_x";
             } else if (name == "y") {
-                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_y";
+                sfc.replace_expression = call_start + "coordinate(" + site_arg + ",e_y";
             } else if (name == "z") {
-                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_z";
+                sfc.replace_expression = call_start + "coordinate(" + site_arg + ",e_z";
             } else if (name == "t") {
-                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_t";
+                sfc.replace_expression = call_start + "coordinate(" + site_arg + ",e_t";
 
             // these two are lattice. -methods
             } else if (name == "size") {

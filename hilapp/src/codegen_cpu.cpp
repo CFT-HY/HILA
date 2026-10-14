@@ -111,6 +111,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         code << "const int _hila_loop_end   = _hila_ranges.max[_hila_wait_i];\n";
     }
 
+    // is the site loop split between OpenMP threads?
+    bool omp_parallel_loop = false;
+
     // and the openacc loop header
     if (target.openacc) {
         generate_openacc_loop_header(code);
@@ -141,6 +144,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 code << "#pragma omp for";
             else
                 code << "#pragma omp parallel for";
+            omp_parallel_loop = true;
 
             sums = 0;
             for (reduction_expr &r : reduction_list) {
@@ -164,10 +168,6 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     extern bool use_philox_rng;
 
-    // Start the loop
-    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
-         << " < _hila_loop_end; ++" << looping_var << ") {\n";
-
     // With LAYOUT_ON_THE_FLY neighbour indices are computed from the site coordinates,
     // which are computed once per site
     // (always without EVEN_SITES_FIRST)
@@ -182,9 +182,37 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // without EVEN_SITES_FIRST parity loops go through all sites, check the site parity
     bool parity_check = !evenfirst && loop_info.parity_value != Parity::all;
 
-    if ((layout_on_the_fly && (any_read_nb || wait_loop || parity_check)) || has_deep_refs())
+    // site coordinates HILA_site_ needed?  In the lexicographic layout X.coordinates() etc.
+    // are replaced with HILA_site_ -using calls (need_loop_coordinate, loop_function.cpp)
+    bool need_site =
+        (layout_on_the_fly &&
+         (any_read_nb || wait_loop || parity_check ||
+          (!evenfirst && (loop_info.need_loop_coordinate || use_philox_rng)))) ||
+        has_deep_refs();
+
+    // In the lexicographic layout the site is advanced incrementally in sequential loops,
+    // without divisions (not if the loop is split between OpenMP threads).  With
+    // EVEN_SITES_FIRST advance() has data dependent branches and was slower than site()
+    bool incremental_site = need_site && !evenfirst && !omp_parallel_loop && !target.openacc;
+
+    if (incremental_site)
+        code << "hila::layout_site HILA_site_next_ = hila_loop_lattice.mynode.layout.site("
+                "_hila_loop_begin);\n";
+
+    // Start the loop
+    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
+         << " < _hila_loop_end; ++" << looping_var << ") {\n";
+
+    if (incremental_site) {
+        // advance at the start of the body, so that 'continue' in the loop is safe
+        code << "if (" << looping_var << " > _hila_loop_begin) hila_loop_lattice.mynode.layout"
+             << ".advance(HILA_site_next_, " << looping_var << ");\n";
+        // copy, so that the address of the loop-carried HILA_site_next_ does not escape
+        code << "const hila::layout_site HILA_site_ = HILA_site_next_;\n";
+    } else if (need_site) {
         code << "const hila::layout_site HILA_site_ = hila_loop_lattice.mynode.layout.site("
              << looping_var << ");\n";
+    }
 
     // index of deep halo ref X + k*dir
     auto deep_index = [&](const dir_ptr &d) -> std::string {
@@ -212,8 +240,10 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     if (use_philox_rng)
         code << "hila::philox_setup(hila_philox_loop_counter, "
-                "SiteIndex(hila_loop_lattice.coordinates("
-             << looping_var << ")).value);\n";
+                "SiteIndex("
+             << (need_site ? "hila_loop_lattice.mynode.layout.coordinates(HILA_site_)"
+                           : "hila_loop_lattice.coordinates(" + looping_var + ")")
+             << ").value);\n";
 
     if (parity_check) {
         // Parity value: even = 1, odd = 2, all = 3, site parity 0 or 1

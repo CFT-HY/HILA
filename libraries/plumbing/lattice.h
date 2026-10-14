@@ -413,6 +413,19 @@ class lattice_struct {
         return mynode.layout.site_parity(idx);
     }
 
+    /// The same for an already computed site (hilapp-generated CPU loops)
+    inline CoordinateVector coordinates(const hila::layout_site &s) const {
+        return mynode.layout.coordinates(s);
+    }
+
+    inline int coordinate(const hila::layout_site &s, Direction d) const {
+        return s.lc[d] + mynode.min[d];
+    }
+
+    inline Parity site_parity(const hila::layout_site &s) const {
+        return s.parity ? ODD : EVEN;
+    }
+
     /// neighbour index of site idx to direction d (incl. halo)
     inline unsigned neighbour(unsigned idx, Direction d) const {
         return mynode.layout.neighbour(idx, d);
