@@ -645,7 +645,6 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
         if (is_X_index_type || objtype.find("Lattice") != std::string::npos) {
             // now it is a method of X
 
-            bool evenfirst = is_macro_defined("EVEN_SITES_FIRST");
 
             // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
 
@@ -667,57 +666,28 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             // for non-GPU code replace only cases which are needed
             bool replace_this = true;
 
-            // needed for non-evenfirst
-            if (is_X_index_type)
-                loop_info.need_loop_coordinate = true;
-
+            // coordinates and parity come from the lattice (or the site layout) in both
+            // EVEN_SITES_FIRST and lexicographic layouts
             std::string call_start;
-
-            if (evenfirst) {
-                if (target.kernelize)
-                    call_start = "get_dev_";
-                else
-                    call_start = "hila_loop_lattice.";
-            }
+            if (target.kernelize)
+                call_start = "get_dev_";
+            else
+                call_start = "hila_loop_lattice.";
 
             if (name == "coordinates") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "coordinates(" + looping_var;
-                else {
-                    // need to adjust the replace range, because the closing paren must also be removed
-                    sfc.replace_range = sfc.fullExpr->getSourceRange();
-                    sfc.replace_expression = looping_cv;
-                }
+                sfc.replace_expression = call_start + "coordinates(" + looping_var;
             } else if (name == "parity") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "site_parity(" + looping_var;
-                else
-                    sfc.replace_expression = looping_cv + ".parity(";
+                sfc.replace_expression = call_start + "site_parity(" + looping_var;
             } else if (name == "coordinate") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ',';
-                else
-                    sfc.replace_expression = looping_cv + ".e(";
+                sfc.replace_expression = call_start + "coordinate(" + looping_var + ',';
             } else if (name == "x") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_x";
-                else
-                    sfc.replace_expression = looping_cv + ".e(e_x";
+                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_x";
             } else if (name == "y") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_y";
-                else
-                    sfc.replace_expression = looping_cv + ".e(e_y";
+                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_y";
             } else if (name == "z") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_z";
-                else
-                    sfc.replace_expression = looping_cv + ".e(e_z";
+                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_z";
             } else if (name == "t") {
-                if (evenfirst)
-                    sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_t";
-                else
-                    sfc.replace_expression = looping_cv + ".e(e_t";
+                sfc.replace_expression = call_start + "coordinate(" + looping_var + ",e_t";
 
             // these two are lattice. -methods
             } else if (name == "size") {

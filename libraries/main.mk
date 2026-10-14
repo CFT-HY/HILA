@@ -21,11 +21,12 @@
 #%   DEBUG=1                 - compile with -g, for debugging symbols (if implemented)
 #%   EVEN_SITES_FIRST=0      - store sites in logical "typewriter" order, mixing EVEN and ODD
 #%         sites. Default layout stores even lattice sites first, enabling efficient
-#%         looping over parities (EVEN/ODD).
+#%         looping over parities (EVEN/ODD).  =0 implies LAYOUT_ON_THE_FLY, EVEN/ODD loops
+#%         go through all sites.  Not with GPU_OVERLAP_COMM or AVX
 #%   NO_INTERLEAVE=1         - turn off compute during MPI communications (default: on)
 #%   LAYOUT_ON_THE_FLY=1     - compute neighbour indices and site coordinates instead of
-#%         storing them in per-site arrays (saves memory, esp. on GPUs). Requires
-#%         EVEN_SITES_FIRST, not with GPU_OVERLAP_COMM or AVX (default: off)
+#%         storing them in per-site arrays (saves memory, esp. on GPUs). Not with
+#%         GPU_OVERLAP_COMM or AVX (default: off)
 #%   HALO_DEPTH=<n>          - allocate n halo layers per communicated direction, enabling
 #%         direct access f[X + k*d], k <= n (default: 1)
 #% GPU-relevant options:

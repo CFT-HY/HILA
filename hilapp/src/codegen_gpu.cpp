@@ -553,6 +553,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         kernel_launch += ", hila_philox_loop_counter";
     }
 
+    // without EVEN_SITES_FIRST parity loops go through all sites, pass the parity to the kernel
+    bool parity_check =
+        !is_macro_defined("EVEN_SITES_FIRST") && loop_info.parity_value != Parity::all;
+    if (parity_check) {
+        kernel << ", const unsigned HILA_parity_bits_";
+        kernel_launch += ", static_cast<unsigned>(" + loop_info.parity_str + ")";
+    }
+
     // print field call list
     int i = 0;
     for (field_info &l : field_info_list) {
@@ -888,8 +896,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (l.is_read_nb)
             any_read_nb = true;
 
-    if ((layout_on_the_fly && any_read_nb) || has_deep_refs())
+    if ((layout_on_the_fly && (any_read_nb || parity_check)) || has_deep_refs())
         kernel << "const hila::layout_site HILA_site_ = hila_dev_site(" << looping_var << ");\n";
+
+    if (parity_check) {
+        // Parity value: even = 1, odd = 2, all = 3, site parity 0 or 1
+        kernel << "if ((HILA_parity_bits_ >> HILA_site_.parity) & 1) {\n";
+    }
 
     // index of deep halo ref X + k*dir
     auto deep_index = [&](const dir_ptr &d) -> std::string {
@@ -1093,6 +1106,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
                    << ", _dev_field_alloc_size );\n";
         }
+
+    // end the parity check
+    if (parity_check)
+        kernel << "}\n";
 
     // end the if ( looping_var < d_lattice.loop_end) or for() {
     kernel << "}\n";

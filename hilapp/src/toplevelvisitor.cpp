@@ -3250,8 +3250,7 @@ int TopLevelVisitor::halo_depth() {
     if (depth < 0) {
         depth = 1;
         std::string arg;
-        if (is_macro_defined("HALO_DEPTH", &arg) && is_macro_defined("EVEN_SITES_FIRST") &&
-            !target.vectorize && !target.openacc) {
+        if (is_macro_defined("HALO_DEPTH", &arg) && !target.vectorize && !target.openacc) {
             depth = std::atoi(arg.c_str());
             if (depth < 1)
                 depth = 1;

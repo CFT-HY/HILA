@@ -4,14 +4,22 @@
  * on every site and direction.  Also tests neighbour_offset() and deep halo layers
  * (HALO_DEPTH > 1) for depths 1..4, independently of the compiled HALO_DEPTH.
  *
+ * With LAYOUT_ON_THE_FLY (always with EVEN_SITES_FIRST=0) there are no lattice arrays:
+ * coordinates are checked against direct lexicographic decoding, on-node neighbours against
+ * lattice site_index(), and halo indices for being one-to-one and in their ranges.
+ *
  * Lattice size is read from file "parameters" (key "lattice size").
  */
 
 #include "hila.h"
 #include "plumbing/site_layout.h"
 
-#if defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT) || !defined(EVEN_SITES_FIRST)
-#error "test_site_layout: only EVEN_SITES_FIRST layout without GPU_OVERLAP_COMM is supported"
+#if defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT)
+#error "test_site_layout: GPU_OVERLAP_COMM or SUBNODE_LAYOUT layouts are not supported"
+#endif
+
+#ifndef LAYOUT_ON_THE_FLY
+#define HAVE_LATTICE_ARRAYS
 #endif
 
 int main(int argc, char **argv) {
@@ -61,7 +69,42 @@ int main(int argc, char **argv) {
 
     for (unsigned i = 0; i < node.volume; i++) {
         CoordinateVector c = layout.coordinates(i);
-        if (c != lattice->coordinates(i)) {
+#ifdef HAVE_LATTICE_ARRAYS
+        CoordinateVector cref = lattice->coordinates(i);
+#else
+        // lexicographic order of sites, or lex order of even sites then odd sites
+        CoordinateVector cref;
+        {
+#ifdef EVEN_SITES_FIRST
+            // i-th site of its parity in lex order: search (slow but simple)
+            static std::vector<CoordinateVector> esf_order;
+            if (esf_order.empty()) {
+                esf_order.resize(node.volume);
+                unsigned ne = 0, no = node.evensites;
+                for (unsigned lex = 0; lex < node.volume; lex++) {
+                    CoordinateVector cc;
+                    unsigned r = lex;
+                    foralldir (e) {
+                        cc[e] = r % node.size[e] + node.min[e];
+                        r /= node.size[e];
+                    }
+                    if (cc.parity() == EVEN)
+                        esf_order[ne++] = cc;
+                    else
+                        esf_order[no++] = cc;
+                }
+            }
+            cref = esf_order[i];
+#else
+            unsigned r = i;
+            foralldir (e) {
+                cref[e] = r % node.size[e] + node.min[e];
+                r /= node.size[e];
+            }
+#endif
+        }
+#endif
+        if (c != cref) {
             report("site " + std::to_string(i) + " coordinates differ");
             continue;
         }
@@ -74,6 +117,7 @@ int main(int argc, char **argv) {
         auto s = layout.site(i);
         for (int d = 0; d < NDIRS; d++) {
             unsigned nb = layout.neighbour(s, d);
+#ifdef HAVE_LATTICE_ARRAYS
             if (nb != lattice->neighb[d][i])
                 report("site " + std::to_string(i) + " dir " + std::to_string(d) +
                        " neighbour " + std::to_string(nb) + " vs " +
@@ -81,6 +125,26 @@ int main(int argc, char **argv) {
             if (layout.is_off_node(s, d) != (lattice->neighb[d][i] >= node.volume))
                 report("site " + std::to_string(i) + " dir " + std::to_string(d) +
                        " is_off_node differs");
+#else
+            CoordinateVector cn = (c + (Direction)d).mod(lattice.size());
+            int dim = layout.dim_of(d);
+            bool off = !layout.wrap[dim] && !lattice->is_on_mynode(cn);
+            // with 2 node divisions the neighbour can be on node, but via halo
+            if (!layout.wrap[dim] && (is_up_dir((Direction)d) ? s.lc[dim] == node.size[dim] - 1
+                                                              : s.lc[dim] == 0))
+                off = true;
+            if (layout.is_off_node(s, d) != off)
+                report("site " + std::to_string(i) + " dir " + std::to_string(d) +
+                       " is_off_node differs");
+            if (!off && nb != lattice->site_index(cn))
+                report("site " + std::to_string(i) + " dir " + std::to_string(d) +
+                       " neighbour " + std::to_string(nb) + " vs " +
+                       std::to_string(lattice->site_index(cn)));
+            if (off && (nb < layout.halo_offset[d] ||
+                        nb >= layout.halo_offset[d] + layout.face_size[dim]))
+                report("site " + std::to_string(i) + " dir " + std::to_string(d) +
+                       " halo index " + std::to_string(nb) + " outside its range");
+#endif
         }
     }
 
@@ -108,8 +172,15 @@ int main(int argc, char **argv) {
             report("depth " + std::to_string(depth) + " field_alloc_size " +
                    std::to_string(lay.field_alloc_size) + " vs " +
                    std::to_string(node.field_alloc_size));
+#ifdef EVEN_SITES_FIRST
+        // nn halos do not depend on the depth
         if (lay.halo_end != layout.halo_end)
             report("depth " + std::to_string(depth) + " halo_end changed");
+#else
+        // all layers together after each direction
+        if (lay.halo_end != lay.deep_halo_end)
+            report("depth " + std::to_string(depth) + " halo_end != deep_halo_end");
+#endif
 
         // halo index -> (direction, global coordinate), and reverse
         std::vector<int> owner_dir(lay.deep_halo_end, -1);
@@ -117,14 +188,20 @@ int main(int argc, char **argv) {
         size_t n_filled = 0;
 
         for (unsigned i = 0; i < node.volume; i++) {
-            CoordinateVector c = lattice->coordinates(i);
+            CoordinateVector c = lay.coordinates(i);
             auto s = lay.site(i);
             for (int d = 0; d < NDIRS; d++) {
                 Direction dir = (Direction)d;
                 int dim = abs(dir);
                 for (int k = 1; k <= depth; k++) {
                     unsigned nb = lay.neighbour_offset(s, d, k);
-                    if (k == 1 && nb != layout.neighbour(s, d))
+#ifdef EVEN_SITES_FIRST
+                    // nn halo indices do not depend on the depth
+                    const auto &nn_layout = layout;
+#else
+                    const auto &nn_layout = lay;
+#endif
+                    if (k == 1 && nb != nn_layout.neighbour(s, d))
                         report("depth " + std::to_string(depth) + " site " + std::to_string(i) +
                                " dir " + std::to_string(d) + " k=1 differs from neighbour()");
 
@@ -162,7 +239,11 @@ int main(int argc, char **argv) {
                     if (l == 0) {
                         unsigned j = i;
                         for (int m = 0; m < k; m++)
+#ifdef HAVE_LATTICE_ARRAYS
                             j = lattice->neighb[d][j];
+#else
+                            j = lay.neighbour(j, d);
+#endif
                         if (nb != j)
                             report("depth " + std::to_string(depth) + " site " +
                                    std::to_string(i) + " dir " + std::to_string(d) +

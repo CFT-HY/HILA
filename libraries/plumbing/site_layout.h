@@ -8,9 +8,10 @@
  * @details
  * This reproduces the EVEN_SITES_FIRST layout (without GPU_OVERLAP_COMM) arithmetically, so
  * that the per-site arrays lattice.neighb[NDIRS][volume] and mynode.coordinates[volume]
- * (and their GPU copies) are not needed.
+ * (and their GPU copies) are not needed.  Without EVEN_SITES_FIRST the layout is
+ * lexicographic, see below.
  *
- * Layout recap:
+ * EVEN_SITES_FIRST layout recap:
  *   - "lex" index of a site on the node: lc[0] + size[0]*(lc[1] + size[1]*(lc[2] + ...)),
  *     where lc = (global coordinates) - mynode.min
  *   - site index = lex/2                for even sites (parity of global coordinates)
@@ -32,6 +33,14 @@
  *     Layer l of direction e_x contains sites with local x = size[x] + l, of e_x_down
  *     sites with x = -1 - l.  Deep layers follow all nn halos, in the order of directions,
  *     so that nn halo indices are independent of the halo depth.
+ *
+ * Lexicographic layout (EVEN_SITES_FIRST not defined):
+ *   - site index = lex, parity is computed from the coordinates
+ *   - all halo layers of direction d are together, layer l = 0 .. halo_depth-1 at
+ *       halo_offset[d] + l*face_size[dim] + j
+ *     with j the face lex index.  Thus deep_offset[d] = halo_offset[d] + face_size[dim], and
+ *     deep_halo_index() is the same as above.  No parity split anywhere: gathers are
+ *     always done with parity ALL.
  *
  * All functions marked HILA_HOST_DEVICE use only plain int arrays, so that they can be
  * called from GPU kernels and host code.  The struct is trivially copyable and small, so
@@ -132,7 +141,13 @@ struct site_layout_struct {
             }
         }
 
-        // halos in the order of directions, as in create_std_gathers()
+        // halos in the order of directions, as in create_std_gathers().  In the lexicographic
+        // layout all layers of a direction are together
+#ifdef EVEN_SITES_FIRST
+        const unsigned layers = 1;
+#else
+        const unsigned layers = halo_depth;
+#endif
         size_t offset = volume;
         for (int d = 0; d < NDIRS; d++) {
             int k = dim_of(d);
@@ -159,19 +174,24 @@ struct site_layout_struct {
                 }
                 halo_offset[d] = offset;
                 halo_evensites[d] = even;
-                offset += face;
+                offset += (size_t)layers * face;
             }
         }
         halo_end = offset;
 
-        // deep layers after all nn halos
+        // deep layers after all nn halos (EVEN_SITES_FIRST), or right after the nn halo of
+        // the same direction (lexicographic)
         for (int d = 0; d < NDIRS; d++) {
             int k = dim_of(d);
             if (wrap[k] || halo_depth == 1) {
                 deep_offset[d] = 0;
             } else {
+#ifdef EVEN_SITES_FIRST
                 deep_offset[d] = offset;
                 offset += (size_t)(halo_depth - 1) * face_size[k];
+#else
+                deep_offset[d] = halo_offset[d] + face_size[k];
+#endif
             }
         }
         assert(offset < (1ULL << 32) && "site_layout: too large node for 32-bit indices");
@@ -206,7 +226,11 @@ struct site_layout_struct {
 
     /// site index from lex index and parity
     HILA_HOST_DEVICE inline unsigned index_of(unsigned lex, unsigned parity) const {
+#ifdef EVEN_SITES_FIRST
         return (lex >> 1) + (parity ? evensites : 0);
+#else
+        return lex;
+#endif
     }
 
     /// site index from local coordinates
@@ -227,6 +251,7 @@ struct site_layout_struct {
     /// Everything about site with index idx
     HILA_HOST_DEVICE inline layout_site site(unsigned idx) const {
         layout_site s;
+#ifdef EVEN_SITES_FIRST
         s.parity = (idx >= evensites) ? 1 : 0;
         unsigned lex = (idx - (s.parity ? evensites : 0)) << 1;
         lex_to_local(lex, s.lc);
@@ -240,6 +265,11 @@ struct site_layout_struct {
             }
         }
         s.lex = lex;
+#else
+        s.lex = idx;
+        lex_to_local(idx, s.lc);
+        s.parity = parity_of(s.lc);
+#endif
         return s;
     }
 
@@ -273,7 +303,11 @@ struct site_layout_struct {
 
     /// Halo index of the off-node neighbour of boundary site s to direction d
     HILA_HOST_DEVICE inline unsigned halo_index(const layout_site &s, int d) const {
+#ifdef EVEN_SITES_FIRST
         return halo_offset[d] + (s.parity ? halo_evensites[d] : 0) + (face_lex(s, dim_of(d)) >> 1);
+#else
+        return halo_offset[d] + face_lex(s, dim_of(d));
+#endif
     }
 
     /// Index of halo layer l >= 1 (0 = nn halo) to direction d, at the face position of s
@@ -349,7 +383,11 @@ struct site_layout_struct {
     }
 
     inline ::Parity site_parity(unsigned idx) const {
+#ifdef EVEN_SITES_FIRST
         return idx < evensites ? EVEN : ODD;
+#else
+        return site(idx).parity ? ODD : EVEN;
+#endif
     }
 };
 

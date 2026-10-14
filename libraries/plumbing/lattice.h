@@ -16,10 +16,11 @@
 #include "plumbing/fft_structs.h"
 #include "plumbing/site_layout.h"
 
-#ifdef LAYOUT_ON_THE_FLY
-#if !defined(EVEN_SITES_FIRST)
-#error "LAYOUT_ON_THE_FLY requires EVEN_SITES_FIRST"
+#if !defined(EVEN_SITES_FIRST) && (defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT))
+#error "EVEN_SITES_FIRST=0 is not available with GPU_OVERLAP_COMM or vectorized targets"
 #endif
+
+#ifdef LAYOUT_ON_THE_FLY
 #if defined(GPU_OVERLAP_COMM)
 #error "LAYOUT_ON_THE_FLY is not (yet) available with GPU_OVERLAP_COMM"
 #endif
@@ -29,8 +30,8 @@
 #endif
 
 #if HALO_DEPTH > 1
-#if !defined(EVEN_SITES_FIRST) || defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT)
-#error "HALO_DEPTH > 1 requires EVEN_SITES_FIRST, not with GPU_OVERLAP_COMM or SUBNODE_LAYOUT"
+#if defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT)
+#error "HALO_DEPTH > 1 is not available with GPU_OVERLAP_COMM or SUBNODE_LAYOUT"
 #endif
 #if defined(GPU_CCL) || defined(GPU_SHMEM)
 #error "HALO_DEPTH > 1 is not (yet) available with GPU_CCL or GPU_SHMEM"
@@ -190,8 +191,14 @@ class lattice_struct {
         size_t buffer; // offset from the start of field array
         unsigned *sitelist;
 
+        // In the lexicographic layout (EVEN_SITES_FIRST=0) the lists are not split by parity,
+        // and parity is ignored below: communications are always done with parity ALL
+
         // Get a vector containing the sites of parity par and number of elements
         const unsigned *RESTRICT get_sitelist(Parity par, int &size) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ALL) {
                 size = sites;
                 return sitelist;
@@ -206,6 +213,9 @@ class lattice_struct {
 
         // The number of sites that need to be communicated
         unsigned n_sites(Parity par) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ALL) {
                 return sites;
             } else if (par == EVEN) {
@@ -217,6 +227,9 @@ class lattice_struct {
 
         // The local index of a site that is sent to neighbour
         unsigned site_index(unsigned site, Parity par) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ODD) {
                 return sitelist[evensites + site];
             } else {
@@ -226,6 +239,9 @@ class lattice_struct {
 
         // The offset of the halo from the start of the field array
         unsigned offset(Parity par) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ODD) {
                 return buffer + evensites;
             } else {
@@ -267,18 +283,13 @@ class lattice_struct {
     unsigned *deep_sitelist[NDIRS];
 #endif
 
-#ifdef EVEN_SITES_FIRST
-    /// Main neighbour index array.  With LAYOUT_ON_THE_FLY these are nullptr, and the
-    /// neighbour indices are computed with mynode.layout
+    /// Main neighbour index array.  With LAYOUT_ON_THE_FLY (always if EVEN_SITES_FIRST=0)
+    /// these are nullptr, and the neighbour indices are computed with mynode.layout
     unsigned *RESTRICT neighb[NDIRS];
 
     /// implement waiting using mask_t - unsigned char is good for up to 4 dim.
+    /// nullptr with LAYOUT_ON_THE_FLY
     dir_mask_t *RESTRICT wait_arr_;
-#else
-    // offsets to halos, halo depth
-    size_t halo_offset[NDIRS];
-    size_t halo_depth[NDIM];
-#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
@@ -337,12 +348,11 @@ class lattice_struct {
     }
 #endif
 
-#if defined(EVEN_SITES_FIRST)
-#ifdef GPU_OVERLAP_COMM
+#if defined(GPU_OVERLAP_COMM)
 
     int loop_ranges(Parity P, bool fetch_on, hila::iter_range_t &ranges) const;
 
-#else
+#elif defined(EVEN_SITES_FIRST)
 
     unsigned loop_begin(Parity P) const {
         if (P != ODD)
@@ -356,6 +366,16 @@ class lattice_struct {
             return mynode.evensites;
         else
             return mynode.volume;
+    }
+
+#else
+
+    // lexicographic layout: parity loops go through all sites, the parity is checked in the loop
+    unsigned loop_begin(Parity P) const {
+        return 0;
+    }
+    unsigned loop_end(Parity P) const {
+        return mynode.volume;
     }
 
 #endif
@@ -417,46 +437,6 @@ class lattice_struct {
     }
 
 #endif // LAYOUT_ON_THE_FLY
-
-#else // Now not EVEN_SITES_FIRST
-
-    unsigned loop_begin(Parity P) const {
-        // assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
-        return 0;
-    }
-    unsigned loop_end(Parity P) const {
-        return mynode.volume;
-    }
-
-    // Use computation to get coordinates: from fastest
-    // to lowest, dir = 0, 1, 2, ...
-    // each coordinate is c[d] = (idx/size_factor[d]) % size[d] + min[d], but
-    // do it like below to avoid the mod
-
-    inline CoordinateVector coordinates(size_t idx) const {
-        CoordinateVector c;
-        size_t vdiv, ndiv;
-
-        vdiv = idx;
-        for (int d = 0; d < NDIM - 1; ++d) {
-            ndiv = vdiv / mynode.size[d];
-            c[d] = vdiv - ndiv * mynode.size[d] + mynode.min[d];
-            vdiv = ndiv;
-        }
-        c[NDIM - 1] = vdiv + mynode.min[NDIM - 1];
-
-        return c;
-    }
-
-    inline int coordinate(size_t idx, Direction d) const {
-        return (idx / mynode.size_factor[d]) % mynode.size[d] + mynode.min[d];
-    }
-
-    inline Parity site_parity(size_t idx) const {
-        return coordinates(idx).parity();
-    }
-
-#endif
 
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();

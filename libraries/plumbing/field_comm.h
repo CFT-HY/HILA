@@ -527,6 +527,10 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
     // check if this is done - either gathered or no comm to be done in the 1st place
 
     Parity par = p;
+#ifndef EVEN_SITES_FIRST
+    // lexicographic layout: halos are not split by parity, always gather ALL
+    par = ALL;
+#endif
 
     gather_status_t gather_status = check_communication(d, par);
 

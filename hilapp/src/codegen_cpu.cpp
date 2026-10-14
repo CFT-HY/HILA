@@ -89,10 +89,6 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
 
-    // change later!
-    if (!evenfirst)
-        generate_wait_loops = false;
-
     // Set the start and end points
     if (!boundary_layer) {
         // with not EVEN_SITES_FIRST go over all sites
@@ -174,15 +170,19 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     // With LAYOUT_ON_THE_FLY neighbour indices are computed from the site coordinates,
     // which are computed once per site
-    bool layout_on_the_fly = is_macro_defined("LAYOUT_ON_THE_FLY") && evenfirst && !target.vectorize;
+    // (always without EVEN_SITES_FIRST)
+    bool layout_on_the_fly = is_macro_defined("LAYOUT_ON_THE_FLY") && !target.vectorize;
     bool any_read_nb = false;
     for (field_info &l : field_info_list)
         if (l.is_read_nb)
             any_read_nb = true;
 
-    bool wait_loop = evenfirst && generate_wait_loops && !boundary_layer;
+    bool wait_loop = generate_wait_loops && !boundary_layer;
 
-    if ((layout_on_the_fly && (any_read_nb || wait_loop)) || has_deep_refs())
+    // without EVEN_SITES_FIRST parity loops go through all sites, check the site parity
+    bool parity_check = !evenfirst && loop_info.parity_value != Parity::all;
+
+    if ((layout_on_the_fly && (any_read_nb || wait_loop || parity_check)) || has_deep_refs())
         code << "const hila::layout_site HILA_site_ = hila_loop_lattice.mynode.layout.site("
              << looping_var << ");\n";
 
@@ -215,16 +215,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 "SiteIndex(hila_loop_lattice.coordinates("
              << looping_var << ")).value);\n";
 
-    if (!evenfirst) {
-        if (loop_info.need_loop_coordinate) {
-            code << "CoordinateVector " << looping_cv << " = hila_loop_lattice.coordinates("
-                 << looping_var << ");\n";
-        }
-
-        if (loop_info.parity_value != Parity::all) {
-            code << "if (" << looping_cv << ".parity() == " << loop_info.parity_str << ") {\n";
-            ending_braces++;
-        }
+    if (parity_check) {
+        // Parity value: even = 1, odd = 2, all = 3, site parity 0 or 1
+        // closed after the setters, inside the site loop
+        code << "if ((static_cast<unsigned>(" << loop_info.parity_str
+             << ") >> HILA_site_.parity) & 1) {\n";
     }
 
 
@@ -385,6 +380,10 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " << looping_var
                  << ");\n";
         }
+
+    // end of the parity check
+    if (parity_check)
+        code << "}\n";
 
     // End of the loop content
     code << "}\n";
