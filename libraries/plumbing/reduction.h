@@ -327,7 +327,26 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
                   "(int/long/float/double/long double)");
 
 #if defined(CUDA) || defined(HIP)
+#ifdef EVEN_SITES_FIRST
     T val = gpu_minmax(is_min, par, loc);
+#else
+    // lexicographic layout: sites of one parity are not contiguous, gpu_minmax goes over
+    // all sites.  Mask the sites of the other parity
+    T val;
+    if (par == ALL) {
+        val = gpu_minmax(is_min, ALL, loc);
+    } else {
+        const T fill = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::lowest();
+        Field<T> masked;
+        onsites (ALL) {
+            if (X.parity() == par)
+                masked[X] = (*this)[X];
+            else
+                masked[X] = fill;
+        }
+        val = masked.gpu_minmax(is_min, ALL, loc);
+    }
+#endif
 #else
     // get suitable initial value
     T val = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
