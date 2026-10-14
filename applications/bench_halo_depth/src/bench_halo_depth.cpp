@@ -97,7 +97,17 @@ void bench(const std::string &tname, int iters) {
         deriv4(a, b, e_y);
     });
 
-    hila::out0 << tname << " checksum " << a.sum() << '\n';
+    // checksums: squarenorm (a plain sum of a derivative would vanish)
+    nn_sum(a, b);
+    hila::out0 << tname << " check nn-sum     " << std::setprecision(8) << a.squarenorm() << '\n';
+    nnn_sum(a, b);
+    hila::out0 << tname << " check 2-step sum " << a.squarenorm() << '\n';
+    deriv4(a, b, e_y);
+    hila::out0 << tname << " check deriv4 e_y " << a.squarenorm() << '\n';
+    if (HALO_DEPTH == 1 || HALO_DEPTH >= 3) {
+        step3(a, b);
+        hila::out0 << tname << " check 3-step e_x " << a.squarenorm() << '\n';
+    }
 }
 
 int main(int argc, char **argv) {
