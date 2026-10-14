@@ -45,6 +45,33 @@ int main(int argc, char **argv) {
             hila::out << "rank " << hila::myrank() << ": " << s << '\n';
     };
 
+    // fast_divisor must agree with integer division for all 32-bit numerators
+    {
+        std::vector<unsigned> divisors;
+        for (unsigned d = 1; d <= 2048; d++)
+            divisors.push_back(d);
+        for (unsigned d : {4095u, 65535u, 65536u, 1000003u, 0x7fffffffu, 0x80000000u,
+                           0xfffffffeu, 0xffffffffu})
+            divisors.push_back(d);
+        uint64_t rng = 12345;
+        for (unsigned d : divisors) {
+            hila::fast_divisor fd;
+            fd.set(d);
+            auto check = [&](unsigned n) {
+                if (fd.div(n) != n / d)
+                    report("fast_divisor " + std::to_string(n) + " / " + std::to_string(d) +
+                           " gives " + std::to_string(fd.div(n)));
+            };
+            for (unsigned n : {0u, 1u, d - 1, d, d + 1, 2 * d - 1, 0xffffffffu, 0xfffffffeu,
+                               0xffffffffu - 0xffffffffu % d, 0xffffffffu - 0xffffffffu % d - 1})
+                check(n);
+            for (int i = 0; i < 2000; i++) {
+                rng = rng * 6364136223846793005ULL + 1442695040888963407ULL;
+                check((unsigned)(rng >> 32));
+            }
+        }
+    }
+
     if (layout.volume != node.volume)
         report("volume " + std::to_string(layout.volume) + " vs " +
                std::to_string(node.volume));

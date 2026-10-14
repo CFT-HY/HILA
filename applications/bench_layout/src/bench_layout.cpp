@@ -1,7 +1,8 @@
 /**
- * Timing of typical onsites() kernels, for comparing LAYOUT_ON_THE_FLY against the
- * neighbour/coordinate arrays.  Fields are not changed between iterations of a kernel,
- * so after the first call no communication is done - this measures the loop kernels.
+ * Timing of typical onsites() kernels, for comparing LAYOUT_ON_THE_FLY and the lexicographic
+ * layout (EVEN_SITES_FIRST=0) against the neighbour/coordinate arrays.  Fields are not
+ * changed between iterations of a kernel, so after the first call no communication is
+ * done - this measures the loop kernels.
  */
 
 #include "hila.h"
@@ -94,7 +95,9 @@ int main(int argc, char **argv) {
     ad = 0;
     ma = 0;
 
-#ifdef LAYOUT_ON_THE_FLY
+#ifndef EVEN_SITES_FIRST
+    hila::out0 << "\n=== EVEN_SITES_FIRST=0 (lexicographic, on the fly) ===\n";
+#elif defined(LAYOUT_ON_THE_FLY)
     hila::out0 << "\n=== LAYOUT_ON_THE_FLY ===\n";
 #else
     hila::out0 << "\n=== neighbour/coordinate arrays (default) ===\n";

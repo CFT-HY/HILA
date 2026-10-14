@@ -61,6 +61,29 @@
 
 namespace hila {
 
+/// Division of 32-bit unsigned integers by a runtime-constant divisor d with a multiplication:
+/// n / d = high 64 bits of M * n, where M = ceil(2^64 / d).  Exact for all 32-bit n and d >= 2
+/// (D. Lemire, O. Kaser, N. Kurz, "Faster remainder by direct computation", 2019).
+/// d == 1 is stored as M = 0, and n is added to the result with mask one = ~0u (branch-free).
+struct fast_divisor {
+    uint64_t M;
+    unsigned one; // ~0u if d == 1, else 0
+
+    void set(unsigned d) {
+        assert(d >= 1 && "fast_divisor: divisor must be >= 1");
+        M = (d == 1) ? 0 : UINT64_MAX / d + 1;
+        one = (d == 1) ? ~0u : 0u;
+    }
+
+    HILA_HOST_DEVICE inline unsigned div(unsigned n) const {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+        return (unsigned)__umul64hi(M, n) + (n & one);
+#else
+        return (unsigned)(((unsigned __int128)M * n) >> 64) + (n & one);
+#endif
+    }
+};
+
 /// Coordinates and derived quantities of a site on this node, computed once per site
 struct layout_site {
     int lc[NDIM];    // local coordinates, 0 <= lc[d] < size[d]
@@ -73,6 +96,7 @@ struct site_layout_struct {
     int min[NDIM];  // node origin (global coordinates)
     int size[NDIM]; // node size
     unsigned size_factor[NDIM]; // 1, size[0], size[0]*size[1], ...
+    fast_divisor size_div[NDIM]; // division by size[d]
     unsigned volume;
     unsigned evensites;
     unsigned min_parity; // parity of the node origin
@@ -111,6 +135,7 @@ struct site_layout_struct {
             min[d] = nmin[d];
             size[d] = nsize[d];
             size_factor[d] = v;
+            size_div[d].set(size[d]);
             v *= size[d];
             ps += min[d];
             wrap[d] = (ndiv[d] == 1);
@@ -241,7 +266,14 @@ struct site_layout_struct {
     /// local coordinates from lex index
     HILA_HOST_DEVICE inline void lex_to_local(unsigned lex, int (&lc)[NDIM]) const {
         for (int d = 0; d < NDIM - 1; d++) {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+            // GPUs have no integer division instruction, multiplication is much faster
+            unsigned q = size_div[d].div(lex);
+#else
+            // on CPUs hardware division was faster in neighbour loops (AMD Zen 3), the
+            // multiplication increases register pressure
             unsigned q = lex / size[d];
+#endif
             lc[d] = lex - q * size[d];
             lex = q;
         }
