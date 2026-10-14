@@ -89,12 +89,24 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
 
+    // Lexicographic layout: the loop goes through x-rows of the node.  Within a row all
+    // neighbour indices are affine in x (nb0[d] + x, or i +- 1 for x), only the row ends need
+    // the general neighbours.  The loop body is a lambda called for each site, the interior
+    // of a row has no branches and can be vectorized.  See applications/bench_rows.
+    bool rows_loop = !evenfirst && !boundary_layer && !target.vectorize && !target.openacc;
+
     // Set the start and end points
     if (!boundary_layer) {
         // with not EVEN_SITES_FIRST go over all sites
         const char *paritystr = evenfirst ? loop_info.parity_str.c_str() : "ALL";
         code << "const int _hila_loop_begin = hila_loop_lattice.loop_begin(" << paritystr << ");\n";
         code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << paritystr << ");\n";
+
+        if (rows_loop) {
+            code << "const hila::site_layout_struct & HILA_lay_ = hila_loop_lattice.mynode.layout;\n";
+            code << "const int HILA_nx_ = HILA_lay_.size[0];\n";
+            code << "const int HILA_rows_ = HILA_lay_.volume / HILA_nx_;\n";
+        }
 
         if (generate_wait_loops) {
             code << "for (int _hila_wait_i = 0; _hila_wait_i < 2; ++_hila_wait_i) {\n";
@@ -193,15 +205,48 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // In the lexicographic layout the site is advanced incrementally in sequential loops,
     // without divisions (not if the loop is split between OpenMP threads).  With
     // EVEN_SITES_FIRST advance() has data dependent branches and was slower than site()
-    bool incremental_site = need_site && !evenfirst && !omp_parallel_loop && !target.openacc;
+    bool incremental_site =
+        need_site && !evenfirst && !omp_parallel_loop && !target.openacc && !rows_loop;
+
+    if (rows_loop)
+        need_site = true;
 
     if (incremental_site)
         code << "hila::layout_site HILA_site_next_ = hila_loop_lattice.mynode.layout.site("
                 "_hila_loop_begin);\n";
 
-    // Start the loop
-    code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
-         << " < _hila_loop_end; ++" << looping_var << ") {\n";
+    if (rows_loop) {
+        // loop over rows, row start site and its neighbours
+        code << "for (int HILA_row_ = 0; HILA_row_ < HILA_rows_; ++HILA_row_) {\n";
+        code << "const unsigned HILA_i0_ = HILA_row_ * HILA_nx_;\n";
+        code << "const hila::layout_site HILA_row_site_ = HILA_lay_.site(HILA_i0_);\n";
+        if (any_read_nb) {
+            code << "unsigned HILA_nb0_[NDIRS];\n";
+            code << "for (int HILA_d_ = 0; HILA_d_ < NDIRS; ++HILA_d_) HILA_nb0_[HILA_d_] = "
+                    "HILA_lay_.neighbour(HILA_row_site_, HILA_d_);\n";
+        }
+        if (wait_loop) {
+            // off-node directions of the row interior: no x-directions
+            code << "const dir_mask_t HILA_row_mask_ = hila_loop_lattice.wait_mask(HILA_row_site_)"
+                    " & ~(dir_mask_t)((1 << e_x) | (1 << (-e_x)));\n";
+            // scope in place of the wait-if below, closed by 'end of loop content'.  As for
+            // the wait-if, ending_braces counts the closing of the wait loop
+            code << "{\n";
+            ending_braces++;
+        }
+        // the body for one site
+        // force inlining: large bodies (e.g. SU(3)) were not inlined, and were 3-4x slower
+        code << "auto HILA_body_ = [&](const int HILA_x_, const unsigned * RESTRICT HILA_nb_) "
+                "__attribute__((always_inline)) {\n";
+        code << "const unsigned " << looping_var << " = HILA_i0_ + HILA_x_;\n";
+        code << "hila::layout_site HILA_site_ = HILA_row_site_;\n";
+        code << "HILA_site_.lc[0] = HILA_x_; HILA_site_.lex = " << looping_var
+             << "; HILA_site_.parity ^= HILA_x_ & 1;\n";
+    } else {
+        // Start the loop
+        code << "for(int " << looping_var << " = _hila_loop_begin; " << looping_var
+             << " < _hila_loop_end; ++" << looping_var << ") {\n";
+    }
 
     if (incremental_site) {
         // advance at the start of the body, so that 'continue' in the loop is safe
@@ -209,7 +254,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
              << ".advance(HILA_site_next_, " << looping_var << ");\n";
         // copy, so that the address of the loop-carried HILA_site_next_ does not escape
         code << "const hila::layout_site HILA_site_ = HILA_site_next_;\n";
-    } else if (need_site) {
+    } else if (need_site && !rows_loop) {
         code << "const hila::layout_site HILA_site_ = hila_loop_lattice.mynode.layout.site("
              << looping_var << ");\n";
     }
@@ -221,7 +266,16 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     };
 
     // expression for the index of the neighbour of fieldname to direction dirname
+    bool special_bc = is_macro_defined("SPECIAL_BOUNDARY_CONDITIONS");
     auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
+        if (rows_loop) {
+            // field neighbour arrays exist only for special boundary conditions
+            if (special_bc)
+                return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
+                       dirname + "], HILA_nb_[" + dirname + "], " + looping_var + ")";
+            else
+                return "HILA_nb_[" + dirname + "]";
+        }
         if (layout_on_the_fly)
             return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
                    dirname + "], HILA_site_, " + looping_var + ", " + dirname + ")";
@@ -229,7 +283,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             return fieldname + ".fs->neighbours[" + dirname + "][" + looping_var + "]";
     };
 
-    if (wait_loop) {
+    if (wait_loop && !rows_loop) {
         if (layout_on_the_fly)
             code << "if (((hila_loop_lattice.wait_mask(HILA_site_)";
         else
@@ -247,9 +301,14 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     if (parity_check) {
         // Parity value: even = 1, odd = 2, all = 3, site parity 0 or 1
-        // closed after the setters, inside the site loop
-        code << "if ((static_cast<unsigned>(" << loop_info.parity_str
-             << ") >> HILA_site_.parity) & 1) {\n";
+        // closed after the setters, inside the site loop.  Runtime parity may be ALL: the
+        // first, loop invariant condition lets the compiler unswitch the loop
+        if (loop_info.parity_value == Parity::none)
+            code << "if (" << loop_info.parity_str << " == Parity::all || ";
+        else
+            code << "if (";
+        code << "((static_cast<unsigned>(" << loop_info.parity_str
+             << ") >> HILA_site_.parity) & 1)) {\n";
     }
 
 
@@ -414,6 +473,41 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // end of the parity check
     if (parity_check)
         code << "}\n";
+
+    if (rows_loop) {
+        // end of the body lambda, and calls for the sites of the row
+        code << "};\n";
+
+        // row ends with general neighbours
+        code << "for (int HILA_e_ = 0; HILA_e_ < (HILA_nx_ > 1 ? 2 : 1); ++HILA_e_) {\n";
+        code << "const int HILA_x_ = (HILA_e_ == 0) ? 0 : HILA_nx_ - 1;\n";
+        code << "hila::layout_site HILA_s_ = HILA_row_site_;\n";
+        code << "HILA_s_.lc[0] = HILA_x_; HILA_s_.lex += HILA_x_; HILA_s_.parity ^= HILA_x_ & "
+                "1;\n";
+        if (wait_loop)
+            code << "if (((hila_loop_lattice.wait_mask(HILA_s_) & _dir_mask_) != 0) != "
+                    "_hila_wait_i) continue;\n";
+        code << "unsigned HILA_nbe_[NDIRS];\n";
+        if (any_read_nb)
+            code << "for (int HILA_d_ = 0; HILA_d_ < NDIRS; ++HILA_d_) HILA_nbe_[HILA_d_] = "
+                    "HILA_lay_.neighbour(HILA_s_, HILA_d_);\n";
+        code << "HILA_body_(HILA_x_, HILA_nbe_);\n";
+        code << "}\n";
+
+        // row interior: unit stride neighbours
+        if (wait_loop)
+            code << "if (((HILA_row_mask_ & _dir_mask_) != 0) == _hila_wait_i)\n";
+        code << "for (int HILA_x_ = 1; HILA_x_ < HILA_nx_ - 1; ++HILA_x_) {\n";
+        code << "unsigned HILA_nbi_[NDIRS];\n";
+        if (any_read_nb) {
+            code << "for (int HILA_d_ = 0; HILA_d_ < NDIRS; ++HILA_d_) HILA_nbi_[HILA_d_] = "
+                    "HILA_nb0_[HILA_d_] + HILA_x_;\n";
+            code << "HILA_nbi_[e_x] = HILA_i0_ + HILA_x_ + 1;\n";
+            code << "HILA_nbi_[-e_x] = HILA_i0_ + HILA_x_ - 1;\n";
+        }
+        code << "HILA_body_(HILA_x_, HILA_nbi_);\n";
+        code << "}\n";
+    }
 
     // End of the loop content
     code << "}\n";

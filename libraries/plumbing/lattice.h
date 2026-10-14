@@ -440,6 +440,13 @@ class lattice_struct {
         return mynode.layout.neighbour(s, d);
     }
 
+    /// The same in row loops (lexicographic layout), nb_computed from the row
+    inline unsigned neighbour_index(const unsigned *nb, unsigned nb_computed, unsigned idx) const {
+        if (nb != nullptr)
+            return nb[idx];
+        return nb_computed;
+    }
+
     /// Replaces wait_arr_[idx]: bit (1 << d) set if the neighbour to direction d is off-node
     inline dir_mask_t wait_mask(const hila::layout_site &s) const {
         dir_mask_t m = 0;
