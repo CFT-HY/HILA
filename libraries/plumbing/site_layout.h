@@ -305,38 +305,6 @@ struct site_layout_struct {
         return s;
     }
 
-    /// Step local coordinates and lex index of s forward by one lexicographic site
-    HILA_HOST_DEVICE inline void step_lex(layout_site &s) const {
-        s.lex++;
-        for (int d = 0; d < NDIM; d++) {
-            if (++s.lc[d] < size[d])
-                return;
-            if (d < NDIM - 1)
-                s.lc[d] = 0;
-        }
-    }
-
-    /// Move s from the site with index idx-1 to the site with index idx, without divisions
-    /// (incremental loops).  Same result as s = site(idx), for 0 < idx < volume.
-    HILA_HOST_DEVICE inline void advance(layout_site &s, unsigned idx) const {
-#ifdef EVEN_SITES_FIRST
-        if (idx == evensites) {
-            // from the last even site to the first odd site
-            s = site(idx);
-            return;
-        }
-        // next pair (lex 2m, 2m+1), take the member with the same parity
-        step_lex(s);
-        if (s.lex & 1)
-            step_lex(s);
-        if (parity_of(s.lc) != s.parity)
-            step_lex(s);
-#else
-        step_lex(s);
-        s.parity = parity_of(s.lc);
-#endif
-    }
-
     /// Index of the neighbour of site s to direction d in the field array (incl. halo)
     HILA_HOST_DEVICE inline unsigned neighbour(const layout_site &s, int d) const {
         int k = dim_of(d);

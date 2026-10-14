@@ -123,9 +123,6 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         code << "const int _hila_loop_end   = _hila_ranges.max[_hila_wait_i];\n";
     }
 
-    // is the site loop split between OpenMP threads?
-    bool omp_parallel_loop = false;
-
     // and the openacc loop header
     if (target.openacc) {
         generate_openacc_loop_header(code);
@@ -156,7 +153,6 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 code << "#pragma omp for";
             else
                 code << "#pragma omp parallel for";
-            omp_parallel_loop = true;
 
             sums = 0;
             for (reduction_expr &r : reduction_list) {
@@ -202,18 +198,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
           (!evenfirst && (loop_info.need_loop_coordinate || use_philox_rng)))) ||
         has_deep_refs();
 
-    // In the lexicographic layout the site is advanced incrementally in sequential loops,
-    // without divisions (not if the loop is split between OpenMP threads).  With
-    // EVEN_SITES_FIRST advance() has data dependent branches and was slower than site()
-    bool incremental_site =
-        need_site && !evenfirst && !omp_parallel_loop && !target.openacc && !rows_loop;
-
     if (rows_loop)
         need_site = true;
-
-    if (incremental_site)
-        code << "hila::layout_site HILA_site_next_ = hila_loop_lattice.mynode.layout.site("
-                "_hila_loop_begin);\n";
 
     if (rows_loop) {
         // loop over rows, row start site and its neighbours
@@ -248,13 +234,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
              << " < _hila_loop_end; ++" << looping_var << ") {\n";
     }
 
-    if (incremental_site) {
-        // advance at the start of the body, so that 'continue' in the loop is safe
-        code << "if (" << looping_var << " > _hila_loop_begin) hila_loop_lattice.mynode.layout"
-             << ".advance(HILA_site_next_, " << looping_var << ");\n";
-        // copy, so that the address of the loop-carried HILA_site_next_ does not escape
-        code << "const hila::layout_site HILA_site_ = HILA_site_next_;\n";
-    } else if (need_site && !rows_loop) {
+    if (need_site && !rows_loop) {
         code << "const hila::layout_site HILA_site_ = hila_loop_lattice.mynode.layout.site("
              << looping_var << ");\n";
     }

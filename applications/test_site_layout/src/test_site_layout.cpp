@@ -72,23 +72,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    // incremental advance() must reproduce site(idx) for all idx
-    {
-        auto s = layout.site(0);
-        for (unsigned i = 1; i < node.volume; i++) {
-            layout.advance(s, i);
-            auto r = layout.site(i);
-            bool same = (s.lex == r.lex && s.parity == r.parity);
-            foralldir (e)
-                if (s.lc[e] != r.lc[e])
-                    same = false;
-            if (!same) {
-                report("advance() to site " + std::to_string(i) + " differs from site()");
-                s = r;
-            }
-        }
-    }
-
     if (layout.volume != node.volume)
         report("volume " + std::to_string(layout.volume) + " vs " +
                std::to_string(node.volume));
