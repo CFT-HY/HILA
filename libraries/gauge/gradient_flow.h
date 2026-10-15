@@ -93,7 +93,7 @@ void get_zeuthen_flow_force(const GaugeField<group> &U, VectorField<Algebra<grou
                 F_LW[d][X] +
                 (1.0 / 12.0) * ( // calculate gradient term improvement
                                  // (\mu=d, no sum) D_\mu D_\mu^* F_LW(X)
-                                   left_conjugation(U[d][X], F_LW[d][X])            // U F U^\dagger
+                                   left_conjugation(U[d][X], F_LW[d][X + d])        // U F U^\dagger
                                    - 2.0 * F_LW[d][X]                               //
                                    + right_conjugation(U[d][X - d], F_LW[d][X - d]) // U^dagger F U
                                );
