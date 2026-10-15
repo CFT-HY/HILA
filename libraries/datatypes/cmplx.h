@@ -263,6 +263,7 @@ class Complex {
      * 
      * @return T
      */
+    #pragma hila novector
     inline T abs() const {
         return hypot(re,im);
     }
