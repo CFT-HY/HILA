@@ -1,5 +1,8 @@
 #ifndef HILA_GLOBAL_H_
 #define HILA_GLOBAL_H_
+
+#include "defs.h"
+
 /**
  * @file globals.h
  * @brief Definition of global variable class

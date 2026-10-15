@@ -116,16 +116,16 @@ class hila_fft {
         // get fully aligned buffer space.  MPI uses these buffers directly - with
         // GPU_AWARE_COMM they come from the comm pool, so that the same blocks
         // (and their MPI registrations) are reused on every fft
-        send_buf = (cmplx_t *)d_malloc_comm(buf_size * sizeof(cmplx_t) * elements);
-        receive_buf = (cmplx_t *)d_malloc_comm(buf_size * sizeof(cmplx_t) * elements);
+        send_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
+        receive_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
         //        if (buf_size > 0)
         //            fft_wrk_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) *
         //            elements);
     }
 
     ~hila_fft() {
-        d_free_comm(send_buf);
-        d_free_comm(receive_buf);
+        d_free(send_buf);
+        d_free(receive_buf);
         // if (buf_size > 0)
         //  d_free(fft_wrk_buf);
     }

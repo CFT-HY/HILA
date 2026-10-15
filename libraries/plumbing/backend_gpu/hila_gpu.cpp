@@ -267,11 +267,8 @@ gpuEvent_t &hila::compute_event() {
 // __constant__ int64_t _d_volume;
 // // __constant__ int _d_size[NDIM];
 // __constant__ CoordinateVector _d_size;
-// #ifndef EVEN_SITES_FIRST
-// __constant__ int _d_nodesize[NDIM];
-// __constant__ int _d_nodemin[NDIM];
-// __constant__ int _d_nodefactor[NDIM];
-// #endif
+
+#ifndef USE_PHILOX_RNG
 
 /* Random number generator */
 static gpurandState *gpurandstateptr = nullptr;
@@ -393,6 +390,7 @@ __device__ __host__ double hila::random() {
 #endif
 }
 
+#endif // if not USE_PHILOX_RNG
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Setup the lattice struct on GPUs:
@@ -405,9 +403,14 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
     /* Setup neighbour fields in all directions */
     for (int d = 0; d < NDIRS; d++) {
         // For normal boundaries
+#ifndef LAYOUT_ON_THE_FLY
         gpuMalloc(&(d_neighb[d]), lat.mynode.volume * sizeof(unsigned));
         gpuMemcpy(d_neighb[d], lat.neighb[d], lat.mynode.volume * sizeof(unsigned),
                   gpuMemcpyHostToDevice);
+#else
+        // computed on the fly from _d_layout
+        d_neighb[d] = nullptr;
+#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // For special boundaries
@@ -425,7 +428,7 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 #endif
     }
 
-#ifdef EVEN_SITES_FIRST
+#if !defined(LAYOUT_ON_THE_FLY)
     /* Setup the location field */
     gpuMalloc(&(d_coordinates), lat.mynode.volume * sizeof(CoordinateVector));
     tmp = (CoordinateVector *)memalloc(lat.mynode.volume * sizeof(CoordinateVector));
@@ -463,10 +466,14 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 #endif
 #endif
 
-#ifdef EVEN_SITES_FIRST
+#if !defined(LAYOUT_ON_THE_FLY)
 
         gpuMemcpyToSymbol(_dev_coordinates, &d_coordinates, sizeof(CoordinateVector *), 0,
                           gpuMemcpyHostToDevice);
+#endif
+
+#if defined(LAYOUT_ON_THE_FLY) || HALO_DEPTH > 1
+        _d_layout = lat.mynode.layout;
 #endif
 
         gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
@@ -475,22 +482,6 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
         _d_volume = lat.l_volume;
         _d_size = lat.l_size;
 
-#ifndef EVEN_SITES_FIRST
-
-        _d_nodesize = lat.mynode.size;
-        _d_nodemin = lat.mynode.min;
-        _d_nodefactor = lat.mynode.size_factor;
-
-        // foralldir(d) s[d] = lat.mynode.size[d];
-        // gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
-
-        // foralldir(d) s[d] = lat.mynode.min[d];
-        // gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
-
-        // foralldir(d) s[d] = lat.mynode.size_factor[d];
-        // gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
-
-#endif
     }
 
 #ifndef HILAPP
@@ -528,11 +519,13 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 
         gpuSetDevice(my_device);
 
+#ifndef USE_PHILOX_RNG
         // set gpu rng state to "off", to prevent accidental use
         gpurandstateptr = nullptr;
         // set d_gpurandstateptr <- nullptr.
         gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
                           gpuMemcpyHostToDevice);
+#endif
 
 
 #if defined(CUDA_MALLOC_ASYNC)

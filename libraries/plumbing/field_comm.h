@@ -174,6 +174,27 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 } // end of get_receive_buffer
 
 
+/// Shift (and f[X + offset] access through shift-copy) with parity EVEN or ODD is not
+/// consistent if the lattice size is odd to a direction where the shift has a non-zero
+/// component: crossing the periodic boundary, the parity of the shifted site depends on the
+/// site.  Stop with an error in that case.
+/// Nearest-neighbour gathers f[X+d] with EVEN/ODD have the same issue but are left enabled
+/// on purpose: this allows odd-sized Euclidean time extents (finite temperature).  There user
+/// code must not rely on even/odd neighbours across the boundary (t = 0).
+inline void check_shift_parity(const CoordinateVector &v, Parity par) {
+    if (par == ALL)
+        return;
+    foralldir (d) {
+        if (v[d] != 0 && lattice.size(d) % 2 == 1) {
+            hila::out0 << "ERROR: shift or f[X + offset] access by " << v << " with parity "
+                       << par << " is not supported, lattice size " << lattice.size()
+                       << " is odd to direction " << hila::prettyprint(d)
+                       << ".  Use parity ALL.\n";
+            hila::terminate(1);
+        }
+    }
+}
+
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
 
@@ -181,6 +202,7 @@ template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
 
     assert_all_ranks_present();
+    check_shift_parity(v, par);
 
     // use this to store remaining moves
     CoordinateVector rem = v;
@@ -307,6 +329,8 @@ void Field<T>::buffered_shift_offsets(const CoordinateVector &v, Parity par) con
 
 template <typename T>
 const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity par) const {
+
+    check_shift_parity(v, par);
 
     int len = v.norm_L1();
     if (len == 0)
@@ -503,6 +527,10 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
     // check if this is done - either gathered or no comm to be done in the 1st place
 
     Parity par = p;
+#ifndef EVEN_SITES_FIRST
+    // lexicographic layout: halos are not split by parity, always gather ALL
+    par = ALL;
+#endif
 
     gather_status_t gather_status = check_communication(d, par);
 
@@ -731,6 +759,246 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
     }
 #endif
 
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Deep halo gathers: fetch halo layers 0..depth-1 from direction d (ALL parity), so that
+/// f[X + k*d], k <= depth, can be read directly (index from site_layout neighbour_offset()).
+///
+/// Two messages per direction: layer 0 (the nn halo, same content and order as an nn ALL
+/// gather; skipped if the nn halo is already gathered) and layers 1..depth-1 to the deep
+/// halo region.  A completed deep gather also marks the nn gather of d (ALL) done.
+/// Directions which are not divided between nodes need no communication: neighbour_offset()
+/// wraps on the node.
+/////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+bool Field<T>::is_gathered_depth(Direction d, int depth) const {
+    if (depth <= 1)
+        return is_gathered(d, ALL);
+#if HALO_DEPTH > 1
+    return fs->deep_status[d] == gather_status_t::DONE && fs->deep_depth[d] >= depth;
+#else
+    return false;
+#endif
+}
+
+template <typename T>
+dir_mask_t Field<T>::start_gather_depth(Direction d, int depth) const {
+
+    if (depth <= 1)
+        return start_gather(d, ALL);
+
+#if HALO_DEPTH == 1
+    hila::out << "ERROR: halo depth " << depth << " gather requires compilation with HALO_DEPTH >= "
+              << depth << '\n';
+    hila::terminate(1);
+    return 0;
+#else
+
+    if (depth > HALO_DEPTH) {
+        hila::out << "ERROR: halo depth " << depth << " gather, but HALO_DEPTH is " << HALO_DEPTH
+                  << '\n';
+        hila::terminate(1);
+    }
+
+    assert_all_ranks_present();
+
+    // take the tags right away, keeps the tags in sync on all ranks
+    int tag0 = get_next_msg_tag();
+    int tag1 = get_next_msg_tag();
+
+    const auto &layout = lattice->mynode.layout;
+    const int dim = abs(d);
+
+    if (layout.wrap[dim]) {
+        // no comms needed, neighbour_offset() wraps on the node
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+        if (fs->boundary_condition[d] != hila::bc::PERIODIC) {
+            hila::out << "ERROR: halo depth > 1 access with non-periodic boundary condition in "
+                         "a direction not divided between nodes is not supported\n";
+            hila::terminate(1);
+        }
+#endif
+        fs->deep_status[d] = gather_status_t::DONE;
+        fs->deep_depth[d] = HALO_DEPTH;
+        return 0;
+    }
+
+    if (fs->deep_status[d] != gather_status_t::NOT_DONE && fs->deep_depth[d] >= depth) {
+        hila::n_gather_avoided++;
+        return fs->deep_status[d] == gather_status_t::DONE ? 0 : get_dir_mask(d);
+    }
+
+    // shallower deep gather or nn gathers on the fly to d: finish these first, they write
+    // to the same halo
+    if (fs->deep_status[d] == gather_status_t::STARTED)
+        wait_gather_depth(d, fs->deep_depth[d]);
+    for (Parity p : {ALL, EVEN, ODD})
+        if (is_gather_started(d, p))
+            wait_gather(d, p);
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const unsigned face = layout.face_size[dim];
+
+    // layer 0 is not needed if nn halo is valid.  The status is the same on all ranks.
+    const unsigned n0 = is_gathered(d, ALL) ? 0 : face;
+    const unsigned n1 = (depth - 1) * face;
+    fs->deep_n[0][d] = n0;
+    fs->deep_n[1][d] = n1;
+
+    fs->deep_status[d] = gather_status_t::STARTED;
+    fs->deep_depth[d] = depth;
+
+    if ((size_t)(n0 + n1) * sizeof(T) >= (1ULL << 31)) {
+        hila::out << "Too large MPI message!  Size " << (size_t)(n0 + n1) * sizeof(T) << '\n';
+        hila::terminate(1);
+    }
+
+    bool do_receive = boundary_need_to_communicate(d);
+    bool do_send = boundary_need_to_communicate(-d);
+
+    if (do_send) {
+        bool antiperiodic = false;
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+        if (fs->boundary_condition[d] == hila::bc::ANTIPERIODIC &&
+            lattice->mynode.is_on_edge(-d))
+            antiperiodic = true;
+#endif
+        fs->deep_send_buffer[d] = fs->payload.allocate_mpi_buffer(n0 + n1);
+
+        // deep layers use the nn comm node struct with the deep site list
+        lattice_struct::comm_node_struct deep_to = ci.to_node;
+        deep_to.sitelist = lattice->deep_sitelist[d];
+        deep_to.sites = deep_to.evensites = n1;
+        deep_to.oddsites = 0;
+
+#if defined(CUDA) || defined(HIP)
+        if (n0 > 0)
+            fs->payload.gather_comm_elements(fs->deep_send_buffer[d], ci.to_node, ALL, lattice,
+                                             antiperiodic, hila::compute_stream());
+        fs->payload.gather_comm_elements(fs->deep_send_buffer[d] + n0, deep_to, ALL, lattice,
+                                         antiperiodic, hila::compute_stream());
+#else
+        if (n0 > 0)
+            fs->payload.gather_comm_elements(fs->deep_send_buffer[d], ci.to_node, ALL, lattice,
+                                             antiperiodic);
+        fs->payload.gather_comm_elements(fs->deep_send_buffer[d] + n0, deep_to, ALL, lattice,
+                                         antiperiodic);
+#endif
+    }
+
+#ifdef GPU_AWARE_COMM
+    // send buffer must be filled, receive buffer may be a just released comm pool block
+    if (do_send || do_receive)
+        gpuStreamSynchronize(hila::compute_stream());
+#endif
+
+    if (do_receive) {
+        T *rbuf0, *rbuf1;
+#ifdef VANILLA
+        // directly to the halo
+        rbuf0 = fs->payload.get_buffer() + ci.from_node.offset(ALL);
+        rbuf1 = fs->payload.get_buffer() + layout.deep_offset[d];
+#else
+        fs->deep_receive_buffer[d] = fs->payload.allocate_mpi_buffer(n0 + n1);
+        rbuf0 = fs->deep_receive_buffer[d];
+        rbuf1 = rbuf0 + n0;
+#endif
+        post_receive_timer.start();
+        if (n0 > 0)
+            MPI_Irecv(rbuf0, (int)(n0 * sizeof(T)), MPI_BYTE, ci.from_node.rank, tag0,
+                      lattice->mpi_comm_lat, &fs->deep_receive_request[0][d]);
+        MPI_Irecv(rbuf1, (int)(n1 * sizeof(T)), MPI_BYTE, ci.from_node.rank, tag1,
+                  lattice->mpi_comm_lat, &fs->deep_receive_request[1][d]);
+        post_receive_timer.stop();
+    }
+
+    if (do_send) {
+        start_send_timer.start();
+        if (n0 > 0)
+            MPI_Isend(fs->deep_send_buffer[d], (int)(n0 * sizeof(T)), MPI_BYTE, ci.to_node.rank,
+                      tag0, lattice->mpi_comm_lat, &fs->deep_send_request[0][d]);
+        MPI_Isend(fs->deep_send_buffer[d] + n0, (int)(n1 * sizeof(T)), MPI_BYTE,
+                  ci.to_node.rank, tag1, lattice->mpi_comm_lat, &fs->deep_send_request[1][d]);
+        start_send_timer.stop();
+    }
+
+    return get_dir_mask(d);
+#endif
+}
+
+template <typename T>
+void Field<T>::wait_gather_depth(Direction d, int depth) const {
+
+    if (depth <= 1) {
+        wait_gather(d, ALL);
+        return;
+    }
+
+#if HALO_DEPTH > 1
+    if (fs->deep_status[d] != gather_status_t::STARTED)
+        return; // done, or wrapping direction
+
+    assert_all_ranks_present();
+
+    const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    const unsigned n0 = fs->deep_n[0][d];
+    const unsigned n1 = fs->deep_n[1][d];
+
+    if (boundary_need_to_communicate(d)) {
+        wait_receive_timer.start();
+        if (n0 > 0)
+            MPI_Wait(&fs->deep_receive_request[0][d], MPI_STATUS_IGNORE);
+        MPI_Wait(&fs->deep_receive_request[1][d], MPI_STATUS_IGNORE);
+        wait_receive_timer.stop();
+
+#if !defined(VANILLA)
+        lattice_struct::comm_node_struct deep_from = ci.from_node;
+        deep_from.buffer = lattice->mynode.layout.deep_offset[d];
+        deep_from.sites = deep_from.evensites = n1;
+        deep_from.oddsites = 0;
+
+        if (n0 > 0)
+            fs->payload.place_comm_elements(d, ALL, fs->deep_receive_buffer[d], ci.from_node,
+                                            lattice, hila::compute_stream());
+        fs->payload.place_comm_elements(d, ALL, fs->deep_receive_buffer[d] + n0, deep_from,
+                                        lattice, hila::compute_stream());
+#endif
+    }
+
+    if (boundary_need_to_communicate(-d)) {
+        wait_send_timer.start();
+        if (n0 > 0)
+            MPI_Wait(&fs->deep_send_request[0][d], MPI_STATUS_IGNORE);
+        MPI_Wait(&fs->deep_send_request[1][d], MPI_STATUS_IGNORE);
+        wait_send_timer.stop();
+    }
+
+    // buffers back to the pool.  place_comm_elements may still be reading the receive
+    // buffer: start_gather_depth() and start_communication() synchronize before reuse
+    if (fs->deep_send_buffer[d] != nullptr) {
+        fs->payload.free_mpi_buffer(fs->deep_send_buffer[d]);
+        fs->deep_send_buffer[d] = nullptr;
+    }
+#ifndef VANILLA
+    if (fs->deep_receive_buffer[d] != nullptr) {
+        fs->payload.free_mpi_buffer(fs->deep_receive_buffer[d]);
+        fs->deep_receive_buffer[d] = nullptr;
+    }
+#endif
+
+    fs->deep_status[d] = gather_status_t::DONE;
+    if (n0 > 0)
+        mark_gathered(d, ALL);
+    hila::n_gather_done += 1;
+#endif
+}
+
+template <typename T>
+void Field<T>::gather_depth(Direction d, int depth) const {
+    start_gather_depth(d, depth);
+    wait_gather_depth(d, depth);
 }
 
 #if (defined(CUDA) || defined(HIP))

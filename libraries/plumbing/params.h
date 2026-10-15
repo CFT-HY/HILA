@@ -44,10 +44,48 @@
 /**
  * @brief  EVEN_SITES_FIRST is default. To traverse sites on natural (parity invariant) order use
  * -DEVEN_SITES_FIRST=0
+ * @details Without EVEN_SITES_FIRST sites are stored in lexicographic order (x fastest), and
+ * neighbour indices and coordinates are always computed on the fly (implies
+ * LAYOUT_ON_THE_FLY).  Loops with parity EVEN or ODD work, but go through all sites, and
+ * all halo communications are done with parity ALL.  Not available with vectorized (AVX)
+ * targets or GPU_OVERLAP_COMM.
  */
 #define EVEN_SITES_FIRST
 #elif EVEN_SITES_FIRST == 0
 #undef EVEN_SITES_FIRST
+#endif
+
+/**
+ * @brief LAYOUT_ON_THE_FLY: compute neighbour indices and site coordinates arithmetically
+ * (see site_layout.h) instead of storing per-site arrays lattice.neighb[] and coordinates
+ * (and their GPU copies).  Saves (4*NDIRS + 4*NDIM) bytes/site on GPUs.
+ * Not available with GPU_OVERLAP_COMM or vectorized (AVX) targets.  Off by default, enable
+ * with -DLAYOUT_ON_THE_FLY.  Always on if EVEN_SITES_FIRST=0.
+ */
+#ifdef LAYOUT_ON_THE_FLY
+#if LAYOUT_ON_THE_FLY == 0
+#undef LAYOUT_ON_THE_FLY
+#ifndef EVEN_SITES_FIRST
+#error "EVEN_SITES_FIRST=0 always uses LAYOUT_ON_THE_FLY, it cannot be turned off"
+#endif
+#endif
+#endif
+
+#if !defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
+#define LAYOUT_ON_THE_FLY
+#endif
+
+/**
+ * @brief HALO_DEPTH: number of halo layers allocated for each communicated direction.
+ * @details Default 1 (nearest neighbours only).  With HALO_DEPTH = D > 1, layers 2..D are
+ * allocated after the nearest-neighbour halos (see site_layout.h), enabling direct access
+ * to f[X + k*d] with k <= D.  With EVEN_SITES_FIRST the nearest-neighbour halo layout is
+ * unchanged.  Costs
+ * (D-1) * (boundary surface) elements per field.  Not with GPU_OVERLAP_COMM or vectorized
+ * targets.  Local node size in divided directions must be >= D.
+ */
+#ifndef HALO_DEPTH
+#define HALO_DEPTH 1
 #endif
 
 /// NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK determine how MPI ranks are laid out on logical
@@ -75,6 +113,16 @@
 #define WRITE_BUFFER_SIZE 2000000
 #endif
 
+/// @brief USE_PHILOX_RNG enables philox 4x32-10 random number generator.
+/// This is the default now.  If it is defined, then the
+/// GPU_RNG_THREAD_BLOCKS below does nothing
+/// 
+
+#ifndef USE_PHILOX_RNG
+#define USE_PHILOX_RNG
+#elif USE_PHILOX_RNG == 0
+#undef USE_PHILOX_RNG
+#endif
 
 // boundary conditions are "off" by default -- no need to do anything here
 // #ifndef SPECIAL_BOUNDARY_CONDITIONS

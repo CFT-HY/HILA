@@ -21,8 +21,14 @@
 #%   DEBUG=1                 - compile with -g, for debugging symbols (if implemented)
 #%   EVEN_SITES_FIRST=0      - store sites in logical "typewriter" order, mixing EVEN and ODD
 #%         sites. Default layout stores even lattice sites first, enabling efficient
-#%         looping over parities (EVEN/ODD).
+#%         looping over parities (EVEN/ODD).  =0 implies LAYOUT_ON_THE_FLY, EVEN/ODD loops
+#%         go through all sites.  Not with GPU_OVERLAP_COMM or AVX
 #%   NO_INTERLEAVE=1         - turn off compute during MPI communications (default: on)
+#%   LAYOUT_ON_THE_FLY=1     - compute neighbour indices and site coordinates instead of
+#%         storing them in per-site arrays (saves memory, esp. on GPUs). Not with
+#%         GPU_OVERLAP_COMM or AVX (default: off)
+#%   HALO_DEPTH=<n>          - allocate n halo layers per communicated direction, enabling
+#%         direct access f[X + k*d], k <= n (default: 1)
 #% GPU-relevant options:
 #%   GPU_AWARE_COMM=0        - turn off GPU aware MPI (default: on) former (GPU_AWARE_COMM)
 #%   GPU_CCL=1               - turn on NCCL/RCCL support for GPU communications (default: off)
@@ -144,6 +150,16 @@ ifdef EVEN_SITES_FIRST
 ifeq ($(EVEN_SITES_FIRST),0)
 HILA_OPTS += -DEVEN_SITES_FIRST=0
 endif
+endif
+
+ifdef LAYOUT_ON_THE_FLY
+ifneq ($(LAYOUT_ON_THE_FLY),0)
+HILA_OPTS += -DLAYOUT_ON_THE_FLY
+endif
+endif
+
+ifdef HALO_DEPTH
+HILA_OPTS += -DHALO_DEPTH=$(HALO_DEPTH)
 endif
 
 ifdef NO_INTERLEAVE

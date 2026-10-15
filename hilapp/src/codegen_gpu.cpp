@@ -130,6 +130,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     code << "auto& compute_stream = hila::compute_stream();\n";
     code << "auto& compute_event = hila::compute_event();\n";
 
+    // deep halo gathers (X + k*dir) are completed before the loop
+    generate_deep_gathers(code);
+
     if (gpu_overlap_comm || gpu_ccl || gpu_shmem) {
         code << "auto& halo_stream = hila::halo_stream();\n";
         code << "auto& halo_event = hila::halo_event();\n";
@@ -310,11 +313,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     static bool rng_threads_checked = false;
     static int rng_thread_block_number = 0;
+    extern bool use_philox_rng; // this is true if philox is in use
 
     bool use_thread_blocks = false;
     int thread_block_number = 0;
 
-    if (loop_info.contains_random) {
+    if (loop_info.contains_random && !use_philox_rng) {
 
         if (!rng_threads_checked) {
             // now check if the rng thread number is present
@@ -540,7 +544,22 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
 
     kernel_launch =
-        kernel_name + "<<< N_blocks, N_threads,0, compute_stream>>>( _hila_loop_begin, _hila_loop_end";
+        kernel_name +
+        "<<< N_blocks, N_threads,0, compute_stream>>>( _hila_loop_begin, _hila_loop_end";
+
+    if (use_philox_rng) {
+        // add philox_loop_counter
+        kernel << ", uint32_t HILA_philox_loop_counter";
+        kernel_launch += ", hila_philox_loop_counter";
+    }
+
+    // without EVEN_SITES_FIRST parity loops go through all sites, pass the parity to the kernel
+    bool parity_check =
+        !is_macro_defined("EVEN_SITES_FIRST") && loop_info.parity_value != Parity::all;
+    if (parity_check) {
+        kernel << ", const unsigned HILA_parity_bits_";
+        kernel_launch += ", static_cast<unsigned>(" + loop_info.parity_str + ")";
+    }
 
     // print field call list
     int i = 0;
@@ -628,7 +647,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         std::string repl_string;
         repl_string = "{\n " + s.maskname + looping + " = 1;\n";
         repl_string +=
-            s.sitename + looping + " = SiteIndex(_dev_coordinates[" + looping_var + "]);\n";
+            s.sitename + looping + " = SiteIndex(get_dev_coordinates(" + looping_var + "));\n";
 
         if (s.assign_expr == nullptr) {
 
@@ -834,6 +853,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    // First, reset philox loop counter
+
+    if (use_philox_rng) {
+        kernel << "// philox_setup_loopcount calls __syncthreads(); must be called by all threads\n";
+        kernel << "hila::philox_setup_loopcount(HILA_philox_loop_counter);\n";
+    }
 
     /////////////////////////////////////////////////////////////////////////////
     // Standard boilerplate in CUDA kernels: calculate site index
@@ -856,6 +882,43 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                << looping_var << " = HILA_idx_l_;\n";
     }
 
+    if (use_philox_rng) {
+        // initialize philox - NOTE: contains __syncthreads(), so ALL THREADS MUST EXECUTE THIS!
+        kernel << "hila::philox_setup_index(SiteIndex(get_dev_coordinates(" + looping_var +
+                      ")).value);\n";
+    }
+
+    // With LAYOUT_ON_THE_FLY neighbour indices are computed from the site coordinates,
+    // which are computed once per site
+    bool layout_on_the_fly = is_macro_defined("LAYOUT_ON_THE_FLY");
+    bool any_read_nb = false;
+    for (field_info &l : field_info_list)
+        if (l.is_read_nb)
+            any_read_nb = true;
+
+    if ((layout_on_the_fly && (any_read_nb || parity_check)) || has_deep_refs())
+        kernel << "const hila::layout_site HILA_site_ = hila_dev_site(" << looping_var << ");\n";
+
+    if (parity_check) {
+        // Parity value: even = 1, odd = 2, all = 3, site parity 0 or 1
+        kernel << "if ((HILA_parity_bits_ >> HILA_site_.parity) & 1) {\n";
+    }
+
+    // index of deep halo ref X + k*dir
+    auto deep_index = [&](const dir_ptr &d) -> std::string {
+        return "hila_dev_neighbour_offset(HILA_site_, " + deep_dir_string(d, loopBuf, true) +
+               ", " + std::to_string(d.deep_k) + ")";
+    };
+
+    // expression for the index of the neighbour of fieldname to direction dirname
+    auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
+        if (layout_on_the_fly)
+            return "hila_dev_neighbour(" + fieldname + ".neighbours[" + dirname +
+                   "], HILA_site_, " + looping_var + ", " + dirname + ")";
+        else
+            return fieldname + ".neighbours[" + dirname + "][" + looping_var + "]";
+    };
+
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
         if (l.is_read_nb) {
@@ -863,6 +926,15 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             if (!l.is_loop_local_dir) {
                 // "standard" loop extern neighb direction
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
+                               << l.new_name << ".get(" << deep_index(d)
+                               << ", _dev_field_alloc_size);\n";
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        continue;
+                    }
+
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
@@ -879,8 +951,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     // Create the temp variable and call the getter
                     kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
-                           << l.new_name << ".get(" << l.new_name << ".neighbours[" << dirname
-                           << "][" << looping_var << "], _dev_field_alloc_size);\n";
+                           << l.new_name << ".get(" << nb_index(l.new_name, dirname)
+                           << ", _dev_field_alloc_size);\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -902,12 +974,17 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
                 kernel << "for (int HILA_dir_ = 0; HILA_dir_ < NDIRS; "
                           "++HILA_dir_) {\n"
-                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get(" << l.new_name
-                       << ".neighbours[HILA_dir_][" << looping_var
-                       << "], _dev_field_alloc_size);\n}\n";
+                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get("
+                       << nb_index(l.new_name, "HILA_dir_") << ", _dev_field_alloc_size);\n}\n";
 
                 // and replace references in loop body
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                                                               ", _dev_field_alloc_size)");
+                        continue;
+                    }
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
@@ -924,6 +1001,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                 // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
+                    if (d.deep_k > 0) {
+                        for (field_ref *ref : d.ref_list)
+                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                                                               ", _dev_field_alloc_size)");
+                        continue;
+                    }
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
@@ -932,10 +1015,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                             loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + l.new_name +
-                                                           ".neighbours[" + dirname + "][" +
-                                                           looping_var +
-                                                           "], _dev_field_alloc_size)");
+                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" +
+                                                           nb_index(l.new_name, dirname) +
+                                                           ", _dev_field_alloc_size)");
                     }
                 }
 #endif
@@ -1024,6 +1106,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
                    << ", _dev_field_alloc_size );\n";
         }
+
+    // end the parity check
+    if (parity_check)
+        kernel << "}\n";
 
     // end the if ( looping_var < d_lattice.loop_end) or for() {
     kernel << "}\n";

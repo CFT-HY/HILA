@@ -20,9 +20,11 @@
 /// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible
 /// change is made.  This is the default below.
 
-#define HILA_SIGNATURE_NUMBER    8
+#define HILA_SIGNATURE_NUMBER    11
 
-#define MINIMUM_HILAPP_SIGNATURE 7
-#define MINIMUM_HILA_SIGNATURE   8
+// 10: philox RNG and LAYOUT_ON_THE_FLY code generation
+// 11: deep halo access f[X + k*dir] with HALO_DEPTH > 1
+#define MINIMUM_HILAPP_SIGNATURE 11
+#define MINIMUM_HILA_SIGNATURE   11
 
 #endif

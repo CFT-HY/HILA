@@ -14,6 +14,29 @@
 #include "plumbing/coordinates.h"
 #include "plumbing/timing.h"
 #include "plumbing/fft_structs.h"
+#include "plumbing/site_layout.h"
+
+#if !defined(EVEN_SITES_FIRST) && (defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT))
+#error "EVEN_SITES_FIRST=0 is not available with GPU_OVERLAP_COMM or vectorized targets"
+#endif
+
+#ifdef LAYOUT_ON_THE_FLY
+#if defined(GPU_OVERLAP_COMM)
+#error "LAYOUT_ON_THE_FLY is not (yet) available with GPU_OVERLAP_COMM"
+#endif
+#if defined(SUBNODE_LAYOUT)
+#error "LAYOUT_ON_THE_FLY is not available with vectorized (SUBNODE_LAYOUT) targets"
+#endif
+#endif
+
+#if HALO_DEPTH > 1
+#if defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT)
+#error "HALO_DEPTH > 1 is not available with GPU_OVERLAP_COMM or SUBNODE_LAYOUT"
+#endif
+#if defined(GPU_CCL) || defined(GPU_SHMEM)
+#error "HALO_DEPTH > 1 is not (yet) available with GPU_CCL or GPU_SHMEM"
+#endif
+#endif
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
@@ -96,9 +119,13 @@ class lattice_struct {
 
         Vector<NDIM, unsigned> size_factor; // components: 1, size[0], size[0]*size[1], ...
 
-#ifdef EVEN_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
         std::vector<CoordinateVector> coordinates;
 #endif
+
+        /// arithmetic site layout, set up in create_std_gathers().  Used for neighbours and
+        /// coordinates if LAYOUT_ON_THE_FLY
+        hila::site_layout_struct layout;
 
 #ifdef GPU_OVERLAP_COMM
         std::vector<unsigned> map_site_index;
@@ -164,8 +191,14 @@ class lattice_struct {
         size_t buffer; // offset from the start of field array
         unsigned *sitelist;
 
+        // In the lexicographic layout (EVEN_SITES_FIRST=0) the lists are not split by parity,
+        // and parity is ignored below: communications are always done with parity ALL
+
         // Get a vector containing the sites of parity par and number of elements
         const unsigned *RESTRICT get_sitelist(Parity par, int &size) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ALL) {
                 size = sites;
                 return sitelist;
@@ -180,6 +213,9 @@ class lattice_struct {
 
         // The number of sites that need to be communicated
         unsigned n_sites(Parity par) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ALL) {
                 return sites;
             } else if (par == EVEN) {
@@ -191,6 +227,9 @@ class lattice_struct {
 
         // The local index of a site that is sent to neighbour
         unsigned site_index(unsigned site, Parity par) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ODD) {
                 return sitelist[evensites + site];
             } else {
@@ -200,6 +239,9 @@ class lattice_struct {
 
         // The offset of the halo from the start of the field array
         unsigned offset(Parity par) const {
+#ifndef EVEN_SITES_FIRST
+            par = ALL;
+#endif
             if (par == ODD) {
                 return buffer + evensites;
             } else {
@@ -233,17 +275,21 @@ class lattice_struct {
     /// nearest neighbour comminfo struct
     std::array<nn_comminfo_struct, NDIRS> nn_comminfo;
 
-#ifdef EVEN_SITES_FIRST
-    /// Main neighbour index array
+#if HALO_DEPTH > 1
+    /// Sites sent for halo layers 1..HALO_DEPTH-1 of direction d (layer 0 is the nn halo,
+    /// nn_comminfo[d].to_node.sitelist), layer by layer in face lex order, see site_layout.h.
+    /// (HALO_DEPTH-1)*face_size elements, nullptr if direction is not divided.  Device
+    /// pointer on GPUs.
+    unsigned *deep_sitelist[NDIRS];
+#endif
+
+    /// Main neighbour index array.  With LAYOUT_ON_THE_FLY (always if EVEN_SITES_FIRST=0)
+    /// these are nullptr, and the neighbour indices are computed with mynode.layout
     unsigned *RESTRICT neighb[NDIRS];
 
     /// implement waiting using mask_t - unsigned char is good for up to 4 dim.
+    /// nullptr with LAYOUT_ON_THE_FLY
     dir_mask_t *RESTRICT wait_arr_;
-#else
-    // offsets to halos, halo depth
-    size_t halo_offset[NDIRS];
-    size_t halo_depth[NDIM];
-#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
@@ -302,12 +348,11 @@ class lattice_struct {
     }
 #endif
 
-#if defined(EVEN_SITES_FIRST)
-#ifdef GPU_OVERLAP_COMM
+#if defined(GPU_OVERLAP_COMM)
 
     int loop_ranges(Parity P, bool fetch_on, hila::iter_range_t &ranges) const;
 
-#else
+#elif defined(EVEN_SITES_FIRST)
 
     unsigned loop_begin(Parity P) const {
         if (P != ODD)
@@ -323,7 +368,19 @@ class lattice_struct {
             return mynode.volume;
     }
 
+#else
+
+    // lexicographic layout: parity loops go through all sites, the parity is checked in the loop
+    unsigned loop_begin(Parity P) const {
+        return 0;
+    }
+    unsigned loop_end(Parity P) const {
+        return mynode.volume;
+    }
+
 #endif
+
+#ifndef LAYOUT_ON_THE_FLY
 
     inline const CoordinateVector &coordinates(unsigned idx) const {
         return mynode.coordinates[idx];
@@ -337,45 +394,69 @@ class lattice_struct {
         return coordinates(idx).parity();
     }
 
-#else // Now not EVEN_SITES_FIRST
-
-    unsigned loop_begin(Parity P) const {
-        // assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
-        return 0;
-    }
-    unsigned loop_end(Parity P) const {
-        return mynode.volume;
+    /// neighbour index of site idx to direction d (incl. halo)
+    inline unsigned neighbour(unsigned idx, Direction d) const {
+        return neighb[d][idx];
     }
 
-    // Use computation to get coordinates: from fastest
-    // to lowest, dir = 0, 1, 2, ...
-    // each coordinate is c[d] = (idx/size_factor[d]) % size[d] + min[d], but
-    // do it like below to avoid the mod
+#else // LAYOUT_ON_THE_FLY
 
-    inline CoordinateVector coordinates(size_t idx) const {
-        CoordinateVector c;
-        size_t vdiv, ndiv;
-
-        vdiv = idx;
-        for (int d = 0; d < NDIM - 1; ++d) {
-            ndiv = vdiv / mynode.size[d];
-            c[d] = vdiv - ndiv * mynode.size[d] + mynode.min[d];
-            vdiv = ndiv;
-        }
-        c[NDIM - 1] = vdiv + mynode.min[NDIM - 1];
-
-        return c;
+    inline CoordinateVector coordinates(unsigned idx) const {
+        return mynode.layout.coordinates(idx);
     }
 
-    inline int coordinate(size_t idx, Direction d) const {
-        return (idx / mynode.size_factor[d]) % mynode.size[d] + mynode.min[d];
+    inline int coordinate(unsigned idx, Direction d) const {
+        return mynode.layout.site(idx).lc[d] + mynode.min[d];
     }
 
-    inline Parity site_parity(size_t idx) const {
-        return coordinates(idx).parity();
+    inline Parity site_parity(unsigned idx) const {
+        return mynode.layout.site_parity(idx);
     }
 
-#endif
+    /// The same for an already computed site (hilapp-generated CPU loops)
+    inline CoordinateVector coordinates(const hila::layout_site &s) const {
+        return mynode.layout.coordinates(s);
+    }
+
+    inline int coordinate(const hila::layout_site &s, Direction d) const {
+        return s.lc[d] + mynode.min[d];
+    }
+
+    inline Parity site_parity(const hila::layout_site &s) const {
+        return s.parity ? ODD : EVEN;
+    }
+
+    /// neighbour index of site idx to direction d (incl. halo)
+    inline unsigned neighbour(unsigned idx, Direction d) const {
+        return mynode.layout.neighbour(idx, d);
+    }
+
+    /// Used in hilapp-generated loops: neighbour index from the field's neighbour array nb,
+    /// which is nullptr unless special boundary conditions need it
+    inline unsigned neighbour_index(const unsigned *nb, const hila::layout_site &s, unsigned idx,
+                                    int d) const {
+        if (nb != nullptr)
+            return nb[idx];
+        return mynode.layout.neighbour(s, d);
+    }
+
+    /// The same in row loops (lexicographic layout), nb_computed from the row
+    inline unsigned neighbour_index(const unsigned *nb, unsigned nb_computed, unsigned idx) const {
+        if (nb != nullptr)
+            return nb[idx];
+        return nb_computed;
+    }
+
+    /// Replaces wait_arr_[idx]: bit (1 << d) set if the neighbour to direction d is off-node
+    inline dir_mask_t wait_mask(const hila::layout_site &s) const {
+        dir_mask_t m = 0;
+        for (int d = 0; d < NDIRS; d++)
+            if (mynode.layout.is_off_node(s, d))
+                m |= (1 << d);
+        return m;
+    }
+
+#endif // LAYOUT_ON_THE_FLY
 
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();

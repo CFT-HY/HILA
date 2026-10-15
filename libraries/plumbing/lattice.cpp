@@ -55,6 +55,17 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     // set up the comm arrays
     create_std_gathers();
 
+#ifndef EVEN_SITES_FIRST
+    hila::out0 << "Site layout: lexicographic (EVEN_SITES_FIRST=0), neighbour indices and "
+                  "coordinates computed on the fly\n";
+#elif defined(LAYOUT_ON_THE_FLY)
+    hila::out0 << "Site layout: neighbour indices and coordinates computed on the fly "
+                  "(LAYOUT_ON_THE_FLY)\n";
+#endif
+#if HALO_DEPTH > 1
+    hila::out0 << "Halo depth " << HALO_DEPTH << " layers\n";
+#endif
+
     // Initialize wait_array structures - has to be after std gathers()
     initialize_wait_arrays();
 
@@ -571,7 +582,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     // map site indexes to locations -- coordinates array
     // after the above site_index should work
 
-#ifdef EVEN_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !defined(LAYOUT_ON_THE_FLY)
     coordinates.resize(volume);
     CoordinateVector l = min;
     for (unsigned i = 0; i < volume; i++) {
@@ -609,8 +620,6 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
     return (lattice.size(d) % 2 > 0 && lattice->mynode.is_on_edge(d));
 }
 
-#ifdef EVEN_SITES_FIRST
-
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays
 /// This is for the index array neighbours
@@ -619,10 +628,18 @@ bool lattice_struct::is_this_odd_boundary(Direction d) const {
 
 void lattice_struct::create_std_gathers() {
 
+    // arithmetic layout - with LAYOUT_ON_THE_FLY replaces neighb and coordinates arrays,
+    // otherwise used for consistency checks below
+    mynode.layout.setup(mynode.min, mynode.size, nodes.n_divisions);
+
     // allocate neighbour arrays
 
     for (int d = 0; d < NDIRS; d++) {
+#ifndef LAYOUT_ON_THE_FLY
         neighb[d] = (unsigned *)memalloc(((size_t)mynode.volume) * sizeof(unsigned));
+#else
+        neighb[d] = nullptr;
+#endif
     }
 
     size_t c_offset = mynode.volume; // current offset in field-arrays
@@ -655,10 +672,14 @@ void lattice_struct::create_std_gathers() {
             ln = (l + d).mod(l_size);
 
             if (is_on_mynode(ln)) {
+#ifndef LAYOUT_ON_THE_FLY
                 neighb[d][i] = site_index(ln);
+#endif
             } else {
+#ifndef LAYOUT_ON_THE_FLY
                 // short-circuit neighbour array, for later handling
                 neighb[d][i] = mynode.volume;
+#endif
 
                 // Now site is off-node, this leads to gathering
                 if (from_node.rank == mynode.rank) {
@@ -698,25 +719,39 @@ void lattice_struct::create_std_gathers() {
             size_t to_even = 0, to_odd = 0, from_even = 0, from_odd = 0;
 
             for (size_t i = 0; i < mynode.volume; i++) {
+#ifndef LAYOUT_ON_THE_FLY
                 if (neighb[d][i] == mynode.volume) {
+#else
+                if (mynode.layout.is_off_node(mynode.layout.site(i), d)) {
+#endif
                     CoordinateVector l, ln;
                     l = coordinates(i);
 
                     if (l.parity() == EVEN) {
+#ifndef LAYOUT_ON_THE_FLY
                         neighb[d][i] = c_offset + from_even;
+#endif
                         ++from_even;
 
                     } else {
+#ifndef LAYOUT_ON_THE_FLY
                         neighb[d][i] = c_offset + from_node.evensites + from_odd;
+#endif
                         ++from_odd;
                     }
 
+#ifdef EVEN_SITES_FIRST
                     ln = (l + d).mod(l_size);
                     if (ln.parity() == EVEN) {
                         to_node.sitelist[to_even++] = i;
                     } else {
                         to_node.sitelist[(to_odd++) + to_node.evensites] = i;
                     }
+#else
+                    // lexicographic layout: site index is lex, thus sites come in face lex
+                    // order, which is the order of the receiving halo.  No parity split
+                    to_node.sitelist[to_even++] = i;
+#endif
                 }
             }
 
@@ -727,8 +762,18 @@ void lattice_struct::create_std_gathers() {
 #endif
         }
 
-        // and advance offset for next direction
+        // must agree with the arithmetic layout
+        assert((from_node.sites == 0 || (from_node.buffer == mynode.layout.halo_offset[d] &&
+                                         from_node.evensites == mynode.layout.halo_evensites[d])) &&
+               "halo layout mismatch with site_layout");
+
+        // and advance offset for next direction.  In the lexicographic layout all halo
+        // layers of the direction are here
+#ifdef EVEN_SITES_FIRST
         c_offset += from_node.sites;
+#else
+        c_offset += (size_t)HALO_DEPTH * from_node.sites;
+#endif
 
         if (c_offset >= (1ULL << 32))
             too_large_node = 1;
@@ -736,7 +781,60 @@ void lattice_struct::create_std_gathers() {
     } /* directions */
 
     /* Finally, set the site to the final offset (better be right!) */
-    mynode.field_alloc_size = c_offset;
+    assert(c_offset == mynode.layout.halo_end && "halo size mismatch with site_layout");
+
+    // deeper halo layers (HALO_DEPTH > 1) after the nn halos.  Equal to c_offset if depth 1
+    mynode.field_alloc_size = mynode.layout.deep_halo_end;
+
+#if HALO_DEPTH > 1
+    // layers are fetched from the neighbour node only, so all node sizes in
+    // divided directions must be >= HALO_DEPTH
+    int too_small_node = 0;
+    foralldir (d) {
+        if (nodes.n_divisions[d] > 1 && mynode.size[d] < HALO_DEPTH)
+            too_small_node = 1;
+    }
+    if (hila::reduce_node_sum(too_small_node) > 0) {
+        hila::out0 << "Error: HALO_DEPTH " << HALO_DEPTH
+                   << " is larger than the node size in some divided direction\n";
+        hila::terminate(1);
+    }
+
+    // Send lists for deep halo layers.  Gather from direction d sends to node at -d:
+    // receiver's layer l of d is our coordinate l (d up) or size-1-l (d down), with the
+    // same transverse coordinates (node divisions are aligned)
+    for (int d = 0; d < NDIRS; d++) {
+        const auto &lay = mynode.layout;
+        int k = lay.dim_of(d);
+        if (lay.wrap[k]) {
+            deep_sitelist[d] = nullptr;
+            continue;
+        }
+        unsigned face = lay.face_size[k];
+        unsigned *list = (unsigned *)memalloc((size_t)(HALO_DEPTH - 1) * face * sizeof(unsigned));
+        for (int l = 1; l < HALO_DEPTH; l++) {
+            for (unsigned j = 0; j < face; j++) {
+                int lc[NDIM];
+                unsigned r = j;
+                foralldir (e) {
+                    if (e == k) {
+                        lc[e] = lay.is_up(d) ? l : lay.size[e] - 1 - l;
+                    } else {
+                        lc[e] = r % lay.size[e];
+                        r /= lay.size[e];
+                    }
+                }
+                list[(l - 1) * face + j] = lay.index_of(lc);
+            }
+        }
+#if defined(CUDA) || defined(HIP)
+        deep_sitelist[d] = copy_array_to_gpu(list, (HALO_DEPTH - 1) * face);
+        free(list);
+#else
+        deep_sitelist[d] = list;
+#endif
+    }
+#endif
 
     if (hila::reduce_node_sum(too_large_node) > 0) {
         report_too_large_node();
@@ -756,7 +854,7 @@ static_assert(NDIM <= 4 && "Dimensions at most 4 in dir_mask_t = unsigned char! 
 
 void lattice_struct::initialize_wait_arrays() {
 
-#if !(defined(CUDA) || defined(HIP))
+#if !(defined(CUDA) || defined(HIP)) && !defined(LAYOUT_ON_THE_FLY)
 
     /* Allocate here the mask array needed for forallsites_wait
      * This will contain a bit at location dir if the neighbour
@@ -775,134 +873,11 @@ void lattice_struct::initialize_wait_arrays() {
                 wait_arr_[i] = wait_arr_[i] | (1 << odir);
         }
     }
+#else
+    wait_arr_ = nullptr;
 #endif
 }
 
-#else // now not EVEN_SITES_FIRST
-
-void lattice_struct::create_std_gathers() {
-
-    size_t c_offset = mynode.volume; // current offset in field-arrays
-
-    // We set the communication and the neigbour-array here
-    int too_large_node = 0;
-
-    for (Direction d = e_x; d < NDIRS; ++d) {
-
-        comm_node_struct &from_node = nn_comminfo[d].from_node;
-        // we can do the opposite send during another pass of the sites.
-        // This is just the gather inverted
-        // NOTE: this is not the send to Direction d, but to -d!
-        comm_node_struct &to_node = nn_comminfo[-d].to_node;
-
-        from_node.init();
-        to_node.init();
-
-        halo_offset[d] = c_offset;
-        halo_depth[d] = HALO_DEPTH;
-        c_offset += halo_depth[d] * mynode.volume / mynode.size[d];
-
-        // if there are no communications the rank is left as is
-
-        // first pass through the sites
-        // - set the neighb array, anything to communicate?
-
-        for (size_t i = 0; i < mynode.volume; i++) {
-            CoordinateVector ln, l;
-            l = coordinates(i);
-            // set ln to be the neighbour of the site
-            ln = (l + d).mod(l_size);
-
-            if (is_on_mynode(ln)) {
-                neighb[d][i] = site_index(ln);
-            } else {
-                // short-circuit neighbour array, for later handling
-                neighb[d][i] = mynode.volume;
-
-                // Now site is off-node, this leads to gathering
-                if (from_node.rank == mynode.rank) {
-                    from_node.rank = to_node.rank = node_rank(ln);
-                }
-
-                if (l.parity() == EVEN)
-                    from_node.evensites++;
-                else
-                    from_node.oddsites++;
-
-                // evensites / oddsites classified by the parity of receiving site
-                if (ln.parity() == EVEN)
-                    to_node.evensites++;
-                else
-                    to_node.oddsites++;
-            }
-        }
-
-        // store here the buffer index
-        from_node.buffer = c_offset;
-
-        from_node.sites = from_node.evensites + from_node.oddsites;
-        to_node.sites = to_node.evensites + to_node.oddsites;
-
-        assert(from_node.sites == to_node.sites);
-
-        if (to_node.sites > 0) {
-
-            // sitelist tells us which sites to send
-            to_node.sitelist = (unsigned *)memalloc(to_node.sites * sizeof(unsigned));
-
-            // set the remaining neighbour array indices and sitelists in another go
-            // over sites. temp counters NOTE: ordering is automatically right: with a
-            // given parity, neighbour node indices come in ascending order of host node
-            // index - no sorting needed
-            size_t to_even = 0, to_odd = 0, from_even = 0, from_odd = 0;
-
-            for (size_t i = 0; i < mynode.volume; i++) {
-                if (neighb[d][i] == mynode.volume) {
-                    CoordinateVector l, ln;
-                    l = coordinates(i);
-
-                    if (l.parity() == EVEN) {
-                        neighb[d][i] = c_offset + from_even;
-                        ++from_even;
-
-                    } else {
-                        neighb[d][i] = c_offset + from_node.evensites + from_odd;
-                        ++from_odd;
-                    }
-
-                    ln = (l + d).mod(l_size);
-                    if (ln.parity() == EVEN) {
-                        to_node.sitelist[to_even++] = i;
-                    } else {
-                        to_node.sitelist[(to_odd++) + to_node.evensites] = i;
-                    }
-                }
-            }
-
-#if defined(CUDA) || defined(HIP)
-            auto p = copy_array_to_gpu(to_node.sitelist, to_node.sites);
-            free(to_node.sitelist);
-            to_node.sitelist = p;
-#endif
-        }
-
-        // and advance offset for next direction
-        c_offset += from_node.sites;
-
-        if (c_offset >= (1ULL << 32))
-            too_large_node = 1;
-
-    } /* directions */
-
-    /* Finally, set the site to the final offset (better be right!) */
-    mynode.field_alloc_size = c_offset;
-
-    if (hila::reduce_node_sum(too_large_node) > 0) {
-        report_too_large_node();
-    }
-}
-
-#endif // not EVEN_SITES_FIRST
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
 
@@ -1012,10 +987,10 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
     int k = 0;
     for (int i = 0; i < mynode.volume; i++) {
         if (coordinate(i, abs(d)) != coord) {
-            special_boundaries[d].neighbours[i] = neighb[d][i];
+            special_boundaries[d].neighbours[i] = neighbour(i, d);
         } else {
             special_boundaries[d].neighbours[i] = offs++;
-            special_boundaries[d].move_index[k++] = neighb[d][i];
+            special_boundaries[d].move_index[k++] = neighbour(i, d);
         }
     }
 

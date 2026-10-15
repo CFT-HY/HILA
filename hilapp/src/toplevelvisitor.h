@@ -134,6 +134,17 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     void check_var_info_list();
 
+    /// Parse X + k*dir -type axis offset, see toplevelvisitor.cpp
+    bool parse_axis_offset(Expr *e, Expr *&dirE, int &k, std::vector<Expr *> &atoms);
+    bool collect_axis_offset_terms(Expr *e, int sign, bool &has_X,
+                                   std::vector<std::pair<int, Expr *>> &terms);
+    int halo_depth();
+
+    /// code generation helpers for deep halo access
+    std::string deep_dir_string(const dir_ptr &d, srcBuf &loopBuf, bool in_loop);
+    void generate_deep_gathers(std::stringstream &code);
+    bool has_deep_refs();
+
     bool handle_field_X_expr(Expr *e, bool &is_assign, bool is_compound, bool is_X,
                              bool is_func_arg = false);
 
