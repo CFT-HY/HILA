@@ -90,7 +90,12 @@ void gather_test() {
 void test_std_gathers() {
 
 #if defined(NO_GATHER_TEST)
+
     hila::out0 << "NO_GATHER_TEST defined, skipping test" << std::endl;
+
+#if defined(CUDA) || defined(HIP)
+    gpuMemPoolPurge();
+#endif
     return;
 
 #elif defined(MPI_BENCHMARK_TEST)
