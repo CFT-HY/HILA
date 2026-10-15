@@ -16,3 +16,9 @@ void *memalloc(std::size_t size, const char *filename, const unsigned line);
 /// depending on the target.  Free with d_free()
 void *d_malloc(std::size_t size);
 void d_free(void * dptr);
+
+/// d_malloc_comm allocates "device" memory for buffers which are passed to MPI.
+/// With GPU_AWARE_COMM this comes from the gpu communication memory pool,
+/// otherwise it is the same as d_malloc().  Free with d_free_comm()
+void *d_malloc_comm(std::size_t size);
+void d_free_comm(void *dptr);

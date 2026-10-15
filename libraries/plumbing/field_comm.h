@@ -721,10 +721,14 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 #if defined(GPU_AWARE_COMM) && !defined(GPU_OVERLAP_COMM)
     // place_comm_elements may still be reading receive_buffer: start_communication()
     // synchronizes before the block can be used for a new MPI receive
-    if (fs->send_buffer[d] != nullptr)
-        gpuFreeComm(fs->send_buffer[d]);
-    if (fs->receive_buffer[d] != nullptr)
-        gpuFreeComm(fs->receive_buffer[d]);
+    if (fs->send_buffer[d] != nullptr) {
+        fs->payload.free_mpi_buffer(fs->send_buffer[d]);
+        fs->send_buffer[d] = nullptr;
+    }
+    if (fs->receive_buffer[d] != nullptr) {
+        fs->payload.free_mpi_buffer(fs->receive_buffer[d]);
+        fs->receive_buffer[d] = nullptr;
+    }
 #endif
 
 }

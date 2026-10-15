@@ -47,8 +47,9 @@ __device__ inline auto field_storage<T>::get(const unsigned i,
         base_t arr[n_elements];
     } u;
     const base_t *fp = (base_t *)(fieldbuf);
+    // element-major layout: index in size_t, n_elements * field_alloc_size can exceed 2^32
     for (unsigned e = 0; e < n_elements; e++) {
-        u.arr[e] = fp[e * field_alloc_size + i];
+        u.arr[e] = fp[(size_t)e * field_alloc_size + i];
     }
     return u.value;
 
@@ -72,7 +73,7 @@ __device__ inline void field_storage<T>::set(const T &value, const unsigned i,
     const base_t *value_f = (base_t *)&value;
     base_t *fp = (base_t *)(fieldbuf);
     for (unsigned e = 0; e < n_elements; e++) {
-        fp[e * field_alloc_size + i] = value_f[e];
+        fp[(size_t)e * field_alloc_size + i] = value_f[e];
     }
 }
 
@@ -435,7 +436,7 @@ void field_storage<T>::free_mpi_buffer(T *d_buffer) {
 #ifdef GPU_SHMEM
     gpuFreeShared(d_buffer);
 #else
-    gpuFreeComm(d_buffer);
+    d_free_comm(d_buffer);
 #endif // GPU_SHMEM
 }
 
@@ -445,7 +446,7 @@ T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
 #ifdef GPU_SHMEM
     gpuMallocShared(&(d_buffer), n * sizeof(T));
 #else
-    gpuMallocComm(&(d_buffer), n * sizeof(T));
+    d_buffer = (T *)d_malloc_comm(n * sizeof(T));
 #endif // GPU_SHMEM
     return d_buffer;
 }

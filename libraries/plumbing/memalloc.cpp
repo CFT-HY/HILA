@@ -86,3 +86,36 @@ void d_free(void *dptr) {
 #endif
 
 }
+
+/// d_malloc_comm allocates "device" memory for MPI buffers - from the gpu
+/// communication pool if GPU_AWARE_COMM, otherwise as d_malloc()
+
+void *d_malloc_comm(std::size_t size) {
+
+#if (defined(CUDA) || defined(HIP)) && defined(GPU_AWARE_COMM)
+
+    void *p;
+    gpuMallocComm(&p, size);
+    return p;
+
+#else
+
+    return d_malloc(size);
+
+#endif
+
+}
+
+void d_free_comm(void *dptr) {
+
+#if (defined(CUDA) || defined(HIP)) && defined(GPU_AWARE_COMM)
+
+    if (dptr != nullptr) gpuFreeComm(dptr);
+
+#else
+
+    d_free(dptr);
+
+#endif
+
+}

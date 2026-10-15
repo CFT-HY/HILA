@@ -209,6 +209,16 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
+/// GPUFFT_MPI_SEND_WINDOW
+/// Max number of MPI sends a rank keeps in flight in the GPU FFT pencil exchange.  All
+/// receives are posted first, and sends go out in rotated order (step s: send to pencil
+/// node (me+s) % n), so that at each step every node sends to and receives from different
+/// nodes.  Small value reduces network congestion (incast) in large runs, large value
+/// may be faster.  Value <= 0 means no limit.
+#ifndef GPUFFT_MPI_SEND_WINDOW
+#define GPUFFT_MPI_SEND_WINDOW 1
+#endif
+
 /** @brief GPU_SYNCHRONIZE_TIMERS : if set and !=0 synchronize GPU on timer calls, in order to
  * obtain meaningful timer values
  *
