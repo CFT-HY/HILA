@@ -252,6 +252,25 @@ Note that on supercomputers the default paths aren't the same as on default linu
 
 </details>
 
+### Prebuilt HILA preprocessor {#hila-preprocessor-prebuilt}
+
+On Linux x86_64 and aarch64 a prebuilt, statically linked *hilapp* can be downloaded instead of
+building it.  This is the easiest option on supercomputers, which usually lack the clang/llvm
+development libraries.  In the hila directory:
+
+~~~bash
+hilapp/get_hilapp.sh
+~~~
+
+This downloads the binary corresponding exactly to the checked-out hilapp source (built
+automatically on GitHub for each hilapp change on the main branch) and installs it to
+`hilapp/bin/hilapp`.  Run it again after `git pull`; it does nothing if the binary is up to
+date.  *hilapp* uses the system `g++` to find the C++ standard library headers.
+
+If no binary exists for the exact source version (e.g. on another branch), `hilapp/get_hilapp.sh
+--compatible` installs the newest binary with the same signature number, or build *hilapp* as
+below.  `hilapp/get_hilapp.sh --help` lists the options.
+
 ### Building HILA preprocessor {#hila-preprocessor}
 
 Before building the preprocessor one must first install the dependencies. See the [dependencies](#dependencies)
@@ -266,7 +285,7 @@ make install
 
 This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the default location for the program.  Build takes 1-2 min. 
 
-> __NOTE__: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 processors (by far most common), you can use `make static` -command to build statically linked _hilapp_. Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine. Simpler approach for HPC platforms is use of singularity containers
+> __NOTE__: clang dev libraries are not installed in most supercomputer systems.  There the simplest option is the [prebuilt hilapp](#hila-preprocessor-prebuilt).  Alternatively, `make static` builds a statically linked _hilapp_ which can be copied to `hila/hilapp/bin` on a target machine with the same processor architecture, or use singularity containers.
   
 Test that _hilapp_ works:
 

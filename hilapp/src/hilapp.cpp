@@ -859,7 +859,8 @@ class MyASTConsumer : public ASTConsumer {
                         << "******* ERROR: hila source requires hilapp signature >= "
                         << min_signature << ", but hilapp executable has signature "
                         << HILA_SIGNATURE_NUMBER << ".\n "
-                        << "        Recompile hilapp with current code version.\n"
+                        << "        Recompile hilapp with current code version (make -C hilapp install),\n"
+                        << "        or download a prebuilt binary with hilapp/get_hilapp.sh\n"
                         << "This check can be omitted by defining NO_SIGNATURE_CHECK, but it "
                            "may lead to incorrect program.\n";
 

@@ -1,0 +1,132 @@
+name: Build prebuilt hilapp binaries
+
+# Builds statically linked hilapp binaries for x86_64 and aarch64 Linux and publishes them
+# as a GitHub release, one release per hilapp source version.  Users install them with
+# hilapp/get_hilapp.sh.
+#
+# The release tag is  hilapp-s<signature>-<tree>  where <signature> is HILA_SIGNATURE_NUMBER
+# in libraries/hila_signatures.h and <tree> is the git tree hash of the hilapp/ directory
+# (git rev-parse --short=12 HEAD:hilapp).  Thus get_hilapp.sh can find the binary matching
+# exactly the checked-out source.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'hilapp/**'
+      - 'libraries/hila_signatures.h'
+      - '.github/workflows/hilapp-binaries.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hilapp-binaries
+  cancel-in-progress: false
+
+env:
+  LLVM_VERSION: 18
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM/Clang development packages and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            llvm-${LLVM_VERSION}-dev libclang-${LLVM_VERSION}-dev clang-${LLVM_VERSION} \
+            zlib1g-dev libzstd-dev libxml2-dev libncurses-dev \
+            g++ make libopenmpi-dev openmpi-bin libfftw3-dev
+
+      - name: Release tag
+        id: tag
+        run: |
+          sig=$(awk '/^#define HILA_SIGNATURE_NUMBER/ {print $3}' libraries/hila_signatures.h)
+          tree=$(git rev-parse --short=12 HEAD:hilapp)
+          echo "tag=hilapp-s${sig}-${tree}" >> "$GITHUB_OUTPUT"
+          echo "Release tag hilapp-s${sig}-${tree}"
+
+      - name: Build statically linked hilapp
+        run: |
+          make -C hilapp -j4 static LLVM_VERSION=${LLVM_VERSION}
+          strip hilapp/build/hilapp
+          file hilapp/build/hilapp
+          mkdir -p hilapp/bin
+          cp hilapp/build/hilapp hilapp/bin/hilapp
+
+      - name: Test - build and run hila_healthcheck with the binary
+        run: |
+          cd applications/hila_healthcheck
+          # vanilla target uses -mavx2, override for portability (and aarch64)
+          make -j4 CXXFLAGS="-x c++ --std=c++17 -fno-rtti -O2"
+          mpirun --oversubscribe -np 2 ./build/hila_healthcheck -p "lattice size" "32,32,32" > out.txt 2>&1
+          passed=$(grep -ci passed out.txt || true)
+          failed=$(grep -ci failed out.txt || true)
+          echo "healthcheck: ${passed} passed, ${failed} failed"
+          if [ "${failed}" != "0" ] || [ "${passed}" -lt 50 ]; then
+            cat out.txt
+            exit 1
+          fi
+
+      - name: Package
+        run: |
+          mkdir -p pkg
+          cp hilapp/build/hilapp pkg/
+          {
+            echo "tag: ${{ steps.tag.outputs.tag }}"
+            echo "commit: ${GITHUB_SHA}"
+            echo "arch: ${{ matrix.arch }}"
+            echo "llvm: $(llvm-config-${LLVM_VERSION} --version)"
+            echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > pkg/BUILD_INFO
+          name=hilapp-linux-${{ matrix.arch }}.tar.gz
+          tar -C pkg -czf ${name} hilapp BUILD_INFO
+          sha256sum ${name} > ${name}.sha256
+          cat ${name}.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hilapp-${{ matrix.arch }}
+          path: |
+            hilapp-linux-${{ matrix.arch }}.tar.gz
+            hilapp-linux-${{ matrix.arch }}.tar.gz.sha256
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          ls -l dist
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            gh release upload "${TAG}" dist/* --clobber --repo "${GITHUB_REPOSITORY}"
+          else
+            gh release create "${TAG}" dist/* --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" --latest=false \
+              --title "hilapp binaries ${TAG}" \
+              --notes "Statically linked hilapp for Linux x86_64 and aarch64, built from ${GITHUB_SHA}. Install with hilapp/get_hilapp.sh."
+          fi

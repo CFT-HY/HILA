@@ -60,6 +60,12 @@ ifneq ($(MAKECMDGOALS),list-archs)
   $(info |   "make ARCH=<arch>" : compile using 'arch'                              |)
   $(info |   "make list-archs"  : show ARCH= options                                |)
   $(info *--------------------------------------------------------------------------*)
+  ifeq ($(wildcard $(HILAPP)),)
+    $(info hilapp not found at $(HILAPP))
+    $(info - download a prebuilt binary: $(HILAPP_DIR)/get_hilapp.sh)
+    $(info - or build it from source (needs llvm/clang development files): make -C $(HILAPP_DIR) install)
+    $(error hilapp missing)
+  endif
 endif
 endif
 

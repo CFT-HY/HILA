@@ -1,3 +1,7 @@
+NOTE: on Linux x86_64 and aarch64 prebuilt static hilapp binaries can be downloaded with
+  hilapp/get_hilapp.sh
+which is usually easier than the procedure below.
+
 Statically linked hilapp is needed if the target machine does not
 have all needed clang/llvm development tools installed.  This is unfortunately
 the case for many supercomputers.
