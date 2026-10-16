@@ -41,7 +41,8 @@
  */
 
 
-#include "plumbing/defs.h"
+ #include "plumbing/defs.h"
+ #include "plumbing/type_tools.h"
 
 class ExtendedPrecision {
 
@@ -191,6 +192,15 @@ class ExtendedPrecision {
     double to_double() const {
         return (value + compensation) + compensation2;
     }
+
+    /**
+     * @brief Decimal representation with up to ~32 significant digits
+     * @details Scientific notation, e.g. -6.38876966070759031234567890e-14.  The value is
+     * converted exactly to double-double before printing, thus digits beyond ~31 are not
+     * meaningful.  Implemented in extended.cpp.
+     * @param digits - number of significant digits (1 ... 34)
+     */
+    std::string to_string(int digits = 30) const;
 };
 
 /// template utilities: hila::is_extended<T>::value and
@@ -289,7 +299,11 @@ inline bool operator<=(const A &a, const B &b) {
 }
 
 
+/// Stream output: with stream precision > 17 (e.g. std::setprecision(25)) print with
+/// to_string(precision), otherwise as double
 inline std::ostream &operator<<(std::ostream &strm, const ExtendedPrecision &var) {
+    if (strm.precision() > 17)
+        return strm << var.to_string(strm.precision());
     return strm << var.to_double();
 }
 
@@ -303,8 +317,14 @@ Ntype cast_to(const ExtendedPrecision &ep) {
         return static_cast<Ntype>(ep.to_double());
 }
 
+// Do not call prettyprint(double) here: if this header is included before real_var_ops.h
+// (as in GPU builds), the call resolves to this function through the implicit
+// ExtendedPrecision(double) constructor, giving infinite recursion.
 inline std::string prettyprint(const ExtendedPrecision &val, int prec = 8) {
-    return prettyprint(val.to_double(), prec);
+    std::stringstream ss;
+    ss.precision(prec);
+    ss << val;
+    return ss.str();
 }
 
 } // namespace hila

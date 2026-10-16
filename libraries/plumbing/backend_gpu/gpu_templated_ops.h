@@ -11,6 +11,8 @@
 
 // #if defined(__CUDACC__) || defined(__HIPCC__)
 
+#include "datatypes/extended.h"
+
 #if !defined(HILAPP)
 #if defined(CUDA)
 #include <cub/cub.cuh>
@@ -61,12 +63,13 @@ T cuda_reduce_sum(  T * vector, int N ){
 // Functions used by hilapp in reductions
 // (cannot guarantee operator= and operator+= are marked __device__)
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 __device__ static void _hila_kernel_set_zero(T &v) {
     v = 0;
 }
 
-template <typename T, std::enable_if_t<!hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<!hila::is_arithmetic_or_extended<T>::value, int> = 0>
 __device__ static void _hila_kernel_set_zero(T &v) {
     using ntype = hila::arithmetic_type<T>;
     constexpr int N = sizeof(T) / sizeof(ntype);
@@ -76,12 +79,12 @@ __device__ static void _hila_kernel_set_zero(T &v) {
         arr[i] = 0;
 }
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 __device__ static void _hila_kernel_copy_var(T &a, const T &b) {
     a = b;
 }
 
-template <typename T, std::enable_if_t<!hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<!hila::is_arithmetic_or_extended<T>::value, int> = 0>
 __device__ static void _hila_kernel_copy_var(T &a, const T &b) {
     using ntype = hila::arithmetic_type<T>;
     constexpr int N = sizeof(T) / sizeof(ntype);
@@ -93,12 +96,13 @@ __device__ static void _hila_kernel_copy_var(T &a, const T &b) {
         ar[i] = br[i];
 }
 
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic_or_extended<T>::value, int> = 0>
 __device__ static void _hila_kernel_add_var(T &a, const T &b) {
     a += b;
 }
 
-template <typename T, std::enable_if_t<!hila::is_arithmetic<T>::value, int> = 0>
+
+template <typename T, std::enable_if_t<!hila::is_arithmetic_or_extended<T>::value, int> = 0>
 __device__ static void _hila_kernel_add_var(T &a, const T &b) {
     using ntype = hila::arithmetic_type<T>;
     constexpr int N = sizeof(T) / sizeof(ntype);
@@ -464,13 +468,12 @@ void gpu_set_value(T *vec, const T &val, size_t N) {
 
 /// Just copy the array to GPU memory, returning its device address
 template <typename T>
-T * copy_array_to_gpu(T *data, int n) {
-    T * buf;
-    gpuMalloc(&buf,n*sizeof(T));
+T *copy_array_to_gpu(T *data, int n) {
+    T *buf;
+    gpuMalloc(&buf, n * sizeof(T));
     gpuMemcpy(buf, data, n * sizeof(T), gpuMemcpyHostToDevice);
     return buf;
 }
-
 
 
 #endif
