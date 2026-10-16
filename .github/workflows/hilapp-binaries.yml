@@ -15,8 +15,6 @@ on:
   push:
     branches:
       - main
-      # TEMPORARY: for testing the workflow before merging, remove after merge
-      - hilapp-binaries
     paths:
       - 'hilapp/**'
       - 'libraries/hila_signatures.h'
