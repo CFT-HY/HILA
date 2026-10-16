@@ -94,7 +94,8 @@ void test_std_gathers() {
     hila::out0 << "NO_GATHER_TEST defined, skipping test" << std::endl;
 
 #if defined(CUDA) || defined(HIP)
-    gpuMemPoolPurge();
+    if (lattice.is_base())
+        gpuMemPoolPurge();
 #endif
     return;
 
@@ -109,7 +110,8 @@ void test_std_gathers() {
     gather_test();
 
 #if defined(CUDA) || defined(HIP)
-    gpuMemPoolPurge();
+    if (lattice.is_base())
+        gpuMemPoolPurge();
 #endif
 
     if (lattice.is_base()) {
