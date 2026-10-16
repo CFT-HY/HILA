@@ -283,9 +283,9 @@ std::string get_includes_from_gcc(std::vector<const char *> &av) {
 
                 int v = 0, i = 4;
                 while (pipebuf[i] >= '0' && pipebuf[i] <= '9') {
-                    i++;
                     v *= 10;
                     v += pipebuf[i] - '0';
+                    i++;
                 }
                 if (pipebuf[i] == '\n')
                     pipebuf[i] = 0;
