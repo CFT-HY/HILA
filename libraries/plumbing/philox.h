@@ -302,7 +302,34 @@ static inline float u32_to_unit_float(uint32_t x) {
 
 /**
  * @brief return double precision random number in the interval [0,1)
+ * 
+ * On CPUs, defining -DFAST_RANDOM uses buffering to save the other random
+ * value which is returned on the next round. The effect is marginal, 
+ * so usually no need to use it.  On GPUs it does nothing.
  */
+
+#if defined(FAST_RANDOM) && !(defined(CUDA) || defined(HIP))
+
+#pragma hila loop_function contains_rng
+inline double random() {
+    static double stored;
+    static bool is_stored = false;
+
+    if (is_stored) {
+        is_stored = false;
+        return stored;
+    }
+
+    is_stored = true;
+    uint32_t counter[4];
+    counter[0] = 0;
+    philox_generate(counter);
+    // make 64 bit quantities for conversion to double.
+    stored = u64_to_unit_double((static_cast<uint64_t>(counter[2]) << 32) | counter[3]);
+    return u64_to_unit_double((static_cast<uint64_t>(counter[0]) << 32) | counter[1]);
+}
+
+#else
 
 #pragma hila loop_function contains_rng
 inline double random() {
@@ -313,6 +340,8 @@ inline double random() {
     uint64_t x = (static_cast<uint64_t>(counter[0]) << 32) | counter[1];
     return u64_to_unit_double(x);
 }
+
+#endif
 
 /**
  * @brief return 2 double precision random numbers in the interval [0,1)
