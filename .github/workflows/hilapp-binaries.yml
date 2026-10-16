@@ -57,7 +57,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            llvm-${LLVM_VERSION}-dev libclang-${LLVM_VERSION}-dev clang-${LLVM_VERSION} \
+            llvm-${LLVM_VERSION}-dev libclang-${LLVM_VERSION}-dev clang-${LLVM_VERSION} libpolly-${LLVM_VERSION}-dev \
             zlib1g-dev libzstd-dev libxml2-dev libncurses-dev \
             g++ make libopenmpi-dev openmpi-bin libfftw3-dev
 
