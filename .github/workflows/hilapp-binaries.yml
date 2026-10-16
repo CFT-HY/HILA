@@ -72,7 +72,13 @@ jobs:
 
       - name: Build statically linked hilapp
         run: |
-          make -C hilapp -j4 static LLVM_VERSION=${LLVM_VERSION}
+          # on failure, show the error lines as annotations on the run summary page
+          if ! make -C hilapp -j4 static LLVM_VERSION=${LLVM_VERSION} > build.log 2>&1; then
+            cat build.log
+            grep -E -i 'error|undefined|cannot find|not found' build.log | head -20 | sed 's/^/::error::/'
+            exit 1
+          fi
+          tail -5 build.log
           strip hilapp/build/hilapp
           file hilapp/build/hilapp
           mkdir -p hilapp/bin
@@ -82,13 +88,18 @@ jobs:
         run: |
           cd applications/hila_healthcheck
           # vanilla target uses -mavx2, override for portability (and aarch64)
-          make -j4 CXXFLAGS="-x c++ --std=c++17 -fno-rtti -O2"
+          if ! make -j4 CXXFLAGS="-x c++ --std=c++17 -fno-rtti -O2" > build.log 2>&1; then
+            cat build.log
+            grep -E -i 'error|undefined' build.log | head -20 | sed 's/^/::error::/'
+            exit 1
+          fi
           mpirun --oversubscribe -np 2 ./build/hila_healthcheck -p "lattice size" "32,32,32" > out.txt 2>&1
           passed=$(grep -ci passed out.txt || true)
           failed=$(grep -ci failed out.txt || true)
           echo "healthcheck: ${passed} passed, ${failed} failed"
           if [ "${failed}" != "0" ] || [ "${passed}" -lt 50 ]; then
             cat out.txt
+            grep -i -E 'failed|error' out.txt | head -20 | sed 's/^/::error::/'
             exit 1
           fi
 
