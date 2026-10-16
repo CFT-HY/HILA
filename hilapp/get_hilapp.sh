@@ -4,10 +4,10 @@
 # hila source tree, and install it to hilapp/bin/hilapp.
 #
 # Binaries are built by the GitHub workflow .github/workflows/hilapp-binaries.yml for
-# Linux x86_64 and aarch64, for each change of hilapp/ on the main branch.  The release tag
-# is  hilapp-s<signature>-<tree>, where <signature> is HILA_SIGNATURE_NUMBER and <tree> the
-# git tree hash of the hilapp/ directory.  Thus the binary corresponds exactly to the
-# checked-out hilapp source.
+# Linux x86_64 and aarch64, for each change of hilapp/ on the main branch, and kept in the
+# release "hilapp-binaries".  A binary is identified by  hilapp-s<signature>-<tree>, where
+# <signature> is HILA_SIGNATURE_NUMBER and <tree> the git tree hash of the hilapp/
+# directory.  Thus the binary corresponds exactly to the checked-out hilapp source.
 #
 # Usage:  hilapp/get_hilapp.sh [options]
 #   -c, --compatible   if there is no binary for this exact source version, use the newest
@@ -16,9 +16,8 @@
 #   -r, --repo <o/r>   GitHub repository (default CFT-HY/HILA, or $HILAPP_REPO)
 #   -h, --help         this help
 #
-# For testing, the download locations can be changed with $HILAPP_DOWNLOAD_URL (default
-# https://github.com/<repo>/releases/download) and $HILAPP_API_URL (default
-# https://api.github.com/repos/<repo>/releases?per_page=100).
+# For testing, the download location can be changed with $HILAPP_DOWNLOAD_URL (default
+# https://github.com/<repo>/releases/download/hilapp-binaries).
 #
 # Needs git, curl or wget, tar and sha256sum (or shasum).  After "git pull" run this again;
 # it does nothing if the binary is up to date.
@@ -75,7 +74,7 @@ command -v git > /dev/null || error "git is needed to identify the hilapp source
 tree=$(git -C "${hila_dir}" rev-parse --short=12 HEAD:hilapp 2> /dev/null) ||
     error "could not get the git version of ${hilapp_dir} (not a git checkout?)"
 
-tag="hilapp-s${sig}-${tree}"
+version="hilapp-s${sig}-${tree}"
 
 if ! git -C "${hila_dir}" diff --quiet HEAD -- hilapp/src hilapp/Makefile libraries/hila_signatures.h; then
     echo "get_hilapp.sh: WARNING: hilapp/src has local changes, which are not in the prebuilt binary" >&2
@@ -100,33 +99,37 @@ else
     error "sha256sum or shasum is needed"
 fi
 
-download_url="${HILAPP_DOWNLOAD_URL:-https://github.com/${repo}/releases/download}"
-api_url="${HILAPP_API_URL:-https://api.github.com/repos/${repo}/releases?per_page=100}"
+download_url="${HILAPP_DOWNLOAD_URL:-https://github.com/${repo}/releases/download/hilapp-binaries}"
 
 release_file="${bin_dir}/.hilapp_release"
 
-asset="hilapp-linux-${arch}.tar.gz"
 tmp=$(mktemp -d)
 trap 'rm -rf "${tmp}"' EXIT
 
 download() {
-    # $1 = tag; returns non-zero if the release or asset does not exist
-    local url="${download_url}/$1/${asset}"
+    # $1 = version; returns non-zero if the binary does not exist
+    asset="$1-linux-${arch}.tar.gz"
+    local url="${download_url}/${asset}"
     fetch "${url}" "${tmp}/${asset}" 2> /dev/null && fetch "${url}.sha256" "${tmp}/${asset}.sha256"
 }
 
-if [ "${force}" = 0 ] && [ -x "${bin_dir}/hilapp" ] && [ -f "${release_file}" ] &&
-    [ "$(cat "${release_file}")" = "${tag}" ]; then
-    echo "hilapp is up to date (${tag})"
+up_to_date() {
+    # $1 = version
+    [ "${force}" = 0 ] && [ -x "${bin_dir}/hilapp" ] && [ -f "${release_file}" ] &&
+        [ "$(cat "${release_file}")" = "$1" ]
+}
+
+if up_to_date "${version}"; then
+    echo "hilapp is up to date (${version})"
     exit 0
 fi
 
-echo "Downloading ${tag} for linux-${arch} from ${download_url}"
+echo "Downloading ${version} for linux-${arch} from ${download_url}"
 
-if ! download "${tag}"; then
+if ! download "${version}"; then
     if [ "${compatible}" = 0 ]; then
         cat >&2 << EOF
-get_hilapp.sh: no prebuilt hilapp for this source version (${tag}).
+get_hilapp.sh: no prebuilt hilapp for this source version (${version}).
   Binaries are built for the main branch of ${repo}; this checkout may be on another
   branch, have unpushed commits, or the build may not have finished yet.  Options:
     hilapp/get_hilapp.sh --compatible    newest binary with the same signature ${sig}
@@ -135,17 +138,19 @@ EOF
         exit 1
     fi
 
-    # newest release with the same signature (releases are listed newest first)
-    compat=$(fetch_stdout "${api_url}" |
-        grep -o "\"tag_name\": *\"hilapp-s${sig}-[0-9a-f]*\"" | head -1 | sed 's/.*"\(hilapp-[^"]*\)"/\1/') || true
-    [ -n "${compat}" ] || error "no prebuilt hilapp with signature ${sig} found"
-    [ -f "${release_file}" ] && [ "$(cat "${release_file}")" = "${compat}" ] && [ "${force}" = 0 ] && {
+    # newest binary with the same signature
+    compat=$(fetch_stdout "${download_url}/hilapp-s${sig}-latest.txt" 2> /dev/null | head -1) || true
+    case "${compat}" in
+    hilapp-s"${sig}"-*) ;;
+    *) error "no prebuilt hilapp with signature ${sig} found" ;;
+    esac
+    if up_to_date "${compat}"; then
         echo "hilapp is up to date with the newest compatible binary (${compat})"
         exit 0
-    }
+    fi
     echo "get_hilapp.sh: WARNING: using ${compat}, which is not built from exactly this hilapp source" >&2
     download "${compat}" || error "download of ${compat} failed"
-    tag="${compat}"
+    version="${compat}"
 fi
 
 (cd "${tmp}" && sha_check "${asset}.sha256") || error "checksum of ${asset} does not match"
@@ -159,7 +164,7 @@ if [ -e "${bin_dir}/hilapp" ]; then
     mv -f "${bin_dir}/hilapp" "${bin_dir}/hilapp.previous"
 fi
 mv "${tmp}/x/hilapp" "${bin_dir}/hilapp"
-echo "${tag}" > "${release_file}"
+echo "${version}" > "${release_file}"
 
-echo "Installed ${bin_dir}/hilapp (${tag})"
+echo "Installed ${bin_dir}/hilapp (${version})"
 sed 's/^/    /' "${tmp}/x/BUILD_INFO"
