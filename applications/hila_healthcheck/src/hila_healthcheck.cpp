@@ -710,8 +710,6 @@ void test_fft() {
  */
 void test_fft_real() {
 
-#if !defined(CUDA) && !defined(HIP)
-
     // relative difference of two binned spectra
     auto rel_diff = [](const std::vector<double> &a, const std::vector<double> &b) {
         double d = 0, n = 0;
@@ -826,9 +824,6 @@ void test_fft_real() {
         report_pass("FFT_real float inverse", squarenorm_relative(rf, rf2) / rnorm, 1e-11);
     }
 
-#else
-    hila::out0 << " ...  Skipping FFT_real, not implemented for GPUs yet\n";
-#endif
 }
 
 /**

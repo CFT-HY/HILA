@@ -134,9 +134,16 @@ MPI_Datatype get_MPI_complex_type(size_t &siz) {
     } else if constexpr (std::is_same<T, Complex<float>>::value) {
         siz = sizeof(Complex<float>);
         return MPI_C_FLOAT_COMPLEX;
+    } else if constexpr (std::is_same<T, double>::value) {
+        // real fft
+        siz = sizeof(double);
+        return MPI_DOUBLE;
+    } else if constexpr (std::is_same<T, float>::value) {
+        siz = sizeof(float);
+        return MPI_FLOAT;
     } else {
-        static_assert(sizeof(T) > 0,
-                      "get_MPI_complex_type<T>() called without T being a complex type");
+        // other types (e.g. reflect()): send as bytes
+        siz = 1;
         return MPI_BYTE;
     }
 }

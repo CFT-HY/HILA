@@ -238,46 +238,15 @@ class k_binning {
     }
 
     //////////////////////////////////////////////////////////////////////////////////
-    /// interface for real fields.  With FFTW use the real Fourier transform, which gives
+    /// interface for real fields: use the real Fourier transform, which gives
     /// the same binned result as the complex FFT (see FFT_real_field())
     template <typename T, std::enable_if_t<!hila::contains_complex<T>::value, int> = 0>
     std::vector<double> spectraldensity(const Field<T> &f) {
 
-#if defined(USE_FFTW)
         Field<T> ftrans;
         FFT_real_field(f, ftrans);
 
         return bin_k_field_squarenorm(ftrans);
-#else
-        // GPU: no real transform yet
-        using cmplx_t = Complex<hila::arithmetic_type<T>>;
-
-        if constexpr (sizeof(T) % sizeof(Complex<hila::arithmetic_type<T>>) == 0) {
-            // real field, size is even -- cast the field to pseudo-complex
-            // This works because layouts are compatible in all archs - if this changes
-            // then need copy
-            constexpr int nc = sizeof(T) / sizeof(cmplx_t);
-
-            return spectraldensity(*reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f));
-        } else {
-            // now the size of input is not evenly divisible by sizeof complex.
-            // new complex field
-            constexpr int nc = sizeof(T) / sizeof(cmplx_t) + 1;
-
-            Field<Vector<nc, cmplx_t>> cfield;
-
-            onsites(ALL) {
-
-                cfield[X] = 0;
-                for (int i = 0; i < sizeof(T) / sizeof(hila::arithmetic_type<T>); i++) {
-                    auto a = hila::get_number_in_var(f[X], i);
-                    hila::set_number_in_var(cfield[X], i, a);
-                }
-            }
-
-            return spectraldensity(cfield);
-        }
-#endif
     }
 
 

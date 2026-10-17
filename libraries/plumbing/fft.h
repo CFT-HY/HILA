@@ -531,8 +531,6 @@ Field<T> Field<T>::FFT(fft_direction fftdir) const {
 /// the input multiplied by the product of the size of the lattice to active directions,
 /// as with the complex FFT.  Parseval: sum_x f(x)^2 = sum_k h(k)^2 / lattice.volume().
 ///
-/// Currently implemented for FFTW (CPU) only.
-///
 /// See also Field<T>::FFT_real()
 /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -547,10 +545,6 @@ inline void FFT_real_field(const Field<T> &input, Field<T> &result,
                   "FFT_real_field argument fields must be real, use FFT_field for complex");
     static_assert(std::is_same<real_t, double>::value || std::is_same<real_t, float>::value,
                   "FFT_real_field: field elements must be double or float");
-#if !defined(USE_FFTW)
-    static_assert(sizeof(T) == 0, "FFT_real_field is not yet implemented for GPUs");
-#endif
-
     assert(input.is_initialized(ALL) && "ERROR: Uninitialized field in FFT_real_field");
 
     constexpr size_t elements = sizeof(T) / sizeof(real_t);
