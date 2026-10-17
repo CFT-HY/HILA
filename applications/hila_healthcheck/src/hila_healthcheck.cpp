@@ -908,6 +908,77 @@ void test_spectraldensity() {
     }
 }
 
+/**
+ * @brief Test cross spectrum
+ * @details Compare k_binning::cross_spectrum with Re(F^* G) binned from complex FFTs,
+ * for real, complex and Vector fields
+ */
+void test_cross_spectrum() {
+
+    auto rel_diff = [](const std::vector<double> &a, const std::vector<double> &b) {
+        double d = 0, n = 0;
+        for (int i = 0; i < a.size(); i++) {
+            d += fabs(a[i] - b[i]);
+            n += fabs(b[i]);
+        }
+        return hila::broadcast(d / n);
+    };
+
+    hila::k_binning b;
+    b.k_max(M_PI * sqrt(1.0 * NDIM));
+
+    // real fields, correlated
+    Field<double> r, s;
+    onsites (ALL) {
+        r[X] = hila::gaussrand();
+        s[X] = 0.5 * r[X] + hila::gaussrand();
+    }
+
+    // reference: Re(F^* G) from complex FFTs
+    auto Fr = r.FFT_real_to_complex();
+    auto Fs = s.FFT_real_to_complex();
+    Field<double> ref;
+    onsites (ALL)
+        ref[X] = (Fr[X].conj() * Fs[X]).real();
+
+    report_pass("cross_spectrum of real fields",
+                rel_diff(b.cross_spectrum(r, s), b.bin_k_field(ref)), 1e-12);
+
+    report_pass("cross_spectrum(f,f) == spectraldensity(f)",
+                rel_diff(b.cross_spectrum(r, r), b.spectraldensity(r)), 1e-12);
+
+    // complex fields
+    Field<Complex<double>> cr, cs;
+    onsites (ALL) {
+        cr[X] = Complex<double>(hila::gaussrand(), hila::gaussrand());
+        cs[X] = 0.5 * cr[X] + Complex<double>(hila::gaussrand(), hila::gaussrand());
+    }
+    auto Fcr = cr.FFT();
+    auto Fcs = cs.FFT();
+    onsites (ALL)
+        ref[X] = (Fcr[X].conj() * Fcs[X]).real();
+
+    report_pass("cross_spectrum of complex fields",
+                rel_diff(b.cross_spectrum(cr, cs), b.bin_k_field(ref)), 1e-12);
+
+    // Vector field: sum over components
+    Field<Vector<2, double>> v, w;
+    onsites (ALL) {
+        v[X].e(0) = r[X];
+        v[X].e(1) = s[X];
+        w[X].e(0) = s[X];
+        w[X].e(1) = 2 * r[X];
+    }
+    auto c_vw = b.cross_spectrum(v, w);
+    auto c_rs = b.cross_spectrum(r, s);
+    auto c_sr = b.cross_spectrum(s, r);
+    std::vector<double> c_sum(c_rs.size());
+    for (int i = 0; i < c_sum.size(); i++)
+        c_sum[i] = c_rs[i] + 2 * c_sr[i];
+
+    report_pass("cross_spectrum of Vector<2,double> fields", rel_diff(c_vw, c_sum), 1e-12);
+}
+
 //--------------------------------------------------------------------------------
 
 void test_field_slices() {
@@ -1312,6 +1383,7 @@ int main(int argc, char **argv) {
     test_fft();
     test_fft_real();
     test_spectraldensity();
+    test_cross_spectrum();
     test_matrix_algebra();
     test_extended();
     test_clusters();

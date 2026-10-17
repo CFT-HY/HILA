@@ -64,6 +64,10 @@ namespace hila {
 ///                            bin the square norm of k-space field f
 ///   std::vector<double> spectraldensity(const Field<T> &f)
 ///                            FFT real-space field f and bin the result in squarenorm
+///   std::vector<double> bin_k_field_dot(const Field<T> &a, const Field<T> &b)
+///                            bin sum_i Re(a_i^* b_i) of k-space fields a and b
+///   std::vector<double> cross_spectrum(const Field<T> &f, const Field<T> &g)
+///                            FFT real-space fields f and g and bin sum_i Re(F_i^* G_i)
 ///
 ///   double k(int b)                  return the average k within bin b
 ///   long count(int b)                return the number of points within bin b
@@ -247,6 +251,65 @@ class k_binning {
         FFT_real_field(f, ftrans);
 
         return bin_k_field_squarenorm(ftrans);
+    }
+
+
+    /// sum up Re(a_i^* b_i) over all elements of a and b, i.e. the dot product of
+    /// the real numbers in a and b (for complex types Re a Re b + Im a Im b).
+    /// bin_k_field_dot(f,f) == bin_k_field_squarenorm(f)
+
+    template <typename T>
+    std::vector<double> bin_k_field_dot(const Field<T> &fa, const Field<T> &fb) {
+
+        using float_t = hila::arithmetic_type<T>;
+        constexpr int n_float = sizeof(T) / sizeof(float_t);
+
+        binning_timer.start();
+
+        if (k_avg.size() != par.bins)
+            sd_calculate_bin_info();
+
+        ReductionVector<double> s(par.bins);
+        s.allreduce(false);
+        s = 0;
+
+        onsites(ALL) {
+
+            int b = sd_get_k_bin(X.coordinates(), par);
+            if (b >= 0 && b < par.bins) {
+                double ps = 0;
+                for (int i = 0; i < n_float; i++) {
+                    ps += hila::get_number_in_var(fa[X], i) * hila::get_number_in_var(fb[X], i);
+                }
+                s[b] += ps;
+            }
+        }
+
+        binning_timer.stop();
+
+        return s.vector();
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////
+    /// Cross spectrum of fields f and g:  sum over k in a bin of sum_i Re(F_i^*(k) G_i(k)),
+    /// where F, G are the Fourier transforms and i runs over the elements of the field
+    /// type.  Normalized as spectraldensity(), and cross_spectrum(f,f) == spectraldensity(f).
+    /// Real fields use the real Fourier transform (see FFT_real_field()), which gives the
+    /// same binned result as the complex FFT.
+
+    template <typename T>
+    std::vector<double> cross_spectrum(const Field<T> &f, const Field<T> &g) {
+
+        Field<T> ft, gt;
+        if constexpr (hila::contains_complex<T>::value) {
+            FFT_field(f, ft);
+            FFT_field(g, gt);
+        } else {
+            FFT_real_field(f, ft);
+            FFT_real_field(g, gt);
+        }
+
+        return bin_k_field_dot(ft, gt);
     }
 
 
