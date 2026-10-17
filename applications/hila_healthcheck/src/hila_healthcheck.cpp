@@ -704,6 +704,134 @@ void test_fft() {
 }
 
 /**
+ * @brief Test real Fourier transform FFT_real
+ * @details Compare with the complex FFT: element values to one direction, binned power
+ * and cross spectra, Parseval, inverse transform, float and multi-component fields.
+ */
+void test_fft_real() {
+
+#if !defined(CUDA) && !defined(HIP)
+
+    // relative difference of two binned spectra
+    auto rel_diff = [](const std::vector<double> &a, const std::vector<double> &b) {
+        double d = 0, n = 0;
+        for (int i = 0; i < a.size(); i++) {
+            d += fabs(a[i] - b[i]);
+            n += fabs(b[i]);
+        }
+        return hila::broadcast(d / n);
+    };
+
+    Field<double> r, g;
+    onsites (ALL) {
+        r[X] = hila::gaussrand();
+        g[X] = 0.5 * r[X] + hila::gaussrand();
+    }
+    double rnorm = r.squarenorm();
+
+    {
+        // transform to e_x only, compare elementwise with the complex transform:
+        // h(k) = sqrt(2) Re F(k) for 0 < k < L/2,  h(L-k) = sqrt(2) Im F(k) = -sqrt(2) Im F(L-k)
+        CoordinateVector dirs;
+        dirs.fill(false);
+        dirs[e_x] = true;
+
+        Field<Complex<double>> F;
+        onsites (ALL)
+            F[X] = Complex<double>(r[X], 0);
+        F = F.FFT(dirs);
+
+        Field<double> h = r.FFT_real(dirs);
+        int L = lattice.size(e_x);
+        double eps = 0;
+        onsites (ALL) {
+            int k = X.coordinate(e_x);
+            double expect;
+            if (k == 0 || 2 * k == L)
+                expect = F[X].real();
+            else if (2 * k < L)
+                expect = M_SQRT2 * F[X].real();
+            else
+                expect = -M_SQRT2 * F[X].imag();
+            eps += squarenorm(h[X] - expect);
+        }
+        report_pass("FFT_real to x-direction vs. complex FFT", eps / rnorm, 1e-26 * L);
+    }
+
+    Field<double> hr = r.FFT_real();
+    Field<double> hg = g.FFT_real();
+
+    // Parseval
+    report_pass("FFT_real Parseval", fabs(hr.squarenorm() / lattice.volume() - rnorm) / rnorm,
+                1e-12);
+
+    // inverse
+    Field<double> r2 = hr.FFT_real(fft_direction::back) / lattice.volume();
+    report_pass("FFT_real inverse transform", squarenorm_relative(r, r2) / rnorm, 1e-26);
+
+    // binned power and cross spectra vs complex FFT
+    {
+        auto Fr = r.FFT_real_to_complex();
+        auto Fg = g.FFT_real_to_complex();
+
+        hila::k_binning b;
+        b.k_max(M_PI * sqrt(1.0 * NDIM));
+
+        report_pass("FFT_real binned power spectrum",
+                    rel_diff(b.bin_k_field_squarenorm(hr), b.bin_k_field_squarenorm(Fr)), 1e-12);
+
+        Field<double> prod_real = hr * hg;
+        Field<double> prod_cmplx;
+        onsites (ALL)
+            prod_cmplx[X] = (Fr[X].conj() * Fg[X]).real();
+
+        report_pass("FFT_real binned cross spectrum",
+                    rel_diff(b.bin_k_field(prod_real), b.bin_k_field(prod_cmplx)), 1e-12);
+
+        // spectraldensity() uses FFT_real for real fields
+        Field<Complex<double>> rc;
+        onsites (ALL)
+            rc[X] = Complex<double>(r[X], 0);
+        report_pass("spectraldensity of real field",
+                    rel_diff(b.spectraldensity(r), b.spectraldensity(rc)), 1e-12);
+    }
+
+    // multi-component field: each component transformed separately
+    {
+        Field<Vector<2, double>> v;
+        onsites (ALL) {
+            v[X].e(0) = r[X];
+            v[X].e(1) = g[X];
+        }
+        auto hv = v.FFT_real();
+        double eps = 0;
+        onsites (ALL) {
+            eps += squarenorm(hv[X].e(0) - hr[X]) + squarenorm(hv[X].e(1) - hg[X]);
+        }
+        report_pass("FFT_real Vector<2,double>", eps / hr.squarenorm(), 1e-26);
+    }
+
+    // float
+    {
+        Field<float> rf;
+        onsites (ALL)
+            rf[X] = r[X];
+        Field<float> hf = rf.FFT_real();
+        double eps = 0;
+        onsites (ALL)
+            eps += squarenorm(hf[X] - hr[X]);
+        report_pass("FFT_real float vs double", eps / hr.squarenorm(), 1e-11);
+
+        Field<float> rf2 = hf.FFT_real(fft_direction::back) / lattice.volume();
+        report_pass("FFT_real float inverse", squarenorm_relative(rf, rf2) / rnorm, 1e-11);
+    }
+
+#else
+    hila::out0 << " ...  Skipping FFT_real, not implemented for GPUs yet\n";
+#endif
+}
+
+/**
  * @brief Test spectral density
  * @details Test spectral density extraction from field.
  *
@@ -1112,6 +1240,7 @@ void test_blocking() {
         test_site_access();
         test_set_elements_and_select();
         test_fft();
+        test_fft_real();
 
         lattice.unblock();
         cvfb.unblock_to(cvf);
@@ -1172,6 +1301,7 @@ int main(int argc, char **argv) {
     test_matrix_operations();
     test_element_operations();
     test_fft();
+    test_fft_real();
     test_spectraldensity();
     test_matrix_algebra();
     test_extended();

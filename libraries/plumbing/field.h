@@ -1674,6 +1674,11 @@ class Field {
     Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
     Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
 
+    // real Fourier transform of real fields, see FFT_real_field() in fft.h
+    Field<T> FFT_real(fft_direction fdir = fft_direction::forward) const;
+    Field<T> FFT_real(const CoordinateVector &dirs,
+                      fft_direction fdir = fft_direction::forward) const;
+
     Field<Complex<hila::arithmetic_type<T>>>
     FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
     Field<hila::arithmetic_type<T>>

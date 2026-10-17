@@ -238,10 +238,18 @@ class k_binning {
     }
 
     //////////////////////////////////////////////////////////////////////////////////
-    /// interface for real fields - an extra copy which could be avoided
+    /// interface for real fields.  With FFTW use the real Fourier transform, which gives
+    /// the same binned result as the complex FFT (see FFT_real_field())
     template <typename T, std::enable_if_t<!hila::contains_complex<T>::value, int> = 0>
     std::vector<double> spectraldensity(const Field<T> &f) {
 
+#if defined(USE_FFTW)
+        Field<T> ftrans;
+        FFT_real_field(f, ftrans);
+
+        return bin_k_field_squarenorm(ftrans);
+#else
+        // GPU: no real transform yet
         using cmplx_t = Complex<hila::arithmetic_type<T>>;
 
         if constexpr (sizeof(T) % sizeof(Complex<hila::arithmetic_type<T>>) == 0) {
@@ -269,6 +277,7 @@ class k_binning {
 
             return spectraldensity(cfield);
         }
+#endif
     }
 
 

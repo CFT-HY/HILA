@@ -16,6 +16,18 @@
 template <typename cmplx_t>
 inline void hila_fft<cmplx_t>::transform() {
 
+    if constexpr (std::is_same<cmplx_t, double>::value || std::is_same<cmplx_t, float>::value) {
+        // real field: real Fourier transform, see transform_real() below
+        transform_real();
+        return;
+    } else {
+        transform_complex();
+    }
+}
+
+template <typename cmplx_t>
+inline void hila_fft<cmplx_t>::transform_complex() {
+
     static_assert(std::is_same<cmplx_t, Complex<double>>::value ||
                       std::is_same<cmplx_t, Complex<float>>::value,
                   "Only double or float fields in FFT");
@@ -80,6 +92,106 @@ inline void hila_fft<cmplx_t>::transform() {
         cp = fftwbuf;
         for (int j = 0; j < rec_p.size(); j++) {
             memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(my_fftw_complex) * rec_size[j]);
+            cp += rec_size[j];
+        }
+
+        fft_buffer_timer.stop();
+    }
+
+    if constexpr (is_double) {
+        fftw_destroy_plan(fftwplan);
+        fftw_free(fftwbuf);
+    } else {
+        fftwf_destroy_plan(fftwplan);
+        fftwf_free(fftwbuf);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Real Fourier transform of real pencils (see FFT_real_field() in fft.h).
+/// Forward: fftw R2HC, which leaves Re F_k to index k (0 <= k <= L/2) and Im F_k to
+/// index L-k, and multiply the indices other than k = 0, L/2 by sqrt(2).  This makes
+/// the transform sqrt(L) * orthogonal matrix.
+/// Back: the transpose, i.e. divide by sqrt(2) and fftw HC2R.  Forward + back gives
+/// the original multiplied by L.
+
+template <typename cmplx_t>
+inline void hila_fft<cmplx_t>::transform_real() {
+
+    static_assert(std::is_same<cmplx_t, double>::value || std::is_same<cmplx_t, float>::value,
+                  "Only double or float fields in real FFT");
+
+    constexpr bool is_double = std::is_same<cmplx_t, double>::value;
+
+    using my_fftw_plan = typename std::conditional<is_double, fftw_plan, fftwf_plan>::type;
+
+    extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
+
+    const size_t n_fft = lattice->fftdata->hila_fft_my_columns[dir] * elements;
+    const int length = lattice.size(dir);
+
+    const bool forward = (fftdir == fft_direction::forward);
+    const fftw_r2r_kind kind = forward ? FFTW_R2HC : FFTW_HC2R;
+
+    fft_plan_timer.start();
+
+    cmplx_t *fftwbuf;
+    my_fftw_plan fftwplan;
+    if constexpr (is_double) {
+        fftwbuf = (cmplx_t *)fftw_malloc(sizeof(cmplx_t) * length);
+        fftwplan = fftw_plan_r2r_1d(length, fftwbuf, fftwbuf, kind, FFTW_ESTIMATE);
+    } else {
+        fftwbuf = (cmplx_t *)fftwf_malloc(sizeof(cmplx_t) * length);
+        fftwplan = fftwf_plan_r2r_1d(length, fftwbuf, fftwbuf, kind, FFTW_ESTIMATE);
+    }
+
+    fft_plan_timer.stop();
+
+    // modes k = 0 and (for even L) k = L/2 are real, the others pairs (k, L-k)
+    const int k_last = (length % 2 == 0) ? length / 2 - 1 : length / 2;
+    const cmplx_t scale = forward ? M_SQRT2 : M_SQRT1_2;
+
+    for (size_t i = 0; i < n_fft; i++) {
+
+        fft_buffer_timer.start();
+
+        cmplx_t *cp = fftwbuf;
+        for (int j = 0; j < rec_p.size(); j++) {
+            memcpy(cp, rec_p[j] + i * rec_size[j], sizeof(cmplx_t) * rec_size[j]);
+            cp += rec_size[j];
+        }
+
+        if (!forward) {
+            for (int k = 1; k <= k_last; k++) {
+                fftwbuf[k] *= scale;
+                fftwbuf[length - k] *= scale;
+            }
+        }
+
+        fft_buffer_timer.stop();
+
+        fft_execute_timer.start();
+
+        if constexpr (is_double) {
+            fftw_execute(fftwplan);
+        } else {
+            fftwf_execute(fftwplan);
+        }
+
+        fft_execute_timer.stop();
+
+        fft_buffer_timer.start();
+
+        if (forward) {
+            for (int k = 1; k <= k_last; k++) {
+                fftwbuf[k] *= scale;
+                fftwbuf[length - k] *= scale;
+            }
+        }
+
+        cp = fftwbuf;
+        for (int j = 0; j < rec_p.size(); j++) {
+            memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(cmplx_t) * rec_size[j]);
             cp += rec_size[j];
         }
 

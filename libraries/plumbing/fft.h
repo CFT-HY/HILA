@@ -134,6 +134,9 @@ class hila_fft {
     void make_plan();
     // the actual transform is done here.  Custom for fftw and others
     void transform();
+    // fftw: transform() calls one of these, depending on whether cmplx_t is complex or real
+    void transform_complex();
+    void transform_real();
 
     // reflection using special call
     void reflect();
@@ -494,6 +497,125 @@ Field<T> Field<T>::FFT(fft_direction fftdir) const {
     cv.fill(true);
     Field<T> res;
     FFT_field(*this, res, cv, fftdir);
+    return res;
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Real Fourier transform of a real field input, result in result.
+/// input and result can be the same, "in-place".
+///
+/// T must be a real type, with float or double elements (e.g. double, Vector<3,float>);
+/// each element is transformed separately.  The result is a real field of the same type,
+/// and requires half of the communication and memory of the complex FFT.
+///
+/// To each active direction the transform is the 1-dim. real Fourier transform: if
+/// F(k) = sum_x f(x) exp(-2 pi i k x / L) is the complex transform, the result h is
+///     h(0)   = F(0)
+///     h(k)   = sqrt(2) Re F(k)     0 < k < L/2
+///     h(L/2) = F(L/2)              (if L even)
+///     h(L-k) = sqrt(2) Im F(k)     0 < k < L/2
+/// i.e. the transform is sqrt(L) * orthogonal matrix.  In multiple dimensions these are
+/// applied in turn.  Then h is not simply Re or Im of the complex transform F, but
+/// the 2^m sites k' = (+-k_1, +-k_2, ...) carry the same information as F(k'), where m is
+/// the number of directions where k_i != 0, L/2.  Consequently, for real fields f and g,
+///     sum_{k' in K} Re(F*(k') G(k')) = sum_{k' in K} h_f(k') h_g(k')
+///     sum_{k' in K} |F(k')|^2        = sum_{k' in K} h_f(k')^2
+/// for any set K of k-values which depends only on |k_i| (e.g. |k| bins).  Thus power
+/// spectra and correlation functions averaged over k-directions can be computed directly
+/// from h, without weights.  Also, multiplying h(k) by a real function which depends only
+/// on |k_i| (e.g. smoothing, 1/k^2) is equivalent to doing the same to F(k).
+///
+/// fftdir: fft_direction::forward (default) x -> k, fft_direction::back k -> x.
+/// The back transform is the transpose of the forward one, and forward + back yields
+/// the input multiplied by the product of the size of the lattice to active directions,
+/// as with the complex FFT.  Parseval: sum_x f(x)^2 = sum_k h(k)^2 / lattice.volume().
+///
+/// Currently implemented for FFTW (CPU) only.
+///
+/// See also Field<T>::FFT_real()
+/////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+inline void FFT_real_field(const Field<T> &input, Field<T> &result,
+                           const CoordinateVector &directions,
+                           fft_direction fftdir = fft_direction::forward) {
+
+    using real_t = hila::arithmetic_type<T>;
+
+    static_assert(!hila::contains_complex<T>::value,
+                  "FFT_real_field argument fields must be real, use FFT_field for complex");
+    static_assert(std::is_same<real_t, double>::value || std::is_same<real_t, float>::value,
+                  "FFT_real_field: field elements must be double or float");
+#if !defined(USE_FFTW)
+    static_assert(sizeof(T) == 0, "FFT_real_field is not yet implemented for GPUs");
+#endif
+
+    assert(input.is_initialized(ALL) && "ERROR: Uninitialized field in FFT_real_field");
+
+    constexpr size_t elements = sizeof(T) / sizeof(real_t);
+
+    extern hila::timer fft_timer;
+    fft_timer.start();
+
+    hila_fft<real_t> fft(elements, fftdir);
+
+    fft.full_transform(input, result, directions);
+
+    fft_timer.stop();
+}
+
+/// Real Fourier transform to all directions, see FFT_real_field() above
+
+template <typename T>
+inline void FFT_real_field(const Field<T> &input, Field<T> &result,
+                           fft_direction fftdir = fft_direction::forward) {
+
+    CoordinateVector dirs;
+    dirs.fill(true); // set all directions OK
+
+    FFT_real_field(input, result, dirs, fftdir);
+}
+
+/**
+ * @brief Field method for real Fourier transform of a real field
+ * @details
+ * Used as
+ *   res = f.FFT_real(<args>);
+ * where f and res are of type Field<T>, and T is a real type with double or float
+ * elements.  See FFT_real_field() for the definition of the transform.  Power spectra and
+ * correlation functions averaged over k-directions can be computed directly from the result,
+ * e.g. sum of res[X]^2 over sites with |k| in a bin is the same as the sum of
+ * |F(k)|^2, where F is the complex FFT of f.
+ *
+ * parameter dirs: if dirs[dir] == false (or 0), transform is not done to coordinate
+ * direction dir. By default calling without arguments will execute FFT in all directions.
+ *
+ * parameter fftdir: fft_direction::forward (default) x -> k, fft_direction::back k -> x
+ *
+ * NOTE: the transform is unnormalized, forward + back transform yields
+ * the original Field multiplied by the product of the size of the lattice to active directions.
+ *
+ * @code{.cpp}
+ * Field<double> f;
+ * ...
+ * auto h = f.FFT_real();                       // forward transform
+ * auto f2 = h.FFT_real(fft_direction::back);   // f2 == f * lattice.volume()
+ * @endcode
+ */
+template <typename T>
+Field<T> Field<T>::FFT_real(const CoordinateVector &dirs, fft_direction fftdir) const {
+    Field<T> res;
+    FFT_real_field(*this, res, dirs, fftdir);
+    return res;
+}
+
+template <typename T>
+Field<T> Field<T>::FFT_real(fft_direction fftdir) const {
+    CoordinateVector cv;
+    cv.fill(true);
+    Field<T> res;
+    FFT_real_field(*this, res, cv, fftdir);
     return res;
 }
 
