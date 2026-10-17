@@ -31,7 +31,11 @@ using gpufftType = cufftType;
 #define gpufftMakePlan1d cufftMakePlan1d
 #define gpufftGetSize1d cufftGetSize1d
 #define gpufftEstimate1d cufftEstimate1d
+#define gpufftPlanMany cufftPlanMany
+#define gpufftMakePlanMany cufftMakePlanMany
+#define gpufftEstimateMany cufftEstimateMany
 
+#define GPUFFT_SUCCESS CUFFT_SUCCESS
 #define GPUFFT_FORWARD CUFFT_FORWARD
 #define GPUFFT_INVERSE CUFFT_INVERSE
 
@@ -52,6 +56,7 @@ using gpufftDoubleComplex = hipfftDoubleComplex;
 using gpufftReal = hipfftReal;
 using gpufftDoubleReal = hipfftDoubleReal;
 using gpufftHandle = hipfftHandle;
+using gpufftResult = hipfftResult;
 using gpufftType = hipfftType;
 #define gpufftExecC2C hipfftExecC2C
 #define gpufftExecZ2Z hipfftExecZ2Z
@@ -68,7 +73,11 @@ using gpufftType = hipfftType;
 #define gpufftMakePlan1d hipfftMakePlan1d
 #define gpufftGetSize1d hipfftGetSize1d
 #define gpufftEstimate1d hipfftEstimate1d
+#define gpufftPlanMany hipfftPlanMany
+#define gpufftMakePlanMany hipfftMakePlanMany
+#define gpufftEstimateMany hipfftEstimateMany
 
+#define GPUFFT_SUCCESS HIPFFT_SUCCESS
 #define GPUFFT_FORWARD HIPFFT_FORWARD
 #define GPUFFT_INVERSE HIPFFT_BACKWARD
 
@@ -82,7 +91,15 @@ using gpufftType = hipfftType;
 #endif
 
 
-/// Gather one element column from the mpi buffer
+/// Check the return value of gpufft calls (not seen by check_device_error)
+inline void hila_gpufft_check(gpufftResult res, const char *msg) {
+    if (res != GPUFFT_SUCCESS) {
+        hila::out << "GPU FFT error " << (int)res << ": " << msg << '\n';
+        hila::terminate(1);
+    }
+}
+
+/// Gather one element column from the mpi buffer.  Columns start at data + colsize * column
 template <typename cmplx_t>
 __global__ void hila_fft_gather_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT *d_ptr,
                                        int *RESTRICT d_size, int n, int colsize, int columns) {
@@ -115,6 +132,30 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRIC
         }
     }
 }
+
+/// Column stride of real data in the real fft work buffer: even, so that the data of each
+/// batch starts at an address aligned to the complex type (required by cuFFT/hipFFT R2C/C2R)
+inline int hila_real_fft_stride(int L) {
+    return L + (L % 2);
+}
+
+inline bool hila_gpufft_is_real(gpufftType type) {
+    return type == GPUFFT_R2C || type == GPUFFT_D2Z || type == GPUFFT_C2R || type == GPUFFT_Z2D;
+}
+
+/// Data layout of real transforms: real columns of stride hila_real_fft_stride(L),
+/// complex half-spectra of length L/2+1
+struct hila_gpufft_real_layout {
+    int n, idist, odist, inembed, onembed;
+    hila_gpufft_real_layout(int L, gpufftType type) {
+        n = L;
+        const int rdist = hila_real_fft_stride(L);
+        const int cdist = L / 2 + 1;
+        const bool to_complex = (type == GPUFFT_R2C || type == GPUFFT_D2Z);
+        idist = inembed = to_complex ? rdist : cdist;
+        odist = onembed = to_complex ? cdist : rdist;
+    }
+};
 
 // Define datatype for saved plans
 
@@ -200,7 +241,13 @@ class hila_saved_fftplan_t {
         gpufftSetAutoAllocation(pp->plan, 0);
         // and get the required scratch size
         size_t worksize;
-        gpufftEstimate1d(size, type, batch, &worksize);
+        if (hila_gpufft_is_real(type)) {
+            hila_gpufft_real_layout lo(size, type);
+            gpufftEstimateMany(1, &lo.n, &lo.inembed, 1, lo.idist, &lo.onembed, 1, lo.odist, type,
+                               batch, &worksize);
+        } else {
+            gpufftEstimate1d(size, type, batch, &worksize);
+        }
         // gpufftGetSize1d(pp->plan, size, type, batch, &worksize);
         check_device_error("FFT Plan size");
 
@@ -227,13 +274,27 @@ class hila_saved_fftplan_t {
         }
 
         auto siz = work_area_size;
-        gpufftMakePlan1d(pp->plan, size, type, batch, &siz);
+        if (hila_gpufft_is_real(type)) {
+            hila_gpufft_real_layout lo(size, type);
+            gpufftMakePlanMany(pp->plan, 1, &lo.n, &lo.inembed, 1, lo.idist, &lo.onembed, 1,
+                               lo.odist, type, batch, &siz);
+        } else {
+            gpufftMakePlan1d(pp->plan, size, type, batch, &siz);
+        }
         check_device_error("FFT Plan make1d");
         assert(work_area_size >= siz && "GPU work area mismatch");
 
 #else
 
-        gpufftPlan1d(&(pp->plan), size, type, batch);
+        if (hila_gpufft_is_real(type)) {
+            // real transforms: padded real column stride, see hila_real_fft_stride()
+            hila_gpufft_real_layout lo(size, type);
+            hila_gpufft_check(gpufftPlanMany(&(pp->plan), 1, &lo.n, &lo.inembed, 1, lo.idist,
+                                             &lo.onembed, 1, lo.odist, type, batch),
+                              "FFT plan");
+        } else {
+            hila_gpufft_check(gpufftPlan1d(&(pp->plan), size, type, batch), "FFT plan");
+        }
         check_device_error("FFT plan");
 
 #endif
@@ -388,10 +449,10 @@ void hila_fft<cmplx_t>::transform_complex() {
 /// (the last if L even), i.e. as fftw R2HC with the sqrt(2) normalization.
 /// Back: unpack to c_k and C2R (Z2D).
 
-/// pack R2C output c (columns of length L/2+1) to h (columns of length L)
+/// pack R2C output c (columns of length L/2+1) to h (columns of length L, stride Ls)
 template <typename real_t>
 __global__ void hila_fft_pack_real(real_t *RESTRICT h, const Complex<real_t> *RESTRICT c,
-                                   const int L, const size_t columns) {
+                                   const int L, const int Ls, const size_t columns) {
 
     const int Lc = L / 2 + 1;
     size_t ind = threadIdx.x + (size_t)blockIdx.x * blockDim.x;
@@ -399,7 +460,7 @@ __global__ void hila_fft_pack_real(real_t *RESTRICT h, const Complex<real_t> *RE
         size_t col = ind / Lc;
         int k = ind % Lc;
         Complex<real_t> v = c[ind];
-        real_t *hc = h + col * L;
+        real_t *hc = h + col * Ls;
         if (k == 0 || 2 * k == L) {
             hc[k] = v.re;
         } else {
@@ -412,14 +473,14 @@ __global__ void hila_fft_pack_real(real_t *RESTRICT h, const Complex<real_t> *RE
 /// inverse of the above: unpack h to c for C2R
 template <typename real_t>
 __global__ void hila_fft_unpack_real(const real_t *RESTRICT h, Complex<real_t> *RESTRICT c,
-                                     const int L, const size_t columns) {
+                                     const int L, const int Ls, const size_t columns) {
 
     const int Lc = L / 2 + 1;
     size_t ind = threadIdx.x + (size_t)blockIdx.x * blockDim.x;
     if (ind < columns * Lc) {
         size_t col = ind / Lc;
         int k = ind % Lc;
-        const real_t *hc = h + col * L;
+        const real_t *hc = h + col * Ls;
         Complex<real_t> v;
         if (k == 0 || 2 * k == L) {
             v.re = hc[k];
@@ -440,9 +501,11 @@ inline void hila_gpufft_execute_r2c(gpufftHandle plan, real_t *in, Complex<real_
     gpufftSetStream(plan, hila::compute_stream());
 #endif
     if constexpr (std::is_same<real_t, float>::value)
-        gpufftExecR2C(plan, (gpufftReal *)in, (gpufftComplex *)out);
+        hila_gpufft_check(gpufftExecR2C(plan, (gpufftReal *)in, (gpufftComplex *)out),
+                          "FFT execute R2C");
     else
-        gpufftExecD2Z(plan, (gpufftDoubleReal *)in, (gpufftDoubleComplex *)out);
+        hila_gpufft_check(gpufftExecD2Z(plan, (gpufftDoubleReal *)in, (gpufftDoubleComplex *)out),
+                          "FFT execute D2Z");
 }
 
 template <typename real_t>
@@ -451,9 +514,11 @@ inline void hila_gpufft_execute_c2r(gpufftHandle plan, Complex<real_t> *in, real
     gpufftSetStream(plan, hila::compute_stream());
 #endif
     if constexpr (std::is_same<real_t, float>::value)
-        gpufftExecC2R(plan, (gpufftComplex *)in, (gpufftReal *)out);
+        hila_gpufft_check(gpufftExecC2R(plan, (gpufftComplex *)in, (gpufftReal *)out),
+                          "FFT execute C2R");
     else
-        gpufftExecZ2D(plan, (gpufftDoubleComplex *)in, (gpufftDoubleReal *)out);
+        hila_gpufft_check(gpufftExecZ2D(plan, (gpufftDoubleComplex *)in, (gpufftDoubleReal *)out),
+                          "FFT execute Z2D");
 }
 
 template <typename cmplx_t>
@@ -472,6 +537,7 @@ void hila_fft<cmplx_t>::transform_real() {
     const hila::fftdata_struct &fft = *(lattice->fftdata);
 
     const int L = lattice.size(dir);
+    const int Ls = hila_real_fft_stride(L); // real column stride, see above
     const int Lc = L / 2 + 1;
     const bool forward = (fftdir == fft_direction::forward);
 
@@ -502,8 +568,8 @@ void hila_fft<cmplx_t>::transform_real() {
 
     gpufftHandle plan = hila_saved_fftplan.get_plan(L, batch, type);
 
-    // work arrays: real columns of length L and complex half-spectra of length L/2+1
-    real_t *fft_wrk = (real_t *)d_malloc((size_t)n_columns * L * sizeof(real_t));
+    // work arrays: real columns of length L (stride Ls) and complex half-spectra of length L/2+1
+    real_t *fft_wrk = (real_t *)d_malloc((size_t)n_columns * Ls * sizeof(real_t));
     Complex<real_t> *c_wrk =
         (Complex<real_t> *)d_malloc((size_t)n_columns * Lc * sizeof(Complex<real_t>));
 
@@ -520,19 +586,19 @@ void hila_fft<cmplx_t>::transform_real() {
 
 #if defined(CUDA)
     hila_fft_gather_column<real_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
-        fft_wrk, d_ptr, d_size, rec_p.size(), L, n_columns);
+        fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<real_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(), L, n_columns);
+                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #endif
 
     if (!forward) {
 #if defined(CUDA)
         hila_fft_unpack_real<real_t><<<N_blocks_c, N_threads, 0, hila::compute_stream()>>>(
-            fft_wrk, c_wrk, L, n_columns);
+            fft_wrk, c_wrk, L, Ls, n_columns);
 #else
         hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_unpack_real<real_t>), dim3(N_blocks_c),
-                           dim3(N_threads), 0, 0, fft_wrk, c_wrk, L, (size_t)n_columns);
+                           dim3(N_threads), 0, 0, fft_wrk, c_wrk, L, Ls, (size_t)n_columns);
 #endif
     }
 
@@ -541,7 +607,7 @@ void hila_fft<cmplx_t>::transform_real() {
     fft_execute_timer.start();
 
     for (int i = 0; i < n_fft; i++) {
-        real_t *rp = fft_wrk + (size_t)i * batch * L;
+        real_t *rp = fft_wrk + (size_t)i * batch * Ls;
         Complex<real_t> *cp = c_wrk + (size_t)i * batch * Lc;
 
         if (forward)
@@ -558,19 +624,19 @@ void hila_fft<cmplx_t>::transform_real() {
     if (forward) {
 #if defined(CUDA)
         hila_fft_pack_real<real_t><<<N_blocks_c, N_threads, 0, hila::compute_stream()>>>(
-            fft_wrk, c_wrk, L, n_columns);
+            fft_wrk, c_wrk, L, Ls, n_columns);
 #else
         hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_pack_real<real_t>), dim3(N_blocks_c),
-                           dim3(N_threads), 0, 0, fft_wrk, c_wrk, L, (size_t)n_columns);
+                           dim3(N_threads), 0, 0, fft_wrk, c_wrk, L, Ls, (size_t)n_columns);
 #endif
     }
 
 #if defined(CUDA)
     hila_fft_scatter_column<real_t><<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
-        fft_wrk, d_ptr, d_size, rec_p.size(), L, n_columns);
+        fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<real_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(), L, n_columns);
+                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #endif
 
     fft_buffer_timer.stop();

@@ -727,12 +727,12 @@ void test_fft_real() {
     }
     double rnorm = r.squarenorm();
 
-    {
-        // transform to e_x only, compare elementwise with the complex transform:
-        // h(k) = sqrt(2) Re F(k) for 0 < k < L/2,  h(L-k) = sqrt(2) Im F(k) = -sqrt(2) Im F(L-k)
+    // transform to one direction at a time, compare elementwise with the complex transform:
+    // h(k) = sqrt(2) Re F(k) for 0 < k < L/2,  h(L-k) = sqrt(2) Im F(k) = -sqrt(2) Im F(L-k)
+    foralldir (d) {
         CoordinateVector dirs;
         dirs.fill(false);
-        dirs[e_x] = true;
+        dirs[d] = true;
 
         Field<Complex<double>> F;
         onsites (ALL)
@@ -740,10 +740,10 @@ void test_fft_real() {
         F = F.FFT(dirs);
 
         Field<double> h = r.FFT_real(dirs);
-        int L = lattice.size(e_x);
+        int L = lattice.size(d);
         double eps = 0;
         onsites (ALL) {
-            int k = X.coordinate(e_x);
+            int k = X.coordinate(d);
             double expect;
             if (k == 0 || 2 * k == L)
                 expect = F[X].real();
@@ -753,11 +753,25 @@ void test_fft_real() {
                 expect = -M_SQRT2 * F[X].imag();
             eps += squarenorm(h[X] - expect);
         }
-        report_pass("FFT_real to x-direction vs. complex FFT", eps / rnorm, 1e-26 * L);
+        report_pass("FFT_real to direction " + hila::prettyprint(d) + " vs. complex FFT",
+                    eps / rnorm, 1e-26 * L);
     }
 
     Field<double> hr = r.FFT_real();
     Field<double> hg = g.FFT_real();
+
+    {
+        // all directions at once vs. one direction at a time
+        Field<double> hs = r;
+        foralldir (d) {
+            CoordinateVector dirs;
+            dirs.fill(false);
+            dirs[d] = true;
+            hs = hs.FFT_real(dirs);
+        }
+        report_pass("FFT_real all directions vs. one at a time",
+                    squarenorm_relative(hr, hs) / hr.squarenorm(), 1e-26);
+    }
 
     // Parseval
     report_pass("FFT_real Parseval", fabs(hr.squarenorm() / lattice.volume() - rnorm) / rnorm,
