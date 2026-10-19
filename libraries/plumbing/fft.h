@@ -319,8 +319,9 @@ class hila_fft {
         result.will_change();
 
         foralldir (dir) {
-            if (directions[dir]) {
+            if (directions[dir] && lattice.size(dir) > 1) {
 
+                // no sense in doing anything if extent=1
                 setup_direction(dir);
 
                 if (first_dir) {
