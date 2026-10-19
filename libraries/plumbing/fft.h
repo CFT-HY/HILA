@@ -352,6 +352,13 @@ class hila_fft {
             }
         }
 
+        if (first_dir) {
+            // no active directions with extent > 1: transform is identity
+            if (&result != &input)
+                result = input;
+            return;
+        }
+
         save_result(result);
 
         result.mark_changed(ALL);
