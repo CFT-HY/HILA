@@ -130,7 +130,7 @@ void lattice_struct::setup_layout() {
 
         // now check that the div makes sens
         bool fail = false;
-        foralldir(dir) if (nodesiz[dir] < 2) fail = true; // don't allow nodes of size 1
+        foralldir(dir) if (nodesiz[dir] < 1) fail = true; // don't allow nodes of size 1
         if (fail && !secondtime) {
             secondtime = true;
             ghosts[mdir] =
