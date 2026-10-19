@@ -17,6 +17,8 @@ struct sd_k_bin_parameters {
     
     int exact;       // do this many low k-value "bins" exactly NOT IMPLEMENTED YET
     bool bins_set;   // bool to keep track if number of bins have been set
+
+    Vector<NDIM, double> k_scale; // k_i multiplied by this: 1/blocking factor of lattice
 };
 
 
@@ -24,9 +26,16 @@ struct sd_k_bin_parameters {
 /// TODO: this should be insider k_binning class but hilapp is not yet able to handle
 /// it!
 
+inline double sd_k_norm(const CoordinateVector &cv, const sd_k_bin_parameters &p) {
+    Vector<NDIM, double> k = cv.convert_to_k();
+    foralldir (d)
+        k[d] *= p.k_scale[d];
+    return k.norm();
+}
+
 inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p) {
 
-    double kr = cv.convert_to_k().norm();
+    double kr = sd_k_norm(cv, p);
 
     kr = kr / p.max;
     int b = pow(kr, p.power) * p.bins;
@@ -40,6 +49,13 @@ namespace hila {
 /// from real space).  Vector k is normalized so that -pi < k_i <= pi, i.e.
 //  k_i = 2*pi*x_i/L_i, where L_i = lattice.size(i) and x_i is the L_i/2 modded
 /// coordinate.
+/// On a blocked lattice (lattice.block()) k is given in units of the base lattice:
+///   k_i = 2*pi*x_i/(b_i*L_i), where b_i = (base lattice size)/L_i is the blocking factor.
+/// Thus the binning of a blocked field matches the binning of the unblocked one, also
+/// for anisotropic blocking.  For a smooth field FFT of the unblocked field
+/// ~ (b_0*b_1*...) * FFT of blocked field; spectraldensity() and cross_spectrum() multiply
+/// the result by (b_0*b_1*...)^2 so that the normalization matches the unblocked one.
+/// The bin_k_field*() -functions bin the given k-space field as is, without rescaling.
 /// Bin is determined by formula
 ///   b = (int) ( (k/k_max)^p * n_bins ), where p is the power in binning - usually 1
 ///
@@ -78,19 +94,54 @@ class k_binning {
     sd_k_bin_parameters par;
     std::vector<double> k_avg;
     std::vector<size_t> bin_count;
+    const lattice_struct *bin_info_lattice = nullptr; // lattice where k_avg was computed
+
+    /// blocking factor of the current lattice relative to the base lattice
+    static CoordinateVector blocking_factor() {
+        CoordinateVector b;
+        foralldir (d)
+            b[d] = hila::defined_lattices.front()->l_size[d] / lattice.size(d);
+        return b;
+    }
+
+    /// rescale FFT-based spectra on blocked lattice by (blocking volume)^2
+    static std::vector<double> scale_to_base(std::vector<double> v) {
+        auto bf = blocking_factor();
+        double bvol = 1;
+        foralldir (d)
+            bvol *= bf[d];
+        if (bvol != 1) {
+            for (auto &e : v)
+                e *= bvol * bvol;
+        }
+        return v;
+    }
+
+    /// (re)compute bin info if lattice or binning parameters have changed
+    void check_bin_info() {
+        if (bin_info_lattice != lattice.ptr() || k_avg.size() != par.bins)
+            sd_calculate_bin_info();
+    }
 
   public:
+    /// Default: binwidth 2*pi/L, where L is the largest base lattice dimension, and
+    /// k_max = pi/(minimum blocking factor), i.e. pi on unblocked lattice.
     k_binning() {
-        par.max = M_PI;
         par.power = 1;
         par.exact = 0;
         par.bins = 1;
         par.bins_set = false;
-        foralldir(d) {
-            if (lattice.size(d) > 2 * par.bins)
-                par.bins = lattice.size(d) / 2;
+        auto bf = blocking_factor();
+        int bmin = bf[0];
+        foralldir (d) {
+            int L = lattice.size(d) * bf[d];
+            if (L > 2 * par.bins)
+                par.bins = L / 2;
+            bmin = std::min(bmin, bf[d]);
         }
-        par.binwidth = par.max / par.bins;
+        par.binwidth = M_PI / par.bins;
+        par.bins = (par.bins + bmin - 1) / bmin;
+        par.max = par.binwidth * par.bins;
     }
 
     k_binning(int b) {
@@ -108,6 +159,7 @@ class k_binning {
         par.bins = n;
         par.bins_set = true;
         par.binwidth = par.max / par.bins;
+        k_avg.clear();
         return *this;
     }
 
@@ -123,6 +175,7 @@ class k_binning {
             par.bins = ceil(par.max / par.binwidth);
             par.max = par.binwidth * par.bins;
         }
+        k_avg.clear();
         return *this;
     }
 
@@ -136,6 +189,7 @@ class k_binning {
         par.bins = ceil(par.max / w);
         par.max = par.binwidth * par.bins;
         par.bins_set = false;
+        k_avg.clear();
         return *this;
     }
 
@@ -147,6 +201,7 @@ class k_binning {
     k_binning &power(double p) {
         assert(p > 0);
         par.power = p;
+        k_avg.clear();
         return *this;
     }
 
@@ -172,8 +227,7 @@ class k_binning {
 
         binning_timer.start();
 
-        if (k_avg.size() != par.bins)
-            sd_calculate_bin_info();
+        check_bin_info();
 
         ReductionVector<T> s(par.bins);
         s.allreduce(false);
@@ -202,8 +256,7 @@ class k_binning {
 
         binning_timer.start();
 
-        if (k_avg.size() != par.bins)
-            sd_calculate_bin_info();
+        check_bin_info();
 
         ReductionVector<double> s(par.bins);
         s.allreduce(false);
@@ -238,7 +291,7 @@ class k_binning {
         Field<T> ftrans;
         FFT_field(f, ftrans);
 
-        return bin_k_field_squarenorm(ftrans);
+        return scale_to_base(bin_k_field_squarenorm(ftrans));
     }
 
     //////////////////////////////////////////////////////////////////////////////////
@@ -250,7 +303,7 @@ class k_binning {
         Field<T> ftrans;
         FFT_real_field(f, ftrans);
 
-        return bin_k_field_squarenorm(ftrans);
+        return scale_to_base(bin_k_field_squarenorm(ftrans));
     }
 
 
@@ -266,8 +319,7 @@ class k_binning {
 
         binning_timer.start();
 
-        if (k_avg.size() != par.bins)
-            sd_calculate_bin_info();
+        check_bin_info();
 
         ReductionVector<double> s(par.bins);
         s.allreduce(false);
@@ -293,7 +345,7 @@ class k_binning {
     //////////////////////////////////////////////////////////////////////////////////
     /// Cross spectrum of fields f and g:  sum over k in a bin of sum_i Re(F_i^*(k) G_i(k)),
     /// where F, G are the Fourier transforms and i runs over the elements of the field
-    /// type.  Normalized as spectraldensity(), and cross_spectrum(f,f) == spectraldensity(f).
+    /// type.  Normalized as spectraldensity() (also on blocked lattice), and cross_spectrum(f,f) == spectraldensity(f).
     /// Real fields use the real Fourier transform (see FFT_real_field()), which gives the
     /// same binned result as the complex FFT.
 
@@ -309,14 +361,20 @@ class k_binning {
             FFT_real_field(g, gt);
         }
 
-        return bin_k_field_dot(ft, gt);
+        return scale_to_base(bin_k_field_dot(ft, gt));
     }
 
 
     /// Data structure to hold the binning info - two vectors,
-    /// holding average k value in a bin and count of lattice points
+    /// holding average k value in a bin and count of lattice points.
+    /// Sets also the k scaling for the current (possibly blocked) lattice.
 
     void sd_calculate_bin_info() {
+
+        auto bf = blocking_factor();
+        foralldir (d)
+            par.k_scale[d] = 1.0 / bf[d];
+        bin_info_lattice = lattice.ptr();
 
         k_avg.resize(par.bins);
         bin_count.resize(par.bins);
@@ -328,7 +386,7 @@ class k_binning {
 
         onsites(ALL) {
 
-            double kr = X.coordinates().convert_to_k().norm();
+            double kr = sd_k_norm(X.coordinates(), par);
             int b = sd_get_k_bin(X.coordinates(), par);
 
             if (b >= 0 && b < par.bins) {
@@ -347,9 +405,7 @@ class k_binning {
 
     double k(int i) {
 
-        if (k_avg.size() == 0) {
-            sd_calculate_bin_info();
-        }
+        check_bin_info();
 
         if (i >= 0 && i < par.bins)
             return k_avg[i];
@@ -361,9 +417,7 @@ class k_binning {
 
     long count(int i) {
 
-        if (bin_count.size() == 0) {
-            sd_calculate_bin_info();
-        }
+        check_bin_info();
 
         if (i >= 0 && i < par.bins)
             return bin_count[i];

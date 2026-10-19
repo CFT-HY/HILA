@@ -1178,6 +1178,13 @@ void test_extended() {
 
 void test_clusters() {
 
+    foralldir (d) {
+        if (lattice.size(d) == 1) {
+            hila::out0 << " ...  Skipping cluster test because lattice extent is 1\n";
+            return;
+        }
+    }
+
     {
 #if NDIM > 2 && !defined(VECTORIZED)
 
@@ -1278,6 +1285,64 @@ void test_clusters() {
 #endif
     }
 }
+//--------------------------------------------------------------------------------
+
+/**
+ * @brief Test k_binning on an anisotropically blocked lattice
+ * @details Field cos(2 pi n x_d / L_d) g(x_perp), blocked by 2 to direction d, has the same
+ * Fourier modes as the unblocked one.  Binned spectra must agree if k is scaled to base
+ * lattice units and the spectrum by (blocking volume)^2.
+ */
+void test_spectraldensity_blocking() {
+
+    Direction db = NDIRECTIONS;
+    foralldir (d) {
+        if (db == NDIRECTIONS && lattice.size(d) % 2 == 0 && lattice.size(d) >= 8)
+            db = d;
+    }
+    if (db == NDIRECTIONS || !lattice.is_base())
+        return;
+
+    CoordinateVector blocking;
+    blocking.fill(1);
+    blocking[db] = 2;
+
+    hila::print_dashed_line();
+    hila::out0 << "Testing spectraldensity on lattice blocked by " << blocking << '\n';
+
+    const int n = 3;
+    const int L = lattice.size(db);
+    Field<double> f, fb;
+    onsites (ALL) {
+        double g = 1;
+        foralldir (d) {
+            if (d != db) {
+                int x = X.coordinate(d);
+                g *= 1.0 + sin(0.7 * x * x + 1.3 * (d + 1) * x);
+            }
+        }
+        f[X] = cos(2 * M_PI * n * X.coordinate(db) / L) * g;
+    }
+
+    hila::k_binning b;
+    auto sd = b.spectraldensity(f);
+
+    lattice.block(blocking);
+    fb.block_from(f);
+    auto sdb = b.spectraldensity(fb);
+    auto csb = b.cross_spectrum(fb, fb);
+    lattice.unblock();
+
+    double diff = 0, cdiff = 0, norm = 0;
+    for (int i = 0; i < sd.size(); i++) {
+        diff += fabs(sd[i] - sdb[i]);
+        cdiff += fabs(sd[i] - csb[i]);
+        norm += fabs(sd[i]);
+    }
+    report_pass("Spectral density, anisotropic blocking", hila::broadcast(diff / norm), 1e-10);
+    report_pass("Cross spectrum, anisotropic blocking", hila::broadcast(cdiff / norm), 1e-10);
+}
+
 //--------------------------------------------------------------------------------
 
 void test_blocking() {
@@ -1388,6 +1453,7 @@ int main(int argc, char **argv) {
     test_extended();
     test_clusters();
     test_blocking();
+    test_spectraldensity_blocking();
 
     hila::finishrun();
 }
