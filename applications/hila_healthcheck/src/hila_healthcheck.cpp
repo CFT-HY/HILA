@@ -93,6 +93,40 @@ void test_globals() {
     report_pass("hila::global in namespaces", f.sum() / lattice.volume() - 1123, 1e-12);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
+// Field of a hila type (template class with base_type and argument_type) declared in a
+// namespace: hilapp generates specializations of Field methods for it, which must be
+// placed outside the namespace
+
+namespace hc_types {
+template <typename T>
+struct pt {
+    using base_type = hila::arithmetic_type<T>;
+    using argument_type = T;
+    T x;
+};
+
+// Field<pt<double>> used inside the namespace, after the type
+inline double neighbour_product_sum() {
+    Field<pt<double>> p;
+    onsites (ALL) p[X].x = X.x();
+    double s = 0;
+    onsites (ALL) s += p[X + e_x].x * p[X].x;
+    return s;
+}
+} // namespace hc_types
+
+void test_namespace_field_type() {
+    // sum over x of x * ((x+1) mod L), times the number of x-rows
+    int L = lattice.size(e_x);
+    double expect = 0;
+    for (int x = 0; x < L; x++)
+        expect += x * ((x + 1) % L);
+    expect *= lattice.volume() / L;
+    report_pass("Field of a hila type in a namespace",
+                (hc_types::neighbour_product_sum() - expect) / expect, 1e-12);
+}
+
 /**
  * @brief Test various functions on fields.
  * @details Test functions exp (on both real and complex field) and sin.
@@ -1490,6 +1524,7 @@ int main(int argc, char **argv) {
 
     test_reductions();
     test_globals();
+    test_namespace_field_type();
     test_functions();
     test_site_access();
     test_minmax();

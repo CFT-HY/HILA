@@ -1,6 +1,7 @@
 #include "stringops.h"
 #include "hilapp.h"
 #include "toplevelvisitor.h"
+#include "clang/AST/QualTypeNames.h"
 
 #include <sstream>
 #include <iostream>
@@ -2721,7 +2722,13 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
             funcBuf.insert(0, " auto ", true, true);
         } else {
             // Normal case, just add the declared return type.
-            funcBuf.insert(0, f->getDeclaredReturnType().getAsString(PP) + " ", true, true);
+            // fully qualified: the specialization may be outside the namespace where the
+            // type names are visible
+            funcBuf.insert(0,
+                           TypeName::getFullyQualifiedName(f->getDeclaredReturnType(), *Context,
+                                                           PP) +
+                               " ",
+                           true, true);
         }
     }
 
@@ -2742,9 +2749,16 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // Insertion point for the specialization:  it seems that the template
     // specialization "source" is the 1st declaration.  We want to go after
 
-    SourceLocation insertion_point = spec_insertion_point(typeargs, global.location.bot, f);
+    // pre and post close and reopen namespaces, if the insertion point is within a namespace
+    std::string spec_pre, spec_post;
+    SourceLocation insertion_point =
+        spec_insertion_point(spec_pre, spec_post, typeargs, global.location.bot, f);
 
     SourceRange decl_sr = get_func_decl_range(f);
+
+    // inserted before the kernels generated below - inserts at the same location are appended
+    if (!spec_pre.empty())
+        get_file_srcBuf(insertion_point)->insert(insertion_point, spec_pre, false, false);
 
     // Now we should write the spec here
 
@@ -2760,7 +2774,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // insert after the current toplevedecl
     std::stringstream sb;
     sb << "\n\n// ++++++++ hilapp generated function/method specialization\n"
-       << funcBuf.dump() << "\n// ++++++++\n\n";
+       << funcBuf.dump() << "\n// ++++++++\n\n" << spec_post;
 
     // buffer is not necessarily in toplevelBuf, so:
 
@@ -3018,9 +3032,32 @@ bool TopLevelVisitor::VisitType(Type *T) {
 ///
 /////////////////////////////////////////////////////////////////////////////////
 
+/// Namespaces enclosing declaration D, outermost first
+static std::vector<const NamespaceDecl *> enclosing_namespaces(const Decl *D) {
+    std::vector<const NamespaceDecl *> ns;
+    for (const DeclContext *DC = D->getDeclContext(); DC != nullptr; DC = DC->getParent()) {
+        if (auto *NSD = dyn_cast<NamespaceDecl>(DC))
+            ns.insert(ns.begin(), NSD);
+    }
+    return ns;
+}
+
+static std::string open_namespace(const NamespaceDecl *NSD) {
+    std::string s = NSD->isInline() ? "inline namespace " : "namespace ";
+    if (!NSD->isAnonymousNamespace())
+        s += NSD->getNameAsString() + " ";
+    return s + "{\n";
+}
+
 SourceLocation
-TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typeargs,
+TopLevelVisitor::spec_insertion_point(std::string &pre, std::string &post,
+                                      std::vector<const TemplateArgument *> &typeargs,
                                       SourceLocation ip, FunctionDecl *f) {
+
+    pre.clear();
+    post.clear();
+    // the record which determines the insertion point, if it is moved after it
+    const RecordDecl *moved_after = nullptr;
 
     if (f->hasBody() &&
         srcMgr.isBeforeInTranslationUnit(ip, f->getBody()->getSourceRange().getEnd())) {
@@ -3116,21 +3153,48 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
         if (tp && !tp->isBuiltinType()) {
             RecordDecl *rd = tp->getAsRecordDecl();
             if (rd && srcMgr.isBeforeInTranslationUnit(ip, rd->getSourceRange().getBegin())) {
-                reportDiag(DiagnosticsEngine::Level::Warning, f->getSourceRange().getBegin(),
-                           "hilapp internal error: specialization insertion point for "
-                           "function \'%0\'"
-                           " appears to be before the declaration of type \'%1\', code "
-                           "might not compile",
-                           f->getQualifiedNameAsString().c_str(),
-                           tap->getAsType().getAsString().c_str());
-
-                // try to move the insertion point - fails, TODO: more carefully!
+                // The type is declared after the candidate insertion point: move it after
+                // the type, or after the outermost class containing the type
+                while (auto *outer = dyn_cast<RecordDecl>(rd->getDeclContext()))
+                    rd = outer;
+                // insert right after the ; of the declaration
                 ip = getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
+                moved_after = rd;
             }
         }
     }
-    // skip to end of line -- is fine here
-    ip = findChar(ip, '\n');
+    // skip to end of line -- is fine here.  If moved after a type, the next line may be
+    // another declaration (or end of namespace), insert right after the type instead
+    if (moved_after == nullptr)
+        ip = findChar(ip, '\n');
+
+    if (moved_after != nullptr) {
+        // The specialization must be in the namespace of the function (template), but the
+        // insertion point is in the namespace of the type.  Close the namespaces of the type
+        // down to the common ones, open those of the function, and reverse after the
+        // specialization.
+        auto ns_ip = enclosing_namespaces(moved_after);
+        auto ns_f = enclosing_namespaces(f->getCanonicalDecl());
+        size_t common = 0;
+        while (common < ns_ip.size() && common < ns_f.size() &&
+               ns_ip[common]->getCanonicalDecl() == ns_f[common]->getCanonicalDecl())
+            common++;
+
+        if (ns_ip.size() > common) {
+            pre = "\n// hilapp: close namespaces for the specialization below\n";
+            for (size_t i = common; i < ns_ip.size(); i++)
+                pre += "}\n";
+            for (size_t i = common; i < ns_f.size(); i++)
+                pre += open_namespace(ns_f[i]);
+
+            for (size_t i = common; i < ns_f.size(); i++)
+                post += "}\n";
+            post += "// hilapp: reopen namespaces\n";
+            for (size_t i = common; i < ns_ip.size(); i++)
+                post += open_namespace(ns_ip[i]);
+        }
+    }
+
     return ip;
 }
 

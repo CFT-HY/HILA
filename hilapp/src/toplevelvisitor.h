@@ -114,7 +114,8 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
                             std::vector<std::string> &par, std::vector<std::string> &arg,
                             std::vector<const TemplateArgument *> &typeargs, std::string *al);
 
-    SourceLocation spec_insertion_point(std::vector<const TemplateArgument *> &typeargs,
+    SourceLocation spec_insertion_point(std::string &pre, std::string &post,
+                                        std::vector<const TemplateArgument *> &typeargs,
                                         SourceLocation ip, FunctionDecl *f);
 
     // bool VisitCXXRecordDecl( CXXRecordDecl * D);
