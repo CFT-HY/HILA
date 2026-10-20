@@ -307,41 +307,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
 
 
-    // Figure out the RNG operation status
-    // For RNG loops we optionally create loop with lower number of active threads
-    // enabling the use of smaller rng generator footprint
-
-    static bool rng_threads_checked = false;
-    static int rng_thread_block_number = 0;
-    extern bool use_philox_rng; // this is true if philox is in use
-
+    // thread blocks may be restricted below by GPU_VECTOR_REDUCTION_THREAD_BLOCKS
     bool use_thread_blocks = false;
     int thread_block_number = 0;
-
-    if (loop_info.contains_random && !use_philox_rng) {
-
-        if (!rng_threads_checked) {
-            // now check if the rng thread number is present
-            rng_threads_checked = true;
-            std::string rng_str;
-
-            if (is_macro_defined("GPU_RNG_THREAD_BLOCKS", &rng_str)) {
-                rng_thread_block_number = std::atoi(rng_str.c_str());
-            }
-        }
-
-        if (rng_thread_block_number > 0) {
-            // loop has random and rng thread blocks in use and number known
-            use_thread_blocks = true;
-            thread_block_number = rng_thread_block_number;
-        }
-
-        if (rng_thread_block_number < 0) {
-            reportDiag(DiagnosticsEngine::Level::Warning, loop_info.range.getBegin(),
-                       "loop contains random number generator calls but GPU random numbers are "
-                       "disabled (GPU_RNG_THREAD_BLOCKS < 0).  This may crash the program.");
-        }
-    }
 
 
     // if we have small arrays, encapsulate them in struct
@@ -417,8 +385,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     loop_has_reductionvector_blocks = true;
                     use_thread_blocks = true;
 
-                    // we have to take smaller of block numbers - RNG works with smaller number,
-                    // but not larger.
                     if (thread_block_number > 0) {
                         thread_block_number = std::min(thread_block_number, blocks);
                     } else {
@@ -547,7 +513,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         kernel_name +
         "<<< N_blocks, N_threads,0, compute_stream>>>( _hila_loop_begin, _hila_loop_end";
 
-    if (use_philox_rng) {
+    if (loop_info.contains_random) {
         // add philox_loop_counter
         kernel << ", uint32_t HILA_philox_loop_counter";
         kernel_launch += ", hila_philox_loop_counter";
@@ -856,7 +822,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     /////////////////////////////////////////////////////////////////////////////
     // First, reset philox loop counter
 
-    if (use_philox_rng) {
+    if (loop_info.contains_random) {
         kernel << "// philox_setup_loopcount calls __syncthreads(); must be called by all threads\n";
         kernel << "hila::philox_setup_loopcount(HILA_philox_loop_counter);\n";
     }
@@ -882,7 +848,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                << looping_var << " = HILA_idx_l_;\n";
     }
 
-    if (use_philox_rng) {
+    if (loop_info.contains_random) {
         // initialize philox - NOTE: contains __syncthreads(), so ALL THREADS MUST EXECUTE THIS!
         kernel << "hila::philox_setup_index(SiteIndex(get_dev_coordinates(" + looping_var +
                       ")).value);\n";

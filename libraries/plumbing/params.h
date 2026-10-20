@@ -113,17 +113,6 @@
 #define WRITE_BUFFER_SIZE 2000000
 #endif
 
-/// @brief USE_PHILOX_RNG enables philox 4x32-10 random number generator.
-/// This is the default now.  If it is defined, then the
-/// GPU_RNG_THREAD_BLOCKS below does nothing
-/// 
-
-#ifndef USE_PHILOX_RNG
-#define USE_PHILOX_RNG
-#elif USE_PHILOX_RNG == 0
-#undef USE_PHILOX_RNG
-#endif
-
 // boundary conditions are "off" by default -- no need to do anything here
 // #ifndef SPECIAL_BOUNDARY_CONDITIONS
 
@@ -173,28 +162,6 @@
 // leave undefined by default
 #elif GPU_OVERLAP_COMM == 0
 #undef GPU_OVERLAP_COMM
-#endif
-
-/// @brief  GPU_RNG_THREAD_BLOCKS number of blocks to use in onsites()-loops containing random
-/// numbers. Default is 32. Number of thread blocks (of N_threads threads) to use in onsites()-loops
-/// containing random numbers. GPU_RNG_THREAD_BLOCKS=0 or undefined means use one RNG on each
-/// lattice site, and the thread block number is not restricted.  RNG takes about 48 B/generator
-/// (with XORWOW). When GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS)
-/// generators are in use, which reduces the memory footprint substantially (and bandwidth demand)
-/// Too small number slows down onsites()-loops containing RNGs, because less threads are active.
-/// Example:
-///     Field<Vector<4,double>> vfield;
-///     onsites(ALL) {
-///        vfield[X].gaussian_random();      // there's RNG here, so this onsites() is handled by
-///                                          // GPU_RNG_THREAD_BLOCKS thread blocks
-///     }
-/// GPU_RNG_THREAD_BLOCKS<0 disables GPU random numbers entirely, and loops like above will crash if
-/// executed. hilapp will emit a warning, but program is compiled
-///
-///  Default: 32 seems to be OK compromise. Can be set to 0 if memory is not a problem.
-
-#ifndef GPU_RNG_THREAD_BLOCKS
-#define GPU_RNG_THREAD_BLOCKS 32
 #endif
 
 /// GPU_VECTOR_REDUCTION_THREAD_BLOCKS

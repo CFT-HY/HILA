@@ -126,8 +126,6 @@ std::string TopLevelVisitor::get_filename_and_line(Stmt *S) {
 /// The main entry point for code generation
 ///////////////////////////////////////////////////////////////////////////////
 
-bool use_philox_rng;
-
 void TopLevelVisitor::generate_code(Stmt *S) {
     srcBuf loopBuf; // (&TheRewriter,S);
 
@@ -161,11 +159,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     std::stringstream code;
     code << "{\n";
 
-    if (loop_info.contains_random) {
+    if (loop_info.contains_random)
         code << "hila::check_that_rng_is_initialized();\n";
-        use_philox_rng = is_macro_defined("USE_PHILOX_RNG");
-    } else 
-        use_philox_rng = false;
 
     generate_parity_code(code, parity_var_name);
     generate_selection_code(code);
@@ -203,7 +198,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     mark_fields_changed(code);
 
-    if (use_philox_rng)
+    if (loop_info.contains_random)
         code << "hila::philox_after_onsites();   // reset philox to host\n";
 
     // and close

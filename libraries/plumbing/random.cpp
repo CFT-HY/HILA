@@ -8,8 +8,6 @@
 
 static bool rng_is_initialized = false;
 
-
-#ifdef USE_PHILOX_RNG
 // define global vars for philox
 
 // global index for this node/rank for non-onsites code
@@ -24,22 +22,13 @@ void hila::philox_after_onsites() {
     hila::philox_setup(++hila_philox_loop_counter, hila_philox_my_index);
 }
 
-
-#endif
-
 /**
  * @brief Seed the RNG, must be called before RNG is used
- * 
- * @details The optional 2nd argument indicates whether to initialize the RNG on GPU device:
- * `hila::device_rng::on` (default) or `hila::device_rng::off`.  This argument does nothing if no GPU
- * platform.  If `hila::device_rng::off` is used, `onsites()` -loops cannot contain random number calls
- * (Runtime error will be flagged and program exits).
- * 
- * 
- * Seed is shuffled so that different nodes
- * get different rng seeds.  If `seed == 0`,
- * seed is generated through using the `time()` -function.
- */  
+ *
+ * @details Philox random numbers are identical independent of the number of MPI ranks or
+ * GPU/CPU (inside onsites()-loops).  If `seed == 0`, seed is generated using the clock.
+ * The 2nd argument is not used, it is kept for compatibility.
+ */
 void hila::seed_random(uint64_t seed, bool device_init) {
 
     rng_is_initialized = true;
@@ -47,11 +36,6 @@ void hila::seed_random(uint64_t seed, bool device_init) {
     if (!lattice.is_initialized()) {
         hila::error("lattice.setup() must be called before hila::seed_random()");
     }
-
-
-    uint64_t n = hila::myrank();
-    if (hila::partitions.number() > 1)
-        n += hila::partitions.mylattice() * hila::number_of_nodes();
 
     if (seed == 0) {
         // get seed from time
@@ -69,27 +53,6 @@ void hila::seed_random(uint64_t seed, bool device_init) {
     if (hila::partitions.number() > 1)
         seed = seed ^ ((static_cast<uint64_t>(hila::partitions.mylattice())) << 28);
 
-#ifndef USE_PHILOX_RNG
-
-    hila::out0 << "Using old (deprecated) random number generators\n";
-    
-    hila::initialize_host_rng(seed);
-
-#if defined(CUDA) || defined(HIP)
-
-    // we can use the same seed, the generator is different
-    if (device_init) {
-        hila::initialize_device_rng(seed);
-    } else {
-        hila::out0 << "Not initializing GPU random numbers\n";
-    }
-
-#endif
-
-    hila::out0 << "RNG seed for node 0: " << seed << std::endl;
-
-#else
-
     // Now use PHILOX
     philox_seed0 = static_cast<uint32_t>(seed);
     philox_seed1 = static_cast<uint32_t>(seed >> 32);
@@ -102,119 +65,9 @@ void hila::seed_random(uint64_t seed, bool device_init) {
     hila::out0 << "Using Philox 4x32-10 random number generator\n";
 
     hila::out0 << "Seed is " << seed << std::endl;
-
-#endif
-
 }
 
 
-#ifdef USE_PHILOX_RNG
-
-
-#endif
-
-// Now philox is not defined
-#ifndef USE_PHILOX_RNG
-
-
-#include <random>
-
-// static variable which holds the random state
-// Use 64-bit mersenne twister
-static std::mt19937_64 mersenne_twister_gen;
-
-// random numbers are in interval [0,1)
-static std::uniform_real_distribution<double> real_rnd_dist(0.0, 1.0);
-
-// #endif
-
-
-// In GPU code hila::random() defined in hila_gpu.cpp
-#if !defined(CUDA) && !defined(HIP)
-double hila::random() {
-    return real_rnd_dist(mersenne_twister_gen);
-}
-
-#endif
-
-// Generate random number in non-kernel (non-loop) code.  Not meant to
-// be used in "user code"
-double hila::host_random() {
-    return real_rnd_dist(mersenne_twister_gen);
-}
-
-
-/////////////////////////////////////////////////////////////////////////
-
-
-namespace hila {
-
-/**
- * @brief Random shuffling of rng seed for MPI nodes.
- * @details Do it in a manner makes it difficult to give the same seed by mistake
- * and also avoids giving the same seed for 2 nodes
- * For single MPI node seed remains unchanged
- */
-uint64_t shuffle_rng_seed(uint64_t seed) {
-
-    uint64_t n = hila::myrank();
-    if (hila::partitions.number() > 1)
-        n += hila::partitions.mylattice() * hila::number_of_nodes();
-
-    return (seed + n) ^ (n << 31);
-}
-
-
-/**
- *@param seed unsigned int_64  
- *@note On MPI, this function shuffles different seed values for all MPI ranks.  
- */
-void initialize_host_rng(uint64_t seed) {
-
-    seed = hila::shuffle_rng_seed(seed);
-
-    // #if !defined(OPENMP)
-    mersenne_twister_gen.seed(seed);
-    // warm it up
-    for (int i = 0; i < 9000; i++)
-        mersenne_twister_gen();
-    // #endif
-}
-
-} // namespace hila
-
-
-////////////////////////////////////////////////////////////////////
-// Def here gpu rng functions for non-gpu
-////////////////////////////////////////////////////////////////////
-
-#if !(defined(CUDA) || defined(HIP))
-
-/**
- *@details `hila::random()` does not work inside `onsites()` after this, 
- *unless seeded again using `initialize_device_rng()`. Frees the memory RNG takes on the device. 
- */  
-void hila::free_device_rng() {}
-
-
-/**
- *@details Returns `true` on non-GPU archs.
- */
-bool hila::is_device_rng_on() {
-    return rng_is_initialized;
-}
-
-/**
- *@details This function shuffles the seed for different MPI ranks on MPI.  Called by `seed_random()` unless its 2nd
- *argument is `hila::device_rng_off`. This can reinitialize device RNG free'd by `free_device_rng()`.
- */
-void hila::initialize_device_rng(uint64_t seed) {}
-
-#endif
-
-#endif // !USE_PHILOX_RNG
-
-// Rest is for both philox and not
 
 #define VARIANCE 1.0
 
@@ -308,14 +161,6 @@ void hila::check_that_rng_is_initialized() {
                    << std::endl;
         hila::terminate(1);
     }
-#if !defined(USE_PHILOX_RNG) && (defined(CUDA) || defined(HIP))
-    if (!hila::is_device_rng_on()) {
-        hila::out0 << "ERROR: GPU random number generator is not initialized and onsites()-loop is "
-                      "using random numbers"
-                   << std::endl;
-        hila::terminate(1);
-    }
-#endif
 }
 
 

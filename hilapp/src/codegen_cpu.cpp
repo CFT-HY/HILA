@@ -174,8 +174,6 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // keep track of ending braces for options
     int ending_braces = 0;
 
-    extern bool use_philox_rng;
-
     // With LAYOUT_ON_THE_FLY neighbour indices are computed from the site coordinates,
     // which are computed once per site
     // (always without EVEN_SITES_FIRST)
@@ -195,7 +193,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     bool need_site =
         (layout_on_the_fly &&
          (any_read_nb || wait_loop || parity_check ||
-          (!evenfirst && (loop_info.need_loop_coordinate || use_philox_rng)))) ||
+          (!evenfirst && (loop_info.need_loop_coordinate || loop_info.contains_random)))) ||
         has_deep_refs();
 
     if (rows_loop)
@@ -272,7 +270,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         ending_braces++;
     }
 
-    if (use_philox_rng)
+    if (loop_info.contains_random)
         code << "hila::philox_setup(hila_philox_loop_counter, "
                 "SiteIndex("
              << (need_site ? "hila_loop_lattice.mynode.layout.coordinates(HILA_site_)"

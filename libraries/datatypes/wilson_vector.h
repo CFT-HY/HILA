@@ -5,7 +5,7 @@
 #include "datatypes/matrix.h"
 #include "datatypes/sun.h"
 #include "plumbing/coordinates.h"
-#include "plumbing/random.h"
+#include "plumbing/philox.h"
 #include "datatypes/compoundvector.h"
 
 #if (NDIM == 5 || NDIM == 4)

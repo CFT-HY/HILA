@@ -32,19 +32,6 @@ void gpu_shared_memory_pool_purge();
 void gpu_shared_memory_pool_report();
 #endif
 
-////////////////////////////////////////////////////////////////////////////////////
-// some device rng headers
-////////////////////////////////////////////////////////////////////////////////////
-namespace hila {
-// double random();  // defined in random.h
-void seed_device_rng(unsigned long long seed);
-} // namespace hila
-
-namespace hila {
-void free_device_rng();
-} // namespace hila
-
-
 #ifndef HILAPP
 
 // GPU specific definitions
@@ -158,7 +145,6 @@ using gpuError = cudaError;
 #elif defined(HIP)
 
 #include <hip/hip_runtime.h>
-#include <hiprand/hiprand.h>
 
 // #include <hipcub/hipcub.hpp>*
 

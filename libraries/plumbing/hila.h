@@ -10,11 +10,7 @@
 
 #include "plumbing/globals.h"
 
-#ifdef USE_PHILOX_RNG
 #include "plumbing/philox.h"
-#else
-#include "plumbing/random.h"
-#endif
 
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"

@@ -14,13 +14,6 @@
 
 #if defined(CUDA)
 
-#include <curand_kernel.h>
-
-//using gpurandState = curandState_t;
-using gpurandState = curandStateXORWOW_t;
-#define gpurand_init curand_init
-#define gpurand_uint32 curand
-#define gpurand_uniform curand_uniform
 #define gpuGetDeviceCount(a) GPU_CHECK(cudaGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(cudaSetDevice(dev))
 #define gpuGetLastError cudaGetLastError
@@ -29,13 +22,6 @@ using gpurandState = curandStateXORWOW_t;
 #elif defined(HIP)
 
 #include <hip/hip_runtime.h>
-#include <hiprand/hiprand_kernel.h>
-
-//using gpurandState = hiprandState_t;
-using gpurandState = hiprandStateXORWOW_t;
-#define gpurand_init hiprand_init
-#define gpurand_uint32 hiprand
-#define gpurand_uniform hiprand_uniform
 #define gpuGetDeviceCount(a) GPU_CHECK(hipGetDeviceCount(a))
 #define gpuSetDevice(dev) GPU_CHECK(hipSetDevice(dev))
 #define gpuGetLastError hipGetLastError
@@ -268,129 +254,6 @@ gpuEvent_t &hila::compute_event() {
 // // __constant__ int _d_size[NDIM];
 // __constant__ CoordinateVector _d_size;
 
-#ifndef USE_PHILOX_RNG
-
-/* Random number generator */
-static gpurandState *gpurandstateptr = nullptr;
-__constant__ gpurandState *d_gpurandstateptr;
-
-// check if rng on device is OK
-
-bool hila::is_device_rng_on() {
-    return gpurandstateptr != nullptr;
-}
-
-/* Set seed on device */
-__global__ void seed_random_kernel(unsigned long long seed) {
-    unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
-    //  d_gpurandstateptr set now using memcpyToSymbol
-    //  d_gpurandstateptr = state;
-    gpurand_init(seed + x, x, 0, &d_gpurandstateptr[x]);
-}
-
-/* Set seed on device and host */
-void hila::initialize_device_rng(uint64_t seed) {
-
-#if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS < 0
-    hila::out0 << "GPU RANDOM NUMBERS DISABLED, GPU_RNG_THREAD_BLOCKS < 0\n";
-    return;
-
-#else
-
-    if (is_device_rng_on()) {
-        hila::out0 << "Reseeding GPU random numbers, new seed " << seed << '\n';
-    }
-
-    unsigned long n_blocks = (lattice->mynode.volume + N_threads - 1) / N_threads;
-
-#if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS > 0
-    // If we have limited rng block number
-    if (GPU_RNG_THREAD_BLOCKS < n_blocks) {
-        n_blocks = GPU_RNG_THREAD_BLOCKS;
-    }
-
-    if (!is_device_rng_on()) {
-        hila::out0 << "Initializing GPU random number generator\n";
-        hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads
-                   << " threads\n";
-    }
-#else
-    if (!is_device_rng_on()) {
-        hila::out0 << "Initializing GPU random number generator\n";
-        hila::out0 << "GPU random numbers: using one generator/site (GPU_RNG_THREAD_BLOCKS = 0 or "
-                      "undefined)\n";
-    }
-#endif
-
-    unsigned long long n_sites = n_blocks * N_threads;
-    unsigned long long myseed = seed + hila::myrank() * n_sites;
-
-    if (!is_device_rng_on()) {
-        // allocate random state and copy the ptr to d_gpurandstateptr
-        gpuMalloc(&gpurandstateptr, n_sites * sizeof(gpurandState));
-        gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
-                          gpuMemcpyHostToDevice);
-    }
-
-#ifdef CUDA
-    seed_random_kernel<<<n_blocks, N_threads>>>(myseed);
-#else
-    hipLaunchKernelGGL(seed_random_kernel, dim3(n_blocks), dim3(N_threads), 0, 0, myseed);
-#endif
-    check_device_error("seed_random kernel");
-
-#endif
-
-}
-
-void hila::free_device_rng() {
-    if (is_device_rng_on()) {
-        gpuFree(gpurandstateptr);
-        gpurandstateptr = nullptr;
-        // set d_gpurandstateptr <- nullptr.
-        gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
-                          gpuMemcpyHostToDevice);
-
-        // good to purge the memory pool after releasing a large chunk
-        gpu_memory_pool_purge();
-    }
-}
-
-/* Generate random numbers on device or host. Values are in range [0,1) */
-__device__ __host__ double hila::random() {
-#ifdef _GPU_DEVICE_COMPILE_
-    unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
-
-    // ---
-    // Method 1: convert 32-bit unsigned int directly to double,
-    // i.e. return  uint32 * 2^(-32)
-    // This number below is 2^(-32) in double
-    // THERE SHOULD BE NO REASON TO USE THIS
-    //
-    // return gpurand_uint32(&d_gpurandstateptr[x]) * 2.3283064365386963e-10;
-
-    // ---
-
-    // Method 2: use 2 32-bit unsigned random ints to generate a 53-bit random value,
-    // which is then converted to double by multiplying by 2^(-53)
-    // This should be the preferred method
-    unsigned u1 = gpurand_uint32(&d_gpurandstateptr[x]);
-    unsigned u2 = gpurand_uint32(&d_gpurandstateptr[x]);
-    unsigned long long z = ((unsigned long long)u1) ^ ((unsigned long long)u2 << (53 - 32));
-    return z * 1.1102230246251565e-16; // = 2^(-53)
-
-    // ---
-
-    // This below is std cuda/hip uniform rng
-    // DO NOT USE, GIVES WRONG RANGE (0,1], AND ACTUALLY RETURNS FLOATS
-    // return gpurand_uniform(&d_gpurandstateptr[x]);
-
-#else
-    return hila::host_random();
-#endif
-}
-
-#endif // if not USE_PHILOX_RNG
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Setup the lattice struct on GPUs:
@@ -518,14 +381,6 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
         }
 
         gpuSetDevice(my_device);
-
-#ifndef USE_PHILOX_RNG
-        // set gpu rng state to "off", to prevent accidental use
-        gpurandstateptr = nullptr;
-        // set d_gpurandstateptr <- nullptr.
-        gpuMemcpyToSymbol(d_gpurandstateptr, &gpurandstateptr, sizeof(gpurandState *), 0,
-                          gpuMemcpyHostToDevice);
-#endif
 
 
 #if defined(CUDA_MALLOC_ASYNC)
