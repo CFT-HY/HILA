@@ -76,6 +76,9 @@ hila::global<double> hc_top_global;
  */
 void test_globals() {
 
+    // function-local using-directive, hilapp copies it to GPU kernels
+    using namespace hc_globals;
+
     hc_globals::a = 1;
     hc_globals::inner::b = 10;
     hc_anon_global = 100;
@@ -83,11 +86,11 @@ void test_globals() {
 
     Field<double> f;
     onsites (ALL) {
-        f[X] = hc_globals::a() + hc_globals::times_a(1.0) + hc_globals::inner::b() +
-               hc_globals::get_b() + hc_anon_global() + hc_top_global();
+        f[X] = hc_globals::a() + times_a(1.0) + hc_globals::inner::b() + get_b() +
+               hc_anon_global() + a() + hc_top_global();
     }
-    // 1 + 1 + 10 + 10 + 100 + 1000
-    report_pass("hila::global in namespaces", f.sum() / lattice.volume() - 1122, 1e-12);
+    // 1 + 1 + 10 + 10 + 100 + 1 + 1000
+    report_pass("hila::global in namespaces", f.sum() / lattice.volume() - 1123, 1e-12);
 }
 
 /**

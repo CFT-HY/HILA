@@ -250,6 +250,8 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Generate a header for starting communication and marking fields changed
     std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
     std::string generate_code_gpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
+    std::string local_using_declarations(Stmt *S);
+    void collect_local_usings(Stmt *st, Stmt *loop, SourceLocation loop_loc, std::string &out);
     void generate_openacc_loop_header(std::stringstream &code);
     //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
     std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);

@@ -108,6 +108,90 @@ std::string TopLevelVisitor::make_kernel_name() {
            std::to_string(kernel_index++);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// Function-local using-directives, using-declarations and namespace aliases which are
+/// visible at the loop.  The kernel is generated outside the function, thus these are
+/// repeated at the beginning of the kernel.  Names are written fully qualified, because
+/// the kernel is not in the scope of the function.
+/////////////////////////////////////////////////////////////////////////////////////////
+
+// qualified name usable in code, or empty if it contains an anonymous namespace
+static std::string usable_qualified_name(const NamedDecl *D) {
+    std::string name = D->getQualifiedNameAsString();
+    if (name.find("(anonymous") != std::string::npos)
+        return "";
+    return "::" + name;
+}
+
+static std::string local_using_string(Decl *D) {
+    std::string name;
+    if (auto *UDD = dyn_cast<UsingDirectiveDecl>(D)) {
+        if (auto *ns = UDD->getNominatedNamespace()) {
+            name = usable_qualified_name(ns);
+            if (!name.empty())
+                return "using namespace " + name + ";\n";
+        }
+    } else if (auto *UD = dyn_cast<UsingDecl>(D)) {
+        if (UD->shadow_size() > 0) {
+            name = usable_qualified_name((*UD->shadow_begin())->getTargetDecl());
+            if (!name.empty())
+                return "using " + name + ";\n";
+        }
+    } else if (auto *NAD = dyn_cast<NamespaceAliasDecl>(D)) {
+        if (auto *ns = NAD->getNamespace()) {
+            name = usable_qualified_name(ns);
+            if (!name.empty())
+                return "namespace " + NAD->getNameAsString() + " = " + name + ";\n";
+        }
+    }
+    return "";
+}
+
+// Walk from statement st towards the loop.  Collect usings in the blocks which contain the loop,
+// located before it
+void TopLevelVisitor::collect_local_usings(Stmt *st, Stmt *loop, SourceLocation loop_loc,
+                                           std::string &out) {
+    for (Stmt *c : st->children()) {
+        if (c == nullptr)
+            continue;
+        if (c == loop)
+            return;
+
+        SourceLocation b = srcMgr.getExpansionLoc(c->getBeginLoc());
+        SourceLocation e = srcMgr.getExpansionLoc(c->getEndLoc());
+
+        if (srcMgr.isBeforeInTranslationUnit(e, loop_loc)) {
+            // before the loop - only declarations directly in an enclosing block are visible
+            if (isa<CompoundStmt>(st)) {
+                if (auto *DS = dyn_cast<DeclStmt>(c)) {
+                    for (Decl *D : DS->decls())
+                        out += local_using_string(D);
+                }
+            }
+        } else if (!srcMgr.isBeforeInTranslationUnit(loop_loc, b)) {
+            // c contains the loop
+            collect_local_usings(c, loop, loop_loc, out);
+            return;
+        } else {
+            // after the loop
+            return;
+        }
+    }
+}
+
+std::string TopLevelVisitor::local_using_declarations(Stmt *S) {
+    std::string out;
+    FunctionDecl *FD = global.currentFunctionDecl;
+    if (FD == nullptr || !FD->hasBody())
+        return out;
+
+    collect_local_usings(FD->getBody(), S, srcMgr.getExpansionLoc(S->getBeginLoc()), out);
+
+    if (!out.empty())
+        out = "// using-declarations of the enclosing function\n" + out;
+    return out;
+}
+
 std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                                bool generate_wait_loops) {
 
@@ -793,6 +877,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     // Begin the function
     kernel << ")\n{\n";
+
+    // function-local using-declarations which are visible at the loop
+    kernel << local_using_declarations(S);
 
     // kernel << "backend_lattice_struct *hila_loop_lattice = &d_lattice; \n";
 
