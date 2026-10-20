@@ -2891,8 +2891,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 SourceRange sr = D->getSourceRange();
                 sr = get_real_range(sr); // if there are macros...
 
-                auto dev_varname =
-                    generate_constant_var_name(VD->getQualifiedNameAsString(), false, "");
+                auto dev_varname = generate_constant_var_name(VD);
 
                 std::stringstream cdecl, vardecl;
                 cdecl << "\n// ===================== hilapp: global variable "
@@ -2916,6 +2915,9 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 if (storageclass == StorageClass::SC_Static) {
                     cdecl << "static ";
                     vardecl << "static ";
+                } else if (VD->isInAnonymousNamespace()) {
+                    // the device var is outside the namespace, keep it local to this file
+                    cdecl << "static ";
                 }
 
                 int a = typ.find("<");

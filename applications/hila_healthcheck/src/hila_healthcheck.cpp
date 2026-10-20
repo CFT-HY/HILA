@@ -40,6 +40,56 @@ bool report_pass(std::string message, double eps, double limit) {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
+// hila::global variables in namespaces, used in onsites() and loop functions
+
+namespace hc_globals {
+hila::global<double> a;
+
+// unqualified reference inside the namespace
+#pragma hila loop_function
+inline double times_a(double x) {
+    return x * a();
+}
+
+namespace inner {
+hila::global<double> b;
+}
+
+// partially qualified reference
+#pragma hila loop_function
+inline double get_b() {
+    return inner::b();
+}
+} // namespace hc_globals
+
+namespace {
+hila::global<double> hc_anon_global;
+}
+
+hila::global<double> hc_top_global;
+
+/**
+ * @brief Test hila::global variables in namespaces
+ * @details On GPUs globals are __constant__ device variables, whose names hilapp
+ * generates from the namespaces of the declaration
+ */
+void test_globals() {
+
+    hc_globals::a = 1;
+    hc_globals::inner::b = 10;
+    hc_anon_global = 100;
+    hc_top_global = 1000;
+
+    Field<double> f;
+    onsites (ALL) {
+        f[X] = hc_globals::a() + hc_globals::times_a(1.0) + hc_globals::inner::b() +
+               hc_globals::get_b() + hc_anon_global() + hc_top_global();
+    }
+    // 1 + 1 + 10 + 10 + 100 + 1000
+    report_pass("hila::global in namespaces", f.sum() / lattice.volume() - 1122, 1e-12);
+}
+
 /**
  * @brief Test various functions on fields.
  * @details Test functions exp (on both real and complex field) and sin.
@@ -1436,6 +1486,7 @@ int main(int argc, char **argv) {
     // start tests
 
     test_reductions();
+    test_globals();
     test_functions();
     test_site_access();
     test_minmax();
