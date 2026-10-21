@@ -79,6 +79,7 @@ inline __device__ Parity get_dev_site_parity(T idx) {
 #else // LAYOUT_ON_THE_FLY
 
 // site layout of the current lattice in __constant__ memory
+#pragma hila constant_memory
 HILA_GPU_EXTERN hila::global<hila::site_layout_struct> _d_layout;
 
 #pragma hila loop_function
@@ -146,8 +147,11 @@ inline unsigned hila_dev_neighbour_offset(const hila::layout_site &s, int d, int
 }
 #endif
 
-// Save "constants" lattice size and volume here
+// Save "constants" lattice size and volume here.  System globals are in constant memory,
+// all defined in hila_gpu.cpp (see hila::global)
+#pragma hila constant_memory
 HILA_GPU_EXTERN hila::global<int64_t> _d_volume;
+#pragma hila constant_memory
 HILA_GPU_EXTERN hila::global<CoordinateVector> _d_size;
 
 

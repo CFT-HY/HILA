@@ -1,6 +1,8 @@
 #include "stringops.h"
 #include "generalvisitor.h"
 
+#include <sstream>
+
 //////////////////////////////////////////////////////////////////////////////////
 ///  Implementation of some methods for generalvisitor
 ///  For full list of generalvisitor commands, see generalvisitor.h
@@ -779,11 +781,25 @@ bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
 /// the same name.  The name is obtained from the declaration and its enclosing namespaces,
 /// so it does not depend on how the reference is written (A::a, a within namespace A or
 /// after using namespace A, ...).  Anonymous namespaces are named "anon_".
+///
+/// Globals which are not visible to other files (static, or in anonymous namespace) get
+/// a file-specific tag in the name.  The device variable has always external linkage:
+/// static __constant__ variables do not work with relocatable device code (-rdc).
 /////////////////////////////////////////////////////////////////////////
 
 std::string GeneralVisitor::generate_constant_var_name(const VarDecl *VD) {
 
     VD = VD->getCanonicalDecl();
+
+    std::string file_tag;
+    if (!VD->isExternallyVisible()) {
+        // tag from the path of the compiled source file
+        std::string path =
+            srcMgr.getFilename(srcMgr.getLocForStartOfFile(srcMgr.getMainFileID())).str();
+        std::stringstream ss;
+        ss << "f" << std::hex << (std::hash<std::string>{}(path) & 0xffffffffffULL) << "_";
+        file_tag = ss.str();
+    }
 
     std::string scope;
     for (const DeclContext *DC = VD->getDeclContext(); DC != nullptr; DC = DC->getParent()) {
@@ -793,7 +809,7 @@ std::string GeneralVisitor::generate_constant_var_name(const VarDecl *VD) {
         }
     }
 
-    std::string name = "HILA_device_constant_" + scope + VD->getNameAsString();
+    std::string name = "HILA_device_constant_" + file_tag + scope + VD->getNameAsString();
 
     // just in case, only identifier characters
     for (char &c : name)

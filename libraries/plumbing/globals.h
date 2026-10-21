@@ -13,7 +13,8 @@ namespace hila {
  * @brief Global variable class within hila namespace
  *
  * @details Special wrapper for "simple" types (elementary types, simple structs etc.).
- * Implemented on gpus automatically using `__constant__` memory. All global variables
+ * On GPUs a device copy is created automatically, in `__device__` memory, or in `__constant__`
+ * memory if GPU_GLOBALS_IN_CONSTANT_MEMORY is defined (see params.h). All global variables
  * exist for the whole program lifetime.
  *
  * ## Variable declaration:

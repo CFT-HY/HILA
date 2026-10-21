@@ -531,7 +531,8 @@ enum class pragma_hila {
     CONTAINS_RNG,
     ACCESS,
     SAFE,
-    IN_OMP_PARALLEL_REGION
+    IN_OMP_PARALLEL_REGION,
+    CONSTANT_MEMORY
 };
 
 /// Pragma handling things

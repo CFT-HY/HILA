@@ -2917,21 +2917,42 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 // create unique typedef
                 cdecl << "struct " << customtype << " {};\n";
 
-                cdecl << "__constant__ ";
+                // Device memory of the variable: __constant__ if marked with
+                // #pragma hila constant_memory (system globals, all defined in hila_gpu.cpp), or
+                // if GPU_GLOBALS_IN_CONSTANT_MEMORY is defined.  Otherwise __device__: the device
+                // linker does not always lay out __constant__ variables of several files correctly
+                static int globals_in_constant = -1;
+                if (globals_in_constant < 0)
+                    globals_in_constant = is_macro_defined("GPU_GLOBALS_IN_CONSTANT_MEMORY");
+                // the pragma is on the line before the declaration; the declaration may begin
+                // with a macro expanding to nothing (e.g. HILA_GPU_EXTERN), so look from the
+                // first non-blank character of the line
+                SourceLocation line_start = srcMgr.getExpansionLoc(D->getBeginLoc());
+                while (line_start.isValid() &&
+                       srcMgr.getFileOffset(line_start) > 0 &&
+                       getChar(line_start.getLocWithOffset(-1)) != '\n')
+                    line_start = line_start.getLocWithOffset(-1);
+                while (line_start.isValid() && std::isspace(getChar(line_start)) &&
+                       getChar(line_start) != '\n')
+                    line_start = line_start.getLocWithOffset(1);
+
+                if (globals_in_constant || has_pragma(line_start, pragma_hila::CONSTANT_MEMORY))
+                    cdecl << "__constant__ ";
+                else
+                    cdecl << "__device__ ";
 
                 vardecl << "\n// custom global declaration\n";
 
+                // The device var is never static: static __constant__ does not work with
+                // relocatable device code.  For non-visible globals the name is unique to
+                // the file instead, see generate_constant_var_name()
                 auto storageclass = VD->getStorageClass();
                 if (storageclass == StorageClass::SC_Extern) {
                     cdecl << "extern ";
                     vardecl << "extern ";
                 }
                 if (storageclass == StorageClass::SC_Static) {
-                    cdecl << "static ";
                     vardecl << "static ";
-                } else if (VD->isInAnonymousNamespace()) {
-                    // the device var is outside the namespace, keep it local to this file
-                    cdecl << "static ";
                 }
 
                 int a = typ.find("<");

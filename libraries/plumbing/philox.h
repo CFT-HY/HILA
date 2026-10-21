@@ -65,9 +65,23 @@
 #define HILA_PHILOX_EXTERN extern
 #endif
 
-// store seed in constant memory
-HILA_PHILOX_EXTERN hila::global<uint32_t> philox_seed0;
-HILA_PHILOX_EXTERN hila::global<uint32_t> philox_seed1;
+// Seeds are stored in constant memory on GPUs.  There they are defined in hila_gpu.cpp, so that
+// all system __constant__ variables are in the same compilation unit: the device linker
+// does not always lay out __constant__ variables of several files correctly.
+#if defined(CUDA) || defined(HIP)
+#ifdef IN_HILA_GPU
+#define HILA_PHILOX_SEED_EXTERN /* nothing */
+#else
+#define HILA_PHILOX_SEED_EXTERN extern
+#endif
+#else
+#define HILA_PHILOX_SEED_EXTERN HILA_PHILOX_EXTERN
+#endif
+
+#pragma hila constant_memory
+HILA_PHILOX_SEED_EXTERN hila::global<uint32_t> philox_seed0;
+#pragma hila constant_memory
+HILA_PHILOX_SEED_EXTERN hila::global<uint32_t> philox_seed1;
 
 // global loop counter for philox, increased after onsites() which contains random
 HILA_PHILOX_EXTERN uint32_t hila_philox_loop_counter;

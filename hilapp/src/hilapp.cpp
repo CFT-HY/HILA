@@ -244,7 +244,8 @@ struct pragma_types {
 static std::vector<pragma_types> pragma_hila_types{
     {"skip", false},         {"ast_dump", false},        {"loop_function", false},
     {"novector", false},     {"nonvectorizable", false}, {"contains_rng", false},
-    {"direct_access", true}, {"safe_access", true},      {"omp_parallel_region", false}};
+    {"direct_access", true}, {"safe_access", true},      {"omp_parallel_region", false},
+    {"constant_memory", false}};
 
 
 // And grab also #pragma once locations, not allowed in hila code

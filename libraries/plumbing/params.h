@@ -155,6 +155,20 @@
 #endif
 
 /**
+ * @brief GPU_GLOBALS_IN_CONSTANT_MEMORY if set and !=0, user hila::global variables are placed
+ * in GPU __constant__ memory, otherwise in __device__ (global) memory.  Off by default:
+ * the CUDA device linker (at least up to CUDA 13.3) does not always lay out __constant__
+ * variables defined in several compilation units correctly, leading to "invalid argument"
+ * errors in cudaMemcpyToSymbol().  The hila system globals are always in constant memory,
+ * all defined in hila_gpu.cpp.
+ */
+#ifndef GPU_GLOBALS_IN_CONSTANT_MEMORY
+// leave undefined by default
+#elif GPU_GLOBALS_IN_CONSTANT_MEMORY == 0
+#undef GPU_GLOBALS_IN_CONSTANT_MEMORY
+#endif
+
+/**
  * @brief GPU_OVERLAP_COMM if set and !=0, overlap communication and computation in onsites()-loops.
  * Enable with -DGPU_OVERLAP_COMM=1
  */
