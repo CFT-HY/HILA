@@ -683,7 +683,11 @@ var_info *GeneralVisitor::add_var_to_decl_list(VarDecl *var, int scope_level) {
 /// This is done only within site loops and loop functions
 ///
 
-bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
+/// in_kernel: the reference is in an onsites() body, which on GPUs becomes a kernel.  There
+/// only the device variable is used: HIP (clang) checks kernel bodies also in the host
+/// compilation pass, where calling the host-only operator() would be an error.
+
+bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE, bool in_kernel) {
 
     bool got_error = false;
     Expr *E = nullptr;
@@ -737,7 +741,12 @@ bool GeneralVisitor::handle_global_var_method_call(CallExpr *CE) {
 
                 srcBuf *sb = get_file_srcBuf(sr.getBegin());
 
-                std::string repl = "\n#ifdef ";
+                std::string repl;
+                if (in_kernel) {
+                    sb->replace(sr, constvarname);
+                    return true;
+                }
+                repl = "\n#ifdef ";
                 if (target.cuda) {
                     repl.append("__CUDA_ARCH__");
                 } else if (target.hip) {

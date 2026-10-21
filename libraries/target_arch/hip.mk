@@ -33,7 +33,7 @@ LDLIBS := -lm -L/opt/rocm-5.3.0/hiprand/lib -L/opt/rocm-5.3.0/hipfft/lib -L/opt/
 MPI_INCLUDE_DIRS := -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
 MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
 
-LDLIBS += -lrocrand -lrocfft -lhipfft -lhiprand $(MPI_LIBS)
+LDLIBS += -lhipfft $(MPI_LIBS)
 
 HIP_PATH ?= $(shell hipconfig --path)
 HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/hiprand/include -I$(HIP_PATH)/hipfft/include -I$(HIP_PATH)/rocrand/include -I$(HIP_PATH)/rocfft/include -I$(HIP_PATH)/hipcub/include

@@ -304,7 +304,7 @@ class GeneralVisitor {
 
     bool handle_loop_function_if_needed(call_info_struct &ci);
 
-    bool handle_global_var_method_call(CallExpr *call);
+    bool handle_global_var_method_call(CallExpr *call, bool in_kernel = false);
     bool handle_global_var_ref(DeclRefExpr *e);
 
     std::string generate_constant_var_name(const VarDecl *VD);

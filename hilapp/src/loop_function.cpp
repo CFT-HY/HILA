@@ -28,8 +28,8 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
         return;
     }
 
-    // and treat a global variable reference v.value()
-    if (handle_global_var_method_call(Call)) {
+    // and treat a global variable reference v.value() - the loop body is a kernel on GPUs
+    if (handle_global_var_method_call(Call, true)) {
         parsing_state.skip_children = 1;
         return;
     }
