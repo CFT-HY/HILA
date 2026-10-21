@@ -20,12 +20,14 @@
 /// TYPICAL USE CASE: Increment all numbers to a new equal value when incompatible
 /// change is made.  This is the default below.
 
-#define HILA_SIGNATURE_NUMBER    12
+#define HILA_SIGNATURE_NUMBER    13
 
 // 10: philox RNG and LAYOUT_ON_THE_FLY code generation
 // 11: deep halo access f[X + k*dir] with HALO_DEPTH > 1
 // 12: philox is the only RNG, USE_PHILOX_RNG removed
-#define MINIMUM_HILAPP_SIGNATURE 12
-#define MINIMUM_HILA_SIGNATURE   12
+// 13: hila::global in __device__ memory on GPUs, system globals in constant memory
+//     (#pragma hila constant_memory), globals in namespaces
+#define MINIMUM_HILAPP_SIGNATURE 13
+#define MINIMUM_HILA_SIGNATURE   13
 
 #endif
