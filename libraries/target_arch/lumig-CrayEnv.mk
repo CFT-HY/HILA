@@ -52,4 +52,4 @@ LDFLAGS += -lmpi_gtl_hsa
 # These variables must be defined here
 #
 HILAPP_OPTS := -target:HIP -DHIP $(HILAPP_INCLUDES)
-HILA_OPTS := -DHIP -DGPU_RNG_THREAD_BLOCKS=64 $(HILA_INCLUDES)
+HILA_OPTS := -DHIP $(HILA_INCLUDES)
