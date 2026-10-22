@@ -269,7 +269,6 @@ void test_reductions() {
         report_pass("ReductionVector<int64_t>, sum " + hila::prettyprint(s), s, 1e-15);
     }
 
-#if NDIM > 2
     {
 
         constexpr int N = 5;
@@ -284,16 +283,52 @@ void test_reductions() {
             rmf[X.x()] += mf[X];
         }
 
+        double slice_volume = lattice.volume() / lattice.size(e_x);
 
         double diff = 0;
         for (int i = 0; i < lattice.size(e_x); i++) {
-            diff += (rmf[i] - lattice.size(e_y) * lattice.size(e_z)).squarenorm();
+            diff += (rmf[i] - slice_volume).squarenorm();
         }
 
 
         report_pass("SU(" + std::to_string(N) + ") ReductionVector", diff, 1e-8);
     }
-#endif
+
+    {
+        // reductions in loops with gathers.  With GPU_OVERLAP_COMM loops with
+        // communication are split into interior and boundary site ranges, the
+        // reduction must collect both
+        Field<int64_t> lf;
+        lf[ALL] = X.x();
+
+        int64_t nx = lattice.size(e_x);
+        int64_t slice_volume = lattice.volume() / nx;
+        int64_t expect = slice_volume * nx * (nx - 1) / 2;
+
+        double diff = 0, vdiff = 0;
+        foralldir (d) {
+            int64_t s = 0;
+            Reduction<double> rd = 0;
+            onsites (ALL) {
+                s += lf[X + d];
+                rd += lf[X - d];
+            }
+            diff += abs(s - expect) + abs(rd.value() - expect);
+
+            ReductionVector<int64_t> rv(nx);
+            onsites (ALL) {
+                rv[X.x()] += lf[X + d];
+            }
+            for (int x = 0; x < nx; x++) {
+                int64_t xs = (d == e_x) ? (x + 1) % nx : x;
+                vdiff += abs(rv[x] - xs * slice_volume);
+            }
+        }
+
+        // these should be actually exactly = 0 ...
+        report_pass("Reduction with gathers", diff, 1e-16);
+        report_pass("ReductionVector with gathers", vdiff, 1e-16);
+    }
 }
 
 
