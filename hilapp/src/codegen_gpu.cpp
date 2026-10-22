@@ -261,8 +261,24 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         code << "int _hila_loop_begin = _hila_ranges.min[0];\n";
         code << "int _hila_loop_end = _hila_ranges.max[0];\n";
 
+        // N_blocks is the max of both ranges: reduction arrays are allocated and
+        // reduced with it, and the first (init) launch uses it so that it initializes
+        // every block slot the second launch accumulates into. Second launch uses
+        // its own block count, which is <= N_blocks. Usually the bulk range is
+        // the larger one and then N_blocks is just the first ranges block count...
+        // TODO: if the boundary range is larger (small node volumes), the first launch
+        // has (N_blocks_1 - N_blocks_0) blocks with no sites, they only initialize their
+        // reduction slot.  This could be avoided by launching both ranges with their own
+        // block counts and passing a block offset instead of HILA_reduction_init_:
+        // allocate N_blocks_0 + N_blocks_1 slots, the second launch writes slots
+        // N_blocks_0 ... without accumulating...
         code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
                 "N_threads - 1)/N_threads;\n";
+        code << "if (_hila_loops == 2) {\n"
+             << "    int N_blocks_1 = (_hila_ranges.max[1] - _hila_ranges.min[1] + "
+                "N_threads - 1)/N_threads;\n"
+             << "    if (N_blocks_1 > N_blocks) N_blocks = N_blocks_1;\n"
+             << "}\n";
 
         if (reduction_list.size() != 0) {
             code << "bool HILA_reduction_init_ = true;\n";
