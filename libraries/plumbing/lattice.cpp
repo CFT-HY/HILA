@@ -15,13 +15,13 @@ std::vector<lattice_struct *> defined_lattices;
 
 // global bookkeeping
 int64_t n_gather_avoided = 0, n_gather_done = 0;
-}
+} // namespace hila
 
 // Reporting on possibly too large node: stop if
 // node size (with buffers) is larger than 2^31 - too close for comfort!
 
 void report_too_large_node() {
-    if_rank0() {
+    if_rank0 () {
         hila::out << "Node size too large: size = " << lattice->mynode.size[0];
         for (int d = 1; d < NDIM; d++)
             hila::out << " x " << lattice->mynode.size[d];
@@ -50,11 +50,6 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
 
     setup_layout();
 
-    setup_nodes();
-
-    // set up the comm arrays
-    create_std_gathers();
-
 #ifndef EVEN_SITES_FIRST
     hila::out0 << "Site layout: lexicographic (EVEN_SITES_FIRST=0), neighbour indices and "
                   "coordinates computed on the fly\n";
@@ -62,9 +57,20 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     hila::out0 << "Site layout: neighbour indices and coordinates computed on the fly "
                   "(LAYOUT_ON_THE_FLY)\n";
 #endif
+
 #if HALO_DEPTH > 1
     hila::out0 << "Halo depth " << HALO_DEPTH << " layers\n";
 #endif
+
+    if (hila::check_input) {
+        hila::out << "***** Input check done *****\n";
+        hila::finishrun();
+    }
+
+    setup_nodes();
+
+    // set up the comm arrays
+    create_std_gathers();
 
     // Initialize wait_array structures - has to be after std gathers()
     initialize_wait_arrays();
@@ -83,11 +89,6 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     backend_lattice = new backend_lattice_struct;
     backend_lattice->setup(*this);
 #endif
-
-    if (hila::check_input) {
-        hila::out << "***** Input check done *****\n";
-        hila::finishrun();
-    }
 
     test_std_gathers();
 }
