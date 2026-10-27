@@ -977,6 +977,7 @@ void test_spectraldensity() {
     hila::k_binning b;
     b.k_max(M_PI * sqrt(1.0 * NDIM));
     b.bins(b.bins() - 1); // reduce the number of default bins by 1
+    b.k_round();
 
     // test std binning first
 

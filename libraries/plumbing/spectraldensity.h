@@ -10,10 +10,10 @@ extern hila::timer binning_timer;
 
 struct sd_k_bin_parameters {
     double max;      // min and max of k (default: 0 and pi)
-    double power;    // binned function k^p, default p=1  : note, min and max are "powered"
-                     // too
+
     double binwidth; 
     int bins;        // how many bins in output (default=max of lattice.size(d)/2)
+    bool round;  // true if bin determined by rounding to int (default: floor)
     
     int exact;       // do this many low k-value "bins" exactly NOT IMPLEMENTED YET
     bool bins_set;   // bool to keep track if number of bins have been set
@@ -38,7 +38,7 @@ inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p
     double kr = sd_k_norm(cv, p);
 
     kr = kr / p.max;
-    int b = pow(kr, p.power) * p.bins;
+    int b = p.round ? round(kr * p.bins) : kr * p.bins;
     return b;
 }
 
@@ -57,7 +57,9 @@ namespace hila {
 /// the result by (b_0*b_1*...)^2 so that the normalization matches the unblocked one.
 /// The bin_k_field*() -functions bin the given k-space field as is, without rescaling.
 /// Bin is determined by formula
-///   b = (int) ( (k/k_max)^p * n_bins ), where p is the power in binning - usually 1
+///   b = (int) ( (k/k_max) * n_bins )
+/// unless rounding is set with k_round(), when it is 
+///   b = (int) round( (k/k_max) * n_bins )
 ///
 ///   hila::k_binning kb;
 ///   kb.bins(80).k_max(M_PI);
@@ -70,11 +72,11 @@ namespace hila {
 ///                  if bins have been modified it is kept constant, otherwise
 ///                  number of bins is changed so that binwidth is const.
 ///   double k_max()                      get max value of k
-///   hila::k_binning & power(double p)   set the "power" in binning
-///   double power()                      get power
 ///   hila::k_binning & binwidth(double w)  set binwidth (k_max const, so bins changes)
 ///   double binwidth()                   get binwidth
-///
+///   hila::k_binning & k_round()         set rounding to nearest bin value
+///   bool get_round()                    get rounding value
+///   
 ///   std::vector<T>      bin_k_field(const Field<T> &f)       bin the k-space field f
 ///   std::vector<double> bin_k_field_squarenorm(const Field<T & f)
 ///                            bin the square norm of k-space field f
@@ -127,8 +129,8 @@ class k_binning {
     /// Default: binwidth 2*pi/L, where L is the largest base lattice dimension, and
     /// k_max = pi/(minimum blocking factor), i.e. pi on unblocked lattice.
     k_binning() {
-        par.power = 1;
         par.exact = 0;
+        par.round = false;
         par.bins = 1;
         par.bins_set = false;
         auto bf = blocking_factor();
@@ -146,8 +148,8 @@ class k_binning {
 
     k_binning(int b) {
         par.max = M_PI;
-        par.power = 1;
         par.exact = 0;
+        par.round = false;
         par.bins = b;
         par.bins_set = true;
         par.binwidth = par.max / par.bins;
@@ -163,7 +165,7 @@ class k_binning {
         return *this;
     }
 
-    int bins(void) {
+    int bins(void) const {
         return par.bins;
     }
 
@@ -179,7 +181,7 @@ class k_binning {
         return *this;
     }
 
-    double k_max(void) {
+    double k_max(void) const {
         return par.max;
     }
 
@@ -193,20 +195,20 @@ class k_binning {
         return *this;
     }
 
-    double binwidth() {
+    double binwidth() const {
         return par.binwidth;
     }
 
-    /// Bin quantity k^p
-    k_binning &power(double p) {
-        assert(p > 0);
-        par.power = p;
-        k_avg.clear();
+
+    /// set/get rounding mode in binning
+
+    k_binning &k_round(bool _val = true) {
+        par.round = _val;
         return *this;
     }
 
-    double power() {
-        return par.power;
+    bool get_round() const {
+        return par.round;
     }
 
     /// Bin exactly this many bins
@@ -426,11 +428,18 @@ class k_binning {
     }
 
     /// Bin limits
-    /// bin is  b = floor((k / k_max)^p * n_bins)
-    /// thus, k_min(b) = (b/n_bins)^(1/p) * k_max
+    /// bin is  b = floor((k / k_max) * n_bins) if not round on
+    /// thus, k_min(b) = (b/n_bins) * k_max
+    /// If round is on, b = round((k / k_max) * n_bins) = floor((k / k_max) * n_bins + 0.5)
+    /// and k_min(b) = ((b-0.5)/n_bins) * k_max
 
     double bin_min(int i) {
-        return pow(((double)i) / par.bins, 1.0 / par.power) * par.max;
+
+        double a = i;
+        if (par.round && i > 0) 
+            a -= 0.5;
+
+        return (a / par.bins) * par.max;
     }
 
     double bin_max(int i) {
