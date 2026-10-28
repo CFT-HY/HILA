@@ -1388,30 +1388,32 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         TraverseStmt(s);
 
         // check also the conditionals - are these site dependent?
-        if (!loop_info.has_site_dependent_cond_or_index) {
-            Expr *condexpr = nullptr;
-            if (IfStmt *IS = dyn_cast<IfStmt>(s))
-                condexpr = IS->getCond();
-            else if (ForStmt *FS = dyn_cast<ForStmt>(s))
-                condexpr = FS->getCond();
-            else if (WhileStmt *WS = dyn_cast<WhileStmt>(s))
-                condexpr = WS->getCond();
-            else if (DoStmt *DS = dyn_cast<DoStmt>(s))
-                condexpr = DS->getCond();
-            else if (SwitchStmt *SS = dyn_cast<SwitchStmt>(s))
-                condexpr = SS->getCond();
-            else if (ConditionalOperator *CO = dyn_cast<ConditionalOperator>(s))
-                condexpr = CO->getCond();
+        Expr *condexpr = nullptr;
+        if (IfStmt *IS = dyn_cast<IfStmt>(s))
+            condexpr = IS->getCond();
+        else if (ForStmt *FS = dyn_cast<ForStmt>(s))
+            condexpr = FS->getCond();
+        else if (WhileStmt *WS = dyn_cast<WhileStmt>(s))
+            condexpr = WS->getCond();
+        else if (DoStmt *DS = dyn_cast<DoStmt>(s))
+            condexpr = DS->getCond();
+        else if (SwitchStmt *SS = dyn_cast<SwitchStmt>(s))
+            condexpr = SS->getCond();
+        else if (ConditionalOperator *CO = dyn_cast<ConditionalOperator>(s))
+            condexpr = CO->getCond();
 
-            if (condexpr != nullptr) {
+        if (condexpr != nullptr) {
+            if (!loop_info.has_site_dependent_cond_or_index) {
                 loop_info.has_site_dependent_cond_or_index =
                     is_site_dependent(condexpr, &loop_info.conditional_vars);
                 if (loop_info.has_site_dependent_cond_or_index)
                     loop_info.condExpr = condexpr;
-
-                // Flag general cond expression
-                loop_info.has_conditional = true;
             }
+
+            // Flag general cond expression.  This must be done even if site dependence
+            // was already found (eg. site dependent array index in the loop body),
+            // otherwise conditionally assigned fields are not read in first
+            loop_info.has_conditional = true;
         }
 
         parsing_state.ast_depth = 0;
