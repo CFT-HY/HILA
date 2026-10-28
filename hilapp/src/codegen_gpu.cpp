@@ -372,7 +372,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     code << "gcclGroupEnd();\n";
                 if (gpu_shmem) {
                     code << "nvshmemx_quiet_on_stream(halo_stream);\n";
-                    code << "nvshmemx_barrier_all_on_stream(halo_stream);\n";
+                    // no barrier_all: the put-with-signal / signal-wait pair in
+                    // field_comm.h gives per-neighbour completion
                 }
             }
             for (field_info &l : field_info_list) {
@@ -1435,7 +1436,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     code << "gcclGroupEnd();\n";
                 if (gpu_shmem) {
                     code << "nvshmemx_quiet_on_stream(halo_stream);\n";
-                    code << "nvshmemx_barrier_all_on_stream(halo_stream);\n";
+                    // no barrier_all: the put-with-signal / signal-wait pair in
+                    // field_comm.h gives per-neighbour completion
                 }
             }
             for (field_info &l : field_info_list) {

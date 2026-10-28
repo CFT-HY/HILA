@@ -443,7 +443,9 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 template <typename T>
 void field_storage<T>::free_mpi_buffer(T *d_buffer) {
 #ifdef GPU_SHMEM
-    gpuFreeShared(d_buffer);
+    // Not recycled: without the global barrier a straggler put-with-signal can
+    // still be in flight, and would corrupt whichever field reused the block.
+    (void)d_buffer;
 #else
     d_free_comm(d_buffer);
 #endif // GPU_SHMEM

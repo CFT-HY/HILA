@@ -164,6 +164,12 @@ void hila::report_overlap_config(std::ostream &out) {
     out << "Overlap stream mode   : priority (fixed; high-priority halo_stream)\n";
 #endif
 #endif
+#if defined(GPU_SHMEM)
+    out << "NVSHMEM halo path     : "
+        << (hila::nvshmem_use_fused_putsignal() ? "fused put-signal (single-QP ordering)"
+                                               : "put -> quiet -> signal (multi-QP safe)")
+        << "  [QP/device " << hila::nvshmem_num_qp() << "; HILA_FUSED_PUTSIGNAL overrides]\n";
+#endif
 }
 
 gpuStreamPool &hila::stream_pool() {
@@ -463,6 +469,36 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 #ifdef GPU_SHMEM
 #include <nvshmem.h>
 #include <nvshmemx.h>
+    // Effective IB queue pairs per device; NVSHMEM has no query, so read the env
+    // the transport reads (defaulted to 1 at init below).
+    int nvshmem_num_qp() {
+        static int qp = [] {
+            const char *e = getenv("NVSHMEM_IB_NUM_RC_PER_DEVICE");
+            int v = e ? atoi(e) : 1; // the setenv default below makes unset == 1
+            return v > 0 ? v : 1;
+        }();
+        return qp;
+    }
+
+    // Fused put-with-signal iff the single-QP ordering guarantee holds;
+    // HILA_FUSED_PUTSIGNAL=0/1 overrides.
+    bool nvshmem_use_fused_putsignal() {
+        static bool fused = [] {
+            bool f = (nvshmem_num_qp() == 1); // default: fused iff single QP
+            if (const char *e = getenv("HILA_FUSED_PUTSIGNAL")) {
+                f = atoi(e) != 0;
+                if (f && nvshmem_num_qp() > 1 && hila::myrank() == 0)
+                    fprintf(stderr,
+                            "WARNING: HILA_FUSED_PUTSIGNAL=1 forced with "
+                            "NVSHMEM_IB_NUM_RC_PER_DEVICE=%d > 1 -- the signal may "
+                            "overtake the payload and corrupt halos\n",
+                            nvshmem_num_qp());
+            }
+            return f;
+        }();
+        return fused;
+    }
+
     void initialize_nvshmem_communication() {
         int rank, size;
 
@@ -472,6 +508,10 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
             check_device_error("Could not get device count");
             gpuSetDevice(lattice->mynode.rank % n_devices);
         }
+
+        // one queue pair keeps the fused put-with-signal ordering-safe; an
+        // explicit user setting wins
+        setenv("NVSHMEM_IB_NUM_RC_PER_DEVICE", "1", 0);
 
         nvshmemx_init_attr_t attr;
         attr.mpi_comm = &lattice.ptr()->mpi_comm_lat;
