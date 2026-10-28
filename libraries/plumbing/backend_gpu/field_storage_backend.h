@@ -168,10 +168,11 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     // Call the kernel to build the list of elements
     gpuMalloc(&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
-    gather_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                    lattice->mynode.field_alloc_size);
+    gather_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 
     // Copy the result to the host
+    gpuStreamSynchronize(hila::compute_stream());
     gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
 
     gpuFree(d_site_index);
@@ -213,10 +214,11 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
         // Call the kernel to build the list of elements
         gpuMalloc(&(d_buffer), n * sizeof(T));
         int N_blocks = n / N_threads + 1;
-        gather_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                                lattice->mynode.field_alloc_size);
+        gather_elements_negated_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+            *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 
         // Copy the result to the host
+        gpuStreamSynchronize(hila::compute_stream());
         gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
 
         gpuFree(d_site_index);
@@ -333,9 +335,11 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 
     // Call the kernel to place the elements
     int N_blocks = n / N_threads + 1;
-    place_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                   lattice->mynode.field_alloc_size);
+    place_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 
+    // the kernel reads both buffers; complete before the pool reclaims them
+    gpuStreamSynchronize(hila::compute_stream());
     gpuFree(d_buffer);
     gpuFree(d_site_index);
 }
