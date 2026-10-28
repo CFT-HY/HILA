@@ -479,31 +479,47 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 template <typename T>
 dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
     const auto &ci = lattice->nn_comminfo[d];
-    if (!is_gather_started(d, p))
+
+    // check_communication() can downgrade an ALL gather to EVEN/ODD in place, so
+    // the started parity need not be the loop's literal p.  Transfer what was
+    // actually started; unpack_buffers() resolves identically.
+    if (p == ALL) {
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
+            !is_gather_started(d, ODD))
+            return 0;
+    } else if (!is_gather_started(d, p))
         return 0;
 
-    unsigned sites = ci.to_node.n_sites(p);
-    size_t n_bytes = sites * sizeof(T);
-    if (n_bytes == 0)
-        return 0;
+    int n_transfer;
+    Parity par = resolve_started_parity(d, p, n_transfer);
 
-    T *send_ptr = fs->send_buffer[d] + ci.to_node.offset(p);
-    T *recv_ptr = fs->get_receive_buffer(d, p, ci.from_node);
+    dir_mask_t mask = 0;
+    for (int i = 0; i < n_transfer; ++i, par = opp_parity(par)) {
+
+        unsigned sites = ci.to_node.n_sites(par);
+        size_t n_bytes = sites * sizeof(T);
+        if (n_bytes == 0)
+            continue;
+
+        T *send_ptr = fs->send_buffer[d] + ci.to_node.offset(par);
+        T *recv_ptr = fs->get_receive_buffer(d, par, ci.from_node);
 
 #if defined(GPU_SHMEM)
-    nvshmemx_putmem_nbi_on_stream(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
+        nvshmemx_putmem_nbi_on_stream(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
 
 #elif defined(GPU_CCL)
-    using scalar_t = hila::arithmetic_type<T>;
-    size_t n_elems = sites * (sizeof(T) / sizeof(scalar_t));
-    auto g_type = gccl_type<scalar_t>::value;
+        using scalar_t = hila::arithmetic_type<T>;
+        size_t n_elems = sites * (sizeof(T) / sizeof(scalar_t));
+        auto g_type = gccl_type<scalar_t>::value;
 
-    gcclSend(send_ptr, n_elems, g_type, ci.to_node.rank, lattice->gccl_comm_lat, stream);
-    gcclRecv(recv_ptr, n_elems, g_type, ci.from_node.rank, lattice->gccl_comm_lat, stream);
+        gcclSend(send_ptr, n_elems, g_type, ci.to_node.rank, lattice->gccl_comm_lat, stream);
+        gcclRecv(recv_ptr, n_elems, g_type, ci.from_node.rank, lattice->gccl_comm_lat, stream);
 #endif
 
-    hila::n_gather_done += 1;
-    return get_dir_mask(d);
+        hila::n_gather_done += 1;
+        mask = get_dir_mask(d);
+    }
+    return mask;
 }
 #endif
 /// start_gather(): Communicate the field at Parity par from Direction
