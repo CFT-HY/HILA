@@ -98,17 +98,9 @@ class k_binning {
     std::vector<size_t> bin_count;
     const lattice_struct *bin_info_lattice = nullptr; // lattice where k_avg was computed
 
-    /// blocking factor of the current lattice relative to the base lattice
-    static CoordinateVector blocking_factor() {
-        CoordinateVector b;
-        foralldir (d)
-            b[d] = hila::defined_lattices.front()->l_size[d] / lattice.size(d);
-        return b;
-    }
-
     /// rescale FFT-based spectra on blocked lattice by (blocking volume)^2
     static std::vector<double> scale_to_base(std::vector<double> v) {
-        auto bf = blocking_factor();
+        auto bf = lattice.blocking_factor();
         double bvol = 1;
         foralldir (d)
             bvol *= bf[d];
@@ -133,7 +125,7 @@ class k_binning {
         par.round = false;
         par.bins = 1;
         par.bins_set = false;
-        auto bf = blocking_factor();
+        auto bf = lattice.blocking_factor();
         int bmin = bf[0];
         foralldir (d) {
             int L = lattice.size(d) * bf[d];
@@ -373,7 +365,7 @@ class k_binning {
 
     void sd_calculate_bin_info() {
 
-        auto bf = blocking_factor();
+        auto bf = lattice.blocking_factor();
         foralldir (d)
             par.k_scale[d] = 1.0 / bf[d];
         bin_info_lattice = lattice.ptr();
