@@ -90,9 +90,12 @@ auto field_storage<T>::get_element(const unsigned i, const Lattice lattice) cons
     char *d_buffer;
     T value;
 
-    // Call the kernel to collect the element
+    // on compute_stream: it is non-blocking, so a default-stream launch here is
+    // not ordered after the onsites loop that wrote the field
     gpuMalloc(&(d_buffer), sizeof(T));
-    get_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->mynode.field_alloc_size);
+    get_element_kernel<<<1, 1, 0, hila::compute_stream()>>>(*this, d_buffer, i,
+                                                            lattice->mynode.field_alloc_size);
+    gpuStreamSynchronize(hila::compute_stream());
 
     // Copy the result to the host
     gpuMemcpy((char *)(&value), d_buffer, sizeof(T), gpuMemcpyDeviceToHost);
@@ -119,9 +122,13 @@ template <typename A>
 void field_storage<T>::set_element(A &value, const unsigned i, const Lattice lattice) {
     T t_value = value;
 
+    // on compute_stream, completed before returning: ordered against onsites
+    // loops on both sides
     if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE) {
         // pass element directly as arg
-        set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice->mynode.field_alloc_size);
+        set_element_kernel<<<1, 1, 0, hila::compute_stream()>>>(*this, t_value, i,
+                                                                lattice->mynode.field_alloc_size);
+        gpuStreamSynchronize(hila::compute_stream());
     } else {
         // This branch is used for large variables:
         // allocate space and copy the buffer to the device
@@ -130,7 +137,9 @@ void field_storage<T>::set_element(A &value, const unsigned i, const Lattice lat
         gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
         // call the kernel to set correct indexes
-        set_element_kernel_ptr<<<1, 1>>>(*this, d_buffer, i, lattice->mynode.field_alloc_size);
+        set_element_kernel_ptr<<<1, 1, 0, hila::compute_stream()>>>(
+            *this, d_buffer, i, lattice->mynode.field_alloc_size);
+        gpuStreamSynchronize(hila::compute_stream());
         gpuFree(d_buffer);
     }
 }
@@ -159,10 +168,11 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     // Call the kernel to build the list of elements
     gpuMalloc(&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
-    gather_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                    lattice->mynode.field_alloc_size);
+    gather_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 
     // Copy the result to the host
+    gpuStreamSynchronize(hila::compute_stream());
     gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
 
     gpuFree(d_site_index);
@@ -204,10 +214,11 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
         // Call the kernel to build the list of elements
         gpuMalloc(&(d_buffer), n * sizeof(T));
         int N_blocks = n / N_threads + 1;
-        gather_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                                lattice->mynode.field_alloc_size);
+        gather_elements_negated_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+            *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 
         // Copy the result to the host
+        gpuStreamSynchronize(hila::compute_stream());
         gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
 
         gpuFree(d_site_index);
@@ -324,9 +335,11 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 
     // Call the kernel to place the elements
     int N_blocks = n / N_threads + 1;
-    place_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                   lattice->mynode.field_alloc_size);
+    place_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
+        *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
 
+    // the kernel reads both buffers; complete before the pool reclaims them
+    gpuStreamSynchronize(hila::compute_stream());
     gpuFree(d_buffer);
     gpuFree(d_site_index);
 }
@@ -434,7 +447,9 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
 template <typename T>
 void field_storage<T>::free_mpi_buffer(T *d_buffer) {
 #ifdef GPU_SHMEM
-    gpuFreeShared(d_buffer);
+    // Not recycled: without the global barrier a straggler put-with-signal can
+    // still be in flight, and would corrupt whichever field reused the block.
+    (void)d_buffer;
 #else
     d_free_comm(d_buffer);
 #endif // GPU_SHMEM

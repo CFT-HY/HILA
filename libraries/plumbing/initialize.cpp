@@ -265,6 +265,11 @@ void hila::initialize(int argc, char **argv) {
     hila::out0 << "Not using GPU_AWARE_COMM\n";
 #endif
 
+    // overlap stream mode and, under NVSHMEM, the selected halo path
+    if_rank0 () {
+        hila::report_overlap_config(hila::out);
+    }
+
 #if !defined(GPU_VECTOR_REDUCTION_THREAD_BLOCKS) || GPU_VECTOR_REDUCTION_THREAD_BLOCKS <= 0
     hila::out0 << "ReductionVector with atomic operations (GPU_VECTOR_REDUCTION_THREAD_BLOCKS=0)\n";
 #else

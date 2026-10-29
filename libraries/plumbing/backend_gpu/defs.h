@@ -379,6 +379,11 @@ gpuStream_t &halo_stream();
 gpuEvent_t &halo_event();
 gpuStream_t &compute_stream();
 gpuEvent_t &compute_event();
+#ifdef GPU_SHMEM
+// NVSHMEM halo-path selection (definitions in hila_gpu.cpp)
+int nvshmem_num_qp();
+bool nvshmem_use_fused_putsignal();
+#endif
 // Report the comm/compute overlap stream configuration (mode + green-context SM
 // split) and the env vars that control it, to the given stream (rank-0 banner).
 void report_overlap_config(std::ostream &out);
@@ -418,6 +423,23 @@ using gpuError = int;
 
 #define gpuStreamSynchronize(a) do {} while(0)
 #define gpuDeviceSynchronize() do {} while(0)
+
+#if defined(GPU_SHMEM)
+// Stubs for the NVSHMEM symbols used in field_comm.h: hilapp only parses these
+// bodies, it never runs them.  Variadic so the stream type need not be named.
+#define gpuMallocShared(a, b) do {} while(0)
+#define gpuFreeShared(a) do {} while(0)
+inline void nvshmem_barrier_all() {}
+template <typename... A> inline void nvshmemx_putmem_nbi_on_stream(A...) {}
+template <typename... A> inline void nvshmemx_signal_op_on_stream(A...) {}
+template <typename... A> inline void nvshmemx_quiet_on_stream(A...) {}
+#ifndef NVSHMEM_SIGNAL_ADD
+#define NVSHMEM_SIGNAL_ADD 0
+#endif
+#ifndef NVSHMEM_CMP_GE
+#define NVSHMEM_CMP_GE 0
+#endif
+#endif // GPU_SHMEM
 
 #define gpuEventRecord(a,b) do {} while(0)
 #define gpuEventSynchronize(a) do {} while(0)
@@ -468,6 +490,12 @@ inline gpuStream_t& compute_event() {
 }
 
 inline void report_overlap_config(std::ostream &) {}
+
+#if defined(GPU_SHMEM)
+// hilapp-pass stubs for the halo-path selection (real definitions in hila_gpu.cpp)
+inline int nvshmem_num_qp() { return 1; }
+inline bool nvshmem_use_fused_putsignal() { return true; }
+#endif
 
 
 void initialize_gccl_communication();

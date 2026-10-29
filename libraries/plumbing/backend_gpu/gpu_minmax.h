@@ -47,14 +47,16 @@ gpucub::KeyValuePair<keyvalueindexT, T> gpu_minmax_argreduce_range(bool is_min, 
     // Allocate temporary storage
     gpuMalloc(&d_temp_storage, temp_storage_bytes);
 
-    // Run argmin-reduction
+    // on compute_stream: that is where data_in was produced
     if (is_min) {
         GPU_CHECK(gpucub::DeviceReduce::ArgMin(d_temp_storage, temp_storage_bytes, data_in,
-                                               result_p, num_items));
+                                               result_p, num_items, hila::compute_stream()));
     } else {
         GPU_CHECK(gpucub::DeviceReduce::ArgMax(d_temp_storage, temp_storage_bytes, data_in,
-                                               result_p, num_items));
+                                               result_p, num_items, hila::compute_stream()));
     }
+
+    gpuStreamSynchronize(hila::compute_stream());
 
     gpuFree(d_temp_storage);
 

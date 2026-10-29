@@ -110,6 +110,15 @@ class Field {
 #endif
         T *send_buffer[NDIRS];
 
+#if defined(GPU_SHMEM)
+        // Halo completion signalling, replacing the global barrier.  One monotonic
+        // counter per (direction, parity) slot = (int)d * 3 + parity_idx(p).
+        static constexpr int comm_signal_slots = NDIRS * 3;
+        uint64_t *comm_signal = nullptr;             // symmetric heap, zeroed
+        uint64_t signal_expected[comm_signal_slots]; // host, monotonic
+        uint64_t *get_signal_buffer();               // lazy symmetric alloc + zero
+#endif
+
 #if HALO_DEPTH > 1
         // deep halo gathers (layers 0..depth-1, always ALL parity), see start_gather_depth()
         gather_status_t deep_status[NDIRS];
@@ -210,6 +219,11 @@ class Field {
 #endif
 #endif
             }
+#if defined(GPU_SHMEM)
+            comm_signal = nullptr;
+            for (int i = 0; i < comm_signal_slots; i++)
+                signal_expected[i] = 0;
+#endif
         }
 
         /**
@@ -242,6 +256,10 @@ class Field {
 #endif
 #endif
             }
+#if defined(GPU_SHMEM)
+            // not freed -- see field_storage<T>::free_mpi_buffer()
+            comm_signal = nullptr;
+#endif
         }
 
         /**

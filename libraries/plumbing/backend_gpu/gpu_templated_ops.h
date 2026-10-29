@@ -147,8 +147,8 @@ T gpu_reduce_sum(T *vector, int N, gpuStream_t stream = 0) {
         int new_size = (vector_size - first) / reduce_step;
         // Find number of blocks and launch the kernel
         int blocks = (new_size - 1) / N_threads + 1;
-        gpu_reduce_sum_kernel<<<blocks, N_threads>>>(vector + first, vector_size, new_size,
-                                                     reduce_step);
+        gpu_reduce_sum_kernel<<<blocks, N_threads, 0, hila::compute_stream()>>>(
+            vector + first, vector_size, new_size, reduce_step);
         check_device_error("gpu_reduce_sum kernel");
         // Find the full size of the resulting array
         vector_size = new_size + first;
@@ -192,8 +192,8 @@ T gpu_reduce_product(T *vector, int N, gpuStream_t stream = 0) {
         int new_size = (vector_size - first) / reduce_step;
         // Find number of blocks and launch the kernel
         int blocks = new_size / N_threads + 1;
-        gpu_reduce_product_kernel<<<blocks, N_threads>>>(vector + first, vector_size, new_size,
-                                                         reduce_step);
+        gpu_reduce_product_kernel<<<blocks, N_threads, 0, hila::compute_stream()>>>(
+            vector + first, vector_size, new_size, reduce_step);
 
         // Find the full size of the resulting array
         vector_size = new_size + first;
@@ -393,9 +393,10 @@ template <typename T>
 void sum_blocked_vectorreduction(T *data, T *output, const int reduction_size, const int threads) {
     T *output_device;
     gpuMalloc(&output_device, reduction_size * sizeof(T));
+    // on compute_stream: that is where the preceding onsites loop wrote data
     sum_blocked_vectorreduction_kernel_cub<T, GPU_BLOCK_REDUCTION_THREADS>
-        <<<reduction_size, GPU_BLOCK_REDUCTION_THREADS>>>(data, output_device, reduction_size,
-                                                          threads);
+        <<<reduction_size, GPU_BLOCK_REDUCTION_THREADS, 0, hila::compute_stream()>>>(
+            data, output_device, reduction_size, threads);
 
     hila::synchronize_threads();
     gpuMemcpy(output, output_device, reduction_size * sizeof(T), gpuMemcpyDeviceToHost);
@@ -436,7 +437,7 @@ __global__ void gpu_set_value_kernel_ptr(T *vector, const T *valptr, int elems) 
 /// use memset to set value to zero - not useful for other values
 template <typename T>
 inline void gpu_set_zero(T *vec, size_t N) {
-    gpuMemset(vec, 0, N * sizeof(T));
+    gpuMemsetAsync(vec, 0, N * sizeof(T), hila::compute_stream());
 }
 
 /// Setting to some value needs to be done elem-by-elem
@@ -445,7 +446,7 @@ void gpu_set_value(T *vec, const T &val, size_t N) {
     int blocks = N / N_threads + 1;
     if constexpr (sizeof(T) <= GPU_GLOBAL_ARG_MAX_SIZE)
         // small T size, pass as arg to __global__
-        gpu_set_value_kernel<<<blocks, N_threads>>>(vec, val, N);
+        gpu_set_value_kernel<<<blocks, N_threads, 0, hila::compute_stream()>>>(vec, val, N);
     else {
         // bigger size, memcopy
         T *buf;
@@ -453,7 +454,9 @@ void gpu_set_value(T *vec, const T &val, size_t N) {
         gpuMemcpy(buf, (char *)&val, sizeof(T), gpuMemcpyHostToDevice);
 
         // call the kernel to set correct indexes
-        gpu_set_value_kernel_ptr<<<blocks, N_threads>>>(vec, buf, N);
+        gpu_set_value_kernel_ptr<<<blocks, N_threads, 0, hila::compute_stream()>>>(vec, buf, N);
+        // buf is read by the kernel above
+        gpuStreamSynchronize(hila::compute_stream());
         gpuFree(buf);
     }
 }
