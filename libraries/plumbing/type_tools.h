@@ -12,13 +12,14 @@ namespace hila {
 
 /////////////////////////////////////////////////////////////////////////////////
 /// is class type defined so that can be used in Field<type> -variables
-/// use the existence of type::base_type -element as a proxy for this
+/// use the existence of type::base_type and type::argument_type -elements as a proxy for this
 /// use: hila::is_field_class_type<T>::value
-template <class, class = void>
+template <class, class = void, class = void>
 struct is_field_class_type : std::false_type {};
 
 template <class T>
-struct is_field_class_type<T, std::void_t<typename T::base_type>> : std::true_type {};
+struct is_field_class_type<T, std::void_t<typename T::base_type>,
+                           std::void_t<typename T::argument_type>> : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////////
 /// General routine to determine if type can be used in Field<type> -variables
@@ -28,16 +29,16 @@ template <class, class = void>
 struct is_field_type : std::false_type {};
 
 template <class T>
-struct is_field_type<T, typename std::enable_if_t<is_field_class_type<T>::value ||
-                                                  is_arithmetic<T>::value>> : std::true_type {
-};
+struct is_field_type<
+    T, typename std::enable_if_t<is_field_class_type<T>::value || is_arithmetic<T>::value>>
+    : std::true_type {};
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Utility for obtaining the numeric base type of a class
 /// Use as  "hila::arithmetic_type<T>"
 /// which returns the underlying arithmetic type used in class T (e.g. float, double
 /// etc.)  if it is field class type.  For other types returns the input type
-/// 
+///
 ///
 /// Alt form  "typename base_type_struct<T>"
 
@@ -87,7 +88,9 @@ template <typename A, typename B, typename Enable = void>
 struct contains_type : std::integral_constant<bool, std::is_same<A, B>::value> {};
 
 template <typename A, typename B>
-struct contains_type<A, B, typename std::enable_if_t<hila::is_field_class_type<A>::value && !std::is_same<A,B>::value>>
+struct contains_type<
+    A, B,
+    typename std::enable_if_t<hila::is_field_class_type<A>::value && !std::is_same<A, B>::value>>
     : std::integral_constant<bool, hila::contains_type<hila::inner_type<A>, B>::value> {};
 
 template <typename A>
@@ -111,7 +114,7 @@ using type_div = decltype(std::declval<A>() / std::declval<B>());
 
 //////////////////////////////////////////////////////////////////////////////
 /// Access variables as if arrays of scalar_type numbers
-/// 
+///
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
@@ -125,25 +128,24 @@ inline void set_number_in_var(T &var, int i, const hila::arithmetic_type<T> val)
 
 
 //////////////////////////////////////////////////////////////////////////////
-/// Helper functions 
+/// Helper functions
 ///   hila::is_std_array<T>::value
 ///   hila::is_std_vector<T>::value
 /// are true if the type T is std::array/std::vector, otherwise false
-/// 
+///
 //////////////////////////////////////////////////////////////////////////////
 
-template<typename T>
+template <typename T>
 struct is_std_array : std::false_type {};
 
-template<typename T, std::size_t N>
+template <typename T, std::size_t N>
 struct is_std_array<std::array<T, N>> : std::true_type {};
 
-template<typename T>
+template <typename T>
 struct is_std_vector : std::false_type {};
 
-template<typename T>
+template <typename T>
 struct is_std_vector<std::vector<T>> : std::true_type {};
-
 
 
 } // namespace hila

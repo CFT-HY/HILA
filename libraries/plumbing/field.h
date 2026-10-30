@@ -122,8 +122,8 @@ class Field {
 #if HALO_DEPTH > 1
         // deep halo gathers (layers 0..depth-1, always ALL parity), see start_gather_depth()
         gather_status_t deep_status[NDIRS];
-        int deep_depth[NDIRS];       // depth of the started or done gather
-        unsigned deep_n[2][NDIRS];   // number of elements in layer 0 / deeper layers message
+        int deep_depth[NDIRS];     // depth of the started or done gather
+        unsigned deep_n[2][NDIRS]; // number of elements in layer 0 / deeper layers message
         MPI_Request deep_receive_request[2][NDIRS];
         MPI_Request deep_send_request[2][NDIRS];
         T *deep_send_buffer[NDIRS];
@@ -380,6 +380,11 @@ class Field {
     static_assert(std::is_trivial<T>::value && std::is_standard_layout<T>::value,
                   "Field expects only pod-type elements (plain data): default "
                   "constructor, copy and delete");
+
+    static_assert(hila::is_field_type<T>::value,
+                  "Types used in Field<> must define \"base_type\" and \"argument_type\", usually:\n"
+                  "    using base_type = hila::arithmetic_type<T>;\n"
+                  "    using argument_type = T;\n");
 
   public:
     /**
@@ -1750,7 +1755,7 @@ class Field {
      * @brief Write subspace (slice) of the original field.
      * @details parameter slice (CoordinateVector) is either
      * a fixed coordinate value >= 0 or negative value, implying that this coordinate is run
-     * through. 
+     * through.
      * For example, slice = {5,2,-1,0}; prints the line along z-axis at (x,y,t) = (5,2,0)
      * @param Outf is either filename (std::string) or output stream of open file
      * (std::ofstream)
