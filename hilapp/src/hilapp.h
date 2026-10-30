@@ -270,11 +270,13 @@ struct field_info {
     bool is_read_nb;        // read using nn-neighbours
     bool is_read_offset;    // read with an offset (non-nn) index
     bool is_loop_local_dir; // is read with loop local direction?
+    bool is_read_atX_in_func; // read at X in a field function, see field_function.cpp
     int first_assign_seq;   // the sequence of the first assignment
 
     field_info() {
         type_template = old_name = new_name = loop_ref_name = "";
         is_written = is_read_nb = is_read_atX = is_read_offset = is_loop_local_dir = false;
+        is_read_atX_in_func = false;
         first_assign_seq = 0;
         dir_list = {};
         ref_list = {};
@@ -437,6 +439,26 @@ struct loop_info_struct {
     }
 };
 
+/// Field functions: functions with an X_index_type parameter, which access the fields given
+/// as parameters with f[X] or f[X + dir].  These can be called from site loops, see
+/// field_function.cpp
+enum class ff_param { OTHER, FIELD, X };
+
+struct field_function_info {
+    FunctionDecl *decl;               // the definition of the function (or template pattern)
+    std::vector<ff_param> param_kind; // kind of each parameter
+    std::vector<bool> read_atX;       // field parameter read at X
+    std::vector<bool> read_nb;        // field parameter read at X + dir
+    bool contains_random;
+    bool ok; // false if there were errors
+};
+
+/// a call to a field function inside a site loop
+struct field_function_call {
+    CallExpr *call;
+    field_function_info *ffi;
+};
+
 /// Stores information about loop function arguments
 struct argument_info {
     Expr *E;
@@ -561,6 +583,9 @@ void reset_vectorizable_types();
 /// and clear loop function info
 void clear_loop_functions_in_compilation_unit();
 
+/// and field function info
+void clear_field_functions_in_compilation_unit();
+
 /// check if macro "name" is defined (non-function macros only)
 bool is_macro_defined(const char *name, std::string *arg = nullptr);
 
@@ -588,6 +613,7 @@ extern std::list<loop_const_expr_ref> loop_const_expr_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::list<selection_info> selection_info_list;
 extern std::vector<reduction_expr> reduction_list;
+extern std::vector<field_function_call> field_function_call_list;
 
 
 // struct func_prototype_struct {

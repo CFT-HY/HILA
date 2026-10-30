@@ -34,6 +34,7 @@ std::list<loop_const_expr_ref> loop_const_expr_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::list<selection_info> selection_info_list = {};
 std::vector<reduction_expr> reduction_list = {};
+std::vector<field_function_call> field_function_call_list = {};
 
 // std::vector<func_prototype_struct> prototype_vector = {};
 
@@ -1038,6 +1039,7 @@ class MyFrontendAction : public ASTFrontendAction {
         field_decl = nullptr;
         reset_vectorizable_types();
         clear_loop_functions_in_compilation_unit();
+        clear_field_functions_in_compilation_unit();
 
         return (true);
     }

@@ -269,6 +269,7 @@ OBJECTS = \
   $(BUILDDIR)/toplevelvisitor.o \
   $(BUILDDIR)/loop_function.o \
   $(BUILDDIR)/loop_function_visitor.o \
+  $(BUILDDIR)/field_function.o \
   $(BUILDDIR)/function_prototype.o \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site_visitor.o \

@@ -273,6 +273,11 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size_, std::s
             reason.push_back("it contains site selection variable");
         }
 
+        if (field_function_call_list.size() > 0) {
+            is_vectorizable = false;
+            reason.push_back("it calls field functions");
+        }
+
         // check if the fields are vectorizable in a compatible manner
         for (field_info &fi : field_info_list) {
             if (!fi.vecinfo.is_vectorizable) {

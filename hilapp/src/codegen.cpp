@@ -296,11 +296,13 @@ void TopLevelVisitor::handle_field_info(std::stringstream &code, bool is_cow, St
     for (field_info &l : field_info_list) {
         std::string init_par{"Parity::none"};
 
-        if (l.is_read_nb || l.is_read_atX) {
-            if (loop_info.parity_value == Parity::all || (l.is_read_nb && l.is_read_atX)) {
+        // reads at X in field functions count as reads at X here
+        bool read_atX = l.is_read_atX || l.is_read_atX_in_func;
+        if (l.is_read_nb || read_atX) {
+            if (loop_info.parity_value == Parity::all || (l.is_read_nb && read_atX)) {
                 init_par = "ALL";
             } else {
-                if (l.is_read_atX)
+                if (read_atX)
                     init_par = loop_info.parity_str;
                 else
                     init_par = "opp_parity(" + loop_info.parity_str + ")";

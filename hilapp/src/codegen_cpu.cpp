@@ -420,6 +420,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     } // end of field handling
 
+    // Field and X arguments of field function calls
+    replace_field_function_args(loopBuf);
+
     // // Replace field references in loop body
     // for ( field_ref & le : field_ref_list ) {
     //   //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );

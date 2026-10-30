@@ -911,6 +911,28 @@ class Field {
     }
 #endif
 
+#if !defined(CUDA) && !defined(HIP)
+    /**
+     * @brief Get the element at the neighbour of site i to direction d.  Used in
+     * hilapp-generated field functions, f[X+d] inside a function called from a site loop.
+     * Works in all CPU layouts, but is not as fast as the neighbour access in loops.
+     */
+    inline auto get_value_at_nb(Direction d, unsigned i) const {
+#if defined(VECTORIZED)
+        // vectorized types use the neighbours of the vectorized layout
+        if constexpr (hila::is_vectorizable_type<T>::value)
+            return get_value_at_nb_site(d, i);
+        else
+            return fs->get_element(fs->neighbours[d][i]);
+#elif defined(LAYOUT_ON_THE_FLY)
+        const unsigned *nb = fs->neighbours[d];
+        return fs->get_element(nb != nullptr ? nb[i] : lattice.ref().neighbour(i, d));
+#else
+        return fs->get_element(fs->neighbours[d][i]);
+#endif
+    }
+#endif
+
 #ifndef VECTORIZED
     /**
      * @brief Set an individual element outside a loop. This is also used as a getter in the vanilla

@@ -187,6 +187,12 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     bool handle_special_loop_function(CallExpr *Call);
 
+    /// field functions, see field_function.cpp
+    bool is_field_function(const FunctionDecl *D);
+    field_function_info *get_field_function(FunctionDecl *D);
+    bool handle_field_function_call(CallExpr *Call);
+    void replace_field_function_args(srcBuf &loopBuf);
+
     bool handle_global_var_decl(Decl *D);
 
     // check if stmt is lf[par] = ... -type

@@ -1029,6 +1029,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     loop_const_expr_ref_list.clear();
     loop_function_calls.clear();
     selection_info_list.clear();
+    field_function_call_list.clear();
 
     global.location.loop = ls->getSourceRange().getBegin();
     loop_info.clear_except_external();
@@ -1199,6 +1200,15 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // Check for function calls parameters. We need to determine if the
     // function can assign to the a field parameter (is not const).
+    // field functions access fields - handle these separately, see field_function.cpp
+    if (CallExpr *CE = dyn_cast<CallExpr>(s)) {
+        if (handle_field_function_call(CE)) {
+            parsing_state.skip_children = 1;
+            is_assignment = false;
+            return true;
+        }
+    }
+
     if (is_function_call_stmt(s)) {
 
         // remove loop const functions from loop body
@@ -1601,45 +1611,42 @@ bool TopLevelVisitor::check_field_ref_list() {
 
     field_info_list.clear();
 
+    // find the field_info of field expression nameExpr, add new if not found
+    auto find_field_info = [&](Expr *nameExpr) -> field_info * {
+        // search for duplicates
+        for (field_info &li : field_info_list) {
+            if (is_duplicate_expr(li.nameExpr, nameExpr)) {
+                return &li;
+            }
+        }
+
+        field_info lfv;
+        lfv.old_name = get_stmt_str(nameExpr);
+        lfv.type_template = get_expr_type(nameExpr);
+        if (lfv.type_template.find("Field", 0) != 0) {
+            reportDiag(DiagnosticsEngine::Level::Error, nameExpr->getSourceRange().getBegin(),
+                       "confused: type of Field expression?");
+            no_errors = false;
+        }
+        lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T>
+
+        // get also the fully canonical Field<T>  type.
+        lfv.element_type =
+            nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+        int a = lfv.element_type.find('<') + 1;
+        int b = lfv.element_type.rfind('>') - a;
+        lfv.element_type = lfv.element_type.substr(a, b);
+
+        lfv.nameExpr = nameExpr; // store the first nameExpr to this field
+
+        field_info_list.push_back(lfv);
+        return &field_info_list.back();
+    };
+
     for (field_ref &p : field_ref_list) {
 
-        std::string name = get_stmt_str(p.nameExpr);
+        field_info *fip = find_field_info(p.nameExpr);
 
-        field_info *fip = nullptr;
-
-        // search for duplicates: if found, lfip is non-null
-
-        for (field_info &li : field_info_list) {
-            if (is_duplicate_expr(li.nameExpr, p.nameExpr)) {
-                //  if (name.compare(li.old_name) == 0) {
-                fip = &li;
-                break;
-            }
-        }
-
-        if (fip == nullptr) {
-            field_info lfv;
-            lfv.old_name = name;
-            lfv.type_template = get_expr_type(p.nameExpr);
-            if (lfv.type_template.find("Field", 0) != 0) {
-                reportDiag(DiagnosticsEngine::Level::Error, p.nameExpr->getSourceRange().getBegin(),
-                           "confused: type of Field expression?");
-                no_errors = false;
-            }
-            lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T>
-
-            // get also the fully canonical Field<T>  type.
-            lfv.element_type =
-                p.nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
-            int a = lfv.element_type.find('<') + 1;
-            int b = lfv.element_type.rfind('>') - a;
-            lfv.element_type = lfv.element_type.substr(a, b);
-
-            lfv.nameExpr = p.nameExpr; // store the first nameExpr to this field
-
-            field_info_list.push_back(lfv);
-            fip = &field_info_list.back();
-        }
         // now fip points to the right info element
         // copy that to lf reference
         p.info = fip;
@@ -1711,6 +1718,41 @@ bool TopLevelVisitor::check_field_ref_list() {
             }
         } // Direction
     } // p-loop
+
+    // Fields accessed in field functions (field_function.cpp).  Neighbours are accessed
+    // with the direction unknown here, gather all directions as with loop local dirs
+    for (field_function_call &fc : field_function_call_list) {
+        for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
+            Expr *arg = fc.call->getArg(i);
+            if (fc.ffi->param_kind[i] != ff_param::FIELD || isa<CXXDefaultArgExpr>(arg))
+                continue;
+
+            field_info *fip = find_field_info(arg->IgnoreImplicit());
+            if (fc.ffi->read_nb[i]) {
+                fip->is_read_nb = true;
+                fip->is_loop_local_dir = true;
+            }
+            if (fc.ffi->read_atX[i])
+                fip->is_read_atX_in_func = true;
+        }
+    }
+
+    // A field written in the loop cannot be read in a field function: the value at X
+    // is written at the end of the loop body (prototype limitation)
+    for (field_function_call &fc : field_function_call_list) {
+        for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
+            Expr *arg = fc.call->getArg(i);
+            if (fc.ffi->param_kind[i] != ff_param::FIELD || isa<CXXDefaultArgExpr>(arg))
+                continue;
+            if (find_field_info(arg->IgnoreImplicit())->is_written) {
+                reportDiag(DiagnosticsEngine::Level::Error, arg->getBeginLoc(),
+                           "Field '%0' is assigned to in this loop and cannot be passed to a "
+                           "field function (prototype limitation)",
+                           get_stmt_str(arg).c_str());
+                no_errors = false;
+            }
+        }
+    }
 
     // Deep halo refs cannot be used if the field is written in the loop (the halo would
     // be read while the field changes).  Use the shift-copy method for these.
@@ -2445,6 +2487,17 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
     }
 
     // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+
+    // Field functions are rewritten in place, see field_function.cpp.  Templates are
+    // rewritten when called in a loop, non-templates always (the original body
+    // would not link)
+    if (is_field_function(f)) {
+        if (f->isThisDeclarationADefinition() && f->hasBody() &&
+            f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate)
+            get_field_function(f);
+        parsing_state.skip_children = 1;
+        return true;
+    }
 
     if (f->isThisDeclarationADefinition() && f->hasBody()) {
 
