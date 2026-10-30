@@ -450,7 +450,8 @@ struct field_function_info {
     std::vector<bool> read_atX;       // field parameter read at X
     std::vector<bool> read_nb;        // field parameter read at X + dir
     bool contains_random;
-    bool ok; // false if there were errors
+    bool ok;                              // false if there were errors
+    std::vector<FunctionDecl *> instances; // GPU: instances whose callees are marked
 };
 
 /// a call to a field function inside a site loop

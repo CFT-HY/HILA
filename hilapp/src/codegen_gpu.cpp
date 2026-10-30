@@ -1151,6 +1151,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     } // ends Field handling
 
+    // Field and X arguments of field function calls
+    replace_field_function_args(loopBuf);
+
     // if there are site selections, reset the selection flag to 0 at all sites
 
     for (selection_info &s : selection_info_list) {

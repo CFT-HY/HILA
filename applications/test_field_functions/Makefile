@@ -1,7 +1,7 @@
 # Test of field functions: functions which access field neighbours f[X+d],
 # called from site loops.  See src/test_field_functions.cpp
 #
-#   make ARCH=<arch>
+#   make ARCH=<arch>       (also GPU archs, e.g. ARCH=cuda or ARCH=hip)
 
 HILA_DIR := ../..
 

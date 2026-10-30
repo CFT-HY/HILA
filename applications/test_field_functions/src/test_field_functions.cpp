@@ -22,6 +22,28 @@ double weighted(const Field<double> &a, const Field<Complex<double>> &b, const X
     return a[X + e_x] * b[X - e_y].re + X.coordinate(e_z) + (X.parity() == EVEN ? 1 : 0);
 }
 
+// helper functions, a constructor and a global variable.  On GPUs these must
+// become __device__
+hila::global<double> scale;
+
+struct Pair {
+    double a, b;
+    Pair(double x, double y) : a(x), b(y) {}
+};
+
+double square_helper(double x) {
+    return x * x;
+}
+
+double helper2(double x) {
+    return square_helper(x) + 1;
+}
+
+double with_helpers(const Field<double> &f, const X_index_type &X, Direction d) {
+    Pair p(f[X + d], f[X]);
+    return helper2(p.a) * scale() + p.b;
+}
+
 // declared before the loop, defined after it
 double forward_diff(const Field<double> &f, const X_index_type &X, Direction d);
 
@@ -97,6 +119,12 @@ int main(int argc, char **argv) {
     onsites(ALL) g[X] = forward_diff(f, X, e_z);
     onsites(ALL) ref[X] = f[X + e_z] - f[X];
     hila::out0 << "forward_diff:          " << rel_diff(g, ref) << '\n';
+
+    // 6: helper functions, constructor, global
+    scale = 1.5;
+    onsites(ALL) g[X] = with_helpers(f, X, -e_x);
+    onsites(ALL) ref[X] = (f[X - e_x] * f[X - e_x] + 1) * 1.5 + f[X];
+    hila::out0 << "with_helpers:          " << rel_diff(g, ref) << '\n';
 
     hila::finishrun();
 }
