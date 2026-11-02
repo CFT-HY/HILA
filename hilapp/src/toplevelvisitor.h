@@ -132,6 +132,8 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     // void check_allowed_assignment(Stmt *s);
 
     bool check_field_ref_list();
+    bool is_assignment_value_unused(Stmt *s);
+    bool field_direct_write(const field_info &l);
 
     void check_var_info_list();
 

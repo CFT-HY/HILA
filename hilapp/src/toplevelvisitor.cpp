@@ -1,6 +1,7 @@
 #include "stringops.h"
 #include "hilapp.h"
 #include "toplevelvisitor.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/QualTypeNames.h"
 
 #include <sstream>
@@ -1091,6 +1092,42 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
 ///  from VisitStmt() if the status state::in_loop_body is true
 ////////////////////////////////////////////////////////////////////////////////
 
+bool TopLevelVisitor::is_assignment_value_unused(Stmt *s) {
+
+    if (s->getBeginLoc().isMacroID() || s->getEndLoc().isMacroID())
+        return false;
+
+    // go up through possible ExprWithCleanups
+    const Stmt *cur = s;
+    while (true) {
+        auto parents = Context->getParents(*cur);
+        if (parents.size() != 1)
+            return false;
+        if (const ExprWithCleanups *EWC = parents[0].get<ExprWithCleanups>()) {
+            cur = EWC;
+            continue;
+        }
+        const Stmt *P = parents[0].get<Stmt>();
+        if (P == nullptr)
+            return false;
+        if (isa<CompoundStmt>(P))
+            return true;
+        if (const IfStmt *IS = dyn_cast<IfStmt>(P))
+            return cur == IS->getThen() || cur == IS->getElse();
+        if (const ForStmt *FS = dyn_cast<ForStmt>(P))
+            return cur == FS->getBody() || cur == FS->getInc();
+        if (const WhileStmt *WS = dyn_cast<WhileStmt>(P))
+            return cur == WS->getBody();
+        if (const DoStmt *DS = dyn_cast<DoStmt>(P))
+            return cur == DS->getBody();
+        if (const CXXForRangeStmt *RS = dyn_cast<CXXForRangeStmt>(P))
+            return cur == RS->getBody();
+        if (const SwitchCase *SC = dyn_cast<SwitchCase>(P))
+            return cur == SC->getSubStmt();
+        return false;
+    }
+}
+
 bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // This keeps track of the assignment to field
@@ -1138,6 +1175,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
         TraverseStmt(assignee);
         is_assignment = false;
+
+        // Mark plain f[X] = ... -assignments, these can be written directly to the field
+        if (is_field_assign && !is_compound && !field_ref_list.empty() &&
+            field_ref_list.back().fullExpr == assignee->IgnoreParens()->IgnoreImplicit() &&
+            is_assignment_value_unused(s)) {
+            field_ref_list.back().assignExpr = cast<Expr>(s);
+        }
 
         TraverseStmt(assigned_expr);
         parsing_state.skip_children = 1;
