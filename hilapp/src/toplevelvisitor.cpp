@@ -267,6 +267,8 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             }
 
             Expr *dirE = Op->getArg(1)->IgnoreImplicit();
+            lfe.dirE = dirE;
+            lfe.dir_negate = (strcmp(getOperatorSpelling(Op->getOperator()), "-") == 0);
             if (dirE->isIntegerConstantExpr(*Context)) {
                 llvm::APSInt result;
 
@@ -1732,8 +1734,14 @@ bool TopLevelVisitor::check_field_ref_list() {
                     found = false; // deep halo refs only with equal depth
                 } else if (p.is_constant_direction) {
                     found = (dp.is_constant_direction && dp.constant_value == p.constant_value);
-                } else {
+                } else if (dp.parityExpr != nullptr && p.parityExpr != nullptr) {
                     found = is_duplicate_expr(dp.parityExpr, p.parityExpr);
+                } else if (dp.dirE != nullptr && p.dirE != nullptr) {
+                    // field function refs have only the direction expression
+                    found = !dp.is_constant_direction && dp.dir_negate == p.dir_negate &&
+                            is_duplicate_expr(dp.dirE, p.dirE);
+                } else {
+                    found = false;
                 }
 
                 if (found) {
@@ -1746,6 +1754,8 @@ bool TopLevelVisitor::check_field_ref_list() {
             if (!found) {
                 dir_ptr dp;
                 dp.parityExpr = p.parityExpr;
+                dp.dirE = p.dirE;
+                dp.dir_negate = p.dir_negate;
                 dp.count = (p.is_offset == false && p.deep_k == 0);
                 dp.is_offset = p.is_offset;
                 dp.deep_k = p.deep_k;
@@ -1763,9 +1773,12 @@ bool TopLevelVisitor::check_field_ref_list() {
         } // Direction
     } // p-loop
 
-    // Fields accessed in field functions (field_function.cpp).  Neighbours are accessed
-    // with the direction unknown here, gather all directions as with loop local dirs
+    // Fields accessed in field functions (field_function.cpp).  In the value form the
+    // accesses are in field_ref_list.  Otherwise neighbours are accessed with the
+    // direction unknown here, gather all directions as with loop local dirs
     for (field_function_call &fc : field_function_call_list) {
+        if (fc.ffi->value_form)
+            continue;
         for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
             Expr *arg = fc.call->getArg(i);
             if (fc.ffi->param_kind[i] != ff_param::FIELD || isa<CXXDefaultArgExpr>(arg))
@@ -1781,9 +1794,12 @@ bool TopLevelVisitor::check_field_ref_list() {
         }
     }
 
-    // A field written in the loop cannot be read in a field function: the value at X
-    // is written at the end of the loop body (prototype limitation)
+    // A field written in the loop cannot be read in a field function which accesses the
+    // field: the value at X is written at the end of the loop body.  In the value form the
+    // value is passed as usual
     for (field_function_call &fc : field_function_call_list) {
+        if (fc.ffi->value_form)
+            continue;
         for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
             Expr *arg = fc.call->getArg(i);
             if (fc.ffi->param_kind[i] != ff_param::FIELD || isa<CXXDefaultArgExpr>(arg))
@@ -1836,11 +1852,13 @@ bool TopLevelVisitor::check_field_ref_list() {
 
                     if (loop_info.parity_value == Parity::all) {
 
+                        // field function refs: point to the call
+                        Expr *where = p->fullExpr ? p->fullExpr : p->ff_call;
                         reportDiag(DiagnosticsEngine::Level::Error,
-                                   p->parityExpr->getSourceRange().getBegin(),
+                                   where->getSourceRange().getBegin(),
                                    "simultaneous access '%0' and assignment '%1' not "
                                    "allowed with parity ALL",
-                                   get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str());
+                                   get_stmt_str(where).c_str(), l.old_name.c_str());
                         no_errors = false;
                         found_error = true;
 

@@ -196,6 +196,7 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     field_function_info *get_field_function(FunctionDecl *D);
     bool handle_field_function_call(CallExpr *Call);
     void replace_field_function_args(srcBuf &loopBuf);
+    std::string mapped_dir_name(srcBuf &loopBuf, const dir_ptr &d);
 
     bool handle_global_var_decl(Decl *D);
 

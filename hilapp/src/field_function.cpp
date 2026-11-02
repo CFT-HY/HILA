@@ -9,18 +9,29 @@
 //   ...
 //   onsites(ALL) g[X] = gradient(f, X, e_x);
 //
-// The function definition is rewritten in place: the X parameter becomes the site
-// index, and the field accesses become calls of Field::get_value_at() and
-// Field::get_value_at_nb().  At the call site the fields and X are replaced with the
-// loop variables.  The fields accessed in the function are merged into the field
-// info of the loop, so that the communications are started before the loop.
+// The function definition is rewritten in place, in one of two forms:
 //
-// On GPUs the function becomes a __device__ function, the Field parameters
-// field_storage<T> -references (the kernels get field_storage), and the accesses
-// use the same expressions as the kernels.  The functions called from it are
-// marked as loop functions.
+// Value form, if the directions of all accesses are constants or parameters of the
+// function (as above): each access f[X], f[X + dir] becomes a parameter, which gets
+// the field value.  The call is rewritten as if it were
 //
-// Prototype: const Field parameters, f[X] and f[X + dir] only (no offsets), no
+//   gradient(f[X + e_x], f[X - e_x], X, e_x)
+//
+// and the accesses are handled as field references of the loop: only the needed
+// directions are communicated, and the values are fetched as usual.  The Field
+// parameters are removed, X becomes the site index (for X.coordinates() etc.).
+//
+// Accessor form, if a direction is computed in the function (e.g. foralldir(d) inside):
+// the accesses become calls of Field::get_value_at() and Field::get_value_at_nb(), and
+// at the call site the fields and X are replaced with the loop variables.  The fields
+// are merged into the field info of the loop, all directions are communicated.
+//
+// On GPUs the function becomes a __device__ function.  In the accessor form the Field
+// parameters become field_storage<T> -references (the kernels get field_storage), and
+// the accesses use the same expressions as the kernels.  The functions called from it
+// are marked as loop functions.
+//
+// Limitations: const Field parameters, f[X] and f[X + dir] only (no offsets), no
 // nested field function calls.  Loops calling field functions are not vectorized.
 //------------------------------------------------------------------------------
 
@@ -34,6 +45,11 @@
 
 // the name of the site index parameter in the rewritten function
 static const std::string ff_index(name_prefix + "_ff_index");
+
+// the names of the value parameters in the value form
+static std::string ff_value_name(int k) {
+    return name_prefix + "_ff_v" + std::to_string(k);
+}
 
 // all field functions in this compilation unit.  Use list, pointers to elements are kept
 static std::list<field_function_info> field_functions = {};
@@ -107,6 +123,15 @@ class FieldFunctionVisitor : public GeneralVisitor,
     FunctionDecl *fd;
     field_function_info *ffi;
 
+    /// f[X] and f[X + dir] in the function, rewritten after all are found
+    struct found_access {
+        CXXOperatorCallExpr *OC; // the f[..] expression
+        int param;               // Field parameter
+        Expr *dirE;              // dir, nullptr for f[X]
+        bool negate;             // X - dir
+    };
+    std::vector<found_access> found;
+
     template <typename visitortype>
     FieldFunctionVisitor(visitortype &v) : GeneralVisitor(v) {}
 
@@ -154,6 +179,73 @@ class FieldFunctionVisitor : public GeneralVisitor,
                    "], _dev_field_alloc_size)";
     }
 
+    /// Can the access be passed as a value: f[X], or the direction is a constant or a
+    /// Direction parameter.  Fill in acc
+    bool get_value_access(const found_access &fa, ff_access &acc) {
+        acc.param = fa.param;
+        acc.atX = (fa.dirE == nullptr);
+        acc.is_const = false;
+        acc.const_value = 0;
+        acc.dir_param = -1;
+        acc.negate = fa.negate;
+        if (acc.atX)
+            return true;
+        if (fa.dirE->isIntegerConstantExpr(*Context)) {
+            auto v = fa.dirE->getIntegerConstantExpr(*Context);
+            acc.is_const = true;
+            acc.const_value = v->getExtValue() + (fa.negate ? 50 : 0); // as in field_ref
+            acc.const_str = std::string(fa.negate ? "-" : "") + "Direction(" +
+                            std::to_string(v->getExtValue()) + ")";
+            return true;
+        }
+        int i = param_index(fa.dirE);
+        if (i >= 0 && ffi->param_kind[i] == ff_param::OTHER &&
+            get_expr_type(fa.dirE) == "Direction") {
+            acc.dir_param = i;
+            return true;
+        }
+        return false;
+    }
+
+    static bool same_access(const ff_access &a, const ff_access &b) {
+        return a.param == b.param && a.atX == b.atX && a.is_const == b.is_const &&
+               (a.atX || (a.is_const ? a.const_value == b.const_value
+                                     : a.dir_param == b.dir_param && a.negate == b.negate));
+    }
+
+    /// Rewrite the accesses: the value form if possible, otherwise access the fields
+    void rewrite_accesses() {
+        std::vector<ff_access> acc(found.size());
+        ffi->value_form = true;
+        for (unsigned i = 0; i < found.size(); i++)
+            if (!get_value_access(found[i], acc[i]))
+                ffi->value_form = false;
+
+        for (unsigned i = 0; i < found.size(); i++) {
+            CXXOperatorCallExpr *OC = found[i].OC;
+            if (ffi->value_form) {
+                // the same access is the same parameter
+                unsigned k;
+                for (k = 0; k < ffi->accesses.size(); k++)
+                    if (same_access(ffi->accesses[k], acc[i]))
+                        break;
+                if (k == ffi->accesses.size())
+                    ffi->accesses.push_back(acc[i]);
+                sb->replace(OC->getSourceRange(), ff_value_name(k));
+            } else {
+                std::string name = get_stmt_str(OC->getArg(0)->IgnoreImplicit());
+                if (found[i].dirE == nullptr) {
+                    sb->replace(OC->getSourceRange(), value_at_X(name));
+                } else {
+                    std::string dir = get_stmt_str(found[i].dirE);
+                    if (found[i].negate)
+                        dir = "-(" + dir + ")";
+                    sb->replace(OC->getSourceRange(), value_at_nb(name, dir));
+                }
+            }
+        }
+    }
+
     /// handle f[X] and f[X + dir].  Returns true if E is a field[] expression
     bool handle_field_ref(Expr *E) {
         CXXOperatorCallExpr *OC = get_field_subscript(E, *this);
@@ -170,7 +262,6 @@ class FieldFunctionVisitor : public GeneralVisitor,
             return true;
         }
 
-        std::string name = get_stmt_str(nameE);
         std::string idxtype = get_expr_type(idxE);
 
         if (idxtype == "X_index_type") {
@@ -179,7 +270,7 @@ class FieldFunctionVisitor : public GeneralVisitor,
                 return true;
             }
             ffi->read_atX[p] = true;
-            sb->replace(OC->getSourceRange(), value_at_X(name));
+            found.push_back({OC, p, nullptr, false});
 
         } else if (idxtype == "X_plus_direction") {
             // X + dir or X - dir, possibly wrapped in a constructor
@@ -190,12 +281,9 @@ class FieldFunctionVisitor : public GeneralVisitor,
                 return true;
             }
 
-            std::string dir = get_stmt_str(Op->getArg(1)->IgnoreImplicit());
-            if (strcmp(getOperatorSpelling(Op->getOperator()), "-") == 0)
-                dir = "-(" + dir + ")";
-
+            bool negate = (strcmp(getOperatorSpelling(Op->getOperator()), "-") == 0);
             ffi->read_nb[p] = true;
-            sb->replace(OC->getSourceRange(), value_at_nb(name, dir));
+            found.push_back({OC, p, Op->getArg(1)->IgnoreImplicit(), negate});
 
         } else if (idxtype == "X_plus_offset") {
             error(idxE->getBeginLoc(),
@@ -358,8 +446,9 @@ class FieldFunctionCallees : public GeneralVisitor,
     }
 };
 
-/// Type of the Field parameter P in the GPU version: const field_storage<T> &
-static std::string gpu_field_param_type(const ParmVarDecl *P, const PrintingPolicy &PP) {
+/// Element type of the Field parameter P as written: Field<double> -> double, and for
+/// templates Field<T> -> T.  Empty if not found
+static std::string field_elem_type(const ParmVarDecl *P, const PrintingPolicy &PP) {
     QualType t = P->getType().getNonReferenceType();
     std::string elem;
     if (!t->isDependentType()) {
@@ -377,7 +466,7 @@ static std::string gpu_field_param_type(const ParmVarDecl *P, const PrintingPoli
         tst->template_arguments()[0].print(PP, os, true);
         os.flush();
     }
-    return "const field_storage<" + elem + "> &";
+    return elem;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -422,6 +511,7 @@ field_function_info *TopLevelVisitor::get_field_function(FunctionDecl *D) {
     ffi->decl = pattern;
     ffi->ok = true;
     ffi->contains_random = false;
+    ffi->value_form = false;
 
     for (ParmVarDecl *P : D->parameters()) {
         ff_param k = get_param_kind(P, PP);
@@ -473,9 +563,11 @@ field_function_info *TopLevelVisitor::get_field_function(FunctionDecl *D) {
     ffv.fd = body_decl;
     ffv.ffi = ffi;
     ffv.TraverseStmt(body_decl->getBody());
+    ffv.rewrite_accesses();
 
-    // and replace the X parameter with the site index in all declarations.  On GPUs
-    // the function is __device__ and gets field_storage instead of Field
+    // and replace the X parameter with the site index in all declarations.  In the value
+    // form the Field parameters are replaced with the values of the accesses.  Otherwise
+    // on GPUs the function gets field_storage instead of Field
     for (FunctionDecl *R : pattern->redecls()) {
         srcBuf *rb = get_file_srcBuf(R->getBeginLoc());
         if (rb == nullptr)
@@ -484,19 +576,33 @@ field_function_info *TopLevelVisitor::get_field_function(FunctionDecl *D) {
             ParmVarDecl *P = R->getParamDecl(i);
             if (ffi->param_kind[i] == ff_param::X) {
                 rb->replace(P->getSourceRange(), "const unsigned " + ff_index);
-            } else if (ffi->param_kind[i] == ff_param::FIELD && target.kernelize) {
-                std::string t = gpu_field_param_type(P, PP);
-                if (t.empty()) {
+            } else if (ffi->param_kind[i] == ff_param::FIELD &&
+                       (ffi->value_form || target.kernelize)) {
+                std::string elem = field_elem_type(P, PP);
+                if (elem.empty()) {
                     reportDiag(DiagnosticsEngine::Level::Error, P->getBeginLoc(),
                                "could not resolve the element type of Field parameter");
                     ffi->ok = false;
+                } else if (!ffi->value_form) {
+                    rb->replace(P->getSourceRange(), "const field_storage<" + elem + "> &" +
+                                                         P->getNameAsString());
                 } else {
-                    rb->replace(P->getSourceRange(), t + P->getNameAsString());
+                    std::string params;
+                    for (unsigned k = 0; k < ffi->accesses.size(); k++)
+                        if (ffi->accesses[k].param == (int)i)
+                            params += (params.empty() ? "" : ", ") + std::string("const ") +
+                                      elem + " &" + ff_value_name(k);
+                    if (params.empty())
+                        rb->remove_with_comma(P->getSourceRange()); // field not used
+                    else
+                        rb->replace(P->getSourceRange(), params);
                 }
             }
         }
         // comment before "template <..>" if it is a template, __device__ after it
-        std::string comment = "// hilapp: field function, X parameter is the site index\n";
+        std::string comment = ffi->value_form
+                                  ? "// hilapp: field function, field values are parameters\n"
+                                  : "// hilapp: field function, X parameter is the site index\n";
         std::string device = target.kernelize ? "__device__ " : "";
         if (FunctionTemplateDecl *T = R->getDescribedFunctionTemplate()) {
             rb->insert(T->getBeginLoc(), comment, true, true);
@@ -575,6 +681,59 @@ bool TopLevelVisitor::handle_field_function_call(CallExpr *Call) {
     field_function_call fc;
     fc.call = Call;
     fc.ffi = ffi;
+
+    // value form: the accesses are field references of the loop, as if the call were
+    // func(f[X + dir], ...).  These have no expressions in the loop, see field_ref
+    if (ffi->value_form) {
+        for (ff_access &a : ffi->accesses) {
+            field_ref r;
+            r.nameExpr = Call->getArg(a.param)->IgnoreImplicit();
+            r.ff_call = Call;
+            r.is_read = true;
+            r.is_written = false;
+            r.sequence = parsing_state.stmt_sequence;
+
+            if (!a.atX) {
+                r.is_direction = true;
+                r.dir_negate = a.negate;
+                Expr *dirE = nullptr;
+                if (!a.is_const) {
+                    dirE = Call->getArg(a.dir_param);
+                    if (auto *DA = dyn_cast<CXXDefaultArgExpr>(dirE))
+                        dirE = DA->getExpr();
+                    dirE = dirE->IgnoreImplicit();
+                }
+
+                if (a.is_const) {
+                    r.is_constant_direction = true;
+                    r.constant_value = a.const_value;
+                    r.direxpr_s = a.const_str;
+                } else if (dirE->isIntegerConstantExpr(*Context)) {
+                    // constant argument
+                    auto v = dirE->getIntegerConstantExpr(*Context);
+                    r.is_constant_direction = true;
+                    r.constant_value = v->getExtValue() + (a.negate ? 50 : 0);
+                    r.direxpr_s = std::string(a.negate ? "-" : "") + "Direction(" +
+                                  std::to_string(v->getExtValue()) + ")";
+                } else if (isa<CXXDefaultArgExpr>(Call->getArg(a.dir_param))) {
+                    reportDiag(DiagnosticsEngine::Level::Error, Call->getBeginLoc(),
+                               "non-constant default Direction argument of field function is "
+                               "not supported");
+                    continue;
+                } else {
+                    r.dirE = dirE;
+                    r.direxpr_s =
+                        std::string(a.negate ? "-" : "") + "(" + get_stmt_str(dirE) + ")";
+                    FieldRefChecker frc(*this);
+                    frc.TraverseStmt(dirE);
+                    r.is_loop_local_dir = frc.isLoopLocal();
+                }
+            }
+            field_ref_list.push_back(r);
+            fc.refs.push_back(&field_ref_list.back());
+        }
+    }
+
     field_function_call_list.push_back(fc);
 
     return true;
@@ -587,6 +746,33 @@ bool TopLevelVisitor::handle_field_function_call(CallExpr *Call) {
 
 void TopLevelVisitor::replace_field_function_args(srcBuf &loopBuf) {
     for (field_function_call &fc : field_function_call_list) {
+
+        if (fc.ffi->value_form) {
+            // rewrite the whole call: the field values, the site index and the other
+            // arguments as they are in the loop now.  Inner calls in the arguments are
+            // before this in the list, these are already rewritten
+            if (fc.refs.size() != fc.ffi->accesses.size())
+                continue; // there was an error
+            std::vector<std::string> args;
+            for (unsigned i = 0; i < fc.ffi->param_kind.size(); i++) {
+                if (fc.ffi->param_kind[i] == ff_param::FIELD) {
+                    for (unsigned k = 0; k < fc.ffi->accesses.size(); k++)
+                        if (fc.ffi->accesses[k].param == (int)i)
+                            args.push_back(fc.refs[k]->replacement);
+                } else if (fc.ffi->param_kind[i] == ff_param::X) {
+                    args.push_back(looping_var);
+                } else if (i < fc.call->getNumArgs() &&
+                           !isa<CXXDefaultArgExpr>(fc.call->getArg(i))) {
+                    args.push_back(loopBuf.get(fc.call->getArg(i)->getSourceRange()));
+                }
+            }
+            std::string text = loopBuf.get(fc.call->getCallee()->getSourceRange()) + "(";
+            for (unsigned i = 0; i < args.size(); i++)
+                text += (i > 0 ? ", " : "") + args[i];
+            loopBuf.replace(fc.call->getSourceRange(), text + ")");
+            continue;
+        }
+
         for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
             Expr *arg = fc.call->getArg(i);
             if (isa<CXXDefaultArgExpr>(arg))

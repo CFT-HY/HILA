@@ -325,7 +325,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                         code << "const " << l.element_type << " " << d.name_with_dir << " = "
                              << l.new_name << ".get_value_at(" << deep_index(d) << ");\n";
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                            replace_field_ref(loopBuf, ref, d.name_with_dir);
                         continue;
                     }
 
@@ -333,9 +333,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
-                                                                          // get_stmt_str(d.e);
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     // generate access stmt
                     code << "const " << l.element_type << " " << d.name_with_dir << " = "
@@ -353,7 +351,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        replace_field_ref(loopBuf, ref, d.name_with_dir);
                     }
                 }
 
@@ -363,7 +361,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr,
+                            replace_field_ref(loopBuf, ref,
                                             l.new_name + ".get_value_at(" + deep_index(d) + ")");
                         continue;
                     }
@@ -372,15 +370,14 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
                         if (target.vectorize /* && l.vecinfo.is_vectorizable */) {
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at_nb_site(" +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at_nb_site(" +
                                                                dirname + ", " + looping_var + ")");
                         } else {
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at(" +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at(" +
                                                                nb_index(l.new_name, dirname) +
                                                                ")");
                         }
@@ -420,7 +417,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         // and finally replace references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
-                loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                replace_field_ref(loopBuf, ref, l.loop_ref_name);
                 if (direct_write) {
                     loopBuf.insert_after(
                         getSourceLocationAtEndOfRange(ref->assignExpr->getSourceRange()),

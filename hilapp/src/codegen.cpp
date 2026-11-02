@@ -789,3 +789,16 @@ bool TopLevelVisitor::field_direct_write(const field_info &l) {
     }
     return true;
 }
+
+/////////////////////////////////////////////////////////////////////////////
+/// The (non-constant) Direction of d as it is in the loop body, after the variables
+/// have been renamed.  Field function refs (field_function.cpp) have only the
+/// direction expression, not X + dir
+/////////////////////////////////////////////////////////////////////////////
+
+std::string TopLevelVisitor::mapped_dir_name(srcBuf &loopBuf, const dir_ptr &d) {
+    if (d.parityExpr != nullptr)
+        return remove_X(loopBuf.get(d.parityExpr->getSourceRange()));
+    std::string s = "(" + loopBuf.get(d.dirE->getSourceRange()) + ")";
+    return d.dir_negate ? "-" + s : s;
+}

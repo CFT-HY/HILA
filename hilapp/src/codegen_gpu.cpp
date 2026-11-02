@@ -1001,7 +1001,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                                << l.new_name << ".get(" << deep_index(d)
                                << ", _dev_field_alloc_size);\n";
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                            replace_field_ref(loopBuf, ref, d.name_with_dir);
                         continue;
                     }
 
@@ -1009,9 +1009,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
-                                                                          // get_stmt_str(d.e);
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     // Check if the Direction is a variable. These have been renamed.
                     // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs
@@ -1026,7 +1024,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        replace_field_ref(loopBuf, ref, d.name_with_dir);
                     }
                 }
             } else {
@@ -1051,7 +1049,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get(" + deep_index(d) +
                                                                ", _dev_field_alloc_size)");
                         continue;
                     }
@@ -1059,11 +1057,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, loop_array_name + "[" + dirname + "]");
+                        replace_field_ref(loopBuf, ref, loop_array_name + "[" + dirname + "]");
                     }
                 }
 
@@ -1073,7 +1070,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get(" + deep_index(d) +
                                                                ", _dev_field_alloc_size)");
                         continue;
                     }
@@ -1081,11 +1078,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" +
+                        replace_field_ref(loopBuf, ref, l.new_name + ".get(" +
                                                            nb_index(l.new_name, dirname) +
                                                            ", _dev_field_alloc_size)");
                     }
@@ -1127,7 +1123,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         // and finally replace references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
-                loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                replace_field_ref(loopBuf, ref, l.loop_ref_name);
                 if (direct_write) {
                     loopBuf.insert_after(
                         getSourceLocationAtEndOfRange(ref->assignExpr->getSourceRange()),

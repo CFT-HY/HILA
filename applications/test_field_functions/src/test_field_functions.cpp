@@ -47,6 +47,23 @@ double with_helpers(const Field<double> &f, const X_index_type &X, Direction d) 
 // declared before the loop, defined after it
 double forward_diff(const Field<double> &f, const X_index_type &X, Direction d);
 
+// template with a direction parameter: field values passed as parameters
+template <typename T>
+T diff(const Field<T> &f, const X_index_type &X, Direction d) {
+    return f[X + d] - f[X];
+}
+
+// a field read only at X, and a scalar parameter
+double add_value(const Field<double> &f, const X_index_type &X, double v) {
+    return f[X] + v;
+}
+
+// unused Field parameter and a default direction
+double default_dir(const Field<double> &unused, const Field<double> &f, const X_index_type &X,
+                   Direction d = e_y) {
+    return f[X - d];
+}
+
 // sum |a - b| / sum |b|, b should be non-zero
 double rel_diff(const Field<double> &a, const Field<double> &b) {
     double d = 0, n = 0;
@@ -125,6 +142,52 @@ int main(int argc, char **argv) {
     onsites(ALL) g[X] = with_helpers(f, X, -e_x);
     onsites(ALL) ref[X] = (f[X - e_x] * f[X - e_x] + 1) * 1.5 + f[X];
     hila::out0 << "with_helpers:          " << rel_diff(g, ref) << '\n';
+
+    // 7: same neighbours in the loop and in the function, constant and variable direction
+    Direction dd = e_z;
+    onsites(ALL) g[X] = gradient(f, X, e_y) + f[X + e_y] + gradient(f, X, dd) * f[X - dd];
+    onsites(ALL) ref[X] = 0.5 * (f[X + e_y] - f[X - e_y]) + f[X + e_y] +
+                          0.5 * (f[X + dd] - f[X - dd]) * f[X - dd];
+    hila::out0 << "shared neighbours:     " << rel_diff(g, ref) << '\n';
+
+    // 8: template, real and complex
+    onsites(ALL) g[X] = diff(f, X, -e_x);
+    onsites(ALL) ref[X] = f[X - e_x] - f[X];
+    hila::out0 << "diff template double:  " << rel_diff(g, ref) << '\n';
+
+    onsites(ALL) lc[X] = diff(c, X, dd);
+    onsites(ALL) lcref[X] = c[X + dd] - c[X];
+    onsites(ALL) {
+        g[X] = lc[X].re + lc[X].im;
+        ref[X] = lcref[X].re + lcref[X].im;
+    }
+    hila::out0 << "diff template complex: " << rel_diff(g, ref) << '\n';
+
+    // 9: field written before the call in the same loop is passed at X
+    Field<double> h, href;
+    onsites(ALL) {
+        h[X] = 2 * f[X];
+        g[X] = add_value(h, X, 1.0);
+    }
+    onsites(ALL) ref[X] = 2 * f[X] + 1;
+    hila::out0 << "written field at X:    " << rel_diff(g, ref) << '\n';
+
+    // 10: field function call in an argument of a field function
+    onsites(ALL) g[X] = add_value(f, X, gradient(f, X, e_x));
+    onsites(ALL) ref[X] = f[X] + 0.5 * (f[X + e_x] - f[X - e_x]);
+    hila::out0 << "nested call argument:  " << rel_diff(g, ref) << '\n';
+
+    // 11: unused Field parameter, default direction
+    onsites(ALL) g[X] = default_dir(c.real(), f, X) + default_dir(f, f, X, e_x);
+    onsites(ALL) ref[X] = f[X - e_y] + f[X - e_x];
+    hila::out0 << "default direction:     " << rel_diff(g, ref) << '\n';
+
+    // 12: ODD loop writes h and reads its EVEN neighbours through a function
+    h = f;
+    href = f;
+    onsites(ODD) h[X] = gradient(h, X, e_x);
+    onsites(ODD) href[X] = 0.5 * (href[X + e_x] - href[X - e_x]);
+    hila::out0 << "ODD write, EVEN read:  " << rel_diff(h, href) << '\n';
 
     hila::finishrun();
 }

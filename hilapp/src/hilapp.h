@@ -152,6 +152,14 @@ struct field_ref {
     // the assignment expr if ref is the lhs of plain f[X] = ... whose value is not used,
     // nullptr otherwise.  Used for writing the field directly at the assignment
     Expr *assignExpr;
+    // nn Direction expression d of X + d or X - d (dir_negate), nullptr if not nn
+    Expr *dirE;
+    bool dir_negate;
+    // refs synthesized for accesses in field functions (field_function.cpp) have no
+    // fullExpr and parityExpr: ff_call is the call, the code for the access is stored
+    // in replacement
+    Expr *ff_call;
+    std::string replacement;
 
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
@@ -164,6 +172,9 @@ struct field_ref {
         deep_dirExpr = nullptr;
         deep_negate = false;
         assignExpr = nullptr;
+        dirE = nullptr;
+        dir_negate = false;
+        ff_call = nullptr;
     }
 
     ~field_ref() {
@@ -188,10 +199,14 @@ struct dir_ptr {
     int deep_k;                 // > 0 for axis offset X + k*dir from deep halo, see field_ref
     Expr *deep_dirExpr;
     bool deep_negate;
+    Expr *dirE;      // nn Direction expression, see field_ref
+    bool dir_negate;
 
     dir_ptr() {
         ref_list = {};
         parityExpr = nullptr;
+        dirE = nullptr;
+        dir_negate = false;
         count = 0;
         deep_k = 0;
         deep_dirExpr = nullptr;
@@ -448,6 +463,19 @@ struct loop_info_struct {
 /// field_function.cpp
 enum class ff_param { OTHER, FIELD, X };
 
+/// A field access f[X] or f[X + dir] in a field function, where dir is a constant or a
+/// parameter of the function.  In the "value" form of the function each access is a
+/// parameter, and the call site passes the field value
+struct ff_access {
+    int param;              // index of the Field parameter
+    bool atX;               // f[X]
+    bool is_const;          // constant direction
+    unsigned const_value;   // its value, negative directions + 50 as in field_ref
+    std::string const_str;  // and the direction as an expression valid anywhere
+    int dir_param;          // index of the Direction parameter if not constant
+    bool negate;            // f[X - dir]
+};
+
 struct field_function_info {
     FunctionDecl *decl;               // the definition of the function (or template pattern)
     std::vector<ff_param> param_kind; // kind of each parameter
@@ -456,13 +484,27 @@ struct field_function_info {
     bool contains_random;
     bool ok;                              // false if there were errors
     std::vector<FunctionDecl *> instances; // GPU: instances whose callees are marked
+    // value form: field values are passed as parameters, accesses lists these.
+    // Otherwise the function accesses the fields (directions not known at the call)
+    bool value_form;
+    std::vector<ff_access> accesses;
 };
 
 /// a call to a field function inside a site loop
 struct field_function_call {
     CallExpr *call;
     field_function_info *ffi;
+    std::vector<field_ref *> refs; // value form: the refs for ffi->accesses
 };
+
+/// set the code for a field reference: replace the expression in the loop, or store it
+/// for synthesized field function refs
+inline void replace_field_ref(srcBuf &sb, field_ref *ref, const std::string &s) {
+    if (ref->fullExpr != nullptr)
+        sb.replace(ref->fullExpr, s);
+    else
+        ref->replacement = s;
+}
 
 /// Stores information about loop function arguments
 struct argument_info {
