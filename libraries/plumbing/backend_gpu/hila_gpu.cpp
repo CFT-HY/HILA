@@ -233,9 +233,14 @@ gpuStream_t &hila::compute_stream() {
     if (overlap_stream_mode() == OverlapStreamMode::Green)
         return green_streams().compute;
 #endif
+    // compute_stream is a blocking stream, i.e. ordered with the legacy default stream.
+    // Library code copies to device with gpuMemcpy (default stream), and from pageable
+    // memory it may return before the copy has reached the device: e.g. the FFT
+    // pointer arrays are read by kernels on compute_stream right after the copy.
+    // halo_stream stays non-blocking, communication still overlaps with compute.
     static gpuStream_t instance = [] {
         gpuStream_t stream;
-        gpuStreamCreateWithFlags(&stream, gpuStreamNonBlocking);
+        gpuStreamCreate(&stream);
         return stream;
     }();
     return instance;

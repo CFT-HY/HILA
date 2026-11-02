@@ -390,9 +390,12 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         }
 
 
+        // field written directly at assignments?
+        bool direct_write = field_direct_write(l);
+
         // and then get (possible) local refs
         // TODO:
-        if (l.is_read_atX || (l.is_written && loop_info.has_conditional)) {
+        if (l.is_read_atX || (l.is_written && loop_info.has_conditional && !direct_write)) {
             // now reading var without nb. reference
             // const here may cause problems in loop functions!
             // if (!l.is_written) {
@@ -410,12 +413,21 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         } else if (l.is_written) {
             code << l.element_type << " " << l.loop_ref_name << ";\n";
             code << "// Initial value of variable " << l.loop_ref_name << " not needed\n";
+            if (direct_write)
+                code << "// Variable " << l.loop_ref_name << " written to field at assignments\n";
         }
 
         // and finally replace references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
                 loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                if (direct_write) {
+                    loopBuf.insert_after(
+                        getSourceLocationAtEndOfRange(ref->assignExpr->getSourceRange()),
+                        ", " + l.new_name + ".set_value_at(" + l.loop_ref_name + ", " +
+                            looping_var + ")",
+                        false);
+                }
             }
 
     } // end of field handling
@@ -446,7 +458,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     // Add calls to setters
     for (field_info &l : field_info_list)
-        if (l.is_written) {
+        if (l.is_written && !field_direct_write(l)) {
             code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " << looping_var
                  << ");\n";
         }

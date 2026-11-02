@@ -101,7 +101,7 @@ void Field<T>::write(std::FILE *outputfile, int precision) const {
     CoordinateVector size = mylat.size();
 
     for (size_t i = 0; i < mylat.volume(); i += sites_per_write) {
-        size_t sites = std::min(sites_per_write, mylat.volume() - i);
+        size_t sites = std::min<size_t>(sites_per_write, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
             coord_list[j] = mylat->global_coordinates(i + j);
 
@@ -143,7 +143,7 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
     CoordinateVector size = mylat.size();
 
     for (size_t i = 0; i < mylat.volume(); i += sites_per_write) {
-        size_t sites = std::min(sites_per_write, mylat.volume() - i);
+        size_t sites = std::min<size_t>(sites_per_write, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
             coord_list[j] = mylat->global_coordinates(i + j);
 
@@ -239,7 +239,7 @@ void Field<T>::read(std::ifstream &inputfile) {
     CoordinateVector size = mylat.size();
 
     for (size_t i = 0; i < mylat.volume(); i += sites_per_read) {
-        size_t sites = std::min(sites_per_read, mylat.volume() - i);
+        size_t sites = std::min<size_t>(sites_per_read, mylat.volume() - i);
         for (size_t j = 0; j < sites; j++)
             coord_list[j] = mylat->global_coordinates(i + j);
 

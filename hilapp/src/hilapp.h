@@ -149,6 +149,9 @@ struct field_ref {
     int deep_k;
     Expr *deep_dirExpr; // the Direction expression
     bool deep_negate;   // if true, the direction is -(deep_dirExpr)
+    // the assignment expr if ref is the lhs of plain f[X] = ... whose value is not used,
+    // nullptr otherwise.  Used for writing the field directly at the assignment
+    Expr *assignExpr;
 
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
@@ -160,6 +163,7 @@ struct field_ref {
         deep_k = 0;
         deep_dirExpr = nullptr;
         deep_negate = false;
+        assignExpr = nullptr;
     }
 
     ~field_ref() {

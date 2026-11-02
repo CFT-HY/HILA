@@ -770,3 +770,22 @@ get_stmt_str(le->dirExpr) + ", "
   }
 }
 */
+
+/////////////////////////////////////////////////////////////////////////////
+/// Check if the Field can be written directly at the assignments f[X] = ...,
+/// instead of writing the loop local variable at the end of the loop body.
+/// This avoids reading in the field (and writing it back) in loops with
+/// conditionals: the field is not read and all refs are plain assignments
+/// whose value is not used.
+/////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::field_direct_write(const field_info &l) {
+    if (!loop_info.has_conditional || !l.is_written || l.is_read_atX || l.is_read_nb ||
+        l.is_read_offset || l.ref_list.empty())
+        return false;
+    for (field_ref *ref : l.ref_list) {
+        if (ref->is_direction || ref->is_read || !ref->is_written || ref->assignExpr == nullptr)
+            return false;
+    }
+    return true;
+}

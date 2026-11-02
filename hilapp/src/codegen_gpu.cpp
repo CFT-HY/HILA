@@ -1094,8 +1094,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
         }
 
+        // field written directly at assignments?
+        bool direct_write = field_direct_write(l);
+
         // TODO:
-        if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
+        if (l.is_read_atX || (loop_info.has_conditional && l.is_written && !direct_write)) {
             // local read
             // if var is not changed mark const
             // NOTE: const here swaps some methods from non-const
@@ -1117,12 +1120,21 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // and a var which is not read
             kernel << l.element_type << " " << l.loop_ref_name << ";\n";
             kernel << "// Initial value of var " << l.loop_ref_name << " not needed\n";
+            if (direct_write)
+                kernel << "// Var " << l.loop_ref_name << " written to field at assignments\n";
         }
 
         // and finally replace references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
                 loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                if (direct_write) {
+                    loopBuf.insert_after(
+                        getSourceLocationAtEndOfRange(ref->assignExpr->getSourceRange()),
+                        ", " + l.new_name + ".set(" + l.loop_ref_name + ", " + looping_var +
+                            ", _dev_field_alloc_size)",
+                        false);
+                }
             }
 
         // // First create temp variables fields gathered from a Direction
@@ -1173,7 +1185,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     // Call setters
     for (field_info &l : field_info_list)
-        if (l.is_written) {
+        if (l.is_written && !field_direct_write(l)) {
             std::string type_name = l.type_template;
             type_name.erase(0, 1).erase(type_name.end() - 1, type_name.end());
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
