@@ -160,6 +160,7 @@ struct field_ref {
     // in replacement
     Expr *ff_call;
     std::string replacement;
+    std::string deep_dir_str; // deep halo direction if no deep_dirExpr (constant)
 
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
@@ -201,6 +202,7 @@ struct dir_ptr {
     bool deep_negate;
     Expr *dirE;      // nn Direction expression, see field_ref
     bool dir_negate;
+    std::string deep_dir_str; // see field_ref
 
     dir_ptr() {
         ref_list = {};
@@ -474,7 +476,18 @@ struct ff_access {
     std::string const_str;  // and the direction as an expression valid anywhere
     int dir_param;          // index of the Direction parameter if not constant
     bool negate;            // f[X - dir]
+    // f[X + offset], non-nn.  offset_tmpl is the offset expression where the parameters
+    // are ff_param_marker(i), replaced with the arguments at the call.  Axis offset
+    // X + axis_k * dir (|axis_k| >= 2, dir as above) can be read from the deep halo
+    bool is_offset;
+    std::string offset_tmpl;
+    int axis_k;
 };
+
+/// marker for parameter i in ff_access::offset_tmpl
+inline std::string ff_param_marker(int i) {
+    return "HILA__ffparam" + std::to_string(i) + "_";
+}
 
 struct field_function_info {
     FunctionDecl *decl;               // the definition of the function (or template pattern)

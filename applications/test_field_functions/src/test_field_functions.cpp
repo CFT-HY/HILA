@@ -58,6 +58,16 @@ double add_value(const Field<double> &f, const X_index_type &X, double v) {
     return f[X] + v;
 }
 
+// offsets: axis offset X + 2*d (deep halo if HALO_DEPTH >= 2), diagonal with two
+// parameters, and a constant diagonal
+double second_diff(const Field<double> &f, const X_index_type &X, Direction d) {
+    return f[X + 2 * d] - 2 * f[X] + f[X - 2 * d];
+}
+
+double diagonal(const Field<double> &f, const X_index_type &X, Direction d1, Direction d2) {
+    return f[X + d1 + d2] - f[X + d1 - d2] + f[X + e_x - e_z];
+}
+
 // unused Field parameter and a default direction
 double default_dir(const Field<double> &unused, const Field<double> &f, const X_index_type &X,
                    Direction d = e_y) {
@@ -188,6 +198,16 @@ int main(int argc, char **argv) {
     onsites(ODD) h[X] = gradient(h, X, e_x);
     onsites(ODD) href[X] = 0.5 * (href[X + e_x] - href[X - e_x]);
     hila::out0 << "ODD write, EVEN read:  " << rel_diff(h, href) << '\n';
+
+    // 13: offsets, also used directly in the loop
+    onsites(ALL) g[X] = second_diff(f, X, dd) + f[X + 2 * dd];
+    onsites(ALL) ref[X] = f[X + 2 * dd] - 2 * f[X] + f[X - 2 * dd] + f[X + 2 * dd];
+    hila::out0 << "offset X + 2*d:        " << rel_diff(g, ref) << '\n';
+
+    onsites(ALL) g[X] = diagonal(f, X, e_y, dd) + diagonal(f, X, -e_x, e_y);
+    onsites(ALL) ref[X] = (f[X + e_y + dd] - f[X + e_y - dd] + f[X + e_x - e_z]) +
+                          (f[X - e_x + e_y] - f[X - e_x - e_y] + f[X + e_x - e_z]);
+    hila::out0 << "offset diagonal:       " << rel_diff(g, ref) << '\n';
 
     hila::finishrun();
 }

@@ -31,11 +31,17 @@
 // the accesses use the same expressions as the kernels.  The functions called from it
 // are marked as loop functions.
 //
-// Limitations: const Field parameters, f[X] and f[X + dir] only (no offsets), no
-// nested field function calls.  Loops calling field functions are not vectorized.
+// Offsets f[X + offset] are possible in the value form, the offset may contain
+// constants and parameters of the function.  These are handled as offsets in the loop
+// (the field is shifted before the loop), and X + k*dir can be read from the deep
+// halo if HALO_DEPTH >= |k|.
+//
+// Limitations: const Field parameters, no nested field function calls.  Loops calling
+// field functions are not vectorized.
 //------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <functional>
 #include <sstream>
 #include <string>
 
@@ -122,13 +128,15 @@ class FieldFunctionVisitor : public GeneralVisitor,
     srcBuf *sb;
     FunctionDecl *fd;
     field_function_info *ffi;
+    TopLevelVisitor *tlv; // for parsing axis offsets
 
     /// f[X] and f[X + dir] in the function, rewritten after all are found
     struct found_access {
         CXXOperatorCallExpr *OC; // the f[..] expression
         int param;               // Field parameter
-        Expr *dirE;              // dir, nullptr for f[X]
+        Expr *dirE;              // dir, nullptr for f[X] and offsets
         bool negate;             // X - dir
+        Expr *offsetE;           // X + offset expression, nullptr if not offset
     };
     std::vector<found_access> found;
 
@@ -183,13 +191,17 @@ class FieldFunctionVisitor : public GeneralVisitor,
     /// Direction parameter.  Fill in acc
     bool get_value_access(const found_access &fa, ff_access &acc) {
         acc.param = fa.param;
-        acc.atX = (fa.dirE == nullptr);
+        acc.atX = (fa.dirE == nullptr && fa.offsetE == nullptr);
         acc.is_const = false;
         acc.const_value = 0;
         acc.dir_param = -1;
         acc.negate = fa.negate;
+        acc.is_offset = (fa.offsetE != nullptr);
+        acc.axis_k = 0;
         if (acc.atX)
             return true;
+        if (acc.is_offset)
+            return get_offset_access(fa.offsetE, acc);
         if (fa.dirE->isIntegerConstantExpr(*Context)) {
             auto v = fa.dirE->getIntegerConstantExpr(*Context);
             acc.is_const = true;
@@ -207,10 +219,68 @@ class FieldFunctionVisitor : public GeneralVisitor,
         return false;
     }
 
+    /// X + offset: the offset may contain parameters (not Field or X) and non-local names.
+    /// Make the template of the offset expression, and check for axis offset X + k*dir
+    bool get_offset_access(Expr *offsetE, ff_access &acc) {
+        srcBuf tb;
+        tb.create(&TheRewriter, offsetE);
+        bool ok = true;
+        std::function<void(Stmt *)> walk = [&](Stmt *s) {
+            if (s == nullptr)
+                return;
+            if (auto *DRE = dyn_cast<DeclRefExpr>(s)) {
+                int i = param_index(DRE);
+                if (i >= 0) {
+                    if (ffi->param_kind[i] == ff_param::X)
+                        tb.replace(DRE, "X");
+                    else if (ffi->param_kind[i] == ff_param::OTHER)
+                        tb.replace(DRE, ff_param_marker(i));
+                    else
+                        ok = false;
+                } else if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+                    if (VD->isLocalVarDeclOrParm())
+                        ok = false; // local variable of the function
+                }
+            }
+            for (Stmt *c : s->children())
+                walk(c);
+        };
+        walk(offsetE);
+        if (!ok)
+            return false;
+        acc.offset_tmpl = remove_X(tb.dump());
+
+        // axis offset X + k*dir, dir constant or Direction parameter
+        Expr *dirE;
+        int k;
+        std::vector<Expr *> atoms;
+        if (tlv->parse_axis_offset(offsetE, dirE, k, atoms) && std::abs(k) >= 2) {
+            dirE = dirE->IgnoreParens()->IgnoreImplicit();
+            if (dirE->isIntegerConstantExpr(*Context)) {
+                acc.is_const = true;
+                acc.const_value = dirE->getIntegerConstantExpr(*Context)->getExtValue();
+                acc.axis_k = k;
+            } else {
+                int i = param_index(dirE);
+                if (i >= 0 && ffi->param_kind[i] == ff_param::OTHER) {
+                    acc.dir_param = i;
+                    acc.axis_k = k;
+                }
+            }
+        }
+        return true;
+    }
+
     static bool same_access(const ff_access &a, const ff_access &b) {
-        return a.param == b.param && a.atX == b.atX && a.is_const == b.is_const &&
-               (a.atX || (a.is_const ? a.const_value == b.const_value
-                                     : a.dir_param == b.dir_param && a.negate == b.negate));
+        if (a.param != b.param || a.atX != b.atX || a.is_offset != b.is_offset)
+            return false;
+        if (a.atX)
+            return true;
+        if (a.is_offset)
+            return a.offset_tmpl == b.offset_tmpl;
+        return a.is_const == b.is_const &&
+               (a.is_const ? a.const_value == b.const_value
+                           : a.dir_param == b.dir_param && a.negate == b.negate);
     }
 
     /// Rewrite the accesses: the value form if possible, otherwise access the fields
@@ -232,6 +302,10 @@ class FieldFunctionVisitor : public GeneralVisitor,
                 if (k == ffi->accesses.size())
                     ffi->accesses.push_back(acc[i]);
                 sb->replace(OC->getSourceRange(), ff_value_name(k));
+            } else if (found[i].offsetE != nullptr) {
+                error(OC->getBeginLoc(),
+                      "f[X + offset] in a field function is possible only if the offsets and "
+                      "directions of all accesses are constants or function parameters");
             } else {
                 std::string name = get_stmt_str(OC->getArg(0)->IgnoreImplicit());
                 if (found[i].dirE == nullptr) {
@@ -270,7 +344,7 @@ class FieldFunctionVisitor : public GeneralVisitor,
                 return true;
             }
             ffi->read_atX[p] = true;
-            found.push_back({OC, p, nullptr, false});
+            found.push_back({OC, p, nullptr, false, nullptr});
 
         } else if (idxtype == "X_plus_direction") {
             // X + dir or X - dir, possibly wrapped in a constructor
@@ -283,12 +357,12 @@ class FieldFunctionVisitor : public GeneralVisitor,
 
             bool negate = (strcmp(getOperatorSpelling(Op->getOperator()), "-") == 0);
             ffi->read_nb[p] = true;
-            found.push_back({OC, p, Op->getArg(1)->IgnoreImplicit(), negate});
+            found.push_back({OC, p, Op->getArg(1)->IgnoreImplicit(), negate, nullptr});
 
         } else if (idxtype == "X_plus_offset") {
-            error(idxE->getBeginLoc(),
-                  "offsets f[X + offset] are not (yet) supported in field functions, "
-                  "only f[X] and f[X + dir]");
+            // these are possible only in the value form, see rewrite_accesses()
+            ffi->read_nb[p] = true;
+            found.push_back({OC, p, nullptr, false, idxE});
         } else {
             error(idxE->getBeginLoc(), "field functions accept only f[X] and f[X + dir]");
         }
@@ -562,6 +636,7 @@ field_function_info *TopLevelVisitor::get_field_function(FunctionDecl *D) {
     ffv.sb = sb;
     ffv.fd = body_decl;
     ffv.ffi = ffi;
+    ffv.tlv = this;
     ffv.TraverseStmt(body_decl->getBody());
     ffv.rewrite_accesses();
 
@@ -616,6 +691,76 @@ field_function_info *TopLevelVisitor::get_field_function(FunctionDecl *D) {
     mark_callees(ffi);
 
     return ffi;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// The field ref of offset access a in field function call Call: the offset with the
+/// arguments, as with f[X + offset] in the loop.  Axis offset X + k*dir is read from
+/// the deep halo if HALO_DEPTH >= |k|
+//////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::synthesize_offset_ref(CallExpr *Call, const ff_access &a, field_ref &r) {
+
+    // replace the parameter markers with the arguments
+    std::string offset = a.offset_tmpl;
+    for (unsigned i = 0; i < Call->getNumArgs(); i++) {
+        std::string m = ff_param_marker(i);
+        if (offset.find(m) == std::string::npos)
+            continue;
+        Expr *arg = Call->getArg(i);
+        if (auto *DA = dyn_cast<CXXDefaultArgExpr>(arg)) {
+            if (!DA->getExpr()->isIntegerConstantExpr(*Context)) {
+                reportDiag(DiagnosticsEngine::Level::Error, Call->getBeginLoc(),
+                           "non-constant default argument used in an offset of a field "
+                           "function is not supported");
+                return false;
+            }
+            arg = DA->getExpr();
+        }
+        FieldRefChecker frc(*this);
+        frc.TraverseStmt(arg);
+        if (frc.isLoopLocal()) {
+            reportDiag(DiagnosticsEngine::Level::Error, arg->getBeginLoc(),
+                       "non-nearest neighbour reference cannot depend on variable '%0' "
+                       "defined inside site loop",
+                       frc.getLocalVarInfo()->name.c_str());
+            return false;
+        }
+        // parentheses only if needed, the offset text is compared with other offsets
+        std::string s = get_stmt_str(arg->IgnoreImplicit());
+        bool is_name = !s.empty() && std::all_of(s.begin(), s.end(), [](char c) {
+            return std::isalnum((unsigned char)c) || c == '_';
+        });
+        if (!is_name)
+            s = "(" + s + ")";
+        for (size_t pos = offset.find(m); pos != std::string::npos;
+             pos = offset.find(m, pos + s.size()))
+            offset.replace(pos, m.size(), s);
+    }
+
+    r.is_direction = true;
+    r.direxpr_s = offset;
+
+    if (a.axis_k != 0 && halo_depth() >= std::abs(a.axis_k)) {
+        // deep halo
+        r.is_offset = false;
+        r.deep_k = std::abs(a.axis_k);
+        r.deep_negate = (a.axis_k < 0);
+        if (a.is_const) {
+            r.deep_dir_str = "Direction(" + std::to_string(a.const_value) + ")";
+        } else {
+            Expr *dirE = Call->getArg(a.dir_param);
+            if (auto *DA = dyn_cast<CXXDefaultArgExpr>(dirE))
+                dirE = DA->getExpr();
+            if (isa<CXXDefaultArgExpr>(Call->getArg(a.dir_param)))
+                r.deep_dir_str = "(" + get_stmt_str(dirE) + ")"; // constant, checked above
+            else
+                r.deep_dirExpr = dirE->IgnoreImplicit();
+        }
+    } else {
+        r.is_offset = true;
+    }
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -693,7 +838,10 @@ bool TopLevelVisitor::handle_field_function_call(CallExpr *Call) {
             r.is_written = false;
             r.sequence = parsing_state.stmt_sequence;
 
-            if (!a.atX) {
+            if (a.is_offset) {
+                if (!synthesize_offset_ref(Call, a, r))
+                    continue;
+            } else if (!a.atX) {
                 r.is_direction = true;
                 r.dir_negate = a.negate;
                 Expr *dirE = nullptr;

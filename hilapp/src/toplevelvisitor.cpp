@@ -4,6 +4,7 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/QualTypeNames.h"
 
+#include <algorithm>
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -1740,6 +1741,22 @@ bool TopLevelVisitor::check_field_ref_list() {
                     // field function refs have only the direction expression
                     found = !dp.is_constant_direction && dp.dir_negate == p.dir_negate &&
                             is_duplicate_expr(dp.dirE, p.dirE);
+                } else if (dp.deep_k > 0) {
+                    // field function deep halo refs: direction expression or constant
+                    found = dp.deep_negate == p.deep_negate &&
+                            ((dp.deep_dirExpr && p.deep_dirExpr &&
+                              is_duplicate_expr(dp.deep_dirExpr, p.deep_dirExpr)) ||
+                             (!dp.deep_dirExpr && !p.deep_dirExpr &&
+                              dp.deep_dir_str == p.deep_dir_str));
+                } else if (dp.is_offset && p.is_offset) {
+                    // field function offsets: the offset as text, without whitespace
+                    auto strip = [](std::string s) {
+                        s.erase(std::remove_if(s.begin(), s.end(),
+                                               [](unsigned char c) { return std::isspace(c); }),
+                                s.end());
+                        return s;
+                    };
+                    found = strip(dp.direxpr_s) == strip(p.direxpr_s);
                 } else {
                     found = false;
                 }
@@ -1761,6 +1778,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                 dp.deep_k = p.deep_k;
                 dp.deep_dirExpr = p.deep_dirExpr;
                 dp.deep_negate = p.deep_negate;
+                dp.deep_dir_str = p.deep_dir_str;
                 dp.is_constant_direction = p.is_constant_direction;
                 dp.constant_value = p.constant_value;
                 dp.is_loop_local_dir = p.is_loop_local_dir;
@@ -3556,7 +3574,9 @@ bool TopLevelVisitor::parse_axis_offset(Expr *e, Expr *&dirE, int &k,
 /// Direction string of a deep halo ref.  in_loop: use names mapped in the loop buffer
 std::string TopLevelVisitor::deep_dir_string(const dir_ptr &d, srcBuf &loopBuf, bool in_loop) {
     std::string s;
-    if (in_loop)
+    if (d.deep_dirExpr == nullptr)
+        s = d.deep_dir_str; // constant direction from a field function
+    else if (in_loop)
         s = loopBuf.get(d.deep_dirExpr->getSourceRange());
     else
         s = get_stmt_str(d.deep_dirExpr);

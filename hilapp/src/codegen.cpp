@@ -393,8 +393,12 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
 
                     // and rewrite references to the offset field
                     for (field_ref *fr : new_fi.ref_list) {
-                        loopBuf.replace(fr->nameExpr, offset_field_name);
-                        loopBuf.replace(fr->parityExpr, "X");
+                        // field function refs have no expression in the loop, the code
+                        // is set as for other refs at X
+                        if (fr->parityExpr != nullptr) {
+                            loopBuf.replace(fr->nameExpr, offset_field_name);
+                            loopBuf.replace(fr->parityExpr, "X");
+                        }
                         fr->direxpr_s.clear();
                         fr->is_direction = false;           // no Direction
                         fr->info = &field_info_list.back(); // info points to new field_info
