@@ -103,6 +103,76 @@ Assignment and manipulation of variables defined outside of onsites loops are il
     }
 ~~~
 
+## Field functions {#field_functions_guide}
+
+Normally `f[X]` and `f[X + dir]` can be written only directly inside onsites loops.  A *field
+function* is a function which reads fields at `X` and its neighbours, and which can be called
+from onsites loops.  A function is a field function if it has a parameter of type
+X_index_type:
+
+~~~cpp
+// derivative of f to direction d
+double gradient(const Field<double> &f, const X_index_type &X, Direction d) {
+    return 0.5 * (f[X + d] - f[X - d]);
+}
+
+// templates are fine
+template <typename T>
+T laplacian(const Field<T> &f, const X_index_type &X) {
+    T r = -2 * NDIM * f[X];
+    foralldir(d) r += f[X + d] + f[X - d];
+    return r;
+}
+
+...
+onsites(ALL) {
+    g[X] = gradient(f, X, e_y) + laplacian(h, X);
+    double s = 0;
+    foralldir(d) s += gradient(f, X, d);
+}
+~~~
+
+Inside a field function:
+
+- Fields given as parameters can be read with `f[X]`, `f[X + dir]` and `f[X + offset]`, where
+  `X` is the X_index_type parameter.
+- `X.coordinates()`, `X.coordinate(dir)`, `X.parity()` and `X.x()` etc. can be used as in onsites loops.
+- Other functions can be called, and hila::global variables used.  On GPUs the functions
+  called are compiled for the device automatically.
+
+At the call the `X` argument must be `X`, and the Field arguments must be field variables (e.g.
+`f`, `U[d]`) which do not depend on variables defined inside the loop.
+
+_hilapp_ rewrites the function in one of two forms:
+
+- **Values passed:** if the directions and offsets of all field accesses are constants or
+  parameters of the function, as in `gradient()` above, the function gets the field values as
+  parameters.  The call `gradient(f, X, e_y)` works as if it were
+  `gradient(f[X + e_y], f[X - e_y], X, e_y)`: only the directions used are communicated, the
+  values are fetched as for field accesses in the loop, and the same neighbour used both in
+  the loop and in the function is fetched only once.  Offsets `f[X + offset]` are handled as in
+  the loop (see [Shift and reflect operators](#shift_and_reflect)): `f[X + 2*d]` is read from the
+  deep halo if the code is compiled with `HALO_DEPTH=2` or more, otherwise the field is shifted
+  before the loop.
+- **Fields accessed:** if a direction is computed inside the function, as with `foralldir(d)`
+  in `laplacian()`, the function reads the fields itself.  Then all neighbour directions of
+  the fields are communicated before the loop, and offsets cannot be used.
+
+The value form is generally more efficient: prefer passing the directions as parameters.
+
+Limitations:
+
+- Field parameters must be `const Field<T> &`, field functions cannot write to fields.
+- The Field and X parameters can be used only as `f[...]` and `X.method()`: e.g. `f.sum()` or
+  passing `f` to another function is not possible.
+- Field functions cannot call other field functions.
+- The function must be a non-member function, and its definition must be in the same
+  compilation unit (e.g. in a header, or in the same source file).
+- On vectorized (AVX) targets onsites loops calling field functions are not vectorized.
+- A non-constant default argument cannot be used as a direction.
+
+See `applications/test_field_functions` for examples.
+
 ## Loop external field access
 
 There are a few ways of accessing Field elements which exclusively are to be used outside of onsites loops.
@@ -401,7 +471,7 @@ N fields G[N], where we know the field values are between 0 and fmax:
 > NOTE: ReductionVector indexing has no protection. Using index past the 
 > ends of the array will cause trouble!
 
-# Shift and reflect operators
+# Shift and reflect operators {#shift_and_reflect}
 
 Field::shift operations allow shifting all elements by a certain displacement vector v. Even and Odd elements cannot be shifted with Field::shift method
 ~~~cpp
