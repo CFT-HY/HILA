@@ -90,8 +90,7 @@ auto field_storage<T>::get_element(const unsigned i, const Lattice lattice) cons
     char *d_buffer;
     T value;
 
-    // on compute_stream: it is non-blocking, so a default-stream launch here is
-    // not ordered after the onsites loop that wrote the field
+    // on compute_stream, where the onsites loop that wrote the field ran
     gpuMalloc(&(d_buffer), sizeof(T));
     get_element_kernel<<<1, 1, 0, hila::compute_stream()>>>(*this, d_buffer, i,
                                                             lattice->mynode.field_alloc_size);
