@@ -4,6 +4,9 @@ name: Build prebuilt hilapp binaries
 # to a single rolling GitHub release (tag hilapp-binaries).  Users install them with
 # hilapp/get_hilapp.sh.
 #
+# The tarball contains the binary and clang's builtin headers (include/, installed to
+# hilapp/include).
+#
 # Each hilapp source version is identified by  hilapp-s<signature>-<tree>  where <signature>
 # is HILA_SIGNATURE_NUMBER in libraries/hila_signatures.h and <tree> is the git tree hash of
 # the hilapp/ directory (git rev-parse --short=12 HEAD:hilapp).  Release assets:
@@ -81,6 +84,14 @@ jobs:
           file hilapp/build/hilapp
           mkdir -p hilapp/bin
           cp hilapp/build/hilapp hilapp/bin/hilapp
+          # the build copies clang's builtin headers to hilapp/include; check that hilapp
+          # uses them (and not the build-time clang location)
+          cat hilapp/include/.clang_version
+          printf '#include <cstddef>\n#include <vector>\n' > t.cpp
+          hilapp/bin/hilapp --show-include-paths --syntax-only t.cpp > paths.txt 2>&1
+          cat paths.txt
+          grep -qx "    -resource-dir=${PWD}/hilapp" paths.txt ||
+            { echo "::error::hilapp does not use the headers in hilapp/include"; exit 1; }
 
       - name: Test - build and run hila_healthcheck with the binary
         run: |
@@ -105,6 +116,8 @@ jobs:
         run: |
           mkdir -p pkg
           cp hilapp/build/hilapp pkg/
+          # clang builtin headers (stddef.h etc.) for this binary, installed to hilapp/include
+          cp -R hilapp/include pkg/include
           {
             echo "version: ${{ steps.version.outputs.version }}"
             echo "commit: ${GITHUB_SHA}"
@@ -113,7 +126,7 @@ jobs:
             echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > pkg/BUILD_INFO
           name=${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}.tar.gz
-          tar -C pkg -czf ${name} hilapp BUILD_INFO
+          tar -C pkg -czf ${name} hilapp include BUILD_INFO
           sha256sum ${name} > ${name}.sha256
           cat ${name}.sha256
 

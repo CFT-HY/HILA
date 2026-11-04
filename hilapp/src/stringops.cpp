@@ -243,14 +243,126 @@ std::string remove_class_from_type(const std::string &s) {
 
 
 /////////////////////////////////////////////////////////////////////////////////////
-/// Get includes using system gcc - only if static compile!
+/// Locate the system headers for the clang parser:
+///  - clang's builtin headers (stddef.h, stdarg.h, limits.h, intrinsics ...) from
+///    a clang resource dir:  -resource-dir=<dir>, headers in <dir>/include.
+///    These belong to the clang version hilapp is built with.
+///  - (static build) the gcc installation whose C++ library (libstdc++) is used:
+///    --gcc-install-dir=<dir>.  Clang then adds the libstdc++ and libc include
+///    dirs itself, as system include dirs.
+/// gcc's own builtin header dir (<gcc-install-dir>/include) is not used: those
+/// headers are gcc specific.
 /////////////////////////////////////////////////////////////////////////////////////
+
+#include <cstdio>
+#include <fstream>
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+
+namespace {
+
+/// args to be added to av.  These are pushed to av only after all have been added,
+/// because av stores the c_str() pointers
+std::vector<std::string> added_args;
+
+void add_arg(const std::string &arg) {
+    added_args.push_back(arg);
+}
+
+/// is there an arg starting with prefix (user given on the command line)
+bool has_arg_prefix(const std::vector<const char *> &av, const char *prefix) {
+    for (const char *a : av)
+        if (strncmp(a, prefix, strlen(prefix)) == 0)
+            return true;
+    return false;
+}
+
+/// run a shell command, return the first line of its stdout (empty on failure)
+std::string first_output_line(const std::string &cmd) {
+    std::string res;
+    FILE *pipe = popen(cmd.c_str(), "r");
+    if (pipe == nullptr)
+        return res;
+    char buf[4096];
+    if (fgets(buf, sizeof(buf), pipe) != nullptr)
+        res = buf;
+    pclose(pipe);
+    while (!res.empty() && (res.back() == '\n' || res.back() == '\r' || res.back() == ' '))
+        res.pop_back();
+    return res;
+}
+
+/// Check the clang resource dir candidate: return 1 if <dir>/include has the builtin
+/// headers of this clang version, 0 if there are no headers, -1 if they belong to
+/// another clang version (found_version).  hilapp/Makefile and get_hilapp.sh write
+/// the clang major version to <dir>/include/.clang_version.
+int check_resource_dir(const std::string &dir, int &found_version) {
+    if (dir.empty() || !llvm::sys::fs::exists(dir + "/include/stddef.h"))
+        return 0;
+    std::ifstream vf(dir + "/include/.clang_version");
+    if (vf >> found_version && found_version != LLVM_VERSION_MAJOR)
+        return -1;
+    return 1;
+}
+
+/// Add -resource-dir=<dir>.  Candidates:
+///  1. <hilapp-dir>/include, where the hilapp binary is <hilapp-dir>/bin/hilapp or
+///     <hilapp-dir>/build/hilapp.  Installed by hilapp/Makefile and get_hilapp.sh.
+///  2. the resource dir of the clang hilapp was built with (HILAPP_CLANG_RESOURCE_DIR)
+/// If neither is found, clang uses its default (relative to the binary).
+void add_resource_dir(const char *argv0, std::vector<const char *> &av) {
+    if (has_arg_prefix(av, "-resource-dir"))
+        return;
+
+    std::string exe = llvm::sys::fs::getMainExecutable(argv0, (void *)&add_resource_dir);
+    std::string hilapp_dir =
+        llvm::sys::path::parent_path(llvm::sys::path::parent_path(exe)).str();
+
+    int version = 0;
+    int status = check_resource_dir(hilapp_dir, version);
+    if (status == 1) {
+        add_arg("-resource-dir=" + hilapp_dir);
+        return;
+    }
+
+#ifdef HILAPP_CLANG_RESOURCE_DIR
+    int v2;
+    if (check_resource_dir(HILAPP_CLANG_RESOURCE_DIR, v2) == 1) {
+        add_arg(std::string("-resource-dir=") + HILAPP_CLANG_RESOURCE_DIR);
+        return;
+    }
+#endif
+
+    // Not found.  A non-static hilapp may still find the headers of the clang installation
+    // (clang default), thus "not found" is a warning only for the static hilapp
+    const char *hint = "  Reinstall hilapp with hilapp/get_hilapp.sh, or build it with "
+                       "'make -C hilapp static' or 'make -C hilapp install'\n";
+    if (status == -1) {
+        std::cerr << "hilapp WARNING: clang builtin headers in " << hilapp_dir
+                  << "/include are for clang " << version << ", but hilapp uses clang "
+                  << LLVM_VERSION_MAJOR << ", ignoring them.\n"
+                  << hint;
+    }
+#ifdef USE_COMPILER_INCLUDES
+    else {
+        std::cerr << "hilapp WARNING: clang builtin headers (stddef.h etc.) not found in "
+                  << hilapp_dir << "/include.\n"
+                  << hint;
+    }
+#endif
+}
+
+} // namespace
 
 #ifdef USE_COMPILER_INCLUDES
 
-#include <fstream>
-
-std::string get_includes_from_gcc(std::vector<const char *> &av) {
+/// Static build: hilapp uses the C++ standard library (libstdc++) of the gcc installation
+/// of the compiler given with --get-includes-with=<compiler>, by default the newest g++-N
+/// or g++.  The installation dir is from '<compiler> -print-libgcc-file-name', and it is
+/// passed to clang with --gcc-install-dir.  With 'none' clang searches for gcc itself.
+/// Returns the compiler name.
+std::string add_gcc_installation(std::vector<const char *> &av) {
 
     std::string compiler = "g++";
 
@@ -270,71 +382,57 @@ std::string get_includes_from_gcc(std::vector<const char *> &av) {
         }
     }
 
-    if (compiler != "none") {
-        char pipebuf[20000];
-        FILE *pipe;
-        if (!got_compiler) {
-            // this pipe cmd gives bash completions for g++-<tab>
-            // the code below selects the largest version number
-            pipe = popen("echo -n 'compgen -c g++-' | bash", "r");
+    if (compiler == "none")
+        return compiler;
 
-            int version = 0;
-            while (pipe && !feof(pipe) && fgets(pipebuf, sizeof(pipebuf), pipe) != NULL) {
+    if (!got_compiler) {
+        // this pipe cmd gives bash completions for g++-<tab>
+        // the code below selects the largest version number
+        FILE *pipe = popen("echo -n 'compgen -c g++-' | bash", "r");
+        char pipebuf[1000];
 
-                int v = 0, i = 4;
-                while (pipebuf[i] >= '0' && pipebuf[i] <= '9') {
-                    v *= 10;
-                    v += pipebuf[i] - '0';
-                    i++;
-                }
-                if (pipebuf[i] == '\n')
-                    pipebuf[i] = 0;
-                if (pipebuf[i] == 0 && v > version) {
-                    compiler = pipebuf;
-                    version = v;
-                }
+        int version = 0;
+        while (pipe && !feof(pipe) && fgets(pipebuf, sizeof(pipebuf), pipe) != NULL) {
+
+            int v = 0, i = 4;
+            while (pipebuf[i] >= '0' && pipebuf[i] <= '9') {
+                v *= 10;
+                v += pipebuf[i] - '0';
+                i++;
             }
+            if (pipebuf[i] == '\n')
+                pipebuf[i] = 0;
+            if (pipebuf[i] == 0 && v > version) {
+                compiler = pipebuf;
+                version = v;
+            }
+        }
 
+        if (pipe)
             pclose(pipe);
-        }
-
-        // std::cerr << "FOUND COMPILER " << compiler << '\n';
-
-        // The following commmand makes the compiler to produce list of include dirs
-        // NOTE: this relies on the compiler identifying the path lines starting
-        // with " /" at the beginning of each line.
-        // This is the case for g++ or clang
-        std::string pipecmd = "echo | " + compiler + " -xc++ --std=" + cpp_standard +
-                              " -Wp,-v - 2>&1 | grep '^ /'";
-
-        // std::cerr << pipecmd << '\n';
-        pipe = popen(pipecmd.c_str(), "r");
-
-        // this needs to be static to store the strings!
-        static std::vector<std::string> includedirs;
-
-        if (pipe) {
-            while (!feof(pipe) && fgets(pipebuf, sizeof(pipebuf), pipe) != NULL) {
-
-                includedirs.push_back("-I");
-                includedirs.back() += pipebuf + 1;
-                includedirs.back().back() = 0; // remove \n
-            }
-            for (auto &r : includedirs) {
-                av.push_back(r.c_str());
-                // std::cerr << r << '\n';
-            }
-        }
-        pclose(pipe);
-
-        if (includedirs.size() == 0)
-            std::cerr << "hilapp WARNING: could not find include paths with compiler \"" << compiler
-                      << "\"\n";
     }
 
-    // for (auto &r : av) {
-    //     std::cerr << r << '\n';
-    // }
+    // gcc installation given explicitly to clang (after --)
+    if (has_arg_prefix(av, "--gcc-install-dir") || has_arg_prefix(av, "--gcc-toolchain"))
+        return compiler;
+
+    // libgcc.a is in the gcc installation dir <prefix>/lib/gcc/<triple>/<version>
+    std::string libgcc = first_output_line(compiler + " -print-libgcc-file-name 2>/dev/null");
+    std::string dir = llvm::sys::path::parent_path(libgcc).str();
+
+    if (dir.empty() || !llvm::sys::fs::exists(dir + "/crtbegin.o")) {
+        std::cerr << "hilapp WARNING: could not find the gcc installation of compiler \""
+                  << compiler << "\" (with '" << compiler
+                  << " -print-libgcc-file-name'), letting clang search for it\n";
+        return compiler;
+    }
+
+#if LLVM_VERSION_MAJOR >= 16
+    add_arg("--gcc-install-dir=" + dir);
+#else
+    // older clang: give the installation prefix, clang chooses the version under it
+    add_arg("--gcc-toolchain=" + dir + "/../../../..");
+#endif
 
     return compiler;
 }
@@ -406,8 +504,11 @@ std::string handle_cmdline_args(int argc, const char **argv, std::vector<const c
 
     std::string compiler;
 #ifdef USE_COMPILER_INCLUDES
-    compiler = get_includes_from_gcc(avvect);
+    compiler = add_gcc_installation(avvect);
 #endif
+    add_resource_dir(argv[0], avvect);
+    for (auto &a : added_args)
+        avvect.push_back(a.c_str());
 
     avvect.push_back(cppstd);
     avvect.push_back("-DHILAPP");

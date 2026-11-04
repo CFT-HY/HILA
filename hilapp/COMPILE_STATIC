@@ -16,12 +16,13 @@ provided that machines are binary compatible, usually both x86_64).
 > cd hila/hilapp
 > make [-j4] static 
 
-  This results in statically linked program build/hilapp
+  This results in statically linked program build/hilapp, and copies the
+  clang builtin headers (stddef.h etc.) the program needs to directory include/
 
 - Install hila source package on target machine (e.g. with git)
 
-- Copy hilapp executable to the directory hila/hilapp/bin 
-  on the target machine.
+- Copy hilapp executable to the directory hila/hilapp/bin, and the
+  directory include/ to hila/hilapp/include on the target machine.
 
 - Test:
 > hilapp/bin/hilapp --help

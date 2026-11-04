@@ -9,10 +9,14 @@
 #%    make install     - build and move hilapp to hilapp/bin
 #%    make static      - build a statically compiled hilapp.  This can
 #%                       be copied to systems without llvm/clang libraries
-#%                       (assuming architectures are binary compatible)
+#%                       (assuming architectures are binary compatible),
+#%                       together with directory hilapp/include
 #%    make clean       - clean up
 #%    make [..] LLVM_VERSION=N   - build using llvm version 
 #%                       (assumes llvm-config-N exists)
+#%
+#%    Building hilapp copies clang's builtin headers (stddef.h etc.)
+#%    to hilapp/include, where hilapp finds them.
 #%-----------------------------------------------------------------------------
 #
 # The Makefile variables may be customized, depending on where
@@ -115,6 +119,32 @@ $(info --------------------------------------------------------------)
 # CXX := g++
 # CXX := clang++
 CXX := $(LLVM_BIN_PATH)/clang++
+
+# hilapp needs the builtin headers (stddef.h, stdarg.h, limits.h, intrinsics ...) of the
+# clang version it is built with.  These are copied to hilapp/include, where hilapp
+# finds them relative to its own location (bin/hilapp or build/hilapp), so that
+# a statically linked hilapp can be moved to another machine.  The clang major version
+# is written to include/.clang_version.  The build-time location is compiled in as a
+# fallback.
+CLANG_RESOURCE_DIR := $(shell $(LLVM_BIN_PATH)/clang -print-resource-dir 2>/dev/null)
+CLANG_MAJOR_VERSION := $(shell $(LLVM_BIN_PATH)/llvm-config --version | cut -d. -f1)
+CLANG_HEADER_DIR := include
+
+ifneq ($(CLANG_RESOURCE_DIR),)
+RESOURCE_OPT := -DHILAPP_CLANG_RESOURCE_DIR=\"$(CLANG_RESOURCE_DIR)\"
+endif
+
+define copy_clang_headers
+	@if [ -f "$(CLANG_RESOURCE_DIR)/include/stddef.h" ]; then \
+	  rm -rf $(CLANG_HEADER_DIR) && \
+	  cp -RL $(CLANG_RESOURCE_DIR)/include $(CLANG_HEADER_DIR) && \
+	  echo $(CLANG_MAJOR_VERSION) > $(CLANG_HEADER_DIR)/.clang_version && \
+	  echo "Copied clang builtin headers $(CLANG_RESOURCE_DIR)/include to hilapp/$(CLANG_HEADER_DIR)" ; \
+	else \
+	  echo "WARNING: clang builtin headers not found ($(LLVM_BIN_PATH)/clang -print-resource-dir)," ; \
+	  echo "         hilapp/$(CLANG_HEADER_DIR) not created" ; \
+	fi
+endef
 
 # CXXFLAGS := -fno-rtti -std=c++17 -g
 CXXFLAGS := -fno-rtti -std=c++17 -O2
@@ -293,10 +323,12 @@ $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 $(BUILDDIR)/hilapp: ${OBJECTS} ${STATIC_INCLUDE}
 	$(CXX) $(STATIC) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
 	$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
+	$(copy_clang_headers)
 
 install: $(BUILDDIR)/hilapp
 	@mkdir -p $(BINDIR)
 	mv $(BUILDDIR)/hilapp $(BINDIR)
+	$(copy_clang_headers)
 
 # Insert git sha value to the code
 GIT_SHA := $(shell git rev-parse --short=8 HEAD)
@@ -312,12 +344,12 @@ $(GIT_SHA_FILE):
 	-rm -f build/.git_sha_number_*
 	touch $(GIT_SHA_FILE)
 
+endif
+
 # make separate rule for stringops
 $(BUILDDIR)/stringops.o : $(SRCDIR)/stringops.cpp $(HEADERS) Makefile $(GIT_SHA_FILE)
 	@mkdir -p $(BUILDDIR)
-	$(CXX) -c $(CXXFLAGS) $(STATIC) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $(SHA_OPT) $< -o $@
-
-endif
+	$(CXX) -c $(CXXFLAGS) $(STATIC) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $(SHA_OPT) $(RESOURCE_OPT) $< -o $@
 
 
 help:

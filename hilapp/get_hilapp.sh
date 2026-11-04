@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # get_hilapp.sh - download a prebuilt, statically linked hilapp binary matching this
-# hila source tree, and install it to hilapp/bin/hilapp.
+# hila source tree, and install it to hilapp/bin/hilapp, and the clang builtin headers it
+# needs to hilapp/include.
 #
 # Binaries are built by the GitHub workflow .github/workflows/hilapp-binaries.yml for
 # Linux x86_64 and aarch64, for each change of hilapp/ on the main branch, and kept in the
@@ -164,6 +165,12 @@ if [ -e "${bin_dir}/hilapp" ]; then
     mv -f "${bin_dir}/hilapp" "${bin_dir}/hilapp.previous"
 fi
 mv "${tmp}/x/hilapp" "${bin_dir}/hilapp"
+
+# clang builtin headers (stddef.h etc.) of the binary, hilapp finds them in hilapp/include
+if [ -d "${tmp}/x/include" ]; then
+    rm -rf "${hilapp_dir}/include"
+    mv "${tmp}/x/include" "${hilapp_dir}/include"
+fi
 echo "${version}" > "${release_file}"
 
 echo "Installed ${bin_dir}/hilapp (${version})"
