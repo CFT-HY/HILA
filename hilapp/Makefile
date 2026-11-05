@@ -139,6 +139,7 @@ define copy_clang_headers
 	  rm -rf $(CLANG_HEADER_DIR) && \
 	  cp -RL $(CLANG_RESOURCE_DIR)/include $(CLANG_HEADER_DIR) && \
 	  echo $(CLANG_MAJOR_VERSION) > $(CLANG_HEADER_DIR)/.clang_version && \
+	  chmod -R g=u $(CLANG_HEADER_DIR) && \
 	  echo "Copied clang builtin headers $(CLANG_RESOURCE_DIR)/include to hilapp/$(CLANG_HEADER_DIR)" ; \
 	else \
 	  echo "WARNING: clang builtin headers not found ($(LLVM_BIN_PATH)/clang -print-resource-dir)," ; \
@@ -328,6 +329,7 @@ $(BUILDDIR)/hilapp: ${OBJECTS} ${STATIC_INCLUDE}
 install: $(BUILDDIR)/hilapp
 	@mkdir -p $(BINDIR)
 	mv $(BUILDDIR)/hilapp $(BINDIR)
+	chmod g=u $(BINDIR)/hilapp
 	$(copy_clang_headers)
 
 # Insert git sha value to the code
