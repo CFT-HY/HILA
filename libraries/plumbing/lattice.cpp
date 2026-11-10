@@ -64,7 +64,8 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
 
     if (hila::check_input) {
         hila::out << "***** Input check done *****\n";
-        hila::finishrun();
+        // can do crude exit with input check, it should be a vanilla run in any case
+        exit(0);
     }
 
     setup_nodes();
