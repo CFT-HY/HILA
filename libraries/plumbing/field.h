@@ -1790,6 +1790,70 @@ class Field {
                             bool to_float = false) const;
 
     /**
+     * @brief Projection of the field: sum over the directions in `dirs`.
+     * @details The result is an array over the remaining ("kept") directions, ordered so
+     * that the lowest kept direction runs fastest. If all directions are projected the
+     * result has one element, the sum of the field.
+     * The optional range cmin, cmax restricts both the summation range in the projected
+     * directions and the output range in the kept directions.
+     * Memory use: each MPI rank needs only the projection of its own sites, and
+     * rank 0 collects the result. Only rank 0 gets the result unless broadcast == true.
+     *
+     * Example: in 4 dimensions, `auto p = f.get_projection({e_z, e_t});` gives an
+     * array of lattice.size(e_x)*lattice.size(e_y) elements, element (x,y) is at
+     * index x + y*lattice.size(e_x).
+     */
+    std::vector<T> get_projection(const std::vector<Direction> &dirs,
+                                  bool broadcast = false) const;
+    std::vector<T> get_projection(const std::vector<Direction> &dirs, const CoordinateVector &cmin,
+                                  const CoordinateVector &cmax, bool broadcast = false) const;
+
+    /**
+     * @brief Write out the projection (sum over directions `dirs`) of the field.
+     * @details Each element is on one line, ordered so that the lowest kept direction
+     * runs fastest, as in write_subvolume(). See get_projection() for `dirs`, cmin and cmax.
+     * Rank 0 writes the result in slabs, and never holds the whole projection
+     * (unless the highest kept direction is not divided between MPI ranks).
+     * @param Outf is either filename (std::string) or output stream of open file
+     * (std::ofstream)
+     */
+    template <typename Outf>
+    void write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                          int precision = 6) const;
+    template <typename Outf>
+    void write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                          const CoordinateVector &cmin, const CoordinateVector &cmax,
+                          int precision = 6) const;
+
+    /**
+     * @brief Write the projection as a binary file, see write_projection().
+     * @details to_float = true converts double values to float.
+     */
+    template <typename Outf>
+    void write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
+                                 bool to_float = false) const;
+    template <typename Outf>
+    void write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
+                                 const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                 bool to_float = false) const;
+
+    /// @internal
+    /// Compute the projection and hand it to `output` on rank 0 in consecutive slabs.
+    /// output is called with (const T *data, size_t n).
+    template <typename Func>
+    void projection_internal(const std::vector<Direction> &dirs, const CoordinateVector &cmin,
+                             const CoordinateVector &cmax, Func &&output) const;
+
+    /// @internal
+    void write_projection_internal(std::ofstream &out, const std::vector<Direction> &dirs,
+                                   const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                   int precision, bool binary, bool to_float) const;
+    /// @internal
+    void write_projection_internal(const std::string &filename, const std::vector<Direction> &dirs,
+                                   const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                   int precision, bool binary, bool to_float) const;
+
+    /**
      * @brief Sum reduction of Field
      * @details The sum in the reduction is defined by the Field type T
      * @param par Parity

@@ -48,6 +48,9 @@ inline void _hila_init_gpu_ops_vectorreduction() {
 ///   a.allreduce(bool)     : turn allreduce on/off  (default=true)
 ///   a.nonblocking(bool)   : turn non-blocking reduction on/off
 ///   a.delayed(bool)       : turn delayed reduction on/off
+///   a.node_local(bool)    : turn node-local reduction on/off: no MPI reduction,
+///                           each MPI rank gets the result of its own sites only.
+///                           The size may then differ between ranks.
 ///
 ///   a.wait()              : for non-blocking reduction, wait() has to be called
 ///                           after the loop to complete the reduction
@@ -56,6 +59,7 @@ inline void _hila_init_gpu_ops_vectorreduction() {
 ///   a.is_allreduce()      : queries the reduction status
 ///     is_nonblocking()
 ///     is_delayed()
+///     is_node_local()
 ///
 ///   a.push_back(element)   : add one element to
 /// The same reduction variable can be used again
@@ -74,6 +78,7 @@ class ReductionVector {
     bool is_allreduce_ = true;
     bool is_nonblocking_ = false;
     bool is_delayed_ = false;
+    bool is_node_local_ = false;
 
     bool delay_is_on = false;   // status of the delayed reduction
     bool is_delayed_sum = true; // sum/product
@@ -84,6 +89,10 @@ class ReductionVector {
 
         // if for some reason reduction is going on unfinished, wait.
         wait();
+
+        // node-local reduction: the result is the sum/product of this rank's sites
+        if (is_node_local_)
+            return;
 
         if (is_nonblocking_)
             comm_is_on = true;
@@ -200,6 +209,18 @@ class ReductionVector {
         return is_delayed_;
     }
 
+    /// node_local(bool) turns node-local reduction on or off.  By default off.
+    /// With node-local reduction there is no MPI communication: each rank
+    /// accumulates only the contributions of its own sites, and the initial
+    /// value is kept on every rank.
+    ReductionVector &node_local(bool b = true) {
+        is_node_local_ = b;
+        return *this;
+    }
+    bool is_node_local() {
+        return is_node_local_;
+    }
+
     /// Assignment is used only outside site loops - wait for comms if needed
     /// Make this return void, hard to imagine it is used for anything useful
     template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
@@ -220,7 +241,7 @@ class ReductionVector {
     void init_sum() {
         // if something is happening wait
         wait();
-        if (hila::myrank() != 0 && !delay_is_on) {
+        if (hila::myrank() != 0 && !delay_is_on && !is_node_local_) {
             for (auto &vp : val)
                 vp = 0;
         }
@@ -228,7 +249,7 @@ class ReductionVector {
     /// Init is to be called before every site loop
     void init_product() {
         wait();
-        if (hila::myrank() != 0 && !delay_is_on) {
+        if (hila::myrank() != 0 && !delay_is_on && !is_node_local_) {
             for (auto &vp : val)
                 vp = 1;
         }

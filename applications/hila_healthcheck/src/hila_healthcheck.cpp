@@ -648,6 +648,109 @@ void test_subvolumes() {
 }
 
 /**
+ * @brief Test Field projections
+ * @details Compare get_projection() and write_projection_binary() with a reference
+ * computed with ReductionVector, for all sets of projected directions, for the
+ * full lattice and for a subvolume.
+ */
+void test_projection() {
+
+    Field<Complex<double>> f;
+    f.gaussian_random();
+
+    // subvolume corners
+    CoordinateVector smin, smax;
+    foralldir (d) {
+        smin[d] = hila::random() * lattice.size(d) / 2;
+        smax[d] = smin[d] + 1 + hila::random() * (lattice.size(d) - smin[d] - 1);
+    }
+    hila::broadcast2(smin, smax);
+
+    double maxerr_bin = 0;
+
+    for (int mask = 1; mask < (1 << NDIM); mask++) {
+        std::vector<Direction> dirs;
+        std::string dirname;
+        foralldir (d) {
+            if (mask & (1 << d)) {
+                dirs.push_back(d);
+                dirname += hila::prettyprint(d) + ' ';
+            }
+        }
+
+        double maxerr = 0;
+        for (int sub = 0; sub < 2; sub++) {
+            CoordinateVector cmin = 0, cmax = lattice.size();
+            cmax.asArray() -= 1;
+            if (sub) {
+                cmin = smin;
+                cmax = smax;
+            }
+
+            // reference: ReductionVector over the kept directions
+            CoordinateVector stride = 0;
+            int n = 1;
+            foralldir (d) {
+                if (!(mask & (1 << d))) {
+                    stride[d] = n;
+                    n *= cmax[d] - cmin[d] + 1;
+                }
+            }
+            ReductionVector<Complex<double>> rv(n);
+            onsites (ALL) {
+                CoordinateVector c = X.coordinates();
+                bool inside = true;
+                int idx = 0;
+                foralldir (d) {
+                    if (c[d] < cmin[d] || c[d] > cmax[d])
+                        inside = false;
+                    idx += (c[d] - cmin[d]) * stride[d];
+                }
+                if (inside)
+                    rv[idx] += f[X];
+            }
+
+            auto p = f.get_projection(dirs, cmin, cmax);
+
+            if_rank0 () {
+                if (p.size() != n) {
+                    maxerr = 1;
+                } else {
+                    for (int i = 0; i < n; i++)
+                        maxerr = std::max(maxerr, abs(p[i] - rv[i]) / (1 + abs(rv[i])));
+                }
+            }
+
+            // binary writer, read back on rank 0
+            if (sub == 1 && mask == (1 << (NDIM - 1))) {
+                std::string fname = "projection_test.dat";
+                f.write_projection_binary(fname, dirs, cmin, cmax);
+                if_rank0 () {
+                    std::ifstream in(fname, std::ios::binary);
+                    std::vector<Complex<double>> b(n);
+                    in.read((char *)b.data(), n * sizeof(Complex<double>));
+                    if (!in || in.peek() != EOF) {
+                        maxerr_bin = 1;
+                    } else {
+                        for (int i = 0; i < n; i++)
+                            maxerr_bin =
+                                std::max(maxerr_bin, abs(b[i] - rv[i]) / (1 + abs(rv[i])));
+                    }
+                    in.close();
+                    std::remove(fname.c_str());
+                }
+            }
+        }
+
+        hila::broadcast(maxerr);
+        report_pass("Projection over " + dirname, maxerr, 1e-10);
+    }
+
+    hila::broadcast(maxerr_bin);
+    report_pass("write_projection_binary", maxerr_bin, 1e-10);
+}
+
+/**
  * @brief Test FFT
  * @details Test forward and inverse FFT on fields.
  *
@@ -1509,6 +1612,7 @@ void test_blocking() {
         test_set_elements_and_select();
         test_fft();
         test_fft_real();
+        test_projection();
 
         lattice.unblock();
         cvfb.unblock_to(cvf);
@@ -1568,6 +1672,7 @@ int main(int argc, char **argv) {
     test_set_elements_and_select();
     test_shift();
     test_subvolumes();
+    test_projection();
     test_matrix_operations();
     test_element_operations();
     test_fft();

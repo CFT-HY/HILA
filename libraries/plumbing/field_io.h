@@ -357,6 +357,40 @@ static void read_fields(const std::string &filename, fieldtypes &...fields) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+namespace hila {
+/// @internal
+/// Write n elements of type T from buf to an open output stream (called on rank 0 only).
+/// ASCII: each element on its own line, numbers separated by spaces.
+/// Binary: raw element data, optionally converted to float.
+/// Used by Field::write_subvolume and Field::write_projection.
+template <typename T>
+void write_elements_to_stream(std::ofstream &outputfile, const T *buffer, size_t n, bool binary,
+                              bool to_float) {
+
+    constexpr int n_numbers = sizeof(T) / sizeof(hila::arithmetic_type<T>);
+
+    if (!binary) {
+        for (size_t k = 0; k < n; k++) {
+            for (int l = 0; l < n_numbers; l++) {
+                outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
+            }
+            outputfile << '\n';
+        }
+    } else if (!to_float || std::is_same<hila::arithmetic_type<T>, float>::value) {
+        outputfile.write((const char *)buffer, n * sizeof(T));
+    } else {
+        std::vector<float> floatbuf(n * n_numbers);
+        float *fp = floatbuf.data();
+        for (size_t k = 0; k < n; k++) {
+            for (int l = 0; l < n_numbers; l++) {
+                *(fp++) = hila::get_number_in_var(buffer[k], l);
+            }
+        }
+        outputfile.write((const char *)floatbuf.data(), floatbuf.size() * sizeof(float));
+    }
+}
+} // namespace hila
+
 /// Write a "subspace" of the original lattice
 /// Each element is written on a single line
 /// TODO: more formatting?
@@ -389,17 +423,6 @@ void Field<T>::write_subvolume_internal(std::ofstream &outputfile, const Coordin
     if_rank0 ()
         buffer = (T *)memalloc(n_write * sizeof(T));
 
-    // check if need to convert to float
-    bool convert_to_float = false;
-    float *floatbuf = nullptr;
-    if (binary && to_float && !std::is_same<hila::arithmetic_type<T>, float>::value) {
-        convert_to_float = true;
-
-        if_rank0 ()
-            floatbuf = (float *)memalloc(n_write * sizeof(T) / sizeof(hila::arithmetic_type<T>) *
-                                         sizeof(float));
-    }
-
     CoordinateVector c;
 
     size_t i = 0, j = 0;
@@ -419,35 +442,13 @@ void Field<T>::write_subvolume_internal(std::ofstream &outputfile, const Coordin
             fs->gather_elements(buffer, coord_list);
 
             if_rank0 () {
-                if (!binary) {
-                    for (size_t k = 0; k < i; k++) {
-                        for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
-                            outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
-                        }
-                        outputfile << '\n';
-                    }
-                } else {
-                    if (!convert_to_float) {
-                        outputfile.write((char *)buffer, i * sizeof(T));
-
-                    } else {
-                        float *fp = floatbuf;
-                        for (size_t k = 0; k < i; k++) {
-                            for (int l = 0; l < sizeof(T) / sizeof(hila::arithmetic_type<T>); l++) {
-                                *(fp++) = hila::get_number_in_var(buffer[k], l);
-                            }
-                        }
-                        outputfile.write((char *)floatbuf, (fp - floatbuf)*sizeof(float));
-                    }
-                }
+                hila::write_elements_to_stream(outputfile, buffer, i, binary, to_float);
             }
             i = 0;
         }
     }
     if_rank0 () {
         std::free(buffer);
-        if (convert_to_float)
-            std::free(floatbuf);
     }
 }
 

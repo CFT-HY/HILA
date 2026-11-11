@@ -203,6 +203,8 @@ For getting a sub volume there are the following methods:
 - `Field::get_slice`
 - `Field::get_subvolume` 
 
+For sums over one or more directions see [Projections](#field_projection_guide).
+
 
 
 # Reductions
@@ -432,8 +434,12 @@ The type implements the methods (for clarity, using placeholder variable name a)
 - Option setting, called before reduction loop:
     + `a.allreduce(bool on = true)`: set allreduce on/off (default: on)
     + `a.delayed(bool on = true)`: set delayed on/off (default: off)
+    + `a.node_local(bool on = true)`: set node-local reduction on/off (default: off).
+      With node-local reduction there is no MPI communication: on each MPI rank the
+      result contains only the contributions of the rank's own sites, and the initial
+      value is kept on every rank. The size of the vector may differ between ranks.
 
-- Boolean query methods `a.is_allreduce()`, `a.is_delayed()`.
+- Boolean query methods `a.is_allreduce()`, `a.is_delayed()`, `a.is_node_local()`.
 - `a[i]` where i is int : access the element number i.
 - `a.reduce()` : in delayed reduction completes the reduction.  This must be called before the the result is used.
 - Assignment `a = <value>` : fills in a with the value
@@ -470,6 +476,52 @@ N fields G[N], where we know the field values are between 0 and fmax:
 ~~~
 > NOTE: ReductionVector indexing has no protection. Using index past the 
 > ends of the array will cause trouble!
+
+## Projections {#field_projection_guide}
+
+A projection sums the field over one or more directions, giving an array over
+the remaining ("kept") directions:
+~~~cpp
+    Field<double> f;
+    ...
+    // 4 dimensions: sum over z and t, result has lattice.size(e_x)*lattice.size(e_y) elements
+    std::vector<double> p = f.get_projection({e_z, e_t});
+    if (hila::myrank() == 0) {
+        // element (x,y) is p[x + y*lattice.size(e_x)]
+    }
+
+    // write the projection: one element per line, x running fastest
+    f.write_projection("proj_zt.dat", {e_z, e_t});
+    f.write_projection_binary("proj_zt.bin", {e_z, e_t});
+~~~
+
+The methods are
+- `std::vector<T> f.get_projection(dirs, bool broadcast = false)`
+- `std::vector<T> f.get_projection(dirs, cmin, cmax, bool broadcast = false)`
+- `f.write_projection(output, dirs, int precision = 6)`
+- `f.write_projection(output, dirs, cmin, cmax, int precision = 6)`
+- `f.write_projection_binary(output, dirs, bool to_float = false)`
+- `f.write_projection_binary(output, dirs, cmin, cmax, bool to_float = false)`
+
+Here
+- `dirs` is a `std::vector<Direction>` of the projected directions, e.g. `{e_z}` or `{e_y, e_t}`.
+  If all directions are projected, the result is the sum of the field (one element).
+- `cmin`, `cmax` (CoordinateVector, optional) give the corners of a subvolume: the sum runs over
+  `cmin[d] <= c[d] <= cmax[d]` in the projected directions, and the result covers the same range in the
+  kept directions.
+- The result is ordered as in `get_subvolume()`: the lowest kept direction runs fastest.
+  Only rank 0 gets the result of `get_projection()`, unless `broadcast` is true.
+- `output` is a file name (std::string) or an open std::ofstream. The format is the same as
+  in `write_subvolume()` and `write_subvolume_binary()`; `to_float = true` converts double
+  values to float.
+
+The projection does not need a full copy of the result on every rank, unlike
+a `ReductionVector` over the kept coordinates. Each MPI rank sums only its own sites
+(using a node-local ReductionVector), and the ranks sharing the same range of the
+kept coordinates add up their sums with `MPI_Reduce`. Rank 0 collects the
+result in slabs along the highest kept direction; the writers write each slab
+directly, so rank 0 holds only one slab at a time.  `get_projection()` returns the
+whole result on rank 0.
 
 # Shift and reflect operators {#shift_and_reflect}
 
