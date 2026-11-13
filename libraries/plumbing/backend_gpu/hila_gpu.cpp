@@ -285,21 +285,6 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
         // computed on the fly from _d_layout
         d_neighb[d] = nullptr;
 #endif
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        // For special boundaries
-        // TODO: check this really works now!
-        const unsigned *special_neighb =
-            lat.get_neighbour_array((Direction)d, hila::bc::ANTIPERIODIC);
-
-        if (special_neighb != lat.neighb[d]) {
-            gpuMalloc(&(d_neighb_special[d]), lat.mynode.volume * sizeof(unsigned));
-            gpuMemcpy(d_neighb_special[d], special_neighb, lat.mynode.volume * sizeof(unsigned),
-                      gpuMemcpyHostToDevice);
-        } else {
-            d_neighb_special[d] = d_neighb[d];
-        }
-#endif
     }
 
 #if !defined(LAYOUT_ON_THE_FLY)
@@ -323,6 +308,18 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 }
 
 #endif // not HILAPP
+
+#ifndef HILAPP
+    void backend_lattice_struct::setup_bc_edge(const lattice_struct &lat) {
+        if (d_bc_edge != nullptr)
+            return;
+        gpuMalloc(&d_bc_edge, lat.mynode.volume * sizeof(dir_mask_t));
+        gpuMemcpy(d_bc_edge, lat.bc_edge_, lat.mynode.volume * sizeof(dir_mask_t),
+                  gpuMemcpyHostToDevice);
+        gpuMemcpyToSymbol(_dev_bc_edge, &d_bc_edge, sizeof(dir_mask_t *), 0,
+                          gpuMemcpyHostToDevice);
+    }
+#endif
 
     // set some gobal variables, visible on GPUs
     // thus, hilapp needs to see this definition
@@ -351,6 +348,9 @@ void backend_lattice_struct::setup(lattice_struct &lat) {
 #endif
 
         gpuMemcpyToSymbol(_dev_field_alloc_size, &field_alloc_size, sizeof(unsigned), 0,
+                          gpuMemcpyHostToDevice);
+
+        gpuMemcpyToSymbol(_dev_bc_edge, &d_bc_edge, sizeof(dir_mask_t *), 0,
                           gpuMemcpyHostToDevice);
 
         _d_volume = lat.l_volume;

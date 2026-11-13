@@ -13,7 +13,7 @@ ARCH := vanilla
 
 NDIM := 3
 
-APP_OPTS := -DNDIM=$(NDIM) -DSPECIAL_BOUNDARY_CONDITIONS
+APP_OPTS := -DNDIM=$(NDIM)
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk

@@ -279,19 +279,11 @@ class lattice_struct {
     /// nullptr with LAYOUT_ON_THE_FLY
     dir_mask_t *RESTRICT wait_arr_;
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    /// special boundary pointers are needed only in cases neighbour
-    /// pointers must be modified (new halo elements). That is known only during
-    /// runtime.
-    struct special_boundary_struct {
-        unsigned *neighbours;
-        unsigned *move_index;
-        size_t offset, n_even, n_odd, n_total;
-        bool is_needed;
-    };
-    // holder for nb ptr info
-    special_boundary_struct special_boundaries[NDIRS];
-#endif
+    /// b.c. edge mask, bit (1 << d) set if the neighbour of the site to direction d is across
+    /// the lattice boundary.  Allocated by setup_bc_edge() when the first field with a
+    /// non-periodic b.c. is created, nullptr before that
+    dir_mask_t *RESTRICT bc_edge_ = nullptr;
+
 
 #ifndef VANILLA
     backend_lattice_struct *backend_lattice;
@@ -325,16 +317,6 @@ class lattice_struct {
     //     return mynode.first_site_even;
     // };
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    void init_special_boundaries();
-    void setup_special_boundary_array(Direction d);
-
-    const unsigned *get_neighbour_array(Direction d, hila::bc bc);
-#else
-    const unsigned *get_neighbour_array(Direction d, hila::bc bc) {
-        return neighb[d];
-    }
-#endif
 
 #if defined(GPU_OVERLAP_COMM)
 
@@ -420,19 +402,12 @@ class lattice_struct {
     }
 
     /// Used in hilapp-generated loops: neighbour index from the field's neighbour array nb,
-    /// which is nullptr unless special boundary conditions need it
+    /// which is nullptr with LAYOUT_ON_THE_FLY (the index is then computed from s)
     inline unsigned neighbour_index(const unsigned *nb, const hila::layout_site &s, unsigned idx,
                                     int d) const {
         if (nb != nullptr)
             return nb[idx];
         return mynode.layout.neighbour(s, d);
-    }
-
-    /// The same in row loops (lexicographic layout), nb_computed from the row
-    inline unsigned neighbour_index(const unsigned *nb, unsigned nb_computed, unsigned idx) const {
-        if (nb != nullptr)
-            return nb[idx];
-        return nb_computed;
     }
 
     /// Replaces wait_arr_[idx]: bit (1 << d) set if the neighbour to direction d is off-node
@@ -448,6 +423,9 @@ class lattice_struct {
 
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();
+
+    /// allocate and fill bc_edge_ if not done yet
+    void setup_bc_edge();
 
 
     /// Return the coordinates of a site, where 1st dim (x) runs fastest etc.

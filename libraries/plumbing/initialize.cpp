@@ -216,9 +216,6 @@ void hila::initialize(int argc, char **argv) {
 #ifndef EVEN_SITES_FIRST
         hila::out0 << "=0";
 #endif
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        hila::out0 << " SPECIAL_BOUNDARY_CONDITIONS";
-#endif
         hila::out0 << '\n';
 
         hila::timestamp("Starting");

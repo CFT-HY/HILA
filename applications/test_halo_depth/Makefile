@@ -3,7 +3,7 @@
 #
 #%     make [..] NDIM=<d>          - Dimensions of system, default 3
 #%     make [..] HALO_DEPTH=<n>    - halo depth, default 3 here
-#%     make [..] ANTIPERIODIC=1    - also test antiperiodic b.c. (SPECIAL_BOUNDARY_CONDITIONS)
+#%     make [..] ANTIPERIODIC=1    - also test antiperiodic b.c.
 
 HILA_DIR := ../..
 
@@ -21,7 +21,7 @@ APP_OPTS := -DNDIM=$(NDIM)
 
 ifdef ANTIPERIODIC
 ifneq ($(ANTIPERIODIC),0)
-APP_OPTS += -DSPECIAL_BOUNDARY_CONDITIONS
+APP_OPTS += -DTEST_ANTIPERIODIC
 endif
 endif
 

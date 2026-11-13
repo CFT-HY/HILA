@@ -46,8 +46,7 @@
  * called from GPU kernels and host code.  The struct is trivially copyable and small, so
  * it can be placed in __constant__ memory or passed as a kernel argument.
  *
- * NOT handled (yet): GPU_OVERLAP_COMM layout, SUBNODE_LAYOUT (vector backend),
- * SPECIAL_BOUNDARY_CONDITIONS which need extra halo elements.
+ * NOT handled (yet): GPU_OVERLAP_COMM layout, SUBNODE_LAYOUT (vector backend).
  */
 
 #include "plumbing/defs.h"
@@ -110,8 +109,7 @@ struct site_layout_struct {
 
     unsigned halo_end;         // volume + all nn halos
     unsigned field_alloc_size; // deep_halo_end rounded up to a multiple of 256, as in lattice
-                               // setup (special boundary elements, if any, go after
-                               // deep_halo_end)
+                               // setup
 
     // deeper halo layers, used if halo_depth > 1
     int halo_depth;                // number of halo layers, >= 1

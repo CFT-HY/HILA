@@ -56,24 +56,6 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
 }
 
 template <typename T>
-void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
-                                               const unsigned *RESTRICT index_list, int n,
-                                               const Lattice lattice) const {
-    if constexpr (hila::has_unary_minus<T>::value) {
-#pragma omp parallel for
-        for (unsigned j = 0; j < n; j++) {
-            unsigned index = index_list[j];
-            buffer[j] = -get(index, lattice->mynode.field_alloc_size); /// requires unary - !!
-            // std::memcpy( buffer + j, (char *) (&element), sizeof(T) );
-        }
-    } else {
-        // sizeof(T) here to prevent compile time evaluation of assert
-        assert(sizeof(T) < 1 && "Antiperiodic boundary conditions require that unary - "
-                                "-operator is defined!");
-    }
-}
-
-template <typename T>
 void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
                                       int n, const Lattice lattice) {
 #pragma omp parallel for
@@ -84,46 +66,18 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 
 template <typename T>
 void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
-                                                   const Lattice lattice,
-                                                   bool antiperiodic) {
-    // Only need to do something for antiperiodic boundaries
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-
-    if (antiperiodic) {
-        unsigned n, start = 0;
-        if (par == ODD) {
-            n = lattice->special_boundaries[dir].n_odd;
-            start = lattice->special_boundaries[dir].n_even;
-        } else {
-            if (par == EVEN)
-                n = lattice->special_boundaries[dir].n_even;
-            else
-                n = lattice->special_boundaries[dir].n_total;
-        }
-        unsigned offset = lattice->special_boundaries[dir].offset + start;
-        gather_elements_negated(fieldbuf + offset,
-                                lattice->special_boundaries[dir].move_index + start, n, lattice);
-    }
-
-#else
-    assert(!antiperiodic && "antiperiodic BC possible only if SPECIAL_BOUNDARY_CONDITIONS defined");
-#endif
+                                                   const Lattice lattice) {
+    // nothing to do in the standard layout: the neighbours wrap on the node, and the
+    // b.c. are applied when the neighbour values are read (hila::bc_nb_value)
 }
 
 template <typename T>
 void field_storage<T>::gather_comm_elements(T *RESTRICT buffer,
                                             const lattice_struct::comm_node_struct &to_node,
-                                            Parity par, const Lattice lattice,
-                                            bool antiperiodic) const {
+                                            Parity par, const Lattice lattice) const {
     int n;
     const unsigned *index_list = to_node.get_sitelist(par, n);
-
-    if (antiperiodic) {
-        gather_elements_negated(buffer, index_list, n, lattice);
-    } else {
-        gather_elements(buffer, index_list, n, lattice);
-    }
+    gather_elements(buffer, index_list, n, lattice);
 }
 
 template <typename T>

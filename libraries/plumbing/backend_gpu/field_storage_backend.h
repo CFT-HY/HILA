@@ -178,55 +178,6 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     gpuFree(d_buffer);
 }
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-
-/// A kernel that gathers elements negated
-// requires unary -
-template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
-__global__ void gather_elements_negated_kernel(field_storage<T> field, T *buffer,
-                                               unsigned *site_index, const int n,
-                                               const unsigned field_alloc_size) {
-    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
-    if (Index < n) {
-        buffer[Index] = -field.get(site_index[Index], field_alloc_size);
-    }
-}
-
-/// CUDA implementation of gather_elements_negated without CUDA aware MPI
-// The only difference to the above is the kernel that is called
-template <typename T>
-void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
-                                               const unsigned *RESTRICT index_list, int n,
-                                               const Lattice lattice) const {
-    unsigned *d_site_index;
-    T *d_buffer;
-
-    if constexpr (!hila::has_unary_minus<T>::value) {
-        assert(sizeof(T) < 0 && "Unary 'operatur- ()' must be defined for Field variable "
-                                "for antiperiodic b.c.");
-    } else {
-
-        // Copy the list of boundary site indexes to the device
-        gpuMalloc(&(d_site_index), n * sizeof(unsigned));
-        gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
-
-        // Call the kernel to build the list of elements
-        gpuMalloc(&(d_buffer), n * sizeof(T));
-        int N_blocks = n / N_threads + 1;
-        gather_elements_negated_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
-            *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
-
-        // Copy the result to the host
-        gpuStreamSynchronize(hila::compute_stream());
-        gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
-
-        gpuFree(d_site_index);
-        gpuFree(d_buffer);
-    }
-}
-
-#endif
-
 template <typename T>
 __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer,
                                             const unsigned *site_index, const int n,
@@ -244,31 +195,11 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer,
     }
 }
 
-// gather -elements only if unary - exists
-template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
-__global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *buffer,
-                                                    const unsigned *site_index, const int n,
-                                                    const unsigned field_alloc_size) {
-    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
-    if (Index < n) {
-        using base_t = hila::arithmetic_type<T>;
-        constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
-        T element = -field.get(site_index[Index], field_alloc_size);
-        base_t *ep = (base_t *)&element;
-        base_t *fp = (base_t *)(buffer);
-        for (unsigned e = 0; e < n_elements; e++) {
-            fp[Index + n * e] = ep[e];
-        }
-    }
-}
-
-
-// MPI buffer on the device. Use the gather_elements and gather_elements_negated
-// kernels to fill the buffer.
+// MPI buffer on the device. Use the gather_comm_elements kernel to fill the buffer.
 template <typename T>
 void field_storage<T>::gather_comm_elements(T *buffer,
                                             const lattice_struct::comm_node_struct &to_node,
-                                            Parity par, const Lattice lattice, bool antiperiodic,
+                                            Parity par, const Lattice lattice,
                                             gpuStream_t stream) const {
     int n;
     const unsigned *d_site_index = to_node.get_sitelist(par, n);
@@ -283,22 +214,8 @@ void field_storage<T>::gather_comm_elements(T *buffer,
 #endif
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    if (antiperiodic) {
-
-        if constexpr (hila::has_unary_minus<T>::value) {
-            gather_comm_elements_negated_kernel<<<N_blocks, N_threads, 0, stream>>>(
-                *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
-        }
-
-    } else {
-        gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
-            *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
-    }
-#else
     gather_comm_elements_kernel<<<N_blocks, N_threads, 0, stream>>>(
         *this, d_buffer, d_site_index, n, lattice->mynode.field_alloc_size);
-#endif
 
 #ifndef GPU_AWARE_COMM
     gpuStreamSynchronize(stream);
@@ -343,57 +260,11 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
     gpuFree(d_site_index);
 }
 
-template <typename T, std::enable_if_t<hila::has_unary_minus<T>::value, int> = 0>
-__global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsigned offset,
-                                                   unsigned *site_index, const int n,
-                                                   const unsigned field_alloc_size) {
-    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
-    if (Index < n) {
-        T value;
-        value = -field.get(site_index[Index], field_alloc_size);
-        field.set(value, offset + Index, field_alloc_size);
-    }
-}
-
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice,
-                                                   bool antiperiodic) {
-    // Only need to do something for antiperiodic boundaries
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    if (antiperiodic) {
-        if constexpr (hila::has_unary_minus<T>::value) {
-            unsigned n, start = 0;
-            if (par == ODD) {
-                n = lattice->special_boundaries[dir].n_odd;
-                start = lattice->special_boundaries[dir].n_even;
-            } else {
-                if (par == EVEN)
-                    n = lattice->special_boundaries[dir].n_even;
-                else
-                    n = lattice->special_boundaries[dir].n_total;
-            }
-            unsigned offset = lattice->special_boundaries[dir].offset + start;
-
-            unsigned *d_site_index;
-            check_device_error("earlier");
-            gpuMalloc(&d_site_index, n * sizeof(unsigned));
-            gpuMemcpy(d_site_index, lattice->special_boundaries[dir].move_index + start,
-                      n * sizeof(unsigned), gpuMemcpyHostToDevice);
-
-            unsigned N_blocks = n / N_threads + 1;
-            set_local_boundary_elements_kernel<<<N_blocks, N_threads, 0, hila::compute_stream()>>>(
-                *this, offset, d_site_index, n, lattice->mynode.field_alloc_size);
-            gpuStreamSynchronize(hila::compute_stream());
-
-            gpuFree(d_site_index);
-        } else {
-            assert("Antiperiodic b.c. cannot be used with unsigned field elements");
-        }
-    }
-
-#else
-    assert(!antiperiodic && "antiperiodic only with SPECIAL_BOUNDARY_CONDITIONS defined");
-#endif
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
+                                                   const Lattice lattice) {
+    // nothing to do: the neighbours wrap on the node, and the b.c. are applied when the
+    // neighbour values are read (hila::bc_nb_value)
 }
 
 // Place communicated elements to the field array

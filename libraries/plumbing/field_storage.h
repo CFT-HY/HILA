@@ -64,8 +64,7 @@ class field_storage {
 
     void gather_comm_vectors(
         T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
-        const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat,
-        bool antiperiodic) const;
+        const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat) const;
 
     void place_recv_elements(
         const T *RESTRICT buffer, Direction d, Parity par,
@@ -74,7 +73,7 @@ class field_storage {
 #endif
 
     void gather_comm_elements(T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node,
-                              Parity par, const Lattice lattice, bool antiperiodic
+                              Parity par, const Lattice lattice
 #if defined(CUDA) || defined(HIP)
                               ,
                               gpuStream_t stream
@@ -83,9 +82,6 @@ class field_storage {
 
     void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
                          const Lattice lattice) const;
-
-    void gather_elements_negated(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
-                                 const Lattice lattice) const;
 
     /// Place boundary elements from neighbour
     void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
@@ -99,8 +95,7 @@ class field_storage {
     void place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
                         const Lattice lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-    void set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice,
-                                     bool antiperiodic);
+    void set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice);
 
     // Allocate buffers for mpi communication
     T *allocate_mpi_buffer(unsigned n);

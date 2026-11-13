@@ -174,17 +174,32 @@ class FieldFunctionVisitor : public GeneralVisitor,
             return f + ".get_value_at(" + ff_index + ")";
     }
 
-    std::string value_at_nb(const std::string &f, const std::string &dir) {
+    std::string value_at_nb(const std::string &f, const std::string &dir, QualType ftype) {
+        // CPU: Field::get_value_at_nb applies the b.c.
         if (!target.kernelize)
             return f + ".get_value_at_nb(" + dir + ", " + ff_index + ")";
         // same as in the kernels, see codegen_gpu.cpp
+        std::string val;
         if (is_macro_defined("LAYOUT_ON_THE_FLY"))
-            return f + ".get(hila_dev_neighbour(" + f + ".neighbours[" + dir +
-                   "], hila_dev_site(" + ff_index + "), " + ff_index + ", " + dir +
-                   "), _dev_field_alloc_size)";
+            val = f + ".get(hila_dev_neighbour(" + f + ".neighbours[" + dir + "], hila_dev_site(" +
+                  ff_index + "), " + ff_index + ", " + dir + "), _dev_field_alloc_size)";
         else
-            return f + ".get(" + f + ".neighbours[" + dir + "][" + ff_index +
-                   "], _dev_field_alloc_size)";
+            val = f + ".get(" + f + ".neighbours[" + dir + "][" + ff_index +
+                  "], _dev_field_alloc_size)";
+        if (field_type_is_periodic(ftype))
+            return val;
+        // field_storage<T> does not know the b.c., take it from the Field type
+        std::string ft = ftype.getNonReferenceType()
+                             .getCanonicalType()
+                             .getUnqualifiedType()
+                             .getAsString(PP_full);
+        if (!is_macro_defined("LAYOUT_ON_THE_FLY"))
+            return "hila::bc_nb_value_cross<" + ft + "::boundary_condition_type>(" + val + ", " +
+                   dir + ", (_dev_bc_edge[" + ff_index + "] >> (" + dir + ")) & 1)";
+        std::string dim = "hila::bc_dim(" + dir + ")";
+        return "hila::bc_nb_value<" + ft + "::boundary_condition_type>(" + val + ", " + dir +
+               ", 1, get_dev_coordinate(" + ff_index + ", " + dim +
+               "), hila_loop_lattice_size((Direction)" + dim + "))";
     }
 
     /// Can the access be passed as a value: f[X], or the direction is a constant or a
@@ -314,7 +329,8 @@ class FieldFunctionVisitor : public GeneralVisitor,
                     std::string dir = get_stmt_str(found[i].dirE);
                     if (found[i].negate)
                         dir = "-(" + dir + ")";
-                    sb->replace(OC->getSourceRange(), value_at_nb(name, dir));
+                    sb->replace(OC->getSourceRange(),
+                                value_at_nb(name, dir, OC->getArg(0)->getType()));
                 }
             }
         }

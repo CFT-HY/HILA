@@ -113,9 +113,6 @@
 #define WRITE_BUFFER_SIZE 2000000
 #endif
 
-// boundary conditions are "off" by default -- no need to do anything here
-// #ifndef SPECIAL_BOUNDARY_CONDITIONS
-
 ///////////////////////////////////////////////////////////////////////////
 // Special defines for GPU targets
 #if defined(CUDA) || defined(HIP)

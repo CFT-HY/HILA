@@ -13,9 +13,8 @@
 
 // Default boundary condition of an element type through the trait:
 // all Field<Vector<5, double>> are antiperiodic in y (see test_boundary_conditions())
-// Antiperiodic b.c. needs SPECIAL_BOUNDARY_CONDITIONS, and is not implemented in vectorized
-// (AVX) builds
-#if defined(SPECIAL_BOUNDARY_CONDITIONS) && !defined(VECTORIZED)
+// Antiperiodic b.c. is not implemented for vectorizable types in vectorized (AVX) builds
+#if !defined(VECTORIZED)
 #define HC_TEST_ANTIPERIODIC
 #endif
 
@@ -586,8 +585,8 @@ void test_shift() {
 /**
  * @brief Test boundary conditions, Field<T, BC>
  * @details Neighbour access f[X+d] across the boundary to all directions, for several element
- * types and b.c.s, with a periodic field read in the same loop.  Antiperiodic b.c. needs
- * SPECIAL_BOUNDARY_CONDITIONS.
+ * types and b.c.s, with a periodic field read in the same loop.  Constant directions and
+ * loop-local directions use different generated code, test both.
  */
 template <typename T, typename B>
 double bc_neighbour_error(const T &unit) {
@@ -623,6 +622,35 @@ double bc_neighbour_error(const T &unit) {
             err += squarenorm(g[X] - (sign + 1) * (1.0 + c.dot(mult)) * unit);
         }
     }
+
+    // loop-local direction: the sum of the neighbours to all directions
+    Field<T> sum, expect;
+    sum[ALL] = 0;
+    onsites (ALL) {
+        for (Direction d = e_x; d < NDIRS; ++d)
+            sum[X] += f[X + d];
+    }
+    expect[ALL] = 0;
+    for (Direction d = e_x; d < NDIRS; ++d) {
+        Direction ad = abs(d);
+        CoordinateVector dv = 0;
+        dv[ad] = is_up_dir(d) ? 1 : -1;
+        int L = lattice.size(ad);
+        bool ap = (B::kind(d) == hila::bc::ANTIPERIODIC);
+        onsites (ALL) {
+            CoordinateVector c = X.coordinates() + dv;
+            double sign = 1;
+            if (c[ad] < 0 || c[ad] >= L) {
+                c[ad] = (c[ad] + L) % L;
+                if (ap)
+                    sign = -1;
+            }
+            expect[X] += sign * (1.0 + c.dot(mult)) * unit;
+        }
+    }
+    onsites (ALL)
+        err += squarenorm(sum[X] - expect[X]);
+
     return err / lattice.volume();
 }
 

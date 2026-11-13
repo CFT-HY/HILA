@@ -137,25 +137,6 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     }
 }
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-
-template <typename T>
-void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
-                                               const unsigned *RESTRICT index_list, int n,
-                                               const Lattice lattice) const {
-    if constexpr (hila::has_unary_minus<T>::value) {
-        for (unsigned j = 0; j < n; j++) {
-            buffer[j] = -get_element(index_list[j]); /// requires unary - !!
-        }
-    } else {
-        // sizeof(T) here to prevent compile time evaluation of assert
-        assert(sizeof(T) < 1 && "Antiperiodic boundary conditions require that unary - "
-                                "-operator is defined!");
-    }
-}
-
-#endif
-
 /// Vectorized implementation of setting elements
 template <typename T>
 void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
@@ -166,12 +147,8 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, const Lattice lattice,
-                                                   bool antiperiodic) {
-
-#ifndef SPECIAL_BOUNDARY_CONDITIONS
-    assert(!antiperiodic && "antiperiodic only with SPECIAL_BOUNDARY_CONDITIONS");
-#endif
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
+                                                   const Lattice lattice) {
 
     if constexpr (hila::is_vectorizable_type<T>::value) {
 
@@ -182,8 +159,6 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, co
         using vectortype = typename hila::vector_info<T>::type;
         using basetype = typename hila::vector_info<T>::base_type;
 
-        // hila::out0 << "Vectorized boundary dir " << dir << " parity " << (int)par << "
-        // bc " << (int)antiperiodic << '\n';
 
         const auto vector_lattice =
             lattice->backend_lattice
@@ -216,76 +191,29 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par, co
                     basetype *RESTRICT s =
                         fp + vector_lattice->halo_index[dir][idx] * (elements * vector_size);
 
-                    if (!antiperiodic) {
-                        for (unsigned e = 0; e < elements * vector_size; e += vector_size)
-                            for (unsigned i = 0; i < vector_size; i++)
-                                t[e + i] = s[e + perm[i]];
-                    } else {
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-                        for (unsigned e = 0; e < elements * vector_size; e += vector_size)
-                            for (unsigned i = 0; i < vector_size; i++)
-                                t[e + i] = -s[e + perm[i]];
-#endif
-                    }
+                    for (unsigned e = 0; e < elements * vector_size; e += vector_size)
+                        for (unsigned i = 0; i < vector_size; i++)
+                            t[e + i] = s[e + perm[i]];
                 }
             } else {
-                //  hila::out0 << "its not permutation, go for copy: bc " <<
-                //  (int)antiperiodic << '\n';
-                if (!antiperiodic) {
-                    // no boundary permutation, straight copy for all vectors
-                    for (unsigned idx = start; idx < end; idx++) {
-                        std::memcpy(fieldbuf + (idx + offset) * vector_size,
-                                    fieldbuf + vector_lattice->halo_index[dir][idx] * vector_size,
-                                    sizeof(T) * vector_size);
-                    }
-                } else {
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-                    basetype *fp = static_cast<basetype *>(static_cast<void *>(fieldbuf));
-                    for (unsigned idx = start; idx < end; idx++) {
-                        /// get ptrs to target and source vec elements
-                        basetype *RESTRICT t = fp + (idx + offset) * (elements * vector_size);
-                        basetype *RESTRICT s =
-                            fp + vector_lattice->halo_index[dir][idx] * (elements * vector_size);
-                        for (unsigned e = 0; e < elements * vector_size; e++)
-                            t[e] = -s[e];
-                    }
-#endif
+                // no boundary permutation, straight copy for all vectors
+                for (unsigned idx = start; idx < end; idx++) {
+                    std::memcpy(fieldbuf + (idx + offset) * vector_size,
+                                fieldbuf + vector_lattice->halo_index[dir][idx] * vector_size,
+                                sizeof(T) * vector_size);
                 }
             }
         }
-
-    } else {
-        // now the field is not vectorized.  Std. access copy
-        // needed only if b.c. is not periodic
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        if (antiperiodic) {
-            // need to copy or do something w. local boundary
-            unsigned n, start = 0;
-            if (par == ODD) {
-                n = lattice->special_boundaries[dir].n_odd;
-                start = lattice->special_boundaries[dir].n_even;
-            } else {
-                if (par == EVEN)
-                    n = lattice->special_boundaries[dir].n_even;
-                else
-                    n = lattice->special_boundaries[dir].n_total;
-            }
-            unsigned offset = lattice->special_boundaries[dir].offset + start;
-
-            gather_elements_negated(
-                fieldbuf + offset, lattice->special_boundaries[dir].move_index + start, n, lattice);
-        }
-#endif
     }
+    // non-vectorized types: nothing to do, the neighbours wrap on the node and the b.c.
+    // are applied when the neighbour values are read
 }
 
 // gather full vectors from fieldbuf to buffer, for communications
 template <typename T>
 void field_storage<T>::gather_comm_vectors(
     T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
-    const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat,
-    bool antiperiodic) const {
+    const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat) const {
 
     // Use sitelist in to_node, but use only every vector_size -index.  These point to
     // the beginning of the vector
@@ -298,23 +226,12 @@ void field_storage<T>::gather_comm_vectors(
 
     assert(n % vector_size == 0);
 
-    if (!antiperiodic) {
-        for (unsigned i = 0; i < n; i += vector_size) {
-            std::memcpy(buffer + i, fieldbuf + index_list[i], sizeof(T) * vector_size);
+    for (unsigned i = 0; i < n; i += vector_size) {
+        std::memcpy(buffer + i, fieldbuf + index_list[i], sizeof(T) * vector_size);
 
-            // check that indices are really what they should -- REMOVE
-            for (unsigned j = 0; j < vector_size; j++)
-                assert(index_list[i] + j == index_list[i + j]);
-        }
-    } else {
-        // copy this as elements
-        for (unsigned i = 0; i < n; i += vector_size) {
-            basetype *RESTRICT t = static_cast<basetype *>(static_cast<void *>(buffer + i));
-            basetype *RESTRICT s =
-                static_cast<basetype *>(static_cast<void *>(fieldbuf + index_list[i]));
-            for (unsigned e = 0; e < elements * vector_size; e++)
-                t[e] = -s[e];
-        }
+        // check that indices are really what they should -- REMOVE
+        for (unsigned j = 0; j < vector_size; j++)
+            assert(index_list[i] + j == index_list[i + j]);
     }
 }
 

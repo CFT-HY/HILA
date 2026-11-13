@@ -62,28 +62,6 @@ void gather_test() {
             hila::terminate(1);
         }
 
-#if 0 && defined(SPECIAL_BOUNDARY_CONDITIONS)
-        // test antiperiodic b.c. to one direction
-        if (next_direction(d) == NDIM) {
-            f2.set_boundary_condition(d, hila::bc::ANTIPERIODIC);
-
-            onsites(ALL) {
-                if (X.coordinate(d) == lattice.size(d) - 1)
-                    f2[X] = -f1[X];
-                else
-                    f2[X] = f1[X];
-            }
-
-            dif1 = 0;
-            onsites(ALL) { dif1 += f1[X] - f2[X - d]; }
-
-            if (dif1 != 0) {
-                hila::out0 << " Antiperiodic up-gather test error! Node " << hila::myrank()
-                        << " direction " << (unsigned)d << '\n';
-                hila::terminate(1);
-            }
-        }
-#endif
     }
 }
 

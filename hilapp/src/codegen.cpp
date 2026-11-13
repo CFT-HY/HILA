@@ -806,3 +806,40 @@ std::string TopLevelVisitor::mapped_dir_name(srcBuf &loopBuf, const dir_ptr &d) 
     std::string s = "(" + loopBuf.get(d.dirE->getSourceRange()) + ")";
     return d.dir_negate ? "-" + s : s;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/// Neighbour value expression val, the value of X + k*dir of field l, with the
+/// boundary condition of the field applied (hila::bc_nb_value).  Periodic fields: val as is.
+/// have_site: HILA_site_ (local coordinates of X) is available in the loop
+//////////////////////////////////////////////////////////////////////////////
+
+std::string TopLevelVisitor::bc_nb_value(const field_info &l, const std::string &val,
+                                         const std::string &dir, int k, bool have_site) {
+    // field_type_is_periodic is conservative: if in doubt, wrap - bc_nb_value is then a no-op
+    if (l.nameExpr != nullptr && field_type_is_periodic(l.nameExpr->getType()))
+        return val;
+
+    std::string bctype = "Field" + l.type_template + "::boundary_condition_type";
+    // nearest neighbour without the site coordinates: use the b.c. edge mask
+    if (k == 1 && !have_site) {
+        std::string mask = target.kernelize ? "_dev_bc_edge" : "HILA_bc_edge_";
+        return "hila::bc_nb_value_cross<" + bctype + ">(" + val + ", " + dir + ", (" + mask +
+               "[" + looping_var + "] >> (" + dir + ")) & 1)";
+    }
+
+    std::string dim = "hila::bc_dim(" + dir + ")";
+    std::string coord, size;
+    if (target.kernelize) {
+        coord = have_site ? "hila_dev_coordinate(HILA_site_, " + dim + ")"
+                          : "get_dev_coordinate(" + looping_var + ", " + dim + ")";
+        size = "hila_loop_lattice_size((Direction)" + dim + ")";
+    } else {
+        coord = have_site ? "(HILA_site_.lc[" + dim + "] + hila_loop_lattice.mynode.min[" + dim +
+                                "])"
+                          : "hila_loop_lattice.coordinate(" + looping_var + ", (Direction)" + dim +
+                                ")";
+        size = "hila_loop_lattice.l_size[" + dim + "]";
+    }
+    return "hila::bc_nb_value<" + bctype + ">(" + val + ", " + dir + ", " + std::to_string(k) +
+           ", " + coord + ", " + size + ")";
+}

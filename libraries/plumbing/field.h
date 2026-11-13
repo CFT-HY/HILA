@@ -168,22 +168,11 @@ class Field {
 #endif
             }
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-            // non-periodic b.c.: on-node wraparound neighbours point to the special boundary
-            // sites, which are filled in by the (negating etc.) local boundary copy
+            // non-periodic b.c. are applied when the neighbour values are read
+            // (hila::bc_nb_value), the neighbour arrays are the same for all fields
             if constexpr (!BC::is_periodic) {
-                for (Direction d = (Direction)0; d < NDIRS; ++d) {
-                    if (BC::kind(d) != hila::bc::PERIODIC) {
-#if !defined(CUDA) && !defined(HIP)
-                        neighbours[d] = mylattice.ptr()->get_neighbour_array(d, BC::kind(d));
-#else
-                        payload.neighbours[d] =
-                            mylattice.ptr()->backend_lattice->d_neighb_special[d];
-#endif
-                    }
-                }
+                mylattice.ptr()->setup_bc_edge();
             }
-#endif
 
 #ifdef VECTORIZED
             if constexpr (hila::is_vectorizable_type<T>::value) {
@@ -398,10 +387,6 @@ class Field {
                   "    using base_type = hila::arithmetic_type<T>;\n"
                   "    using argument_type = T;\n");
 
-#ifndef SPECIAL_BOUNDARY_CONDITIONS
-    static_assert(BC::is_periodic, "Fields with non-periodic boundary conditions require "
-                                   "SPECIAL_BOUNDARY_CONDITIONS to be defined (e.g. in APP_OPTS)");
-#endif
     static_assert(BC::is_periodic || hila::has_unary_minus<T>::value,
                   "antiperiodic boundary conditions possible only for types which implement "
                   "unary minus (-) -operator and are not unsigned");
@@ -807,15 +792,13 @@ class Field {
 
     /**
      * @internal
-     * @brief function boundary_need_to_communicate(dir) returns false if there's special B.C. which
-     * does not need comms here, otherwise true
+     * @brief boundary_need_to_communicate(dir) returns false if the halo to direction dir is not
+     * needed.  Now always true: the halo contains the plain neighbour values for all b.c.s,
+     * the b.c. is applied when the values are read.  A hook for b.c.s which do not read the
+     * neighbours across the boundary (e.g. Dirichlet)
      */
     bool boundary_need_to_communicate(const Direction dir) const {
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        return hila::bc_need_communication(BC::kind(dir)) || !fs->mylattice->mynode.is_on_edge(dir);
-#else
         return true;
-#endif
     }
 
     /// The boundary condition type of the Field
@@ -905,14 +888,30 @@ class Field {
         if constexpr (hila::is_vectorizable_type<T>::value)
             return get_value_at_nb_site(d, i);
         else
-            return fs->get_element(fs->neighbours[d][i]);
+            return nb_value_bc(fs->get_element(fs->neighbours[d][i]), d, i);
 #elif defined(LAYOUT_ON_THE_FLY)
         const unsigned *nb = fs->neighbours[d];
-        return fs->get_element(nb != nullptr ? nb[i] : lattice.ref().neighbour(i, d));
+        return nb_value_bc(fs->get_element(nb != nullptr ? nb[i] : lattice.ref().neighbour(i, d)),
+                           d, i);
 #else
-        return fs->get_element(fs->neighbours[d][i]);
+        return nb_value_bc(fs->get_element(fs->neighbours[d][i]), d, i);
 #endif
     }
+
+  private:
+    /// apply the b.c. to the value v of the neighbour of site i to direction d
+    template <typename V>
+    inline V nb_value_bc(const V &v, Direction d, unsigned i) const {
+        if constexpr (BC::is_periodic) {
+            return v;
+        } else {
+            const int dim = hila::bc_dim(d);
+            return hila::bc_nb_value<BC>(v, d, 1, fs->mylattice->coordinate(i, (Direction)dim),
+                                         fs->mylattice->l_size[dim]);
+        }
+    }
+
+  public:
 #endif
 
 #ifndef VECTORIZED

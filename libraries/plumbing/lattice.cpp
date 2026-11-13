@@ -76,11 +76,6 @@ void lattice_struct::setup_base_lattice(const CoordinateVector &siz) {
     // Initialize wait_array structures - has to be after std gathers()
     initialize_wait_arrays();
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    // do this after std. boundary is done
-    init_special_boundaries();
-#endif
-
     // Alignment: set field_alloc_size to be divisible by 256
     if (mynode.field_alloc_size % 256 > 0)
         mynode.field_alloc_size += 256 - mynode.field_alloc_size % 256;
@@ -881,125 +876,6 @@ void lattice_struct::initialize_wait_arrays() {
 }
 
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-
-/////////////////////////////////////////////////////////////////////
-/// set up special boundary
-/// sets up the bool array which tells if special neighbour indices
-/// are needed.  Note that this is not uniform across the nodes,
-/// not all nodes have them.
-/////////////////////////////////////////////////////////////////////
-
-void lattice_struct::init_special_boundaries() {
-    for (Direction d = (Direction)0; d < NDIRS; ++d) {
-
-        // default values, nothing interesting happens
-        special_boundaries[d].n_even = special_boundaries[d].n_odd = special_boundaries[d].n_total =
-            0;
-        special_boundaries[d].is_needed = false;
-
-        Direction od = -d;
-        int coord = -1;
-        // do we get up/down boundary?
-        if (is_up_dir(d) && mynode.min[d] + mynode.size[d] == l_size[d])
-            coord = l_size[d] - 1;
-        if (is_up_dir(od) && mynode.min[od] == 0)
-            coord = 0;
-
-        if (coord >= 0) {
-            // now we got it
-
-            if (nodes.n_divisions[abs(d)] == 1) {
-                special_boundaries[d].is_needed = true;
-                special_boundaries[d].offset = mynode.field_alloc_size;
-
-                for (unsigned i = 0; i < mynode.volume; i++)
-                    if (coordinate(i, abs(d)) == coord) {
-                        // set buffer indices
-                        special_boundaries[d].n_total++;
-                        if (site_parity(i) == EVEN)
-                            special_boundaries[d].n_even++;
-                        else
-                            special_boundaries[d].n_odd++;
-                    }
-                mynode.field_alloc_size += special_boundaries[d].n_total;
-            }
-        }
-
-        // hila::out << "Node " << hila::myrank() << " dir " << d << " min " <<
-        // mynode.min << " is_on_edge "
-        //   << lattice->mynode.is_on_edge(d) << '\n';
-
-        // allocate neighbours only on 1st use, otherwise unneeded
-        special_boundaries[d].neighbours = nullptr;
-    }
-
-    int toolarge = 0;
-    if (mynode.field_alloc_size >= (1ULL << 32))
-        toolarge = 1;
-    if (hila::reduce_node_sum(toolarge) > 0) {
-        report_too_large_node();
-    }
-}
-
-/////////////////////////////////////////////////////////////////////
-/// give the neighbour array pointer.  Allocate if needed
-
-const unsigned *lattice_struct::get_neighbour_array(Direction d, hila::bc bc) {
-
-#ifndef SPECIAL_BOUNDARY_CONDITIONS
-    assert(bc == hila::bc::PERIODIC &&
-           "non-periodic BC only if SPECIAL_BOUNDARY_CONDITIONS defined");
-    return neighb[d];
-#else
-
-    // regular bc exit, should happen almost always
-    if (special_boundaries[d].is_needed == false || bc == hila::bc::PERIODIC)
-        return neighb[d];
-
-    if (special_boundaries[d].neighbours == nullptr) {
-        setup_special_boundary_array(d);
-    }
-    return special_boundaries[d].neighbours;
-
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////
-/// and set up the boundary to one Direction
-//////////////////////////////////////////////////////////////////////
-
-void lattice_struct::setup_special_boundary_array(Direction d) {
-    // if it is not needed or already done...
-    if (special_boundaries[d].is_needed == false || special_boundaries[d].neighbours != nullptr)
-        return;
-
-    // now allocate neighbour array and the gathering array
-    special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * mynode.volume);
-    special_boundaries[d].move_index =
-        (unsigned *)memalloc(sizeof(unsigned) * special_boundaries[d].n_total);
-
-    int coord;
-    int offs = special_boundaries[d].offset;
-    if (is_up_dir(d))
-        coord = l_size[d] - 1;
-    else
-        coord = 0;
-
-    int k = 0;
-    for (int i = 0; i < mynode.volume; i++) {
-        if (coordinate(i, abs(d)) != coord) {
-            special_boundaries[d].neighbours[i] = neighbour(i, d);
-        } else {
-            special_boundaries[d].neighbours[i] = offs++;
-            special_boundaries[d].move_index[k++] = neighbour(i, d);
-        }
-    }
-
-    assert(k == special_boundaries[d].n_total);
-}
-
-#endif // SPECIAL_BOUNDARY_CONDITIONS
 
 /**
  * @internal set lattice global variables, useful for GPUs
@@ -1106,11 +982,6 @@ void lattice_struct::setup_blocked_lattice(const CoordinateVector &siz, int labe
     create_std_gathers();
 
     initialize_wait_arrays();
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    // do this after std. boundary is done
-    init_special_boundaries();
-#endif
 
     // Alignment: set field_alloc_size to be divisible by 256
     if (mynode.field_alloc_size % 256 > 0)
@@ -1301,3 +1172,27 @@ lattice_struct::create_general_gather(const CoordinateVector &offset) {
 }
 
 #endif
+
+/////////////////////////////////////////////////////////////////////
+/// b.c. edge mask: bit d set if the neighbour of the site to direction d is across the
+/// lattice boundary.  Used for non-periodic b.c., see boundary_condition.h
+/////////////////////////////////////////////////////////////////////
+
+void lattice_struct::setup_bc_edge() {
+    if (bc_edge_ != nullptr)
+        return;
+    bc_edge_ = (dir_mask_t *)memalloc(mynode.volume * sizeof(dir_mask_t));
+    for (unsigned i = 0; i < mynode.volume; i++) {
+        dir_mask_t m = 0;
+        for (Direction d = (Direction)0; d < NDIRS; ++d) {
+            int dim = hila::bc_dim(d);
+            int x = coordinate(i, (Direction)dim);
+            if (is_up_dir(d) ? (x == l_size[dim] - 1) : (x == 0))
+                m |= (dir_mask_t)(1 << d);
+        }
+        bc_edge_[i] = m;
+    }
+#if defined(CUDA) || defined(HIP)
+    backend_lattice->setup_bc_edge(*this);
+#endif
+}

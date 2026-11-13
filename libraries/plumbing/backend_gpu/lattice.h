@@ -21,11 +21,6 @@ struct backend_lattice_struct {
     /// nullptr if LAYOUT_ON_THE_FLY (indices computed from _d_layout)
     unsigned *d_neighb[NDIRS];
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    /// Neighbour indexes with special boundaries. Stored on device
-    unsigned *d_neighb_special[NDIRS];
-#endif
-
     /// The full number of elements in a field, including haloes.
     /// This is necessary for structure-of-arrays -storage
     unsigned field_alloc_size;
@@ -38,8 +33,15 @@ struct backend_lattice_struct {
     CoordinateVector *d_coordinates;
 #endif
 
+    /// b.c. edge mask on device (copy of lattice_struct::bc_edge_), nullptr until the first
+    /// field with non-periodic b.c. is created
+    dir_mask_t *d_bc_edge = nullptr;
+
     /// setup the backend lattice data
     void setup(lattice_struct &lattice);
+
+    /// copy lattice.bc_edge_ to device, set _dev_bc_edge
+    void setup_bc_edge(const lattice_struct &lattice);
 
     void set_device_globals(const lattice_struct &lattice);
 };
@@ -48,6 +50,9 @@ struct backend_lattice_struct {
 // Define here some globals and inline functions
 
 HILA_GPU_EXTERN __constant__ unsigned _dev_field_alloc_size;
+
+/// b.c. edge mask of the sites, see lattice_struct::bc_edge_ and hila::bc_nb_value_cross
+HILA_GPU_EXTERN __constant__ dir_mask_t *_dev_bc_edge;
 
 #ifndef LAYOUT_ON_THE_FLY
 
@@ -89,7 +94,7 @@ inline hila::layout_site hila_dev_site(unsigned idx) {
 }
 
 /// neighbour index used by hilapp-generated kernels: nb is the field's neighbour array,
-/// nullptr unless special boundary conditions need it
+/// nullptr with LAYOUT_ON_THE_FLY (the index is then computed from s)
 #pragma hila loop_function
 inline unsigned hila_dev_neighbour(const unsigned *nb, const hila::layout_site &s, unsigned idx,
                                    int d) {
@@ -144,6 +149,15 @@ inline hila::layout_site hila_dev_site(unsigned idx) {
 inline unsigned hila_dev_neighbour_offset(const hila::layout_site &s, int d, int k) {
     const hila::site_layout_struct &layout = _d_layout();
     return layout.neighbour_offset(s, d, k);
+}
+#endif
+
+#if defined(LAYOUT_ON_THE_FLY) || HALO_DEPTH > 1
+/// global coordinate of site s to direction dim, used for the b.c. in generated kernels
+#pragma hila loop_function
+inline int hila_dev_coordinate(const hila::layout_site &s, int dim) {
+    const hila::site_layout_struct &layout = _d_layout();
+    return s.lc[dim] + layout.min[dim];
 }
 #endif
 

@@ -88,6 +88,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     bool evenfirst = is_macro_defined("EVEN_SITES_FIRST");
 
     code << "const lattice_struct & hila_loop_lattice = lattice.ref();\n";
+    // b.c. edge mask for non-periodic fields, see bc_nb_value()
+    code << "const dir_mask_t * RESTRICT HILA_bc_edge_ = hila_loop_lattice.bc_edge_;\n";
 
     // Lexicographic layout: the loop goes through x-rows of the node.  Within a row all
     // neighbour indices are affine in x (nb0[d] + x, or i +- 1 for x), only the row ends need
@@ -244,18 +246,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     };
 
     // expression for the index of the neighbour of field l to direction dirname
-    bool special_bc = is_macro_defined("SPECIAL_BOUNDARY_CONDITIONS");
     auto nb_index = [&](const field_info &l, const std::string &dirname) -> std::string {
         const std::string &fieldname = l.new_name;
         if (rows_loop) {
-            // field neighbour arrays differ from the lattice ones only for non-periodic
-            // boundary conditions, which is known from the type Field<T, BC>
-            bool periodic = l.nameExpr != nullptr && field_type_is_periodic(l.nameExpr->getType());
-            if (special_bc && !periodic)
-                return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
-                       dirname + "], HILA_nb_[" + dirname + "], " + looping_var + ")";
-            else
-                return "HILA_nb_[" + dirname + "]";
+            // b.c. are applied to the values, all fields use the lattice neighbours
+            return "HILA_nb_[" + dirname + "]";
         }
         if (layout_on_the_fly)
             return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
@@ -326,7 +321,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         code << "const " << l.element_type << " " << d.name_with_dir << " = "
-                             << l.new_name << ".get_value_at(" << deep_index(d) << ");\n";
+                             << bc_nb_value(l,
+                                            l.new_name + ".get_value_at(" + deep_index(d) + ")",
+                                            deep_dir_string(d, loopBuf, true), d.deep_k,
+                                            need_site)
+                             << ";\n";
                         for (field_ref *ref : d.ref_list)
                             replace_field_ref(loopBuf, ref, d.name_with_dir);
                         continue;
@@ -339,18 +338,18 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                         dirname = mapped_dir_name(loopBuf, d);
 
                     // generate access stmt
-                    code << "const " << l.element_type << " " << d.name_with_dir << " = "
-                         << l.new_name;
-
+                    std::string val;
                     if (target.vectorize /* && l.vecinfo.is_vectorizable */) {
                         // now l is vectorizable, but accessed sequentially -- this inly
                         // happens in vectorized targets
-                        code << ".get_value_at_nb_site(" << dirname << ", " << looping_var
-                             << ");\n";
+                        val = l.new_name + ".get_value_at_nb_site(" + dirname + ", " +
+                              looping_var + ")";
                     } else {
                         // std neighbour accessor for scalars
-                        code << ".get_value_at(" << nb_index(l, dirname) << ");\n";
+                        val = l.new_name + ".get_value_at(" + nb_index(l, dirname) + ")";
                     }
+                    code << "const " << l.element_type << " " << d.name_with_dir << " = "
+                         << bc_nb_value(l, val, dirname, 1, need_site) << ";\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -364,8 +363,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            replace_field_ref(loopBuf, ref,
-                                            l.new_name + ".get_value_at(" + deep_index(d) + ")");
+                            replace_field_ref(
+                                loopBuf, ref,
+                                bc_nb_value(l, l.new_name + ".get_value_at(" + deep_index(d) + ")",
+                                            deep_dir_string(d, loopBuf, true), d.deep_k,
+                                            need_site));
                         continue;
                     }
 
@@ -376,14 +378,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                         dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
+                        std::string val;
                         if (target.vectorize /* && l.vecinfo.is_vectorizable */) {
-                            replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at_nb_site(" +
-                                                               dirname + ", " + looping_var + ")");
+                            val = l.new_name + ".get_value_at_nb_site(" + dirname + ", " +
+                                  looping_var + ")";
                         } else {
-                            replace_field_ref(loopBuf, ref,
-                                              l.new_name + ".get_value_at(" + nb_index(l, dirname) +
-                                                  ")");
+                            val = l.new_name + ".get_value_at(" + nb_index(l, dirname) + ")";
                         }
+                        replace_field_ref(loopBuf, ref,
+                                          bc_nb_value(l, val, dirname, 1, need_site));
                     }
                 }
             }

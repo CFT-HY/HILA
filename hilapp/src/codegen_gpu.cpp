@@ -966,7 +966,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         if (l.is_read_nb)
             any_read_nb = true;
 
-    if ((layout_on_the_fly && (any_read_nb || parity_check)) || has_deep_refs())
+    const bool have_site = (layout_on_the_fly && (any_read_nb || parity_check)) || has_deep_refs();
+    if (have_site)
         kernel << "const hila::layout_site HILA_site_ = hila_dev_site(" << looping_var << ");\n";
 
     if (parity_check) {
@@ -998,8 +999,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
-                               << l.new_name << ".get(" << deep_index(d)
-                               << ", _dev_field_alloc_size);\n";
+                               << bc_nb_value(l,
+                                              l.new_name + ".get(" + deep_index(d) +
+                                                  ", _dev_field_alloc_size)",
+                                              deep_dir_string(d, loopBuf, true), d.deep_k,
+                                              have_site)
+                               << ";\n";
                         for (field_ref *ref : d.ref_list)
                             replace_field_ref(loopBuf, ref, d.name_with_dir);
                         continue;
@@ -1019,8 +1024,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     // Create the temp variable and call the getter
                     kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
-                           << l.new_name << ".get(" << nb_index(l.new_name, dirname)
-                           << ", _dev_field_alloc_size);\n";
+                           << bc_nb_value(l,
+                                          l.new_name + ".get(" + nb_index(l.new_name, dirname) +
+                                              ", _dev_field_alloc_size)",
+                                          dirname, 1, have_site)
+                           << ";\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -1042,15 +1050,23 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
                 kernel << "for (int HILA_dir_ = 0; HILA_dir_ < NDIRS; "
                           "++HILA_dir_) {\n"
-                       << loop_array_name << "[HILA_dir_] = " << l.new_name << ".get("
-                       << nb_index(l.new_name, "HILA_dir_") << ", _dev_field_alloc_size);\n}\n";
+                       << loop_array_name << "[HILA_dir_] = "
+                       << bc_nb_value(l,
+                                      l.new_name + ".get(" + nb_index(l.new_name, "HILA_dir_") +
+                                          ", _dev_field_alloc_size)",
+                                      "HILA_dir_", 1, have_site)
+                       << ";\n}\n";
 
                 // and replace references in loop body
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            replace_field_ref(loopBuf, ref, l.new_name + ".get(" + deep_index(d) +
-                                                               ", _dev_field_alloc_size)");
+                            replace_field_ref(loopBuf, ref,
+                                              bc_nb_value(l,
+                                                          l.new_name + ".get(" + deep_index(d) +
+                                                              ", _dev_field_alloc_size)",
+                                                          deep_dir_string(d, loopBuf, true),
+                                                          d.deep_k, have_site));
                         continue;
                     }
                     std::string dirname;
@@ -1070,8 +1086,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            replace_field_ref(loopBuf, ref, l.new_name + ".get(" + deep_index(d) +
-                                                               ", _dev_field_alloc_size)");
+                            replace_field_ref(loopBuf, ref,
+                                              bc_nb_value(l,
+                                                          l.new_name + ".get(" + deep_index(d) +
+                                                              ", _dev_field_alloc_size)",
+                                                          deep_dir_string(d, loopBuf, true),
+                                                          d.deep_k, have_site));
                         continue;
                     }
                     std::string dirname;
@@ -1081,9 +1101,12 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                         dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
-                        replace_field_ref(loopBuf, ref, l.new_name + ".get(" +
-                                                           nb_index(l.new_name, dirname) +
-                                                           ", _dev_field_alloc_size)");
+                        replace_field_ref(loopBuf, ref,
+                                          bc_nb_value(l,
+                                                      l.new_name + ".get(" +
+                                                          nb_index(l.new_name, dirname) +
+                                                          ", _dev_field_alloc_size)",
+                                                      dirname, 1, have_site));
                     }
                 }
 #endif

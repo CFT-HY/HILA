@@ -155,19 +155,58 @@ static void test_loops(const CoordinateVector &mult) {
     loop_result(err, "f[X + 2*e_x] after change");
 }
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-// deep halos of a field antiperiodic to direction ad, if ad is divided between nodes
+#ifdef TEST_ANTIPERIODIC
+// h = value of the field antiperiodic to direction ad at X + v (|v[ad]| < lattice size)
+template <Direction ad>
+static void expected_ap(Field<double> &h, const CoordinateVector &v, const CoordinateVector &mult,
+                        double add) {
+    CoordinateVector lsz = lattice.size();
+    onsites(ALL) {
+        CoordinateVector c = X.coordinates() + v;
+        double sign = (c[ad] < 0 || c[ad] >= lsz[ad]) ? -1 : 1;
+        h[X] = sign * ((double)c.mod(lsz).dot(mult) + add);
+    }
+}
+
+// field antiperiodic to direction ad: the halos contain the plain values, the b.c. is
+// applied when the neighbours are read in loops.  All directions, also those which wrap
+// on the node
 template <Direction ad>
 static void test_antiperiodic(const CoordinateVector &mult) {
-    if (lattice->mynode.layout.wrap[ad])
-        return;
     Field<double, hila::antiperiodic<ad>> g;
+    Field<double> h, h2;
     double add = 5.5;
+    double err;
     g[ALL] = X.coordinates().dot(mult) + add;
+    std::string name = "antiperiodic(" + std::to_string((int)ad) + ") ";
     for (Direction d = (Direction)0; d < NDIRS; ++d) {
-        g.gather_depth(d, HALO_DEPTH);
-        check(g, d, HALO_DEPTH, mult, add, abs(d) == ad, "antiperiodic");
+        if (!lattice->mynode.layout.wrap[abs(d)]) {
+            g.gather_depth(d, HALO_DEPTH);
+            check(g, d, HALO_DEPTH, mult, add, false, name + "halo");
+        }
     }
+    for (Direction d = (Direction)0; d < NDIRS; ++d) {
+        expected_ap<ad>(h, 2 * d, mult, add);
+        expected_ap<ad>(h2, 1 * d, mult, add);
+        err = 0;
+        onsites(ALL) {
+            err += fabs(g[X + 2 * d] - h[X]);
+            err += fabs(g[X + d] - h2[X]);
+        }
+        loop_result(err, name + "g[X + 2*d] and g[X+d], d = " + std::to_string((int)d));
+
+        expected_ap<ad>(h, -2 * d, mult, add);
+        err = 0;
+        onsites(EVEN) err += fabs(g[X - 2 * d] - h[X]);
+        loop_result(err, name + "g[X - 2*d], d = " + std::to_string((int)d));
+    }
+    // too deep: shift-copy.  (hilapp copies the offset expression as text, a template
+    // parameter would not be substituted - use a variable)
+    const Direction dd = ad;
+    expected_ap<ad>(h, (HALO_DEPTH + 1) * dd, mult, add);
+    err = 0;
+    onsites(ALL) err += fabs(g[X + (HALO_DEPTH + 1) * dd] - h[X]);
+    loop_result(err, name + "g[X + (HALO_DEPTH+1)*ad]");
 }
 #endif
 
@@ -254,9 +293,8 @@ int main(int argc, char **argv) {
         check(f, d, HALO_DEPTH, mult, add, false, "simultaneous");
     }
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    // 6: antiperiodic b.c. in directions divided between nodes (deep halo access with a
-    // non-periodic b.c. is not supported to directions which wrap on the node)
+#ifdef TEST_ANTIPERIODIC
+    // 6: antiperiodic b.c., deep halo access
     test_antiperiodic<e_x>(mult);
 #if NDIM > 1
     test_antiperiodic<e_y>(mult);

@@ -20,57 +20,32 @@ void Field<T, BC>::field_struct::gather_comm_elements(
     gpuStream_t stream
 #endif
 ) const {
+    // the halo gets the plain values, b.c. are applied when the neighbour values are read
 #ifndef VECTORIZED
-    bool antiperiodic = false;
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    // note: -d in is_on_edge, because we're about to send stuff to that
-    // Direction (gathering from Direction +d)
-    if (BC::kind(d) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
-        antiperiodic = true;
-#endif
 #if defined(CUDA) || defined(HIP)
-    payload.gather_comm_elements(buffer, to_node, par, lattice, antiperiodic, stream);
+    payload.gather_comm_elements(buffer, to_node, par, lattice, stream);
 #else
-    payload.gather_comm_elements(buffer, to_node, par, lattice, antiperiodic);
+    payload.gather_comm_elements(buffer, to_node, par, lattice);
 #endif
 
 #else
     // this is vectorized branch
-    bool antiperiodic = false;
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    if (BC::kind(d) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
-        antiperiodic = true;
-    }
-#endif
-
     if constexpr (hila::is_vectorizable_type<T>::value) {
         // now vectorized layout
         if (vector_lattice->is_boundary_permutation[abs(d)]) {
             // with boundary permutation need to gather elems 1-by-1
             int n;
             const unsigned *index_list = to_node.get_sitelist(par, n);
-            if (!antiperiodic) {
-                payload.gather_elements(buffer, index_list, n, lattice);
-            } else {
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-                payload.gather_elements_negated(buffer, index_list, n, lattice);
-#endif
-            }
+            payload.gather_elements(buffer, index_list, n, lattice);
         } else {
             // without it, can do the full block
-            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice, antiperiodic);
+            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice);
         }
     } else {
         // not vectoizable, standard methods
         int n;
         const unsigned *index_list = to_node.get_sitelist(par, n);
-        if (!antiperiodic)
-            payload.gather_elements(buffer, index_list, n, lattice);
-        else {
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-            payload.gather_elements_negated(buffer, index_list, n, lattice);
-#endif
-        }
+        payload.gather_elements(buffer, index_list, n, lattice);
     }
 #endif
 }
@@ -115,13 +90,7 @@ void Field<T, BC>::field_struct::place_comm_elements(
 template <typename T, typename BC>
 void Field<T, BC>::field_struct::set_local_boundary_elements(Direction dir, Parity par) {
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-    bool antiperiodic =
-        (BC::kind(dir) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(dir));
-#else
-    bool antiperiodic = false;
-#endif
-    payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
+    payload.set_local_boundary_elements(dir, par, lattice);
 }
 
 
@@ -869,13 +838,6 @@ dir_mask_t Field<T, BC>::start_gather_depth(Direction d, int depth) const {
 
     if (layout.wrap[dim]) {
         // no comms needed, neighbour_offset() wraps on the node
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        if (BC::kind(d) != hila::bc::PERIODIC) {
-            hila::out << "ERROR: halo depth > 1 access with non-periodic boundary condition in "
-                         "a direction not divided between nodes is not supported\n";
-            hila::terminate(1);
-        }
-#endif
         fs->deep_status[d] = gather_status_t::DONE;
         fs->deep_depth[d] = HALO_DEPTH;
         return 0;
@@ -915,11 +877,7 @@ dir_mask_t Field<T, BC>::start_gather_depth(Direction d, int depth) const {
     bool do_send = boundary_need_to_communicate(-d);
 
     if (do_send) {
-        bool antiperiodic = false;
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        if (BC::kind(d) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
-            antiperiodic = true;
-#endif
+        // the halo gets the plain values, b.c. are applied when the neighbour values are read
         fs->deep_send_buffer[d] = fs->payload.allocate_mpi_buffer(n0 + n1);
 
         // deep layers use the nn comm node struct with the deep site list
@@ -931,15 +889,13 @@ dir_mask_t Field<T, BC>::start_gather_depth(Direction d, int depth) const {
 #if defined(CUDA) || defined(HIP)
         if (n0 > 0)
             fs->payload.gather_comm_elements(fs->deep_send_buffer[d], ci.to_node, ALL, lattice,
-                                             antiperiodic, hila::compute_stream());
+                                             hila::compute_stream());
         fs->payload.gather_comm_elements(fs->deep_send_buffer[d] + n0, deep_to, ALL, lattice,
-                                         antiperiodic, hila::compute_stream());
+                                         hila::compute_stream());
 #else
         if (n0 > 0)
-            fs->payload.gather_comm_elements(fs->deep_send_buffer[d], ci.to_node, ALL, lattice,
-                                             antiperiodic);
-        fs->payload.gather_comm_elements(fs->deep_send_buffer[d] + n0, deep_to, ALL, lattice,
-                                         antiperiodic);
+            fs->payload.gather_comm_elements(fs->deep_send_buffer[d], ci.to_node, ALL, lattice);
+        fs->payload.gather_comm_elements(fs->deep_send_buffer[d] + n0, deep_to, ALL, lattice);
 #endif
     }
 

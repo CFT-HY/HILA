@@ -148,6 +148,10 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     void generate_deep_gathers(std::stringstream &code);
     bool has_deep_refs();
 
+    /// neighbour value expression val (X + k*dir) of field l with its b.c. applied
+    std::string bc_nb_value(const field_info &l, const std::string &val, const std::string &dir,
+                            int k, bool have_site);
+
     bool handle_field_X_expr(Expr *e, bool &is_assign, bool is_compound, bool is_X,
                              bool is_func_arg = false);
 

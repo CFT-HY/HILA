@@ -575,14 +575,19 @@ Available b.c. types (see `boundary_condition.h`):
 - `hila::antiperiodic<dirs...>`, e.g. `hila::antiperiodic<e_t>`: antiperiodic in the listed
   directions, periodic in others
 
-A b.c. type is an empty struct with static members `is_periodic`, `kind(Direction)` (returns
+A b.c. type is an empty struct with static members `is_periodic`, `antiperiodic_mask` (bit
+`dim` set if antiperiodic to dimension `dim`), `kind(Direction)` (returns
 `hila::bc::PERIODIC` or `hila::bc::ANTIPERIODIC` for the direction) and `name()`.  Query the
 b.c. of a Field with `Field<T, BC>::get_boundary_condition(dir)` or
 `Field<T, BC>::boundary_condition_type`.
 
-Non-periodic b.c. requires that `SPECIAL_BOUNDARY_CONDITIONS` is defined (e.g. in `APP_OPTS`
-in the Makefile).  It is not implemented in vectorized (AVX) builds for vectorizable element
-types; both cases give a compile-time error.
+The b.c. is applied when a neighbour value is read: in a site loop `f[X + d]` (also
+`f[X + k*d]` and general offsets) is negated if the step from `X` crosses an antiperiodic
+lattice boundary.  The field storage, halos and communications are the same for all b.c.s,
+thus non-periodic b.c. need no compile options or extra memory, and periodic Fields have no
+overhead.  The test uses a 1-byte-per-site edge mask of the lattice, created when the first
+non-periodic Field is.  Non-periodic b.c. is not implemented in vectorized (AVX) builds for
+vectorizable element types (compile-time error).
 
 The earlier run-time methods `set_boundary_condition()` and `copy_boundary_condition()` are
 removed.
