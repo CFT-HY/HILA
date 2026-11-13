@@ -17,11 +17,7 @@ inline void Dirac_Wilson_hop(const Field<matrix> *gauge, const double kappa,
                              const Field<Wilson_vector<N, radix>> &v_in,
                              Field<Wilson_vector<N, radix>> &v_out, Parity par,
                              int sign) {
-    Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] =
-        wilson_dirac_temp_vector<N, radix>;
-    for (int dir = 0; dir < 2 * NDIM; dir++) {
-        vtemp[dir].copy_boundary_condition(v_in);
-    }
+    Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] = wilson_dirac_temp_vector<N, radix>;
 
     // Run neighbour gathers and multiplications
     foralldir(dir) {
@@ -55,11 +51,7 @@ inline void Dirac_Wilson_hop_set(const Field<matrix> *gauge, const double kappa,
                                  const Field<Wilson_vector<N, radix>> &v_in,
                                  Field<Wilson_vector<N, radix>> &v_out, Parity par,
                                  int sign) {
-    Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] =
-        wilson_dirac_temp_vector<N, radix>;
-    for (int dir = 0; dir < 2 * NDIM; dir++) {
-        vtemp[dir].copy_boundary_condition(v_in);
-    }
+    Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] = wilson_dirac_temp_vector<N, radix>;
 
     // Run neighbour gathers and multiplications
     foralldir(dir) {
@@ -112,10 +104,7 @@ inline void Dirac_Wilson_calc_force(const Field<gaugetype> *gauge, const double 
                                     const Field<Wilson_vector<N, radix>> &chi,
                                     const Field<Wilson_vector<N, radix>> &psi,
                                     Field<momtype> (&out)[NDIM], Parity par, int sign) {
-    Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] =
-        wilson_dirac_temp_vector<N, radix>;
-    vtemp[0].copy_boundary_condition(chi);
-    vtemp[1].copy_boundary_condition(chi);
+    Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] = wilson_dirac_temp_vector<N, radix>;
 
     foralldir(dir) {
         onsites(opp_parity(par)) {
@@ -295,7 +284,6 @@ template <typename matrix> class Dirac_Wilson_evenodd {
                       Field<momtype> (&force)[NDIM], int sign) {
         Field<momtype> force2[NDIM];
         Field<vector_type> tmp;
-        tmp.copy_boundary_condition(chi);
 
         tmp[ALL] = 0;
         Dirac_Wilson_hop_set(gauge, kappa, chi, tmp, ODD, -sign);

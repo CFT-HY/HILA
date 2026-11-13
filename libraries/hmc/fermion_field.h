@@ -34,8 +34,12 @@ class fermion_action : public action_base {
 
     void setup(int mre_guess_size) {
 #if NDIM > 3
-        chi.set_boundary_condition(e_t, hila::bc::ANTIPERIODIC);
-        chi.set_boundary_condition(-e_t, hila::bc::ANTIPERIODIC);
+        // the fermion field must be antiperiodic in t: the boundary condition is a part of the
+        // Field type, see boundary_condition.h.  E.g. for the vector type:
+        //   template <> struct hila::default_boundary_condition<vector_type> {
+        //       using type = hila::antiperiodic<e_t>; };
+        static_assert(Field<vector_type>::get_boundary_condition(e_t) == hila::bc::ANTIPERIODIC,
+                      "HMC fermion fields should be antiperiodic in t");
 #endif
         MRE_size = mre_guess_size;
         old_chi_inv.resize(MRE_size);
@@ -89,7 +93,6 @@ class fermion_action : public action_base {
     /// field configuration
     double action() {
         Field<vector_type> psi;
-        psi.copy_boundary_condition(chi);
         CG<DIRAC_OP> inverse(D);
         double action = 0;
 
@@ -105,7 +108,6 @@ class fermion_action : public action_base {
     /// Calculate the action as a field of double precision numbers
     void action(Field<double> &S) {
         Field<vector_type> psi;
-        psi.copy_boundary_condition(chi);
         CG<DIRAC_OP> inverse(D);
 
         gauge.refresh();
@@ -122,7 +124,6 @@ class fermion_action : public action_base {
     /// by the action chi 1/(D_dagger D) chi
     void draw_gaussian_fields() {
         Field<vector_type> psi;
-        psi.copy_boundary_condition(chi);
         gauge.refresh();
 
         onsites(D.par) {
@@ -145,8 +146,6 @@ class fermion_action : public action_base {
     /// action
     void force_step(double eps) {
         Field<vector_type> psi, Mpsi;
-        psi.copy_boundary_condition(chi);
-        Mpsi.copy_boundary_condition(chi);
         Field<momtype> force[NDIM], force2[NDIM];
 
         CG<DIRAC_OP> inverse(D);
@@ -221,8 +220,12 @@ class Hasenbusch_action_2 : public action_base {
 
     void setup(int mre_guess_size) {
 #if NDIM > 3
-        chi.set_boundary_condition(e_t, hila::bc::ANTIPERIODIC);
-        chi.set_boundary_condition(-e_t, hila::bc::ANTIPERIODIC);
+        // the fermion field must be antiperiodic in t: the boundary condition is a part of the
+        // Field type, see boundary_condition.h.  E.g. for the vector type:
+        //   template <> struct hila::default_boundary_condition<vector_type> {
+        //       using type = hila::antiperiodic<e_t>; };
+        static_assert(Field<vector_type>::get_boundary_condition(e_t) == hila::bc::ANTIPERIODIC,
+                      "HMC fermion fields should be antiperiodic in t");
 #endif
         MRE_size = mre_guess_size;
         old_chi_inv.resize(MRE_size);
@@ -253,8 +256,6 @@ class Hasenbusch_action_2 : public action_base {
     double action() {
         Field<vector_type> psi;
         Field<vector_type> v;
-        psi.copy_boundary_condition(chi);
-        v.copy_boundary_condition(chi);
         double action = 0;
 
         gauge.refresh();
@@ -275,8 +276,6 @@ class Hasenbusch_action_2 : public action_base {
     void action(Field<double> &S) {
         Field<vector_type> psi;
         Field<vector_type> v;
-        psi.copy_boundary_condition(chi);
-        v.copy_boundary_condition(chi);
 
         gauge.refresh();
         CG inverse(D);
@@ -293,8 +292,6 @@ class Hasenbusch_action_2 : public action_base {
     void draw_gaussian_fields() {
         Field<vector_type> psi;
         Field<vector_type> v;
-        psi.copy_boundary_condition(chi);
-        v.copy_boundary_condition(chi);
         CG inverse_h(D_h); // Applies 1/(D_h^dagger D_h)
         gauge.refresh();
 
@@ -349,9 +346,6 @@ class Hasenbusch_action_2 : public action_base {
     void force_step(double eps) {
         Field<vector_type> psi, Mpsi;
         Field<vector_type> Dhchi;
-        psi.copy_boundary_condition(chi);
-        Mpsi.copy_boundary_condition(chi);
-        Dhchi.copy_boundary_condition(chi);
         Field<momtype> force[NDIM], force2[NDIM];
 
         CG<DIRAC_OP> inverse(D);

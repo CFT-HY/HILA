@@ -12,6 +12,67 @@
 #include "srcbuf.h" //srcbuf class interface
 #include "hilapp.h" //global vars needed
 
+/////////////////////////////////////////////////////////////////////////////////////
+/// Field<T, BC> type helpers.  The Field class template has the element type T and the
+/// boundary condition type BC (default from T); read these from the template arguments,
+/// not from the type string.
+/////////////////////////////////////////////////////////////////////////////////////
+
+/// The Field<T, BC> specialization of type t (reference and cv removed), nullptr if t is not
+/// a Field specialization
+inline const clang::ClassTemplateSpecializationDecl *field_specialization(clang::QualType t) {
+    t = t.getNonReferenceType().getUnqualifiedType().getCanonicalType();
+    const clang::CXXRecordDecl *rd = t->getAsCXXRecordDecl();
+    if (rd == nullptr)
+        return nullptr;
+    auto *spec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(rd);
+    if (spec == nullptr || spec->getNameAsString() != "Field" ||
+        spec->getTemplateArgs().size() < 1 ||
+        spec->getTemplateArgs().get(0).getKind() != clang::TemplateArgument::Type)
+        return nullptr;
+    return spec;
+}
+
+/// Element type T of Field<T, BC> as a string, "" if t is not a Field
+inline std::string field_element_type(clang::QualType t, const clang::PrintingPolicy &pp) {
+    auto *spec = field_specialization(t);
+    if (spec == nullptr)
+        return "";
+    return spec->getTemplateArgs()
+        .get(0)
+        .getAsType()
+        .getCanonicalType()
+        .getUnqualifiedType()
+        .getAsString(pp);
+}
+
+/// True if Field<T, BC> type t has periodic boundary conditions to all directions, i.e.
+/// BC::is_periodic is true.  False (conservative) if this cannot be determined
+inline bool field_type_is_periodic(clang::QualType t) {
+    auto *spec = field_specialization(t);
+    if (spec == nullptr)
+        return false;
+    if (spec->getTemplateArgs().size() < 2)
+        return true; // old single-argument Field<T>
+    const clang::TemplateArgument &bc = spec->getTemplateArgs().get(1);
+    if (bc.getKind() != clang::TemplateArgument::Type)
+        return false;
+    const clang::CXXRecordDecl *bcd = bc.getAsType()->getAsCXXRecordDecl();
+    if (bcd == nullptr)
+        return false;
+    for (auto *d : bcd->decls()) {
+        if (auto *vd = llvm::dyn_cast<clang::VarDecl>(d)) {
+            if (vd->getNameAsString() == "is_periodic") {
+                const clang::APValue *v = vd->evaluateValue();
+                if (v != nullptr && v->isInt())
+                    return v->getInt().getBoolValue();
+                return false;
+            }
+        }
+    }
+    return false;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////
 /// This implements a "general visitor", a placeholder to many utility functions
@@ -63,6 +124,8 @@ class GeneralVisitor {
 
     /// Store a printing policy. It is required quite often
     PrintingPolicy PP;
+    /// PP with all template arguments printed, also the defaults, see set_printing_policy()
+    PrintingPolicy PP_full;
 
     /// are we on TopLevelVisitor?  False otherwise
     bool is_top_level = false;
@@ -84,13 +147,35 @@ class GeneralVisitor {
     template <typename Visitor_type>
     GeneralVisitor(Visitor_type &caller)
         : TheRewriter(caller.TheRewriter), Context(caller.Context),
-          PP(caller.Context->getLangOpts()), srcMgr(caller.srcMgr),
-          var_info_list(caller.var_info_list), var_decl_list(caller.var_decl_list) {}
+          PP(caller.Context->getLangOpts()), PP_full(caller.Context->getLangOpts()),
+          srcMgr(caller.srcMgr), var_info_list(caller.var_info_list),
+          var_decl_list(caller.var_decl_list) {
+        set_printing_policy();
+    }
 
     /// Construct with rewriter and context
     GeneralVisitor(Rewriter &R, ASTContext *C)
         : TheRewriter(R), Context(C), srcMgr(R.getSourceMgr()), PP(C->getLangOpts()),
-          var_info_list(_var_info_list), var_decl_list(_var_decl_list) {}
+          PP_full(C->getLangOpts()), var_info_list(_var_info_list), var_decl_list(_var_decl_list) {
+        set_printing_policy();
+    }
+
+    /// Field types in generated code are printed with all template arguments, also the
+    /// default ones: Field<T> has the default boundary condition argument, Field<T, BC>, and
+    /// the default may resolve differently at the point where the code is inserted.
+    /// PP_full is used for these; PP is kept as is, other code parses its type strings
+    void set_printing_policy() {
+        PP_full.SuppressDefaultTemplateArgs = false;
+    }
+
+    /// Qualified name of a declaration printed with PP_full (all template arguments)
+    std::string qualified_name(const NamedDecl *D) const {
+        std::string s;
+        llvm::raw_string_ostream os(s);
+        D->printQualifiedName(os, PP_full);
+        os.flush();
+        return s;
+    }
 
     Rewriter &getRewriter() {
         return TheRewriter;

@@ -28,8 +28,8 @@ namespace hila {
 /// Sum the field over the sites of this rank inside the box [lo, hi].
 /// Site with coordinates c goes to index sum_d (c[d]-lo[d])*stride[d]; stride is 0 for the
 /// projected directions.
-template <typename T>
-std::vector<T> projection_local_sum(const Field<T> &f, const CoordinateVector &lo,
+template <typename T, typename BC>
+std::vector<T> projection_local_sum(const Field<T, BC> &f, const CoordinateVector &lo,
                                     const CoordinateVector &hi, const CoordinateVector &stride,
                                     int n_local) {
 
@@ -55,11 +55,11 @@ std::vector<T> projection_local_sum(const Field<T> &f, const CoordinateVector &l
 } // namespace hila
 
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Func>
-void Field<T>::projection_internal(const std::vector<Direction> &dirs,
-                                   const CoordinateVector &cmin, const CoordinateVector &cmax,
-                                   Func &&output) const {
+void Field<T, BC>::projection_internal(const std::vector<Direction> &dirs,
+                                       const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                       Func &&output) const {
 
     assert_all_ranks_present();
 
@@ -262,10 +262,10 @@ void Field<T>::projection_internal(const std::vector<Direction> &dirs,
 }
 
 
-template <typename T>
-std::vector<T> Field<T>::get_projection(const std::vector<Direction> &dirs,
-                                        const CoordinateVector &cmin, const CoordinateVector &cmax,
-                                        bool broadcast) const {
+template <typename T, typename BC>
+std::vector<T> Field<T, BC>::get_projection(const std::vector<Direction> &dirs,
+                                            const CoordinateVector &cmin,
+                                            const CoordinateVector &cmax, bool broadcast) const {
     std::vector<T> res;
     projection_internal(dirs, cmin, cmax,
                         [&res](const T *data, size_t n) { res.insert(res.end(), data, data + n); });
@@ -274,20 +274,20 @@ std::vector<T> Field<T>::get_projection(const std::vector<Direction> &dirs,
     return res;
 }
 
-template <typename T>
-std::vector<T> Field<T>::get_projection(const std::vector<Direction> &dirs,
-                                        bool broadcast) const {
+template <typename T, typename BC>
+std::vector<T> Field<T, BC>::get_projection(const std::vector<Direction> &dirs,
+                                            bool broadcast) const {
     CoordinateVector cmin = 0, cmax = lattice.size();
     cmax.asArray() -= 1;
     return get_projection(dirs, cmin, cmax, broadcast);
 }
 
 
-template <typename T>
-void Field<T>::write_projection_internal(std::ofstream &out, const std::vector<Direction> &dirs,
-                                         const CoordinateVector &cmin,
-                                         const CoordinateVector &cmax, int precision, bool binary,
-                                         bool to_float) const {
+template <typename T, typename BC>
+void Field<T, BC>::write_projection_internal(std::ofstream &out, const std::vector<Direction> &dirs,
+                                             const CoordinateVector &cmin,
+                                             const CoordinateVector &cmax, int precision,
+                                             bool binary, bool to_float) const {
     if (hila::myrank() == 0 && !binary)
         out.precision(precision);
 
@@ -296,47 +296,47 @@ void Field<T>::write_projection_internal(std::ofstream &out, const std::vector<D
     });
 }
 
-template <typename T>
-void Field<T>::write_projection_internal(const std::string &filename,
-                                         const std::vector<Direction> &dirs,
-                                         const CoordinateVector &cmin,
-                                         const CoordinateVector &cmax, int precision, bool binary,
-                                         bool to_float) const {
+template <typename T, typename BC>
+void Field<T, BC>::write_projection_internal(const std::string &filename,
+                                             const std::vector<Direction> &dirs,
+                                             const CoordinateVector &cmin,
+                                             const CoordinateVector &cmax, int precision,
+                                             bool binary, bool to_float) const {
     std::ofstream out;
     hila::open_output_file(filename, out, binary);
     write_projection_internal(out, dirs, cmin, cmax, precision, binary, to_float);
     hila::close_file(filename, out);
 }
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_projection(Outf &&output, const std::vector<Direction> &dirs,
-                                const CoordinateVector &cmin, const CoordinateVector &cmax,
-                                int precision) const {
+void Field<T, BC>::write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                                    const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                    int precision) const {
     write_projection_internal(output, dirs, cmin, cmax, precision, false, false);
 }
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_projection(Outf &&output, const std::vector<Direction> &dirs,
-                                int precision) const {
+void Field<T, BC>::write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                                    int precision) const {
     CoordinateVector cmin = 0, cmax = lattice.size();
     cmax.asArray() -= 1;
     write_projection_internal(output, dirs, cmin, cmax, precision, false, false);
 }
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
-                                       const CoordinateVector &cmin, const CoordinateVector &cmax,
-                                       bool to_float) const {
+void Field<T, BC>::write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
+                                           const CoordinateVector &cmin,
+                                           const CoordinateVector &cmax, bool to_float) const {
     write_projection_internal(output, dirs, cmin, cmax, 0, true, to_float);
 }
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
-                                       bool to_float) const {
+void Field<T, BC>::write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
+                                           bool to_float) const {
     CoordinateVector cmin = 0, cmax = lattice.size();
     cmax.asArray() -= 1;
     write_projection_internal(output, dirs, cmin, cmax, 0, true, to_float);

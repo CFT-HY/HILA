@@ -84,8 +84,8 @@ bool close_file(const std::string &filename, S &fstream) {
 #if defined(USE_FMT)
 
 /// Write the field to a file stream
-template <typename T>
-void Field<T>::write(std::FILE *outputfile, int precision) const {
+template <typename T, typename BC>
+void Field<T, BC>::write(std::FILE *outputfile, int precision) const {
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
@@ -124,8 +124,8 @@ void Field<T>::write(std::FILE *outputfile, int precision) const {
 #endif
 
 /// Write the field to a file stream
-template <typename T>
-void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) const {
+template <typename T, typename BC>
+void Field<T, BC>::write(std::ofstream &outputfile, bool binary, int precision) const {
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
 
@@ -168,8 +168,8 @@ void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) cons
 
 
 /// Write the Field to a named file replacing the file
-template <typename T>
-void Field<T>::write(const std::string &filename, bool binary, int precision) const {
+template <typename T, typename BC>
+void Field<T, BC>::write(const std::string &filename, bool binary, int precision) const {
 
 #if !defined(USE_FMT)
     std::ofstream outputfile;
@@ -195,13 +195,13 @@ void Field<T>::write(const std::string &filename, bool binary, int precision) co
 }
 
 /// Write a list of fields into an output stream
-template <typename T>
-static void write_fields(std::ofstream &outputfile, Field<T> &last) {
+template <typename T, typename BC>
+static void write_fields(std::ofstream &outputfile, Field<T, BC> &last) {
     last.write(outputfile);
 }
 
-template <typename T, typename... fieldtypes>
-static void write_fields(std::ofstream &outputfile, Field<T> &next, fieldtypes &...fields) {
+template <typename T, typename BC, typename... fieldtypes>
+static void write_fields(std::ofstream &outputfile, Field<T, BC> &next, fieldtypes &...fields) {
     next.write(outputfile);
     write_fields(outputfile, fields...);
 }
@@ -218,8 +218,8 @@ static void write_fields(const std::string &filename, fieldtypes &...fields) {
 /////////////////////////////////////////////////////////////////////////////////
 
 /// Read the Field from a stream
-template <typename T>
-void Field<T>::read(std::ifstream &inputfile) {
+template <typename T, typename BC>
+void Field<T, BC>::read(std::ifstream &inputfile) {
     constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
 
@@ -257,8 +257,8 @@ void Field<T>::read(std::ifstream &inputfile) {
 }
 
 /// Read the Field from a stream
-template <typename T>
-void Field<T>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
+template <typename T, typename BC>
+void Field<T, BC>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
     constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
 
@@ -325,8 +325,8 @@ void Field<T>::read(std::ifstream &inputfile, const CoordinateVector &insize) {
 }
 
 // Read Field contents from the beginning of a file
-template <typename T>
-void Field<T>::read(const std::string &filename) {
+template <typename T, typename BC>
+void Field<T, BC>::read(const std::string &filename) {
     std::ifstream inputfile;
     hila::open_input_file(filename, inputfile);
     read(inputfile);
@@ -334,13 +334,13 @@ void Field<T>::read(const std::string &filename) {
 }
 
 // Read a list of fields from an input stream
-template <typename T>
-static void read_fields(std::ifstream &inputfile, Field<T> &last) {
+template <typename T, typename BC>
+static void read_fields(std::ifstream &inputfile, Field<T, BC> &last) {
     last.read_from_stream(inputfile);
 }
 
-template <typename T, typename... fieldtypes>
-static void read_fields(std::ifstream &inputfile, Field<T> &next, fieldtypes &...fields) {
+template <typename T, typename BC, typename... fieldtypes>
+static void read_fields(std::ifstream &inputfile, Field<T, BC> &next, fieldtypes &...fields) {
     next.read_from_stream(inputfile);
     read_fields(inputfile, fields...);
 }
@@ -396,10 +396,10 @@ void write_elements_to_stream(std::ofstream &outputfile, const T *buffer, size_t
 /// TODO: more formatting?
 
 
-template <typename T>
-void Field<T>::write_subvolume_internal(std::ofstream &outputfile, const CoordinateVector &cmin,
-                                        const CoordinateVector &cmax, int precision, bool binary,
-                                        bool to_float) const {
+template <typename T, typename BC>
+void Field<T, BC>::write_subvolume_internal(std::ofstream &outputfile, const CoordinateVector &cmin,
+                                            const CoordinateVector &cmax, int precision,
+                                            bool binary, bool to_float) const {
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
 
@@ -452,10 +452,11 @@ void Field<T>::write_subvolume_internal(std::ofstream &outputfile, const Coordin
     }
 }
 
-template <typename T>
-void Field<T>::write_subvolume_internal(const std::string &filename, const CoordinateVector &cmin,
-                                        const CoordinateVector &cmax, int precision, bool binary,
-                                        bool to_float) const {
+template <typename T, typename BC>
+void Field<T, BC>::write_subvolume_internal(const std::string &filename,
+                                            const CoordinateVector &cmin,
+                                            const CoordinateVector &cmax, int precision,
+                                            bool binary, bool to_float) const {
 
     std::ofstream out;
     hila::open_output_file(filename, out, false);
@@ -463,34 +464,34 @@ void Field<T>::write_subvolume_internal(const std::string &filename, const Coord
     hila::close_file(filename, out);
 }
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_subvolume(Outf &&output, const CoordinateVector &cmin,
-                               const CoordinateVector &cmax, int precision) const {
+void Field<T, BC>::write_subvolume(Outf &&output, const CoordinateVector &cmin,
+                                   const CoordinateVector &cmax, int precision) const {
     write_subvolume_internal(output, cmin, cmax, precision, false, false);
 }
 
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
-                                      const CoordinateVector &cmax, bool to_float) const {
+void Field<T, BC>::write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
+                                          const CoordinateVector &cmax, bool to_float) const {
     write_subvolume_internal(output, cmin, cmax, 0, true, to_float);
 }
 
 
-template <typename T>
+template <typename T, typename BC>
 template <typename Outf>
-void Field<T>::write_slice(Outf &&outf, const CoordinateVector &slice, int precision) const {
+void Field<T, BC>::write_slice(Outf &&outf, const CoordinateVector &slice, int precision) const {
 
     auto [cmin, cmax] = get_range_from_slice(slice);
     write_subvolume(outf, cmin, cmax, precision);
 }
 
-template <typename T>
+template <typename T, typename BC>
 template <typename outf_type>
-void Field<T>::write_slice_binary(outf_type &&outf, const CoordinateVector &slice,
-                                  bool to_float) const {
+void Field<T, BC>::write_slice_binary(outf_type &&outf, const CoordinateVector &slice,
+                                      bool to_float) const {
 
     auto [cmin, cmax] = get_range_from_slice(slice);
     write_subvolume_binary(outf, cmin, cmax, to_float);

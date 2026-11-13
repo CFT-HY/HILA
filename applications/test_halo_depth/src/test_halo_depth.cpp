@@ -31,7 +31,8 @@ static double value_at(const CoordinateVector &c, const CoordinateVector &mult, 
 }
 
 // check halo layers up to depth k of direction d, field f = value_at(X) + add
-static void check(const Field<double> &f, Direction d, int k, const CoordinateVector &mult,
+template <typename B>
+static void check(const Field<double, B> &f, Direction d, int k, const CoordinateVector &mult,
                   double add, bool antiperiodic, const std::string &what) {
     const auto &layout = lattice->mynode.layout;
     const CoordinateVector lsz = lattice.size();
@@ -154,6 +155,22 @@ static void test_loops(const CoordinateVector &mult) {
     loop_result(err, "f[X + 2*e_x] after change");
 }
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+// deep halos of a field antiperiodic to direction ad, if ad is divided between nodes
+template <Direction ad>
+static void test_antiperiodic(const CoordinateVector &mult) {
+    if (lattice->mynode.layout.wrap[ad])
+        return;
+    Field<double, hila::antiperiodic<ad>> g;
+    double add = 5.5;
+    g[ALL] = X.coordinates().dot(mult) + add;
+    for (Direction d = (Direction)0; d < NDIRS; ++d) {
+        g.gather_depth(d, HALO_DEPTH);
+        check(g, d, HALO_DEPTH, mult, add, abs(d) == ad, "antiperiodic");
+    }
+}
+#endif
+
 int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
@@ -238,20 +255,18 @@ int main(int argc, char **argv) {
     }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-    // 6: antiperiodic b.c. in divided directions
-    {
-        Field<double> g;
-        foralldir (d)
-            if (!lattice->mynode.layout.wrap[d])
-                g.set_boundary_condition(d, hila::bc::ANTIPERIODIC);
-        add = 5.5;
-        g[ALL] = X.coordinates().dot(mult) + add;
-        for (Direction d = (Direction)0; d < NDIRS; ++d) {
-            bool ap = !lattice->mynode.layout.wrap[abs(d)];
-            g.gather_depth(d, HALO_DEPTH);
-            check(g, d, HALO_DEPTH, mult, add, ap, "antiperiodic");
-        }
-    }
+    // 6: antiperiodic b.c. in directions divided between nodes (deep halo access with a
+    // non-periodic b.c. is not supported to directions which wrap on the node)
+    test_antiperiodic<e_x>(mult);
+#if NDIM > 1
+    test_antiperiodic<e_y>(mult);
+#endif
+#if NDIM > 2
+    test_antiperiodic<e_z>(mult);
+#endif
+#if NDIM > 3
+    test_antiperiodic<e_t>(mult);
+#endif
 #endif
 
     // 7: hilapp-generated loops

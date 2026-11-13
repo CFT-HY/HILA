@@ -11,6 +11,23 @@
 // unistd.h needed for isatty()
 #include <unistd.h>
 
+// Default boundary condition of an element type through the trait:
+// all Field<Vector<5, double>> are antiperiodic in y (see test_boundary_conditions())
+// Antiperiodic b.c. needs SPECIAL_BOUNDARY_CONDITIONS, and is not implemented in vectorized
+// (AVX) builds
+#if defined(SPECIAL_BOUNDARY_CONDITIONS) && !defined(VECTORIZED)
+#define HC_TEST_ANTIPERIODIC
+#endif
+
+#if NDIM > 1 && defined(HC_TEST_ANTIPERIODIC)
+namespace hila {
+template <>
+struct default_boundary_condition<Vector<5, double>> {
+    using type = hila::antiperiodic<e_y>;
+};
+} // namespace hila
+#endif
+
 
 // report the result of the test -- TODO: nicer formatting?
 bool report_pass(std::string message, double eps, double limit) {
@@ -566,6 +583,131 @@ void test_shift() {
  * @brief Test subvolume operations
  *
  */
+/**
+ * @brief Test boundary conditions, Field<T, BC>
+ * @details Neighbour access f[X+d] across the boundary to all directions, for several element
+ * types and b.c.s, with a periodic field read in the same loop.  Antiperiodic b.c. needs
+ * SPECIAL_BOUNDARY_CONDITIONS.
+ */
+template <typename T, typename B>
+double bc_neighbour_error(const T &unit) {
+
+    CoordinateVector mult;
+    foralldir (d)
+        mult[d] = 1 + 13 * (int)d;
+
+    Field<T, B> f, g;
+    Field<T, hila::periodic> p;
+    f[ALL] = (1.0 + X.coordinates().dot(mult)) * unit;
+    p[ALL] = f[X];
+
+    double err = 0;
+    for (Direction d = e_x; d < NDIRS; ++d) {
+        g[ALL] = f[X + d] + p[X + d];
+
+        Direction ad = abs(d);
+        CoordinateVector dv = 0;
+        dv[ad] = is_up_dir(d) ? 1 : -1;
+        int L = lattice.size(ad);
+        bool ap = (B::kind(d) == hila::bc::ANTIPERIODIC);
+
+        onsites (ALL) {
+            CoordinateVector c = X.coordinates() + dv;
+            double sign = 1;
+            if (c[ad] < 0 || c[ad] >= L) {
+                c[ad] = (c[ad] + L) % L;
+                if (ap)
+                    sign = -1;
+            }
+            // f with b.c. B, p periodic
+            err += squarenorm(g[X] - (sign + 1) * (1.0 + c.dot(mult)) * unit);
+        }
+    }
+    return err / lattice.volume();
+}
+
+void test_boundary_conditions() {
+
+    static_assert(std::is_same<Field<double>, Field<double, hila::periodic>>::value,
+                  "default b.c. should be periodic");
+
+    // element types can carry a default b.c.
+    struct ap_type {
+        using default_boundary_condition = hila::antiperiodic<e_x>;
+    };
+    static_assert(
+        std::is_same<hila::default_boundary_condition_t<ap_type>, hila::antiperiodic<e_x>>::value,
+        "T::default_boundary_condition not found");
+
+    report_pass("Periodic b.c., double", bc_neighbour_error<double, hila::periodic>(1.0), 1e-20);
+
+#ifdef HC_TEST_ANTIPERIODIC
+
+#if NDIM > 2
+    using ap_xz = hila::antiperiodic<e_x, e_z>;
+#else
+    using ap_xz = hila::antiperiodic<e_x>;
+#endif
+    static_assert(ap_xz::kind(e_x) == hila::bc::ANTIPERIODIC &&
+                      ap_xz::kind(e_x_down) == hila::bc::ANTIPERIODIC,
+                  "antiperiodic kind error");
+
+    // results of Field operations
+    {
+        Field<double, ap_xz> fa;
+        Field<double> fp;
+        static_assert(std::is_same<decltype(fa + fp), Field<double, ap_xz>>::value &&
+                          std::is_same<decltype(2.0 * fa), Field<double, ap_xz>>::value &&
+                          std::is_same<decltype(fp - 1.0), Field<double>>::value &&
+                          std::is_same<decltype(exp(fa)), Field<double, ap_xz>>::value,
+                      "b.c. of Field operation results");
+        static_assert(!std::is_convertible<Field<double, ap_xz>, Field<double>>::value,
+                      "conversion between b.c.s must be explicit");
+
+        fa[ALL] = X.coordinate(e_x);
+        Field<double> fc(fa); // explicit conversion copies the values
+        fp = fa;              // so does assignment
+        report_pass("Field<T, BC> conversion and assignment", (fc == fa && fp == fa) ? 0 : 1,
+                    1e-10);
+    }
+
+    report_pass("Antiperiodic b.c. " + ap_xz::name() + ", double",
+                bc_neighbour_error<double, ap_xz>(1.0), 1e-20);
+    report_pass("Antiperiodic b.c. " + ap_xz::name() + ", Complex<double>",
+                bc_neighbour_error<Complex<double>, ap_xz>(Complex<double>(1, 2)), 1e-20);
+
+#if NDIM > 1
+    // default b.c. of Vector<5,double> is set at the top of this file
+    {
+        using V5 = Vector<5, double>;
+        static_assert(std::is_same<Field<V5>, Field<V5, hila::antiperiodic<e_y>>>::value,
+                      "default_boundary_condition specialization not used");
+        V5 unit;
+        for (int i = 0; i < 5; i++)
+            unit[i] = i + 1;
+        report_pass("Default b.c. of the element type, antiperiodic(y), Vector<5,double>",
+                    bc_neighbour_error<V5, hila::default_boundary_condition_t<V5>>(unit), 1e-20);
+    }
+#endif
+
+    // shift by the lattice size: -f to antiperiodic directions, f to periodic
+    {
+        Field<double, ap_xz> f;
+        f[ALL] = 1.0 + X.coordinate(e_x) + 3 * X.coordinate(e_y);
+        double err = 0;
+        foralldir (d) {
+            CoordinateVector v = 0;
+            v[d] = lattice.size(d);
+            auto s = f.shift(v);
+            double sign = (ap_xz::kind(d) == hila::bc::ANTIPERIODIC) ? -1 : 1;
+            onsites (ALL)
+                err += squarenorm(s[X] - sign * f[X]);
+        }
+        report_pass("shift() across antiperiodic boundary", err, 1e-20);
+    }
+#endif
+}
+
 void test_subvolumes() {
 
     bool ok = true;
@@ -1671,6 +1813,7 @@ int main(int argc, char **argv) {
     test_random();
     test_set_elements_and_select();
     test_shift();
+    test_boundary_conditions();
     test_subvolumes();
     test_projection();
     test_matrix_operations();

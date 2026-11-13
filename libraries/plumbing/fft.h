@@ -182,8 +182,8 @@ class hila_fft {
     /// Order: Direction dir goes fastest, then the index to complex data in T,
     /// and other directions are slowest.
 
-    template <typename T>
-    void collect_data(const Field<T> &f) {
+    template <typename T, typename BC>
+    void collect_data(const Field<T, BC> &f) {
 
         extern hila::timer pencil_collect_timer;
         pencil_collect_timer.start();
@@ -220,8 +220,8 @@ class hila_fft {
 
     /// Inverse of the fft_collect_data: write fft'd data from receive_buf to field.
 
-    template <typename T>
-    void save_result(Field<T> &f) {
+    template <typename T, typename BC>
+    void save_result(Field<T, BC> &f) {
 
         constexpr int elements = sizeof(T) / sizeof(cmplx_t);
 
@@ -306,8 +306,8 @@ class hila_fft {
     ////////////////////////////////////////////////////////////////////////
     /// Do the transform itself (fft or reflect only)
 
-    template <typename T>
-    void full_transform(const Field<T> &input, Field<T> &result,
+    template <typename T, typename BC>
+    void full_transform(const Field<T, BC> &input, Field<T, BC> &result,
                         const CoordinateVector &directions) {
 
         // Make sure the result is allocated and mark it changed
@@ -404,9 +404,13 @@ void FFT_delete_plans();
 /// See also Field<T>::FFT()
 /////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateVector &directions,
+template <typename T, typename BC>
+inline void FFT_field(const Field<T, BC> &input, Field<T, BC> &result,
+                      const CoordinateVector &directions,
                       fft_direction fftdir = fft_direction::forward) {
+
+    static_assert(BC::is_periodic, "FFT is possible only for Fields with periodic boundary "
+                                   "conditions");
 
     static_assert(hila::contains_complex<T>::value,
                   "FFT_field argument fields must contain complex type");
@@ -436,8 +440,8 @@ inline void FFT_field(const Field<T> &input, Field<T> &result, const CoordinateV
 /// See also Field<T>::FFT()
 //////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-inline void FFT_field(const Field<T> &input, Field<T> &result,
+template <typename T, typename BC>
+inline void FFT_field(const Field<T, BC> &input, Field<T, BC> &result,
                       fft_direction fftdir = fft_direction::forward) {
 
     CoordinateVector dirs;
@@ -492,18 +496,18 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
  * @param fftdir fft_direction::forward (default)  or fft_direction::back
  * @return Field<T> Transformed field
  */
-template <typename T>
-Field<T> Field<T>::FFT(const CoordinateVector &dirs, fft_direction fftdir) const {
-    Field<T> res;
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::FFT(const CoordinateVector &dirs, fft_direction fftdir) const {
+    Field<T, BC> res;
     FFT_field(*this, res, dirs, fftdir);
     return res;
 }
 
-template <typename T>
-Field<T> Field<T>::FFT(fft_direction fftdir) const {
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::FFT(fft_direction fftdir) const {
     CoordinateVector cv;
     cv.fill(true);
-    Field<T> res;
+    Field<T, BC> res;
     FFT_field(*this, res, cv, fftdir);
     return res;
 }
@@ -542,10 +546,13 @@ Field<T> Field<T>::FFT(fft_direction fftdir) const {
 /// See also Field<T>::FFT_real()
 /////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-inline void FFT_real_field(const Field<T> &input, Field<T> &result,
+template <typename T, typename BC>
+inline void FFT_real_field(const Field<T, BC> &input, Field<T, BC> &result,
                            const CoordinateVector &directions,
                            fft_direction fftdir = fft_direction::forward) {
+
+    static_assert(BC::is_periodic, "FFT is possible only for Fields with periodic boundary "
+                                   "conditions");
 
     using real_t = hila::arithmetic_type<T>;
 
@@ -569,8 +576,8 @@ inline void FFT_real_field(const Field<T> &input, Field<T> &result,
 
 /// Real Fourier transform to all directions, see FFT_real_field() above
 
-template <typename T>
-inline void FFT_real_field(const Field<T> &input, Field<T> &result,
+template <typename T, typename BC>
+inline void FFT_real_field(const Field<T, BC> &input, Field<T, BC> &result,
                            fft_direction fftdir = fft_direction::forward) {
 
     CoordinateVector dirs;
@@ -605,18 +612,18 @@ inline void FFT_real_field(const Field<T> &input, Field<T> &result,
  * auto f2 = h.FFT_real(fft_direction::back);   // f2 == f * lattice.volume()
  * @endcode
  */
-template <typename T>
-Field<T> Field<T>::FFT_real(const CoordinateVector &dirs, fft_direction fftdir) const {
-    Field<T> res;
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::FFT_real(const CoordinateVector &dirs, fft_direction fftdir) const {
+    Field<T, BC> res;
     FFT_real_field(*this, res, dirs, fftdir);
     return res;
 }
 
-template <typename T>
-Field<T> Field<T>::FFT_real(fft_direction fftdir) const {
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::FFT_real(fft_direction fftdir) const {
     CoordinateVector cv;
     cv.fill(true);
-    Field<T> res;
+    Field<T, BC> res;
     FFT_real_field(*this, res, cv, fftdir);
     return res;
 }
@@ -630,12 +637,16 @@ Field<T> Field<T>::FFT_real(fft_direction fftdir) const {
 /// Result is  f(-x) = f(L - x) = f(x)^*
 //////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-Field<Complex<hila::arithmetic_type<T>>> Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
+template <typename T, typename BC>
+Field<Complex<hila::arithmetic_type<T>>, hila::periodic>
+Field<T, BC>::FFT_real_to_complex(fft_direction fftdir) const {
 
     static_assert(hila::is_arithmetic<T>::value,
                   "FFT_real_to_complex can be applied only to Field<real-type> variable");
-    
+
+    static_assert(BC::is_periodic, "FFT is possible only for Fields with periodic boundary "
+                                   "conditions");
+
     assert(is_initialized(ALL) && "ERROR: Uninitialized field in FFT_real_to_complex");
 
     Field<Complex<T>> cf;
@@ -698,11 +709,15 @@ inline int FFT_complex_to_real_site(const CoordinateVector &cv) {
 //////////////////////////////////////////////////////////////////////////////////
 
 
-template <typename T>
-Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
+template <typename T, typename BC>
+Field<hila::arithmetic_type<T>, hila::periodic>
+Field<T, BC>::FFT_complex_to_real(fft_direction fftdir) const {
 
     static_assert(hila::is_complex<T>::value,
                   "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
+
+    static_assert(BC::is_periodic, "FFT is possible only for Fields with periodic boundary "
+                                   "conditions");
 
     assert(is_initialized(ALL) && "ERROR: uninitialized Field in FFT_complex_to_real");
 
@@ -770,14 +785,14 @@ Field<hila::arithmetic_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftd
  * @return Field<T>
  */
 
-template <typename T>
-Field<T> Field<T>::reflect(const CoordinateVector &dirs) const {
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::reflect(const CoordinateVector &dirs) const {
 
     constexpr int elements = 1;
 
     assert(is_initialized(ALL) && "ERROR: uninitialized Field in reflect()");
 
-    Field<T> result;
+    Field<T, BC> result;
 
     hila_fft<T> refl(elements, fft_direction::forward, true);
     refl.full_transform(*this, result, dirs);
@@ -785,16 +800,16 @@ Field<T> Field<T>::reflect(const CoordinateVector &dirs) const {
     return result;
 }
 
-template <typename T>
-Field<T> Field<T>::reflect() const {
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::reflect() const {
 
     CoordinateVector c;
     c.fill(true);
     return reflect(c);
 }
 
-template <typename T>
-Field<T> Field<T>::reflect(Direction dir) const {
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::reflect(Direction dir) const {
 
     CoordinateVector c;
     c.fill(false);

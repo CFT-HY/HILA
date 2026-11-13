@@ -12,12 +12,12 @@
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Gather boundary elements for communication
 
-template <typename T>
-void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                                  const lattice_struct::comm_node_struct &to_node
+template <typename T, typename BC>
+void Field<T, BC>::field_struct::gather_comm_elements(
+    Direction d, Parity par, T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node
 #if defined(CUDA) || defined(HIP)
-                                                  ,
-                                                  gpuStream_t stream
+    ,
+    gpuStream_t stream
 #endif
 ) const {
 #ifndef VECTORIZED
@@ -25,7 +25,7 @@ void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RE
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // note: -d in is_on_edge, because we're about to send stuff to that
     // Direction (gathering from Direction +d)
-    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
+    if (BC::kind(d) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
         antiperiodic = true;
 #endif
 #if defined(CUDA) || defined(HIP)
@@ -38,7 +38,7 @@ void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RE
     // this is vectorized branch
     bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
+    if (BC::kind(d) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d)) {
         antiperiodic = true;
     }
 #endif
@@ -78,12 +78,12 @@ void Field<T>::field_struct::gather_comm_elements(Direction d, Parity par, T *RE
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Place boundary elements from neighbour
 
-template <typename T>
-void Field<T>::field_struct::place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                                 const lattice_struct::comm_node_struct &from_node
+template <typename T, typename BC>
+void Field<T, BC>::field_struct::place_comm_elements(
+    Direction d, Parity par, T *RESTRICT buffer, const lattice_struct::comm_node_struct &from_node
 #if defined(CUDA) || defined(HIP)
-                                                 ,
-                                                 gpuStream_t stream
+    ,
+    gpuStream_t stream
 #endif
 ) {
 
@@ -112,12 +112,12 @@ void Field<T>::field_struct::place_comm_elements(Direction d, Parity par, T *RES
 /////////////////////////////////////////////////////////////////////////////////////////
 /// Place boundary elements from local lattice (used in vectorized version)
 
-template <typename T>
-void Field<T>::field_struct::set_local_boundary_elements(Direction dir, Parity par) {
+template <typename T, typename BC>
+void Field<T, BC>::field_struct::set_local_boundary_elements(Direction dir, Parity par) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     bool antiperiodic =
-        (boundary_condition[dir] == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(dir));
+        (BC::kind(dir) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(dir));
 #else
     bool antiperiodic = false;
 #endif
@@ -128,9 +128,9 @@ void Field<T>::field_struct::set_local_boundary_elements(Direction dir, Parity p
 /////////////////////////////////////////////////////////////////////////////////////////
 /// get the receive buffer pointer for the communication.
 
-template <typename T>
-T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
-                                              const lattice_struct::comm_node_struct &from_node) {
+template <typename T, typename BC>
+T *Field<T, BC>::field_struct::get_receive_buffer(
+    Direction d, Parity par, const lattice_struct::comm_node_struct &from_node) {
 #if defined(VANILLA)
 
     return (T *)payload.get_buffer() + from_node.offset(par);
@@ -198,8 +198,9 @@ inline void check_shift_parity(const CoordinateVector &v, Parity par) {
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
 
-template <typename T>
-Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
+template <typename T, typename BC>
+Field<T, BC> &Field<T, BC>::shift(const CoordinateVector &v, Field<T, BC> &res,
+                                  const Parity par) const {
 
     assert_all_ranks_present();
     check_shift_parity(v, par);
@@ -260,8 +261,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     }
 
     // now longer - need buffer
-    Field<T> r1;
-    Field<T> *from, *to;
+    Field<T, BC> r1;
+    Field<T, BC> *from, *to;
 
     // this ensures that the final move lands on res
     if (len % 2 == 0) {
@@ -300,8 +301,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
 #ifdef FIELD_SHIFT_BUFFERING
 
-template <typename T>
-void Field<T>::buffered_shift_offsets(const CoordinateVector &v, Parity par) const {
+template <typename T, typename BC>
+void Field<T, BC>::buffered_shift_offsets(const CoordinateVector &v, Parity par) const {
     assert_all_ranks_present();
 
     // shift 0?
@@ -327,8 +328,8 @@ void Field<T>::buffered_shift_offsets(const CoordinateVector &v, Parity par) con
     return;
 }
 
-template <typename T>
-const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity par) const {
+template <typename T, typename BC>
+const Field<T, BC> &Field<T, BC>::do_buffered_shift(const CoordinateVector &v, Parity par) const {
 
     check_shift_parity(v, par);
 
@@ -344,7 +345,7 @@ const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity pa
 
             // Now we did not have the data, copy it
 
-            const Field<T> *fptr = nullptr;
+            const Field<T, BC> *fptr = nullptr;
             Direction shiftd;
             if (v.is_direction(shiftd)) {
                 // nearest-neighbour fetch from *this
@@ -400,8 +401,8 @@ const Field<T> &Field<T>::do_buffered_shift(const CoordinateVector &v, Parity pa
     return *this; // unreachable
 }
 
-template <typename T>
-void Field<T>::clear_buffered_shifts() const {
+template <typename T, typename BC>
+void Field<T, BC>::clear_buffered_shifts() const {
     fs->shift_buffer.clear();
 }
 
@@ -409,8 +410,9 @@ void Field<T>::clear_buffered_shifts() const {
 
 #endif // NAIVE_SHIFT
 
-template <typename T>
-typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Parity &p) const {
+template <typename T, typename BC>
+typename Field<T, BC>::gather_status_t Field<T, BC>::check_communication(Direction d,
+                                                                         Parity &p) const {
 
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -464,8 +466,8 @@ typename Field<T>::gather_status_t Field<T>::check_communication(Direction d, Pa
  * @param d Direction
  * @param p Parity
  */
-template <typename T>
-dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
+template <typename T, typename BC>
+dir_mask_t Field<T, BC>::start_gather(Direction d, Parity p) const {
 #if defined(GPU_OVERLAP_COMM)
     return 0;
 #elif !defined(GPU_CCL) && !defined(GPU_SHMEM)
@@ -489,8 +491,8 @@ inline int parity_idx(Parity p) {
 // Lazy symmetric allocation of this field's signal counters.  Collective-safe
 // for the same reason as receive_buffer[]: every PE allocates on the same code
 // path at the same logical point (first remote halo put of this field).
-template <typename T>
-uint64_t *Field<T>::field_struct::get_signal_buffer() {
+template <typename T, typename BC>
+uint64_t *Field<T, BC>::field_struct::get_signal_buffer() {
     if (comm_signal == nullptr) {
         gpuMallocShared(&comm_signal, comm_signal_slots * sizeof(uint64_t));
         gpuMemset(comm_signal, 0, comm_signal_slots * sizeof(uint64_t));
@@ -501,8 +503,8 @@ uint64_t *Field<T>::field_struct::get_signal_buffer() {
 }
 #endif // GPU_SHMEM
 
-template <typename T>
-dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
+template <typename T, typename BC>
+dir_mask_t Field<T, BC>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
     const auto &ci = lattice->nn_comminfo[d];
 
     // check_communication() can downgrade an ALL gather to EVEN/ODD in place, so
@@ -564,8 +566,8 @@ dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) c
 /// start_gather(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the Direction mask bits where something is happening
-template <typename T>
-dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
+template <typename T, typename BC>
+dir_mask_t Field<T, BC>::start_communication(Direction d, Parity p) const {
 
     assert_all_ranks_present();
 
@@ -699,8 +701,8 @@ dir_mask_t Field<T>::start_communication(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
-template <typename T>
-Parity Field<T>::resolve_started_parity(Direction d, Parity p, int &n_wait) const {
+template <typename T, typename BC>
+Parity Field<T, BC>::resolve_started_parity(Direction d, Parity p, int &n_wait) const {
 
     Parity par;
     n_wait = 1;
@@ -736,8 +738,8 @@ Parity Field<T>::resolve_started_parity(Direction d, Parity p, int &n_wait) cons
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
-template <typename T>
-void Field<T>::wait_gather(Direction d, Parity p) const {
+template <typename T, typename BC>
+void Field<T, BC>::wait_gather(Direction d, Parity p) const {
 
     assert_all_ranks_present();
 
@@ -813,7 +815,6 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
         fs->receive_buffer[d] = nullptr;
     }
 #endif
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -827,8 +828,8 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 /// wraps on the node.
 /////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-bool Field<T>::is_gathered_depth(Direction d, int depth) const {
+template <typename T, typename BC>
+bool Field<T, BC>::is_gathered_depth(Direction d, int depth) const {
     if (depth <= 1)
         return is_gathered(d, ALL);
 #if HALO_DEPTH > 1
@@ -838,8 +839,8 @@ bool Field<T>::is_gathered_depth(Direction d, int depth) const {
 #endif
 }
 
-template <typename T>
-dir_mask_t Field<T>::start_gather_depth(Direction d, int depth) const {
+template <typename T, typename BC>
+dir_mask_t Field<T, BC>::start_gather_depth(Direction d, int depth) const {
 
     if (depth <= 1)
         return start_gather(d, ALL);
@@ -869,7 +870,7 @@ dir_mask_t Field<T>::start_gather_depth(Direction d, int depth) const {
     if (layout.wrap[dim]) {
         // no comms needed, neighbour_offset() wraps on the node
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        if (fs->boundary_condition[d] != hila::bc::PERIODIC) {
+        if (BC::kind(d) != hila::bc::PERIODIC) {
             hila::out << "ERROR: halo depth > 1 access with non-periodic boundary condition in "
                          "a direction not divided between nodes is not supported\n";
             hila::terminate(1);
@@ -916,8 +917,7 @@ dir_mask_t Field<T>::start_gather_depth(Direction d, int depth) const {
     if (do_send) {
         bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        if (fs->boundary_condition[d] == hila::bc::ANTIPERIODIC &&
-            lattice->mynode.is_on_edge(-d))
+        if (BC::kind(d) == hila::bc::ANTIPERIODIC && lattice->mynode.is_on_edge(-d))
             antiperiodic = true;
 #endif
         fs->deep_send_buffer[d] = fs->payload.allocate_mpi_buffer(n0 + n1);
@@ -983,8 +983,8 @@ dir_mask_t Field<T>::start_gather_depth(Direction d, int depth) const {
 #endif
 }
 
-template <typename T>
-void Field<T>::wait_gather_depth(Direction d, int depth) const {
+template <typename T, typename BC>
+void Field<T, BC>::wait_gather_depth(Direction d, int depth) const {
 
     if (depth <= 1) {
         wait_gather(d, ALL);
@@ -1050,8 +1050,8 @@ void Field<T>::wait_gather_depth(Direction d, int depth) const {
 #endif
 }
 
-template <typename T>
-void Field<T>::gather_depth(Direction d, int depth) const {
+template <typename T, typename BC>
+void Field<T, BC>::gather_depth(Direction d, int depth) const {
     start_gather_depth(d, depth);
     wait_gather_depth(d, depth);
 }
@@ -1066,8 +1066,8 @@ void Field<T>::gather_depth(Direction d, int depth) const {
  * @param d Direction
  * @param p Parity
  */
-template <typename T>
-dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
+template <typename T, typename BC>
+dir_mask_t Field<T, BC>::pack_buffers(Direction d, Parity p) const {
 
     gather_status_t gather_status = check_communication(d, p);
     if (gather_status == gather_status_t::DONE) {
@@ -1092,8 +1092,8 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
-template <typename T>
-dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
+template <typename T, typename BC>
+dir_mask_t Field<T, BC>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
 
     gather_status_t gather_status = check_communication(d, p);
     if (gather_status == gather_status_t::DONE) {
@@ -1126,8 +1126,8 @@ dir_mask_t Field<T>::pack_buffers(Direction d, Parity p, gpuStream_t &stream) co
  * @param d
  * @param p
  */
-template <typename T>
-void Field<T>::unpack_buffers(Direction d, Parity p) const {
+template <typename T, typename BC>
+void Field<T, BC>::unpack_buffers(Direction d, Parity p) const {
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
 
@@ -1151,8 +1151,8 @@ void Field<T>::unpack_buffers(Direction d, Parity p) const {
     }
 }
 
-template <typename T>
-void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
+template <typename T, typename BC>
+void Field<T, BC>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const {
     const lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     const lattice_struct::comm_node_struct &from_node = ci.from_node;
 
@@ -1189,10 +1189,10 @@ void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const 
 
 /// Gather a list of elements to a single node
 /// coord_list must be same on all nodes, buffer is needed only on "root"
-template <typename T>
-void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
-                                             const std::vector<CoordinateVector> &coord_list,
-                                             int root) const {
+template <typename T, typename BC>
+void Field<T, BC>::field_struct::gather_elements(T *RESTRICT buffer,
+                                                 const std::vector<CoordinateVector> &coord_list,
+                                                 int root) const {
 
     assert_all_ranks_present();
 
@@ -1268,10 +1268,10 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
 /// Send elements from a single node to a list of coordinates
 /// coord_list must be the same on all nodes, but buffer is needed only on "root"!
 
-template <typename T>
-void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
-                                              const std::vector<CoordinateVector> &coord_list,
-                                              int root) {
+template <typename T, typename BC>
+void Field<T, BC>::field_struct::scatter_elements(T *RESTRICT buffer,
+                                                  const std::vector<CoordinateVector> &coord_list,
+                                                  int root) {
     assert_all_ranks_present();
 
     std::vector<unsigned> index_list;
@@ -1345,9 +1345,9 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
     // MPI_Barrier(lattice.mpi_comm_lat);
 }
 
-template <typename T>
-void Field<T>::set_elements(const std::vector<T> &elements,
-                            const std::vector<CoordinateVector> &coord_list) {
+template <typename T, typename BC>
+void Field<T, BC>::set_elements(const std::vector<T> &elements,
+                                const std::vector<CoordinateVector> &coord_list) {
 
     assert_all_ranks_present();
     assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
@@ -1367,9 +1367,9 @@ void Field<T>::set_elements(const std::vector<T> &elements,
 
 
 /// Get a list of elements and store them into a vector
-template <typename T>
-std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord_list,
-                                      bool bcast) const {
+template <typename T, typename BC>
+std::vector<T> Field<T, BC>::get_elements(const std::vector<CoordinateVector> &coord_list,
+                                          bool bcast) const {
     assert_all_ranks_present();
 
     std::vector<T> res;
@@ -1385,9 +1385,9 @@ std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord
 
 
 /// Get a subvolume of the field elements to all nodes
-template <typename T>
-std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
-                                       bool bcast) const {
+template <typename T, typename BC>
+std::vector<T> Field<T, BC>::get_subvolume(const CoordinateVector &cmin,
+                                           const CoordinateVector &cmax, bool bcast) const {
 
     assert_all_ranks_present();
     size_t vol = 1;
@@ -1405,9 +1405,9 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     return get_elements(clist, bcast);
 }
 
-template <typename T>
+template <typename T, typename BC>
 std::pair<CoordinateVector, CoordinateVector>
-Field<T>::get_range_from_slice(const CoordinateVector &slice) const {
+Field<T, BC>::get_range_from_slice(const CoordinateVector &slice) const {
 
     CoordinateVector cmin, cmax;
     foralldir (d) {
@@ -1422,8 +1422,8 @@ Field<T>::get_range_from_slice(const CoordinateVector &slice) const {
 }
 
 /// Get a slice (subvolume)
-template <typename T>
-std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
+template <typename T, typename BC>
+std::vector<T> Field<T, BC>::get_slice(const CoordinateVector &c, bool bcast) const {
 
     assert_all_ranks_present();
     auto [cmin, cmax] = get_range_from_slice(c);
@@ -1435,8 +1435,8 @@ std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const 
 /// Copy the local (mpi process) data to a "logical array"
 /// on gpu code, copies to host
 
-template <typename T>
-void Field<T>::copy_local_data(std::vector<T> &buffer) const {
+template <typename T, typename BC>
+void Field<T, BC>::copy_local_data(std::vector<T> &buffer) const {
 
     // copy to local variables to avoid lattice ptr
     CoordinateVector nmin = lattice->mynode.min;
@@ -1468,8 +1468,8 @@ void Field<T>::copy_local_data(std::vector<T> &buffer) const {
 ////////////////////////////////////////////////////////////////////////////////////
 /// set the local data from an array
 
-template <typename T>
-void Field<T>::set_local_data(const std::vector<T> &buffer) {
+template <typename T, typename BC>
+void Field<T, BC>::set_local_data(const std::vector<T> &buffer) {
 
     // copy to local variables to avoid lattice ptr
     CoordinateVector nmin = lattice->mynode.min;
@@ -1503,8 +1503,8 @@ void Field<T>::set_local_data(const std::vector<T> &buffer) {
 ////////////////////////////////////////////////////////////////////////////////////
 /// Copy local data with halo - useful for visualization
 
-template <typename T>
-inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &dest,
+template <typename T, typename BC>
+inline void collect_field_halo_data_(T *data, const Field<T, BC> &src, Field<T, BC> &dest,
                                      const Vector<NDIM, int> &dirs, int ndir) {
 
 
@@ -1563,8 +1563,8 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
+template <typename T, typename BC>
+void Field<T, BC>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 
     assert_all_ranks_present();
 
@@ -1603,13 +1603,13 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 
     // collect nn-halos
 
-    Field<T> corners = 0;
+    Field<T, BC> corners = 0;
 #if NDIM > 1
-    Field<T> corner2 = 0;
+    Field<T, BC> corner2 = 0;
 #if NDIM > 2
-    Field<T> corner3 = 0;
+    Field<T, BC> corner3 = 0;
 #if NDIM > 3
-    Field<T> corner4 = 0;
+    Field<T, BC> corner4 = 0;
 #endif
 #endif
 #endif
@@ -1650,8 +1650,8 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 
-template <typename T>
-void Field<T>::block_from(Field<T> &orig) {
+template <typename T, typename BC>
+void Field<T, BC>::block_from(Field<T, BC> &orig) {
     assert(orig.is_initialized(ALL) && "block_from()-method field is not initialized");
 
     assert_all_ranks_present();
@@ -1713,8 +1713,8 @@ void Field<T>::block_from(Field<T> &orig) {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 
-template <typename T>
-void Field<T>::unblock_to(Field<T> &target) const {
+template <typename T, typename BC>
+void Field<T, BC>::unblock_to(Field<T, BC> &target) const {
     assert(this->is_initialized(ALL) && "unblock_to()-method field is not initialized");
 
     assert_all_ranks_present();
@@ -1773,8 +1773,8 @@ void Field<T>::unblock_to(Field<T> &target) const {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-void Field<T>::block_to_current_lattice() {
+template <typename T, typename BC>
+void Field<T, BC>::block_to_current_lattice() {
 
     assert_all_ranks_present();
 

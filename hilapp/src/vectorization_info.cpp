@@ -263,8 +263,8 @@ vectorization_info TopLevelVisitor::inspect_field_type(Expr *fE) {
     assert(fspec != nullptr);
 
     const TemplateArgumentList &tal = fspec->getTemplateArgs();
-    // Field should have only 1 template argument (for now), and should be of type
-    assert(tal.size() == 1);
+    // Field<T, BC>: the element type T is the first template argument
+    assert(tal.size() >= 1);
 
     vectorization_info einfo;
 

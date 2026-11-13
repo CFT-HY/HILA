@@ -283,8 +283,8 @@ class Reduction {
 // #else
 // // This for not-gpu branch
 
-template <typename T>
-T Field<T>::sum(Parity par, bool allreduce) const {
+template <typename T, typename BC>
+T Field<T, BC>::sum(Parity par, bool allreduce) const {
 
     Reduction<T> result;
     result.allreduce(allreduce);
@@ -293,8 +293,8 @@ T Field<T>::sum(Parity par, bool allreduce) const {
     return result.value();
 }
 
-template <typename T>
-T Field<T>::product(Parity par, bool allreduce) const {
+template <typename T, typename BC>
+T Field<T, BC>::product(Parity par, bool allreduce) const {
     static_assert(std::is_arithmetic<T>::value,
                   ".product() reduction only for integer or floating point types");
     Reduction<T> result;
@@ -317,8 +317,8 @@ T Field<T>::product(Parity par, bool allreduce) const {
 #include "backend_gpu/gpu_minmax.h"
 #endif
 
-template <typename T>
-T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
+template <typename T, typename BC>
+T Field<T, BC>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     static_assert(std::is_same<T, int>::value || std::is_same<T, long>::value ||
                       std::is_same<T, float>::value || std::is_same<T, double>::value ||
@@ -337,7 +337,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
         val = gpu_minmax(is_min, ALL, loc);
     } else {
         const T fill = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::lowest();
-        Field<T> masked;
+        Field<T, BC> masked;
         onsites (ALL) {
             if (X.parity() == par)
                 masked[X] = (*this)[X];
@@ -409,41 +409,41 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
 
 /// Find minimum value from Field
-template <typename T>
-T Field<T>::min(Parity par) const {
+template <typename T, typename BC>
+T Field<T, BC>::min(Parity par) const {
     CoordinateVector loc;
     return minmax(true, par, loc);
 }
 
 /// Find minimum value and location from Field
-template <typename T>
-T Field<T>::min(CoordinateVector &loc) const {
+template <typename T, typename BC>
+T Field<T, BC>::min(CoordinateVector &loc) const {
     return minmax(true, ALL, loc);
 }
 
 /// Find minimum value and location from Field
-template <typename T>
-T Field<T>::min(Parity par, CoordinateVector &loc) const {
+template <typename T, typename BC>
+T Field<T, BC>::min(Parity par, CoordinateVector &loc) const {
     return minmax(true, par, loc);
 }
 
 
 /// Find maximum value from Field
-template <typename T>
-T Field<T>::max(Parity par) const {
+template <typename T, typename BC>
+T Field<T, BC>::max(Parity par) const {
     CoordinateVector loc;
     return minmax(false, par, loc);
 }
 
 /// Find maximum value and location from Field
-template <typename T>
-T Field<T>::max(CoordinateVector &loc) const {
+template <typename T, typename BC>
+T Field<T, BC>::max(CoordinateVector &loc) const {
     return minmax(false, ALL, loc);
 }
 
 /// Find maximum value and location from Field
-template <typename T>
-T Field<T>::max(Parity par, CoordinateVector &loc) const {
+template <typename T, typename BC>
+T Field<T, BC>::max(Parity par, CoordinateVector &loc) const {
     return minmax(false, par, loc);
 }
 

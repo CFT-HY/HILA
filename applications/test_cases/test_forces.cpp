@@ -31,13 +31,8 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         sun g12 = h * g1;
 
         Field<typename dirac::vector_type> psi, chi, tmp, tmp2;
-#if NDIM > 3
-        psi.set_boundary_condition(e_t, hila::bc::ANTIPERIODIC);
-        psi.set_boundary_condition(-e_t, hila::bc::ANTIPERIODIC);
-#endif
-        chi.copy_boundary_condition(psi);
-        tmp.copy_boundary_condition(psi);
-        tmp2.copy_boundary_condition(psi);
+        // antiperiodic b.c. in t is a part of the Field type: it must be the default b.c. of
+        // dirac::vector_type (hila::default_boundary_condition), see boundary_condition.h
 
         onsites(D.par) {
             psi[X].gaussian_random();

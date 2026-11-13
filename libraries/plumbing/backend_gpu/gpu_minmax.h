@@ -68,8 +68,8 @@ gpucub::KeyValuePair<keyvalueindexT, T> gpu_minmax_argreduce_range(bool is_min, 
     return result;
 }
 
-template <typename T>
-T Field<T>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
+template <typename T, typename BC>
+T Field<T, BC>::gpu_minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
 
     const lattice_struct &mylat = fs->mylattice.ref();

@@ -243,12 +243,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                deep_dir_string(d, loopBuf, true) + ", " + std::to_string(d.deep_k) + ")";
     };
 
-    // expression for the index of the neighbour of fieldname to direction dirname
+    // expression for the index of the neighbour of field l to direction dirname
     bool special_bc = is_macro_defined("SPECIAL_BOUNDARY_CONDITIONS");
-    auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
+    auto nb_index = [&](const field_info &l, const std::string &dirname) -> std::string {
+        const std::string &fieldname = l.new_name;
         if (rows_loop) {
-            // field neighbour arrays exist only for special boundary conditions
-            if (special_bc)
+            // field neighbour arrays differ from the lattice ones only for non-periodic
+            // boundary conditions, which is known from the type Field<T, BC>
+            bool periodic = l.nameExpr != nullptr && field_type_is_periodic(l.nameExpr->getType());
+            if (special_bc && !periodic)
                 return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
                        dirname + "], HILA_nb_[" + dirname + "], " + looping_var + ")";
             else
@@ -346,7 +349,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                              << ");\n";
                     } else {
                         // std neighbour accessor for scalars
-                        code << ".get_value_at(" << nb_index(l.new_name, dirname) << ");\n";
+                        code << ".get_value_at(" << nb_index(l, dirname) << ");\n";
                     }
 
                     // and replace references in loop body
@@ -377,9 +380,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                             replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at_nb_site(" +
                                                                dirname + ", " + looping_var + ")");
                         } else {
-                            replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at(" +
-                                                               nb_index(l.new_name, dirname) +
-                                                               ")");
+                            replace_field_ref(loopBuf, ref,
+                                              l.new_name + ".get_value_at(" + nb_index(l, dirname) +
+                                                  ")");
                         }
                     }
                 }

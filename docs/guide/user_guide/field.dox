@@ -523,6 +523,70 @@ result in slabs along the highest kept direction; the writers write each slab
 directly, so rank 0 holds only one slab at a time.  `get_projection()` returns the
 whole result on rank 0.
 
+# Boundary conditions {#boundary_conditions_guide}
+
+The boundary condition (b.c.) of a Field is a part of its type, given by the second
+template argument: `Field<T, BC>`.  If it is omitted, `Field<T>` has the default b.c. of the
+element type `T`, which is periodic unless `T` says otherwise:
+~~~cpp
+    Field<double> a;                                     // periodic
+    Field<double, hila::antiperiodic<e_t>> b;            // antiperiodic in t
+    Field<Complex<double>, hila::antiperiodic<e_x, e_y>> c;
+
+    template <typename T>
+    using APField = Field<T, hila::antiperiodic<e_t>>;   // alias for convenience
+~~~
+
+The default b.c. of an element type is set either in the type itself, or by specializing the
+trait `hila::default_boundary_condition` (for types which cannot be modified).  The
+specialization must come before the first use of `Field<T>`:
+~~~cpp
+    struct my_fermion {
+        ...
+        using default_boundary_condition = hila::antiperiodic<e_t>;
+    };
+
+    template <>
+    struct hila::default_boundary_condition<Wilson_vector<3, double>> {
+        using type = hila::antiperiodic<e_t>;
+    };
+
+    Field<my_fermion> psi;      // antiperiodic in t, also all temporaries Field<my_fermion>
+~~~
+
+Because the b.c. is a part of the type, it is carried automatically in copies, return values
+and temporaries.  The rules are:
+- Neighbour access `f[X + d]` uses the b.c. of `f`.  In a loop each Field is read with its
+  own b.c., e.g. in `chi[X] = U[d][X] * psi[X + d]`.
+- Copy and move construction keep the b.c.  Construction from a Field with a different b.c.
+  must be explicit, `Field<double> p(ap_field);`, and copies only the values.
+- Assignment `a = b` and `a += b` etc. between different b.c.s copy only the values: `a` keeps
+  its own b.c.
+- Results of Field arithmetic (`a + b`, `a * b`, ...): if the b.c.s are equal, the result has
+  the same b.c.; if one of them is periodic, the result has the other b.c.  Two different
+  non-periodic b.c.s are a compile error.  Functions of one Field (`exp(f)`, `f.conj()`,
+  `f.real()`, ...) keep the b.c.
+- Generic functions written for `Field<T>` accept Fields with the default b.c. of `T`.
+  To accept any b.c., write them as `template <typename T, typename BC> ... Field<T, BC>`.
+- FFT is possible only for periodic Fields (compile-time check).
+
+Available b.c. types (see `boundary_condition.h`):
+- `hila::periodic`
+- `hila::antiperiodic<dirs...>`, e.g. `hila::antiperiodic<e_t>`: antiperiodic in the listed
+  directions, periodic in others
+
+A b.c. type is an empty struct with static members `is_periodic`, `kind(Direction)` (returns
+`hila::bc::PERIODIC` or `hila::bc::ANTIPERIODIC` for the direction) and `name()`.  Query the
+b.c. of a Field with `Field<T, BC>::get_boundary_condition(dir)` or
+`Field<T, BC>::boundary_condition_type`.
+
+Non-periodic b.c. requires that `SPECIAL_BOUNDARY_CONDITIONS` is defined (e.g. in `APP_OPTS`
+in the Makefile).  It is not implemented in vectorized (AVX) builds for vectorizable element
+types; both cases give a compile-time error.
+
+The earlier run-time methods `set_boundary_condition()` and `copy_boundary_condition()` are
+removed.
+
 # Shift and reflect operators {#shift_and_reflect}
 
 Field::shift operations allow shifting all elements by a certain displacement vector v. Even and Odd elements cannot be shifted with Field::shift method

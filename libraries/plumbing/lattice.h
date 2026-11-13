@@ -15,6 +15,7 @@
 #include "plumbing/timing.h"
 #include "plumbing/fft_structs.h"
 #include "plumbing/site_layout.h"
+#include "plumbing/boundary_condition.h"
 
 #if !defined(EVEN_SITES_FIRST) && (defined(GPU_OVERLAP_COMM) || defined(SUBNODE_LAYOUT))
 #error "EVEN_SITES_FIRST=0 is not available with GPU_OVERLAP_COMM or vectorized targets"
@@ -50,23 +51,10 @@ constexpr unsigned number_of_subnodes = VECTOR_SIZE / sizeof(float);
 
 
 namespace hila {
-/// list of field boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
-enum class bc { PERIODIC, ANTIPERIODIC, DIRICHLET };
-
 // Struct to pass the iteration ranges for loop traversal
 struct iter_range_t {
     unsigned min[2], max[2];
 };
-
-/// False if we have b.c. which does not require communication
-inline bool bc_need_communication(hila::bc bc) {
-    if (bc == hila::bc::DIRICHLET) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
 } // namespace hila
 
 void test_std_gathers();

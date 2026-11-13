@@ -200,11 +200,15 @@ int main(int argc, char **argv) {
         s2[ALL] = s1[X + Direction(0)];
         moved_element = s2.get_element(coord1);
         assert(moved_element == 1 && "moved down");
+    }
+    {
+        // Now try antiperiodic boundaries: the b.c. is a part of the Field type
+        Field<double, hila::antiperiodic<e_x>> s1, s2;
+        CoordinateVector coord1 = 0;
+        CoordinateVector coord2 = 0;
+        coord1[0] = (nd[0] - 1) % nd[0];
+        double moved_element;
 
-        s1.set_boundary_condition(Direction(0), hila::bc::ANTIPERIODIC);
-        s2.set_boundary_condition(Direction(0), hila::bc::ANTIPERIODIC);
-
-        // Now try antiperiodic boundaries
         s1 = 0;
         s2 = 0;
         s1.set_element(1, coord1);

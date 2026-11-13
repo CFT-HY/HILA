@@ -9,6 +9,11 @@
 #include <iostream>
 #include <string>
 
+/// The class template hila::default_boundary_condition<T>, which gives the default
+/// boundary condition of Field<T>.  Its explicit specializations (for user types) must
+/// be visible where Field specializations are inserted, like the types themselves.
+static ClassTemplateDecl *default_bc_template = nullptr;
+
 /////////
 /// Implementation of most toplevelvisitor methods
 /////////
@@ -1563,8 +1568,9 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
         count++;
         auto &args = spec->getTemplateArgs();
 
-        if (args.size() != 1) {
-            llvm::errs() << " *** Fatal: More than one type arg for Field<>\n";
+        // Field<T, BC>: element type T and boundary condition type BC
+        if (args.size() < 1 || args.size() > 2) {
+            llvm::errs() << " *** Fatal: Field<> should have 1 or 2 template arguments\n";
             exit(1);
         }
         if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
@@ -1669,20 +1675,18 @@ bool TopLevelVisitor::check_field_ref_list() {
 
         field_info lfv;
         lfv.old_name = get_stmt_str(nameExpr);
-        lfv.type_template = get_expr_type(nameExpr);
+        // all template arguments, Field<T, BC>
+        lfv.type_template =
+            nameExpr->getType().getCanonicalType().getUnqualifiedType().getAsString(PP_full);
         if (lfv.type_template.find("Field", 0) != 0) {
             reportDiag(DiagnosticsEngine::Level::Error, nameExpr->getSourceRange().getBegin(),
                        "confused: type of Field expression?");
             no_errors = false;
         }
-        lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T>
+        lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T, BC>
 
-        // get also the fully canonical Field<T>  type.
-        lfv.element_type =
-            nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
-        int a = lfv.element_type.find('<') + 1;
-        int b = lfv.element_type.rfind('>') - a;
-        lfv.element_type = lfv.element_type.substr(a, b);
+        // element type T of Field<T, BC>, from the template argument
+        lfv.element_type = field_element_type(nameExpr->getType(), PP);
 
         lfv.nameExpr = nameExpr; // store the first nameExpr to this field
 
@@ -2844,7 +2848,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // FInally produce the function return type and full name + possible templ. args.
 
     // put right return type and function name
-    funcBuf.insert(0, f->getQualifiedNameAsString() + template_args, true, true);
+    funcBuf.insert(0, qualified_name(f) + template_args, true, true);
     if (!is_special) {
         // Declarations with a trailing return type behave weirdly, they have empty
         // ReturnTypeSourceRange, but the getDeclaredReturnType is the explicit return
@@ -2859,11 +2863,11 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
             // Normal case, just add the declared return type.
             // fully qualified: the specialization may be outside the namespace where the
             // type names are visible
-            funcBuf.insert(0,
-                           TypeName::getFullyQualifiedName(f->getDeclaredReturnType(), *Context,
-                                                           PP) +
-                               " ",
-                           true, true);
+            funcBuf.insert(
+                0,
+                TypeName::getFullyQualifiedName(f->getDeclaredReturnType(), *Context, PP_full) +
+                    " ",
+                true, true);
         }
     }
 
@@ -2990,6 +2994,9 @@ bool TopLevelVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
         if (D->getNameAsString() == "Field") {
             handle_field_specializations(D);
+        }
+        if (D->getQualifiedNameAsString() == "hila::default_boundary_condition") {
+            default_bc_template = D;
         }
         // global.in_class_template = false;
 
@@ -3188,10 +3195,91 @@ bool TopLevelVisitor::VisitType(Type *T) {
 ///
 /////////////////////////////////////////////////////////////////////////////////
 
-/// Namespaces enclosing declaration D, outermost first
-static std::vector<const NamespaceDecl *> enclosing_namespaces(const Decl *D) {
+/// Explicit specialization hila::default_boundary_condition<t> located after ip, or nullptr
+static const RecordDecl *default_bc_specialization_after(QualType t, SourceLocation ip,
+                                                         ASTContext *Context,
+                                                         SourceManager &srcMgr) {
+    if (default_bc_template == nullptr)
+        return nullptr;
+    for (auto *spec : default_bc_template->specializations()) {
+        if (!spec->isExplicitSpecialization())
+            continue;
+        const TemplateArgumentList &args = spec->getTemplateArgs();
+        if (args.size() < 1 || args.get(0).getKind() != TemplateArgument::Type)
+            continue;
+        if (Context->hasSameType(args.get(0).getAsType(), t) &&
+            srcMgr.isBeforeInTranslationUnit(ip, spec->getSourceRange().getBegin()))
+            return spec;
+    }
+    return nullptr;
+}
+
+/// True if location sl is inside a "#ifdef HILAPP" (or "#if defined(HILAPP)") block, i.e. the
+/// code is seen only by hilapp and removed when the output is compiled.  Scans the
+/// preprocessor conditionals of the file up to sl.
+static bool is_in_hilapp_only_block(SourceLocation sl, SourceManager &SM) {
+    sl = SM.getExpansionLoc(sl);
+    if (sl.isInvalid())
+        return false;
+    bool invalid = false;
+    llvm::StringRef buf = SM.getBufferData(SM.getFileID(sl), &invalid);
+    if (invalid)
+        return false;
+    const std::string text = buf.str();
+    const size_t end = SM.getFileOffset(sl);
+
+    auto starts = [](const std::string &s, const char *w) { return s.rfind(w, 0) == 0; };
+    auto trim = [](std::string s) {
+        size_t a = s.find_first_not_of(" \t");
+        if (a == std::string::npos)
+            return std::string();
+        size_t b = s.find_last_not_of(" \t\r");
+        return s.substr(a, b - a + 1);
+    };
+
+    std::vector<bool> open; // stack of open conditionals: true if the HILAPP-only branch
+    size_t pos = 0;
+    while (pos < end && pos < text.size()) {
+        size_t eol = text.find('\n', pos);
+        if (eol == std::string::npos)
+            eol = text.size();
+        std::string line = trim(text.substr(pos, eol - pos));
+        pos = eol + 1;
+        if (line.empty() || line[0] != '#')
+            continue;
+        std::string d = trim(line.substr(1));
+        if (starts(d, "ifdef")) {
+            std::string m = trim(d.substr(5));
+            open.push_back(m == "HILAPP" || starts(m, "HILAPP ") || starts(m, "HILAPP/"));
+        } else if (starts(d, "ifndef")) {
+            open.push_back(false);
+        } else if (starts(d, "if")) {
+            std::string c = trim(d.substr(2));
+            bool h = (starts(c, "defined(HILAPP)") || starts(c, "defined HILAPP")) &&
+                     c.find("||") == std::string::npos;
+            open.push_back(h);
+        } else if (starts(d, "else") || starts(d, "elif")) {
+            if (!open.empty())
+                open.back() = false;
+        } else if (starts(d, "endif")) {
+            if (!open.empty())
+                open.pop_back();
+        }
+    }
+    for (bool b : open)
+        if (b)
+            return true;
+    return false;
+}
+
+/// Namespaces enclosing declaration D, outermost first.  If lexical, the namespaces where
+/// D is written: e.g. "template <> struct hila::X<int> {..};" written in the global scope
+/// is semantically in hila but lexically in the global scope
+static std::vector<const NamespaceDecl *> enclosing_namespaces(const Decl *D,
+                                                               bool lexical = false) {
     std::vector<const NamespaceDecl *> ns;
-    for (const DeclContext *DC = D->getDeclContext(); DC != nullptr; DC = DC->getParent()) {
+    for (const DeclContext *DC = lexical ? D->getLexicalDeclContext() : D->getDeclContext();
+         DC != nullptr; DC = lexical ? DC->getLexicalParent() : DC->getParent()) {
         if (auto *NSD = dyn_cast<NamespaceDecl>(DC))
             ns.insert(ns.begin(), NSD);
     }
@@ -3235,8 +3323,14 @@ TopLevelVisitor::spec_insertion_point(std::string &pre, std::string &post,
             }
 
             // now parent is the outermost class or function, insertion after the end of
-            // it
-            sl = parent->getEndLoc();
+            // it.  For a class template specialization use the definition of the template:
+            // the source range of the specialization can come from a declaration without
+            // body (e.g. a forward declaration, if the specialization is first named in a
+            // template defined before the class)
+            const CXXRecordDecl *pdef = parent;
+            if (const CXXRecordDecl *pattern = parent->getTemplateInstantiationPattern())
+                pdef = pattern;
+            sl = pdef->getEndLoc();
 
             // skip end chars of definition - sl points to }
             bool error = true;
@@ -3259,7 +3353,8 @@ TopLevelVisitor::spec_insertion_point(std::string &pre, std::string &post,
             if (error) {
 
                 llvm::errs() << "hilapp internal error: confusion in finding end loc of class\n";
-                llvm::errs() << " on " << sl.printToString(srcMgr) << '\n';
+                llvm::errs() << " on " << sl.printToString(srcMgr) << " for function "
+                             << f->getQualifiedNameAsString() << '\n';
                 exit(1);
             }
 
@@ -3299,9 +3394,18 @@ TopLevelVisitor::spec_insertion_point(std::string &pre, std::string &post,
         ip = sl;
     }
 
-    // Check if the
+    // Check if the template argument types are declared after the insertion point.
+    // Not for templates which are seen only by hilapp (inside #ifdef HILAPP, e.g.
+    // ensure_unary_minus_is_loop_function()): their specializations must stay in the
+    // #ifdef HILAPP block, which is removed from the compiled code
+    const FunctionDecl *pattern = f->getTemplateInstantiationPattern();
+    if (pattern == nullptr)
+        pattern = f;
+    const bool hilapp_only = is_in_hilapp_only_block(pattern->getBeginLoc(), srcMgr);
 
     for (const TemplateArgument *tap : typeargs) {
+        if (hilapp_only)
+            break;
         // llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() <<
         // '\n';
         const Type *tp = tap->getAsType().getTypePtrOrNull();
@@ -3318,6 +3422,22 @@ TopLevelVisitor::spec_insertion_point(std::string &pre, std::string &post,
                 moved_after = rd;
             }
         }
+        if (tp) {
+            // The default boundary condition of Field<type> may be given later by an
+            // explicit specialization of hila::default_boundary_condition<type>.  Move the
+            // insertion point after it.  If the type is Field<T, BC>, check also T.
+            QualType qt = tap->getAsType();
+            std::vector<QualType> check = {qt};
+            if (auto *fspec = field_specialization(qt))
+                check.push_back(fspec->getTemplateArgs().get(0).getAsType());
+            for (QualType ct : check) {
+                if (const RecordDecl *bcs =
+                        default_bc_specialization_after(ct, ip, Context, srcMgr)) {
+                    ip = getRangeWithSemicolon(bcs->getSourceRange()).getEnd().getLocWithOffset(1);
+                    moved_after = bcs;
+                }
+            }
+        }
     }
     // skip to end of line -- is fine here.  If moved after a type, the next line may be
     // another declaration (or end of namespace), insert right after the type instead
@@ -3329,7 +3449,8 @@ TopLevelVisitor::spec_insertion_point(std::string &pre, std::string &post,
         // insertion point is in the namespace of the type.  Close the namespaces of the type
         // down to the common ones, open those of the function, and reverse after the
         // specialization.
-        auto ns_ip = enclosing_namespaces(moved_after);
+        // the namespaces open at the insertion point: lexical
+        auto ns_ip = enclosing_namespaces(moved_after, true);
         auto ns_f = enclosing_namespaces(f->getCanonicalDecl());
         size_t common = 0;
         while (common < ns_ip.size() && common < ns_f.size() &&
@@ -3420,7 +3541,7 @@ void TopLevelVisitor::make_mapping_lists(const TemplateParameterList *tpl,
             *argset += ", ";
         switch (tal.get(i).getKind()) {
         case TemplateArgument::ArgKind::Type:
-            arg.push_back(tal.get(i).getAsType().getAsString(PP));
+            arg.push_back(tal.get(i).getAsType().getAsString(PP_full));
             par.push_back(tpl->getParam(i)->getNameAsString());
             if (argset)
                 *argset += arg.back();       // write just added arg
@@ -3434,6 +3555,11 @@ void TopLevelVisitor::make_mapping_lists(const TemplateParameterList *tpl,
 #else
             arg.push_back(llvm::toString(tal.get(i).getAsIntegral(), 10));
 #endif
+            // enum-valued argument (e.g. Direction): an int does not match the template
+            // parameter, cast it
+            if (tal.get(i).getIntegralType()->isEnumeralType())
+                arg.back() =
+                    "(" + tal.get(i).getIntegralType().getAsString(PP_full) + ")" + arg.back();
 
             par.push_back(tpl->getParam(i)->getNameAsString());
             if (argset)

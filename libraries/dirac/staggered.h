@@ -47,8 +47,7 @@ void dirac_staggered_hop(const Field<mtype> *gauge, const Field<vtype> &v_in,
                          Field<vtype> &v_out, Field<double> (&staggered_eta)[NDIM],
                          Parity par, int sign) {
     Field<vtype>(&vtemp)[NDIM] = staggered_dirac_temp<vtype>;
-    foralldir(dir) {
-        vtemp[dir].copy_boundary_condition(v_in);
+    foralldir (dir) {
         v_in.start_gather(dir, par);
     }
 
@@ -159,7 +158,6 @@ template <typename matrix> class dirac_staggered {
 template <typename vector, typename matrix>
 Field<vector> operator*(dirac_staggered<matrix> D, const Field<vector> &in) {
     Field<vector> out;
-    out.copy_boundary_condition(in);
     D.apply(in, out);
     return out;
 }
@@ -168,7 +166,6 @@ Field<vector> operator*(dirac_staggered<matrix> D, const Field<vector> &in) {
 template <typename vector, typename matrix>
 Field<vector> operator*(const Field<vector> &in, dirac_staggered<vector> D) {
     Field<vector> out;
-    out.copy_boundary_condition(in);
     D.dagger(in, out);
     return out;
 }
@@ -262,7 +259,6 @@ template <typename matrix> class dirac_staggered_evenodd {
                       Field<momtype> (&force)[NDIM], int sign) {
         Field<momtype> force2[NDIM];
         Field<vector_type> tmp;
-        tmp.copy_boundary_condition(chi);
 
         tmp[ALL] = 0;
         dirac_staggered_hop(gauge, chi, tmp, staggered_eta, ODD, -sign);

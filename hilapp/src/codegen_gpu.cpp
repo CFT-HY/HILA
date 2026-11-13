@@ -637,7 +637,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
         if (!l.is_written)
             kernel << "const ";
-        kernel << "field_storage" << l.type_template << " " << l.new_name;
+        kernel << "field_storage<" << l.element_type << " > " << l.new_name;
         kernel_launch += l.new_name + ".fs->payload";
         i++;
     }
@@ -1182,8 +1182,6 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Call setters
     for (field_info &l : field_info_list)
         if (l.is_written && !field_direct_write(l)) {
-            std::string type_name = l.type_template;
-            type_name.erase(0, 1).erase(type_name.end() - 1, type_name.end());
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
                    << ", _dev_field_alloc_size );\n";
         }

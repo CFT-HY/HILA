@@ -526,15 +526,15 @@ static std::string field_elem_type(const ParmVarDecl *P, const PrintingPolicy &P
     QualType t = P->getType().getNonReferenceType();
     std::string elem;
     if (!t->isDependentType()) {
-        // Field<elem>
-        std::string s = t.getCanonicalType().getUnqualifiedType().getAsString(PP);
-        elem = s.substr(field_type.size(), s.rfind('>') - field_type.size());
+        // Field<elem, BC>: the first template argument
+        elem = field_element_type(t, PP);
     } else {
         // template: take the template argument as written, through alias templates
         const TemplateSpecializationType *tst = t->getAs<TemplateSpecializationType>();
         while (tst && tst->isTypeAlias())
             tst = tst->getAliasedType()->getAs<TemplateSpecializationType>();
-        if (tst == nullptr || tst->template_arguments().size() != 1)
+        // Field<T> or Field<T, BC> as written
+        if (tst == nullptr || tst->template_arguments().size() < 1)
             return "";
         llvm::raw_string_ostream os(elem);
         tst->template_arguments()[0].print(PP, os, true);

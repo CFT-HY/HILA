@@ -17,6 +17,7 @@
 #include "plumbing/defs.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
+#include "plumbing/boundary_condition.h"
 #include "plumbing/field_storage.h"
 
 #include "plumbing/backend_vector/vector_types.h"
@@ -37,10 +38,12 @@
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
 
-template <typename T>
+/// Field<T, BC>: BC is the boundary condition type, see boundary_condition.h.
+/// By default it is the default b.c. of the element type T (usually hila::periodic)
+template <typename T, typename BC = hila::default_boundary_condition_t<T>>
 class Field;
 
-template <typename T>
+template <typename T, typename BC>
 void ensure_field_operators_exist();
 
 #include "plumbing/ensure_loop_functions.h"
@@ -68,7 +71,7 @@ void ensure_field_operators_exist();
  *
  * @tparam T Field content type
  */
-template <typename T>
+template <typename T, typename BC>
 class Field {
 
   public:
@@ -100,7 +103,6 @@ class Field {
         // neighbour pointers - because of boundary conditions, can be different for
         // diff. fields
         const unsigned *RESTRICT neighbours[NDIRS];
-        hila::bc boundary_condition[NDIRS];
 
         MPI_Request receive_request[3][NDIRS];
         MPI_Request send_request[3][NDIRS];
@@ -134,7 +136,7 @@ class Field {
 
 #ifdef FIELD_SHIFT_BUFFERING
         struct shift_buffer_struct {
-            Field<T> f;
+            Field<T, BC> f;
             CoordinateVector offset;
             Parity par;
         };
@@ -167,9 +169,19 @@ class Field {
             }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-            foralldir (dir) {
-                boundary_condition[dir] = hila::bc::PERIODIC;
-                boundary_condition[-dir] = hila::bc::PERIODIC;
+            // non-periodic b.c.: on-node wraparound neighbours point to the special boundary
+            // sites, which are filled in by the (negating etc.) local boundary copy
+            if constexpr (!BC::is_periodic) {
+                for (Direction d = (Direction)0; d < NDIRS; ++d) {
+                    if (BC::kind(d) != hila::bc::PERIODIC) {
+#if !defined(CUDA) && !defined(HIP)
+                        neighbours[d] = mylattice.ptr()->get_neighbour_array(d, BC::kind(d));
+#else
+                        payload.neighbours[d] =
+                            mylattice.ptr()->backend_lattice->d_neighb_special[d];
+#endif
+                    }
+                }
             }
 #endif
 
@@ -386,6 +398,21 @@ class Field {
                   "    using base_type = hila::arithmetic_type<T>;\n"
                   "    using argument_type = T;\n");
 
+#ifndef SPECIAL_BOUNDARY_CONDITIONS
+    static_assert(BC::is_periodic, "Fields with non-periodic boundary conditions require "
+                                   "SPECIAL_BOUNDARY_CONDITIONS to be defined (e.g. in APP_OPTS)");
+#endif
+    static_assert(BC::is_periodic || hila::has_unary_minus<T>::value,
+                  "antiperiodic boundary conditions possible only for types which implement "
+                  "unary minus (-) -operator and are not unsigned");
+#ifdef VECTORIZED
+    // the neighbour permutations of the vectorized layout do not implement non-periodic
+    // b.c. (wrong results also with the earlier runtime set_boundary_condition())
+    static_assert(BC::is_periodic || !hila::is_vectorizable_type<T>::value,
+                  "non-periodic boundary conditions are not implemented for vectorizable "
+                  "types in vectorized (AVX) builds");
+#endif
+
   public:
     /**
      * @brief Field::fs holds all of the field content in Field::field_struct.
@@ -463,11 +490,22 @@ class Field {
     /**
      * @internal
      * @brief Copy constructor form Field of type A to field of type F if the conversion is defined
+     * @details Implicit only if the boundary conditions are the same; conversion between
+     * different boundary conditions must be explicit: Field<T, BC> f(g);
      * @tparam A
      * @param other
      */
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
-    Field(const Field<A> &other) : Field() {
+    Field(const Field<A, BC> &other) : Field() {
+        assert(other.is_initialized(ALL) && "Initializer Field value not set");
+
+        (*this)[ALL] = other[X];
+    }
+
+    template <
+        typename A, typename B,
+        std::enable_if_t<std::is_convertible<A, T>::value && !std::is_same<B, BC>::value, int> = 0>
+    explicit Field(const Field<A, B> &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
@@ -514,7 +552,7 @@ class Field {
         // Because destructor is instantiated for all fields,
         // use this to put in a hook for generating call to this function
         // in preprocessing stage
-        ensure_field_operators_exist<T>();
+        ensure_field_operators_exist<T, BC>();
 #endif
     }
 
@@ -556,7 +594,7 @@ class Field {
         }
     }
 
-    void copy_from(const Field<T> &f) {
+    void copy_from(const Field<T, BC> &f) {
         check_alloc();
 
         fs->payload.copy_field(lattice, f.fs->payload);
@@ -567,7 +605,7 @@ class Field {
      * @brief elementary field copy op
      */
 
-    void copy(const Field<T> &f, Parity par = ALL) {
+    void copy(const Field<T, BC> &f, Parity par = ALL) {
         (*this)[par] = f[X];
     }
 
@@ -575,7 +613,7 @@ class Field {
      * @brief Copy field from neighbours
      */
 
-    void shift_from(const Field<T> &f, Direction d, Parity par = ALL) {
+    void shift_from(const Field<T, BC> &f, Direction d, Parity par = ALL) {
         (*this)[par] = f[X + d];
     }
 
@@ -670,7 +708,7 @@ class Field {
 
     void will_change() {
         if (fs->refcount > 1) {
-            Field<T> tmp{*this}; // this just sets the reference (increase refcount)
+            Field<T, BC> tmp{*this}; // this just sets the reference (increase refcount)
             clear();             // reset ref
             allocate();
             copy(tmp);
@@ -774,97 +812,41 @@ class Field {
      */
     bool boundary_need_to_communicate(const Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-
-        return hila::bc_need_communication(fs->boundary_condition[dir]) ||
-               !fs->mylattice->mynode.is_on_edge(dir);
+        return hila::bc_need_communication(BC::kind(dir)) || !fs->mylattice->mynode.is_on_edge(dir);
 #else
         return true;
 #endif
     }
 
+    /// The boundary condition type of the Field
+    using boundary_condition_type = BC;
 
     /**
-     * @brief Set the boundary condition in a given Direction (periodic or antiperiodic)
-     * @param dir Direction of boundary condition
-     * @param bc Field boundary condition
+     * @brief Get the boundary condition of the Field to direction dir
+     * @details The boundary condition is a compile-time property of the Field type,
+     * Field<T, BC>; see boundary_condition.h
      */
-    void set_boundary_condition(Direction dir, hila::bc bc) {
-
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-
-
-#ifdef HILAPP
-        // this section is just to generate loop function calls for unary-.  Will removed by hilapp
-        // from final code.  If type T does not have -, give error
-
-        static_assert(hila::has_unary_minus<T>::value,
-                      "BC possible only for types which implement unary "
-                      "minus (-) -operator and are not unsigned");
-
-        ensure_unary_minus_is_loop_function<T>();
-#endif
-
-        // TODO: This works as intended only for periodic/antiperiodic b.c.
-        check_alloc();
-        will_change();
-
-        lattice_struct *mylat = fs->mylattice.ptr();
-        fs->boundary_condition[dir] = bc;
-        fs->boundary_condition[-dir] = bc;
-#if !defined(CUDA) && !defined(HIP)
-        fs->neighbours[dir] = mylat->get_neighbour_array(dir, bc);
-        fs->neighbours[-dir] = mylat->get_neighbour_array(-dir, bc);
-#else
-        if (bc == hila::bc::PERIODIC) {
-            fs->payload.neighbours[dir] = mylat->backend_lattice->d_neighb[dir];
-            fs->payload.neighbours[-dir] = mylat->backend_lattice->d_neighb[-dir];
-        } else {
-            fs->payload.neighbours[dir] = mylat->backend_lattice->d_neighb_special[dir];
-            fs->payload.neighbours[-dir] = mylat->backend_lattice->d_neighb_special[-dir];
-        }
-#endif
-
-        // Make sure boundaries get refreshed
-        mark_changed(ALL);
-#else
-        assert(bc == hila::bc::PERIODIC &&
-               "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
-#endif
+    static constexpr hila::bc get_boundary_condition(Direction dir) {
+        return BC::kind(dir);
     }
 
-    /**
-     * @brief Get the boundary condition of the Field
-     * @param dir Boundary condition in certain direction
-     * @return hila::bc The boundary condition of the Field
-     */
-    hila::bc get_boundary_condition(Direction dir) const {
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
-        return fs->boundary_condition[dir];
-#else
-        return hila::bc::PERIODIC;
-#endif
+    void print_boundary_condition() const {
+        hila::out0 << " ( " << BC::name() << " )\n";
     }
 
-    void print_boundary_condition() {
-        check_alloc();
-        hila::out0 << " ( ";
-        for (int dir = 0; dir < NDIRS; dir++) {
-            hila::out0 << (int)fs->boundary_condition[dir] << " ";
-        }
-        hila::out0 << ")\n";
+    /// set_boundary_condition() and copy_boundary_condition() are removed: the boundary
+    /// condition is the template argument BC of Field<T, BC>
+    template <typename... A>
+    void set_boundary_condition(A &&...) {
+        static_assert(hila::bc_detail::always_false<A...>,
+                      "Field::set_boundary_condition() is removed: the boundary condition is "
+                      "now part of the Field type, e.g. Field<T, hila::antiperiodic<e_t>>");
     }
-
-    /**
-     * @brief Copy the boundary condition from another field
-     *
-     * @tparam A the type of the field which we are copying from
-     * @param rhs the ohter Field
-     */
-    template <typename A>
-    void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir (dir) {
-            set_boundary_condition(dir, rhs.get_boundary_condition(dir));
-        }
+    template <typename... A>
+    void copy_boundary_condition(A &&...) {
+        static_assert(hila::bc_detail::always_false<A...>,
+                      "Field::copy_boundary_condition() is removed: the boundary condition is "
+                      "now part of the Field type, e.g. Field<T, hila::antiperiodic<e_t>>");
     }
 
     // Overloading []
@@ -980,9 +962,9 @@ class Field {
      * \endcode
      *
      * @param rhs
-     * @return Field<T>& Assigned field
+     * @return Field<T, BC>& Assigned field
      */
-    Field<T> &operator=(const Field<T> &rhs) {
+    Field<T, BC> &operator=(const Field<T, BC> &rhs) {
 
 #if !defined(FIELD_COPY_ON_WRITE)
 
@@ -1021,12 +1003,12 @@ class Field {
      *
      * @tparam A Type of element to be assigned
      * @param rhs Field to assign from
-     * @return Field<T>& Assigned field
+     * @return Field<T, BC>& Assigned field
      */
-    template <typename A,
+    template <typename A, typename B,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
-    Field<T> &operator=(const Field<A> &rhs) {
+    Field<T, BC> &operator=(const Field<A, B> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
     }
@@ -1037,12 +1019,12 @@ class Field {
      *
      * @tparam A Type of element to be assigned
      * @param d element to assign to Field
-     * @return Field<T>& Assigned Field
+     * @return Field<T, BC>& Assigned Field
      */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
-    Field<T> &operator=(const A &d) {
+    Field<T, BC> &operator=(const A &d) {
         (*this)[ALL] = d;
         return *this;
     }
@@ -1052,9 +1034,9 @@ class Field {
      * @brief assignment of 0 - nullptr, zero field
      *
      * @param z nullptr
-     * @return Field<T>& Zero Field
+     * @return Field<T, BC>& Zero Field
      */
-    Field<T> &operator=(const std::nullptr_t &z) {
+    Field<T, BC> &operator=(const std::nullptr_t &z) {
         (*this)[ALL] = 0;
         return *this;
     }
@@ -1063,9 +1045,9 @@ class Field {
      * @brief Move Assignment
      *
      * @param rhs
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
-    Field<T> &operator=(Field<T> &&rhs) noexcept {
+    Field<T, BC> &operator=(Field<T, BC> &&rhs) noexcept {
         if (this != &rhs) {
             assert((fs == nullptr || (rhs.fs->mylattice.ptr() == fs->mylattice.ptr())) &&
                    "Field = Field assignment possible only if fields belong to the same lattice");
@@ -1100,11 +1082,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Field to sum
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
-    template <typename A,
+    template <typename A, typename B,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
-    Field<T> &operator+=(const Field<A> &rhs) {
+    Field<T, BC> &operator+=(const Field<A, B> &rhs) {
         (*this)[ALL] += rhs[X];
         return *this;
     }
@@ -1133,11 +1115,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Field to subtract
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
-    template <typename A,
+    template <typename A, typename B,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
-    Field<T> &operator-=(const Field<A> &rhs) {
+    Field<T, BC> &operator-=(const Field<A, B> &rhs) {
         (*this)[ALL] -= rhs[X];
         return *this;
     }
@@ -1166,11 +1148,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Field to compute product with
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
-    template <typename A,
+    template <typename A, typename B,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
-    Field<T> &operator*=(const Field<A> &rhs) {
+    Field<T, BC> &operator*=(const Field<A, B> &rhs) {
         (*this)[ALL] *= rhs[X];
         return *this;
     }
@@ -1199,11 +1181,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Field to divide with
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
-    template <typename A,
+    template <typename A, typename B,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
-    Field<T> &operator/=(const Field<A> &rhs) {
+    Field<T, BC> &operator/=(const Field<A, B> &rhs) {
         (*this)[ALL] /= rhs[X];
         return *this;
     }
@@ -1214,12 +1196,12 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to sum
-     * @return Field<T>&
+     * @return Field<T, BC>&
 
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
-    Field<T> &operator+=(const A &rhs) {
+    Field<T, BC> &operator+=(const A &rhs) {
         (*this)[ALL] += rhs;
         return *this;
     }
@@ -1230,11 +1212,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to subtract
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
-    Field<T> &operator-=(const A &rhs) {
+    Field<T, BC> &operator-=(const A &rhs) {
         (*this)[ALL] -= rhs;
         return *this;
     }
@@ -1245,11 +1227,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to multiply with
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
-    Field<T> &operator*=(const A &rhs) {
+    Field<T, BC> &operator*=(const A &rhs) {
         (*this)[ALL] *= rhs;
         return *this;
     }
@@ -1260,11 +1242,11 @@ class Field {
      *
      * @tparam A Type of r.h.s element
      * @param rhs Element to divide with
-     * @return Field<T>&
+     * @return Field<T, BC>&
      */
     template <typename A,
               std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
-    Field<T> &operator/=(const A &rhs) {
+    Field<T, BC> &operator/=(const A &rhs) {
         (*this)[ALL] /= rhs;
         return *this;
     }
@@ -1309,7 +1291,7 @@ class Field {
      * @param rhs Second (right) Field
      * @return Field<hila::type_plus<A, B>> Summed Field
      */
-    Field<T> operator+() const {
+    Field<T, BC> operator+() const {
         return *this;
     }
 
@@ -1353,8 +1335,8 @@ class Field {
      * @param rhs Second (right) Field
      * @return Field<hila::type_plus<A, B>> Subtracted Field
      */
-    Field<T> operator-() const {
-        Field<T> f;
+    Field<T, BC> operator-() const {
+        Field<T, BC> f;
         f[ALL] = -(*this)[X];
         return f;
     }
@@ -1367,16 +1349,18 @@ class Field {
      * @return true
      * @return false
      */
-    template <typename S>
-    bool operator==(const Field<S> &rhs) const {
+    template <typename S, typename B>
+    bool operator==(const Field<S, B> &rhs) const {
         double s = 0;
+        // novector: the comparison of vectorized elements gives a vector of booleans
+#pragma hila novector
         onsites (ALL)
             s += !((*this)[X] == rhs[X]);
         return (s == 0);
     }
 
-    template <typename S>
-    bool operator!=(const Field<S> &rhs) const {
+    template <typename S, typename B>
+    bool operator!=(const Field<S, B> &rhs) const {
         return !(*this == rhs);
     }
 
@@ -1416,10 +1400,10 @@ class Field {
     /**
      * @brief Returns field with all elements conjugated depending how conjugate is defined for type
      *
-     * @return Field<T>
+     * @return Field<T, BC>
      */
-    Field<T> conj() const {
-        Field<T> f;
+    Field<T, BC> conj() const {
+        Field<T, BC> f;
         f[ALL] = ::conj((*this)[X]);
         return f;
     }
@@ -1428,11 +1412,11 @@ class Field {
      * @brief Returns dagger or Hermitian conjugate of Field depending on how it is
      * defined for Field type T
      *
-     * @return Field<T>
+     * @return Field<T, BC>
      */
     template <typename R = T, typename A = decltype(::dagger(std::declval<R>()))>
-    Field<A> dagger() const {
-        Field<A> f;
+    Field<A, BC> dagger() const {
+        Field<A, BC> f;
         f[ALL] = ::dagger((*this)[X]);
         return f;
     }
@@ -1442,11 +1426,11 @@ class Field {
      *
      * @tparam R Field current type
      * @tparam A Field real part type
-     * @return Field<A>
+     * @return Field<A, BC>
      */
     template <typename R = T, typename A = decltype(::real(std::declval<R>()))>
-    Field<A> real() const {
-        Field<A> f;
+    Field<A, BC> real() const {
+        Field<A, BC> f;
         f[ALL] = ::real((*this)[X]);
         return f;
     }
@@ -1456,11 +1440,11 @@ class Field {
      *
      * @tparam R Field current type
      * @tparam A Field imaginary part type
-     * @return Field<A>
+     * @return Field<A, BC>
      */
     template <typename R = T, typename A = decltype(::imag(std::declval<R>()))>
-    Field<A> imag() const {
-        Field<A> f;
+    Field<A, BC> imag() const {
+        Field<A, BC> f;
         f[ALL] = ::imag((*this)[X]);
         return f;
     }
@@ -1507,19 +1491,19 @@ class Field {
      * @param v
      * @param par
      * @param r
-     * @return Field<T>& returns a reference to res
+     * @return Field<T, BC>& returns a reference to res
      */
-    Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
+    Field<T, BC> &shift(const CoordinateVector &v, Field<T, BC> &r, Parity par) const;
 
-    Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
+    Field<T, BC> &shift(const CoordinateVector &v, Field<T, BC> &r) const {
         return shift(v, r, ALL);
     }
 
-    Field<T> shift(const CoordinateVector &v) const;
+    Field<T, BC> shift(const CoordinateVector &v) const;
 
 #ifdef FIELD_SHIFT_BUFFERING
     void buffered_shift_offsets(const CoordinateVector &v, Parity par) const;
-    const Field<T> &do_buffered_shift(const CoordinateVector &v, Parity par) const;
+    const Field<T, BC> &do_buffered_shift(const CoordinateVector &v, Parity par) const;
     void clear_buffered_shifts() const;
 #endif
 
@@ -1716,24 +1700,27 @@ class Field {
 
 
     // Fourier transform declaration
-    Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
-    Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
+    Field<T, BC> FFT(fft_direction fdir = fft_direction::forward) const;
+    Field<T, BC> FFT(const CoordinateVector &dirs,
+                     fft_direction fdir = fft_direction::forward) const;
 
     // real Fourier transform of real fields, see FFT_real_field() in fft.h
-    Field<T> FFT_real(fft_direction fdir = fft_direction::forward) const;
-    Field<T> FFT_real(const CoordinateVector &dirs,
-                      fft_direction fdir = fft_direction::forward) const;
+    Field<T, BC> FFT_real(fft_direction fdir = fft_direction::forward) const;
+    Field<T, BC> FFT_real(const CoordinateVector &dirs,
+                          fft_direction fdir = fft_direction::forward) const;
 
-    Field<Complex<hila::arithmetic_type<T>>>
+    // explicit hila::periodic: the default b.c. would need Complex<arithmetic_type<T>> to be
+    // a valid type for all T
+    Field<Complex<hila::arithmetic_type<T>>, hila::periodic>
     FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
-    Field<hila::arithmetic_type<T>>
+    Field<hila::arithmetic_type<T>, hila::periodic>
     FFT_complex_to_real(fft_direction fdir = fft_direction::forward) const;
 
 
     // Reflect the field along all or 1 coordinate
-    Field<T> reflect() const;
-    Field<T> reflect(Direction dir) const;
-    Field<T> reflect(const CoordinateVector &dirs) const;
+    Field<T, BC> reflect() const;
+    Field<T, BC> reflect(Direction dir) const;
+    Field<T, BC> reflect(const CoordinateVector &dirs) const;
 
     // Writes the Field to disk
     void write(std::ofstream &outputfile, bool binary = true, int precision = 8) const;
@@ -1926,7 +1913,7 @@ class Field {
      * @brief Fill blocked lattice Field from parent lattice Field (see lattice.block())
      *
      * @details
-     * If Field<T> a belongs to original (parent) lattice and Field<T> belongs to blocked
+     * If Field<T, BC> a belongs to original (parent) lattice and Field<T, BC> belongs to blocked
      * lattice, the operation
      * @code{.cpp}
      * b.block_from(a);
@@ -1967,7 +1954,7 @@ class Field {
      * @endcode
      *
      */
-    void block_from(Field<T> &orig);
+    void block_from(Field<T, BC> &orig);
 
 
     /**
@@ -1983,7 +1970,7 @@ class Field {
      *
      * Leaves other sites of the argument Field unmodified.
      */
-    void unblock_to(Field<T> &target) const;
+    void unblock_to(Field<T, BC> &target) const;
 
     /**
      * @brief Return the lattice to which this field instance belongs to.
@@ -2008,9 +1995,10 @@ class Field {
 
 // operator +  (Field + Field) -generic
 
-template <typename A, typename B>
-auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
-    Field<hila::type_plus<A, B>> tmp;
+template <typename A, typename BA, typename B, typename BB>
+auto operator+(const Field<A, BA> &lhs, const Field<B, BB> &rhs)
+    -> Field<hila::type_plus<A, B>, hila::combine_boundary_conditions_t<BA, BB>> {
+    Field<hila::type_plus<A, B>, hila::combine_boundary_conditions_t<BA, BB>> tmp;
     tmp[ALL] = lhs[X] + rhs[X];
     return tmp;
 }
@@ -2018,9 +2006,9 @@ auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plu
 //////////////////////////////
 // operator + (Field + scalar)
 
-template <typename A, typename B>
-auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>> {
-    Field<hila::type_plus<A, B>> tmp;
+template <typename A, typename BA, typename B>
+auto operator+(const Field<A, BA> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>, BA> {
+    Field<hila::type_plus<A, B>, BA> tmp;
     tmp[ALL] = lhs[X] + rhs;
     return tmp;
 }
@@ -2028,17 +2016,18 @@ auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>
 //////////////////////////////
 /// operator + (scalar + Field)
 
-template <typename A, typename B>
-auto operator+(const A &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
+template <typename A, typename B, typename BB>
+auto operator+(const A &lhs, const Field<B, BB> &rhs) -> Field<hila::type_plus<A, B>, BB> {
     return rhs + lhs;
 }
 
 //////////////////////////////
 // operator - Field - Field -generic
 
-template <typename A, typename B>
-auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
-    Field<hila::type_minus<A, B>> tmp;
+template <typename A, typename BA, typename B, typename BB>
+auto operator-(const Field<A, BA> &lhs, const Field<B, BB> &rhs)
+    -> Field<hila::type_minus<A, B>, hila::combine_boundary_conditions_t<BA, BB>> {
+    Field<hila::type_minus<A, B>, hila::combine_boundary_conditions_t<BA, BB>> tmp;
     tmp[ALL] = lhs[X] - rhs[X];
     return tmp;
 }
@@ -2046,9 +2035,9 @@ auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_min
 //////////////////////////////
 /// operator - (Field - scalar)
 
-template <typename A, typename B>
-auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B>> {
-    Field<hila::type_minus<A, B>> tmp;
+template <typename A, typename BA, typename B>
+auto operator-(const Field<A, BA> &lhs, const B &rhs) -> Field<hila::type_minus<A, B>, BA> {
+    Field<hila::type_minus<A, B>, BA> tmp;
     tmp[ALL] = lhs[X] - rhs;
     return tmp;
 }
@@ -2056,9 +2045,9 @@ auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B
 //////////////////////////////
 // operator - (scalar - Field)
 
-template <typename A, typename B>
-auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
-    Field<hila::type_minus<A, B>> tmp;
+template <typename A, typename B, typename BB>
+auto operator-(const A &lhs, const Field<B, BB> &rhs) -> Field<hila::type_minus<A, B>, BB> {
+    Field<hila::type_minus<A, B>, BB> tmp;
     tmp[ALL] = lhs - rhs[X];
     return tmp;
 }
@@ -2096,9 +2085,10 @@ auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B
  * @param rhs Second (right) Field
  * @return Field<hila::type_plus<A, B>> Multiplied Field
  */
-template <typename A, typename B>
-auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
-    Field<hila::type_mul<A, B>> tmp;
+template <typename A, typename BA, typename B, typename BB>
+auto operator*(const Field<A, BA> &lhs, const Field<B, BB> &rhs)
+    -> Field<hila::type_mul<A, B>, hila::combine_boundary_conditions_t<BA, BB>> {
+    Field<hila::type_mul<A, B>, hila::combine_boundary_conditions_t<BA, BB>> tmp;
     tmp[ALL] = lhs[X] * rhs[X];
     return tmp;
 }
@@ -2106,9 +2096,9 @@ auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul
 /////////////////////////////////
 // operator * (scalar * field)
 
-template <typename A, typename B>
-auto operator*(const A &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
-    Field<hila::type_mul<A, B>> tmp;
+template <typename A, typename B, typename BB>
+auto operator*(const A &lhs, const Field<B, BB> &rhs) -> Field<hila::type_mul<A, B>, BB> {
+    Field<hila::type_mul<A, B>, BB> tmp;
     tmp[ALL] = lhs * rhs[X];
     return tmp;
 }
@@ -2116,9 +2106,9 @@ auto operator*(const A &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>>
 /////////////////////////////////
 // operator * (field * scalar)
 
-template <typename A, typename B>
-auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>> {
-    Field<hila::type_mul<A, B>> tmp;
+template <typename A, typename BA, typename B>
+auto operator*(const Field<A, BA> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>, BA> {
+    Field<hila::type_mul<A, B>, BA> tmp;
     tmp[ALL] = lhs[X] * rhs;
     return tmp;
 }
@@ -2156,9 +2146,10 @@ auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>>
  * @param rhs Second (right) Field
  * @return Field<hila::type_plus<A, B>> Subtracted Field
  */
-template <typename A, typename B>
-auto operator/(const Field<A> &l, const Field<B> &r) -> Field<hila::type_div<A, B>> {
-    Field<hila::type_div<A, B>> tmp;
+template <typename A, typename BA, typename B, typename BB>
+auto operator/(const Field<A, BA> &l, const Field<B, BB> &r)
+    -> Field<hila::type_div<A, B>, hila::combine_boundary_conditions_t<BA, BB>> {
+    Field<hila::type_div<A, B>, hila::combine_boundary_conditions_t<BA, BB>> tmp;
     tmp[ALL] = l[X] / r[X];
     return tmp;
 }
@@ -2166,18 +2157,18 @@ auto operator/(const Field<A> &l, const Field<B> &r) -> Field<hila::type_div<A, 
 
 //////////////////////////////////
 // operator /  (scalar/Field)
-template <typename A, typename B>
-auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
-    Field<hila::type_div<A, B>> tmp;
+template <typename A, typename B, typename BB>
+auto operator/(const A &lhs, const Field<B, BB> &rhs) -> Field<hila::type_div<A, B>, BB> {
+    Field<hila::type_div<A, B>, BB> tmp;
     tmp[ALL] = lhs / rhs[X];
     return tmp;
 }
 
 //////////////////////////////////
 // operator /  (Field/scalar)
-template <typename A, typename B>
-auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>> {
-    Field<hila::type_div<A, B>> tmp;
+template <typename A, typename BA, typename B>
+auto operator/(const Field<A, BA> &lhs, const B &rhs) -> Field<hila::type_div<A, B>, BA> {
+    Field<hila::type_div<A, B>, BA> tmp;
     tmp[ALL] = lhs[X] / rhs;
     return tmp;
 }
@@ -2187,8 +2178,8 @@ namespace hila {
 /**
  * @brief Implement hila::swap() for Fields too, equivalent to std::swap()
  */
-template <typename T>
-void swap(Field<T> &A, Field<T> &B) {
+template <typename T, typename BC>
+void swap(Field<T, BC> &A, Field<T, BC> &B) {
     std::swap(A.fs, B.fs);
 }
 } // namespace hila
@@ -2213,9 +2204,9 @@ void swap(Field<T> &A, Field<T> &B) {
 /**
  * @brief Exponential
  */
-template <typename T, typename R = decltype(exp(std::declval<T>()))>
-Field<R> exp(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(exp(std::declval<T>()))>
+Field<R, BC> exp(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = exp(arg[X]);
     }
@@ -2225,9 +2216,9 @@ Field<R> exp(const Field<T> &arg) {
 /**
  * @brief Logarithm
  */
-template <typename T, typename R = decltype(log(std::declval<T>()))>
-Field<R> log(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(log(std::declval<T>()))>
+Field<R, BC> log(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = log(arg[X]);
     }
@@ -2237,9 +2228,9 @@ Field<R> log(const Field<T> &arg) {
 /**
  * @brief Sine
  */
-template <typename T, typename R = decltype(sin(std::declval<T>()))>
-Field<R> sin(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(sin(std::declval<T>()))>
+Field<R, BC> sin(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = sin(arg[X]);
     }
@@ -2249,9 +2240,9 @@ Field<R> sin(const Field<T> &arg) {
 /**
  * @brief Cosine
  */
-template <typename T, typename R = decltype(cos(std::declval<T>()))>
-Field<R> cos(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(cos(std::declval<T>()))>
+Field<R, BC> cos(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = cos(arg[X]);
     }
@@ -2261,9 +2252,9 @@ Field<R> cos(const Field<T> &arg) {
 /**
  * @brief Tangent
  */
-template <typename T, typename R = decltype(tan(std::declval<T>()))>
-Field<R> tan(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(tan(std::declval<T>()))>
+Field<R, BC> tan(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = tan(arg[X]);
     }
@@ -2273,9 +2264,9 @@ Field<R> tan(const Field<T> &arg) {
 /**
  * @brief Arcsine
  */
-template <typename T, typename R = decltype(asin(std::declval<T>()))>
-Field<R> asin(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(asin(std::declval<T>()))>
+Field<R, BC> asin(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = asin(arg[X]);
     }
@@ -2285,9 +2276,9 @@ Field<R> asin(const Field<T> &arg) {
 /**
  * @brief Arccosine
  */
-template <typename T, typename R = decltype(acos(std::declval<T>()))>
-Field<R> acos(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(acos(std::declval<T>()))>
+Field<R, BC> acos(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = acos(arg[X]);
     }
@@ -2297,9 +2288,9 @@ Field<R> acos(const Field<T> &arg) {
 /**
  * @brief Arctangent
  */
-template <typename T, typename R = decltype(atan(std::declval<T>()))>
-Field<R> atan(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(atan(std::declval<T>()))>
+Field<R, BC> atan(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = atan(arg[X]);
     }
@@ -2309,9 +2300,9 @@ Field<R> atan(const Field<T> &arg) {
 /**
  * @brief Absolute value
  */
-template <typename T, typename R = decltype(abs(std::declval<T>()))>
-Field<R> abs(const Field<T> &arg) {
-    Field<R> res;
+template <typename T, typename BC, typename R = decltype(abs(std::declval<T>()))>
+Field<R, BC> abs(const Field<T, BC> &arg) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = abs(arg[X]);
     }
@@ -2322,9 +2313,10 @@ Field<R> abs(const Field<T> &arg) {
  * @brief Power
  * @param p exponent to which Field element is raised to.
  */
-template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
-Field<R> pow(const Field<T> &arg, const P p) {
-    Field<R> res;
+template <typename T, typename BC, typename P,
+          typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
+Field<R, BC> pow(const Field<T, BC> &arg, const P p) {
+    Field<R, BC> res;
     onsites (ALL) {
         res[X] = pow(arg[X], p);
     }
@@ -2334,8 +2326,8 @@ Field<R> pow(const Field<T> &arg, const P p) {
 /**
  * @brief Squared norm \f$|f|^2\f$
  */
-template <typename T>
-double squarenorm(const Field<T> &arg) {
+template <typename T, typename BC>
+double squarenorm(const Field<T, BC> &arg) {
     double r = 0;
     onsites (ALL) {
         r += squarenorm(arg[X]);
@@ -2344,28 +2336,28 @@ double squarenorm(const Field<T> &arg) {
 }
 
 
-template <typename T>
-double norm(const Field<T> &arg) {
+template <typename T, typename BC>
+double norm(const Field<T, BC> &arg) {
     return sqrt(squarenorm(arg));
 }
 
-template <typename T>
-Field<T> conj(const Field<T> &arg) {
+template <typename T, typename BC>
+Field<T, BC> conj(const Field<T, BC> &arg) {
     return arg.conj();
 }
 
-template <typename T, typename A = decltype(::dagger(std::declval<T>()))>
-Field<A> dagger(const Field<T> &arg) {
+template <typename T, typename BC, typename A = decltype(::dagger(std::declval<T>()))>
+Field<A, BC> dagger(const Field<T, BC> &arg) {
     return arg.dagger();
 }
 
-template <typename T, typename A = decltype(::real(std::declval<T>()))>
-Field<A> real(const Field<T> &arg) {
+template <typename T, typename BC, typename A = decltype(::real(std::declval<T>()))>
+Field<A, BC> real(const Field<T, BC> &arg) {
     return arg.real();
 }
 
-template <typename T, typename A = decltype(::imag(std::declval<T>()))>
-Field<A> imag(const Field<T> &arg) {
+template <typename T, typename BC, typename A = decltype(::imag(std::declval<T>()))>
+Field<A, BC> imag(const Field<T, BC> &arg) {
     return arg.imag();
 }
 
@@ -2378,8 +2370,9 @@ Field<A> imag(const Field<T> &arg) {
  * @param b Field b
  * @return double
  */
-template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
-double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
+template <typename A, typename BA, typename B, typename BB,
+          typename R = decltype(std::declval<A>() - std::declval<B>())>
+double squarenorm_relative(const Field<A, BA> &a, const Field<B, BB> &b) {
     double res = 0;
     onsites (ALL) {
         res += squarenorm(a[X] - b[X]);
@@ -2389,9 +2382,9 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
 
 /// @}
 
-template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v) const {
-    Field<T> res;
+template <typename T, typename BC>
+Field<T, BC> Field<T, BC>::shift(const CoordinateVector &v) const {
+    Field<T, BC> res;
     shift(v, res, ALL);
     return res;
 }
@@ -2406,8 +2399,8 @@ Field<T> Field<T>::shift(const CoordinateVector &v) const {
 ///
 ///  This should happen very seldom, only if there are "by-hand" start_gather operations and these
 ///  are not needed.
-template <typename T>
-void Field<T>::drop_comms(Direction d, Parity p) const {
+template <typename T, typename BC>
+void Field<T, BC>::drop_comms(Direction d, Parity p) const {
 #if !defined(GPU_CCL)
     if (hila::is_comm_initialized()) {
 #if HALO_DEPTH > 1
@@ -2446,8 +2439,8 @@ void Field<T>::drop_comms(Direction d, Parity p) const {
 
 
 ///  @internal And a convenience combi function
-template <typename T>
-void Field<T>::gather(Direction d, Parity p) const {
+template <typename T, typename BC>
+void Field<T, BC>::gather(Direction d, Parity p) const {
     start_gather(d, p);
     wait_gather(d, p);
 }
@@ -2458,8 +2451,8 @@ void Field<T>::gather(Direction d, Parity p) const {
 #include "field_comm.h"
 
 
-template <typename T>
-void Field<T>::random() {
+template <typename T, typename BC>
+void Field<T, BC>::random() {
 
 #if defined(CUDA) || defined(HIP)
 
@@ -2484,8 +2477,8 @@ void Field<T>::random() {
 #endif
 }
 
-template <typename T>
-void Field<T>::gaussian_random(double width) {
+template <typename T, typename BC>
+void Field<T, BC>::gaussian_random(double width) {
 
 #if defined(CUDA) || defined(HIP)
 
@@ -2557,7 +2550,7 @@ inline void dummy_X_f() {
  * need to be explicitly seen by hilapp during 1st pass in order to
  * generater necessary functions.  Add here ops as needed
  */
-template <typename T>
+template <typename T, typename BC>
 inline void ensure_field_operators_exist() {
 
     ensure_unary_minus_is_loop_function<T>();
@@ -2565,7 +2558,7 @@ inline void ensure_field_operators_exist() {
 
     // make shift also explicit
     CoordinateVector v = 0;
-    Field<T> f;
+    Field<T, BC> f;
     f = f.shift(v);
 #ifdef FIELD_COPY_ON_WRITE
     f.copy(f);
