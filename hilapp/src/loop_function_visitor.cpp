@@ -224,12 +224,11 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
                     got_lattice = false;
 
                 } else {
-
-                        // llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
-                        reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
-                                   "global or extern variable references in functions called "
-                                   "from site loops are not allowed.");
-                        return false;
+                    // llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
+                    reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
+                               "global or extern variable references in functions called "
+                               "from site loops are not allowed.");
+                    return false;
                 }
             }
 

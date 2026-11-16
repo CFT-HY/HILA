@@ -196,7 +196,6 @@ void handle_cmdline_target(codetype &target) {
 
     if (cmdline::CUDA || cmdline::HIP || cmdline::openacc)
         target.GPU = true;
-
 }
 
 /////////////////////////////////////////////////////////////////////////////

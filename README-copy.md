@@ -165,8 +165,6 @@ hilapp:
   --AVXinfo=<int>           - AVX vectorization information level 0-2. 0 quiet, 1 not vectorizable loops, 2 all loops
   -D <macro[=value]>        - Define name/macro for preprocessor
   -I <directory>            - Directory for include file search
-  --allow-func-globals      - Allow using global or extern variables in functions called from site loops.
-                              This will not work in kernelized code (for example GPUs)
   --check-init              - Insert checks that Field variables are appropriately initialized before use
   --comment-pragmas         - Comment out '#pragma hila' -pragmas in output
   --dump-ast                - Dump AST tree
