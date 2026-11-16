@@ -89,8 +89,6 @@ extern llvm::cl::opt<int> avx_info;
 extern llvm::cl::opt<bool> comment_pragmas;
 extern llvm::cl::opt<std::string> cppstd;
 
-extern llvm::cl::opt<bool> allow_func_globals;
-
 // save also the original argc and argv
 extern int argc;
 extern const char **argv;

@@ -60,12 +60,6 @@ llvm::cl::opt<std::string> cmdline::dummy_incl("I", llvm::cl::value_desc("direct
                                                llvm::cl::desc("Directory for include file search"),
                                                llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::allow_func_globals(
-    "allow-func-globals",
-    llvm::cl::desc("Allow using global or extern variables in functions called from site loops."
-                   "\nThis will not work in kernelized code (for example GPUs)"),
-    llvm::cl::cat(HilappCategory));
-
 llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
                                       llvm::cl::desc("Comment function call types in output"),
                                       llvm::cl::cat(HilappCategory));
@@ -203,18 +197,6 @@ void handle_cmdline_target(codetype &target) {
     if (cmdline::CUDA || cmdline::HIP || cmdline::openacc)
         target.GPU = true;
 
-    if (target.GPU && cmdline::allow_func_globals) {
-        llvm::errs() << "hilapp commandline error: gpu target architecture '";
-        if (target.cuda)
-            llvm::errs() << "cuda";
-        else if (target.hip)
-            llvm::errs() << "hip";
-        else if (target.openacc)
-            llvm::errs() << "openacc";
-        llvm::errs() << "' is not compatible with option '-allow-func-globals'\n";
-
-        exit(1);
-    }
 }
 
 /////////////////////////////////////////////////////////////////////////////

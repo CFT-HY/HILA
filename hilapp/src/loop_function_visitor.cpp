@@ -225,29 +225,11 @@ class loopFunctionVisitor : public GeneralVisitor, public RecursiveASTVisitor<lo
 
                 } else {
 
-                    if (!cmdline::allow_func_globals) {
                         // llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
                         reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
                                    "global or extern variable references in functions called "
-                                   "from site loops are not allowed."
-                                   "\nThis can be enabled in non-kernelized code with option "
-                                   "'-allow-func-globals'");
+                                   "from site loops are not allowed.");
                         return false;
-                    } else {
-                        if (e->isLValue()) {
-                            reportDiag(DiagnosticsEngine::Level::Error,
-                                       e->getSourceRange().getBegin(),
-                                       "modification of global or extern variables in "
-                                       "functions called from site loops is not allowed.");
-                            return false;
-                        }
-                        reportDiag(DiagnosticsEngine::Level::Warning,
-                                   e->getSourceRange().getBegin(),
-                                   "global or extern variable references in site loop "
-                                   "functions make "
-                                   "code non-portable to kernelized code (e.g. GPU code).");
-                        // just continue after this warning
-                    }
                 }
             }
 
