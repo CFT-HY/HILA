@@ -102,6 +102,12 @@ llvm::cl::opt<bool> cmdline::check_initialization(
     llvm::cl::desc("Insert checks that Field variables are appropriately initialized before use"),
     llvm::cl::cat(HilappCategory));
 
+llvm::cl::opt<bool> cmdline::idx_eval_diags(
+    "idx-eval-diags",
+    llvm::cl::desc("Print the internal diagnostics of the index expression evaluator when the\n"
+                   "values of a Field index in a site loop can not be determined"),
+    llvm::cl::cat(HilappCategory));
+
 // List of targets that can be specified in command line arguments
 
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla", llvm::cl::desc("Generate loops in place"),

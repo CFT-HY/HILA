@@ -4,6 +4,8 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/QualTypeNames.h"
 
+#include "idx_expr_evaluator.h"
+
 #include <algorithm>
 #include <sstream>
 #include <iostream>
@@ -12,6 +14,8 @@
 /////////
 /// Implementation of most toplevelvisitor methods
 /////////
+
+#define NEG_DIR_CONST_OFFSET 50
 
 // define the ptr to the visitor here
 TopLevelVisitor *g_TopLevelVisitor;
@@ -291,7 +295,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                 if (strcmp(ops, "+") == 0)
                     offset = 0;
                 else if (strcmp(ops, "-") == 0)
-                    offset = 50;
+                    offset = NEG_DIR_CONST_OFFSET;
                 else {
                     llvm::errs() << "This cannot happen, direction op " << ops << '\n';
                     exit(1);
@@ -299,7 +303,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 
                 lfe.is_constant_direction = true;
                 // constant_value is used to uniquely label directions.
-                // Give negative dirs an offset of 50.
+                // Give negative dirs an offset of NEG_DIR_CONST_OFFSET=50.
                 lfe.constant_value = result.getExtValue() + offset;
 
 
@@ -335,16 +339,66 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     //              << " Parity " << get_stmt_str(lfe.parityExpr)
     //              << "\n";
 
-    // Check that there are no local variable references up the AST of the name
+    // Check that there are no local variable references up the AST of the name, except in the
+    // index of a field selected as base[index], e.g. U[mu][X] inside foralldir(mu). The values
+    // the index can have are found after the loop has been traversed,
+    // with analyse_loop_local_field_refs()
     FieldRefChecker frc(*this);
     frc.TraverseStmt(lfe.nameExpr);
     if (frc.isLoopLocal()) {
 
-        llvm::errs() << "Loop local var type is " << frc.getLocalVarInfo()->type << '\n';
+        Expr *base = nullptr;
+        Expr *index = nullptr;
+        if (auto *OC = dyn_cast<CXXOperatorCallExpr>(lfe.nameExpr);
+            OC && OC->getOperator() == OO_Subscript && OC->getNumArgs() == 2) {
+            base = OC->getArg(0);
+            index = OC->getArg(1);
+        } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(lfe.nameExpr)) {
+            base = ASE->getBase();
+            index = ASE->getIdx();
+        }
 
-        reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
-                   "Field reference cannot depend on variable '%0' defined inside onsites-loop",
-                   frc.getLocalVarInfo()->name.c_str());
+        bool base_is_loop_local = false;
+        if (base) {
+            FieldRefChecker base_frc(*this);
+            base_frc.TraverseStmt(base);
+            base_is_loop_local = base_frc.isLoopLocal();
+        }
+
+        if (base == nullptr || base_is_loop_local ||
+            !index->getType()->isIntegralOrEnumerationType()) {
+            reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
+                       "Field reference cannot depend on variable '%0' defined inside "
+                       "onsites-loop, except through the index in field[index]",
+                       frc.getLocalVarInfo()->name.c_str());
+        } else if (lfe.is_written) {
+            reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
+                       "Assignment to a Field selected with an index that depends on variable "
+                       "'%0' defined inside onsites-loop is not supported",
+                       frc.getLocalVarInfo()->name.c_str());
+        } else if (lfe.is_offset) {
+            reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
+                       "Offset reference to a Field selected with an index that depends on "
+                       "variable '%0' defined inside onsites-loop is not supported",
+                       frc.getLocalVarInfo()->name.c_str());
+        } else if (index->HasSideEffects(*Context)) {
+            // the index expression is repeated in the generated code, once for each access
+            reportDiag(DiagnosticsEngine::Level::Error, index->getSourceRange().getBegin(),
+                       "The index of a Field selected with an index that depends on variable "
+                       "'%0' defined inside onsites-loop cannot have side effects",
+                       frc.getLocalVarInfo()->name.c_str());
+        } else if (target.vectorize || target.openacc) {
+            // TODO: vectorized and OpenACC targets
+            reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
+                       "Field selected with an index that depends on variable '%0' defined "
+                       "inside onsites-loop is supported only with the plain CPU and GPU "
+                       "targets",
+                       frc.getLocalVarInfo()->name.c_str());
+        } else {
+            lfe.is_loop_local_ref = true;
+            lfe.ref_base = base;
+            lfe.ref_index = index;
+        }
     }
 
     if (contains_random(lfe.fullExpr)) {
@@ -1043,6 +1097,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     // the following is for taking the parity from next elem
     parsing_state.scope_level = 0;
     parsing_state.in_loop_body = true;
+    parsing_state.current_loop_body = ls;
     parsing_state.ast_depth = 0; // renormalize to the beginning of loop
     parsing_state.stmt_sequence = 0;
 
@@ -1050,11 +1105,13 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     TraverseStmt(ls);
 
     parsing_state.in_loop_body = false;
+    parsing_state.current_loop_body = nullptr;
     parsing_state.ast_depth = 0;
 
     // check and analyze the field expressions
     check_var_info_list();
     check_addrofops_and_refs(ls); // scan through the full loop again
+    analyse_loop_local_field_refs(ls);
     check_field_ref_list();
     process_loop_functions(); // revisit functions when vars are fully resolved
 
@@ -1648,7 +1705,285 @@ bool TopLevelVisitor::TraverseDecl(Decl *D) {
 //////////////////////////////////////////////////////////////////////////////
 /// Process the Field<> -references appearing in this loop, and
 /// construct the field_info_list
-//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+
+/// Find with one Idx_expr_evaluator run over the loop body
+///  - the values the index of a field reference like U[mu][X], where mu is
+///    defined inside the site loop, can have, and
+///  - the directions of nearest neighbour references like f[X + mu] or
+///    U[mu][X - mu] with a loop local direction, as (index value, direction)
+///    pairs, so that only these directions need to be gathered.
+/// Returns false if the index values can not be determined. If the directions
+/// can not be determined, all directions are gathered.
+bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
+
+    // helper: nearest neighbour reference with a loop local direction. Not the refs synthesized
+    // for field functions (no fullExpr), their directions are not tracked: all are gathered
+    auto has_loop_local_nb_dir = [](const field_ref &r) {
+        return r.is_direction && r.is_loop_local_dir && !r.is_offset && r.deep_k == 0 &&
+               r.dirE != nullptr && r.fullExpr != nullptr;
+    };
+
+    bool any = false;
+    for (field_ref &r : field_ref_list)
+        if (r.is_loop_local_ref || has_loop_local_nb_dir(r))
+            any = true;
+    if (!any)
+        return true;
+
+    Idx_expr_evaluator evaluator{};
+    bool ok = evaluator.init(global.currentFunctionDecl, loop_body, getASTContext());
+    if (ok) {
+        for (field_ref &r : field_ref_list) {
+            if (r.is_loop_local_ref)
+                evaluator.add_expr_to_tracking_list(r.ref_index);
+            if (has_loop_local_nb_dir(r)) {
+                // the direction together with the index of a field like U[mu]: only the
+                // combinations that occur, e.g. U[mu][X - mu] uses e_x with U[e_x] etc.
+                std::vector<const Expr *> child_exprs;
+                if (r.is_loop_local_ref)
+                    child_exprs.push_back(r.ref_index);
+                child_exprs.push_back(r.dirE);
+                evaluator.add_tuple_to_tracking_list(r.fullExpr, child_exprs);
+            }
+        }
+        ok = evaluator.exec();
+    }
+
+    bool all_found = ok;
+    for (field_ref &r : field_ref_list) {
+        if (!r.is_loop_local_ref)
+            continue;
+
+        const auto [vals, reliable] = evaluator.get_vals_for_expr(r.ref_index);
+        if (!ok || vals == nullptr || !reliable) {
+            reportDiag(DiagnosticsEngine::Level::Error, r.ref_index->getSourceRange().getBegin(),
+                       "Could not determine the values index '%0' of Field '%1' can have in the "
+                       "onsites-loop (add option -idx-eval-diags to print internal diagnostics of "
+                       "the index eval)",
+                       get_stmt_str(r.ref_index).c_str(), get_stmt_str(r.nameExpr).c_str());
+            all_found = false;
+            continue;
+        }
+        r.ref_idx_set.clear();
+        for (const std::optional<int64_t> &v : *vals)
+            r.ref_idx_set.insert(v.value());
+
+        // warn no values: the reference is not on any execution path..
+        if (r.ref_idx_set.empty())
+            reportDiag(DiagnosticsEngine::Level::Warning, r.fullExpr->getSourceRange().getBegin(),
+                       "Field reference '%0' is never executed in the onsites-loop, the index "
+                       "'%1' has no possible values",
+                       get_stmt_str(r.fullExpr).c_str(), get_stmt_str(r.ref_index).c_str());
+    }
+
+    // The directions: X - dir is the opposite direction. A reference that is
+    // never evaluated has no directions, it is not executed.
+    const int ndirs = number_of_directions();
+    bool all_dirs_found = true;
+    // If not known, all directions are gathered, reported warning
+    auto report_dirs_not_found = [&](const field_ref &r) {
+        all_dirs_found = false;
+        reportDiag(DiagnosticsEngine::Level::Warning, r.parityExpr->getSourceRange().getBegin(),
+                   "Gathering all directions: could not determine the directions in field access "
+                   "'%0' in the onsites-loop. May result in unnecesary communications.",
+                   get_stmt_str(r.fullExpr).c_str());
+    };
+    for (field_ref &r : field_ref_list) {
+        if (!has_loop_local_nb_dir(r))
+            continue;
+        r.loop_local_dirs.clear();
+        r.loop_local_dirs_known = false;
+
+        const auto [tuples, reliable] = evaluator.get_tuples_for_expr(r.fullExpr);
+        if (!ok || tuples == nullptr || !reliable || ndirs <= 0) {
+            report_dirs_not_found(r);
+            continue;
+        }
+
+        bool valid = true;
+        for (const Value_tuple &t : *tuples) {
+            const int64_t idx = r.is_loop_local_ref ? t.front().value() : 0;
+            int64_t dir = t.back().value();
+            if (dir < 0 || dir >= ndirs) {
+                valid = false;
+                break;
+            }
+            if (r.dir_negate)
+                dir = ndirs - 1 - dir;
+            r.loop_local_dirs.insert({idx, dir});
+        }
+        r.loop_local_dirs_known = valid;
+        if (!valid)
+            report_dirs_not_found(r);
+    }
+
+    if (!all_found || !all_dirs_found) {
+        if (cmdline::idx_eval_diags) {
+            llvm::errs() << "---------- Idx_expr_evaluator internal diagnostics -----------\n";
+            evaluator.print_eval_diags(llvm::errs());
+            llvm::errs() << "--------------------------------------------------------------\n";
+        }
+    }
+    return all_found;
+}
+
+
+/// The number of elements of `base`, if it is an array or std::array, otherwise nullopt
+static std::optional<uint64_t> static_array_size(const Expr *base, ASTContext &ctx) {
+    const QualType type =
+        base->IgnoreParenImpCasts()->getType().getNonReferenceType().getCanonicalType();
+    if (const ConstantArrayType *CAT = ctx.getAsConstantArrayType(type))
+        return CAT->getSize().getZExtValue();
+    if (const auto *CTSD =
+            dyn_cast_or_null<ClassTemplateSpecializationDecl>(type->getAsCXXRecordDecl())) {
+        const TemplateArgumentList &args = CTSD->getTemplateArgs();
+        if (CTSD->getName() == "array" && CTSD->isInStdNamespace() && args.size() == 2 &&
+            args[1].getKind() == TemplateArgument::Integral)
+            return args[1].getAsIntegral().getZExtValue();
+    }
+    return std::nullopt;
+}
+
+/// Emit warning about the index values of a field with a loop local index, e.g. array_of_fields[i],
+/// if they may be out of the bounds of array_of_fields: all the fields array_of_fields[i] may be
+/// accessed before the loop, also for values that are never used if the analysis over-approximates
+/// them, e.g. for conditions it can not evaluate. For example: const int na = n_active; // 2 at run
+/// time onsites (ALL) {
+///     for (int i = 0; i < 4; i++)
+///         if (i < na) f[X] += array_of_fields[i][X];   // = std::array<Field<double>, 2>
+/// }
+/// the above would get possible values for i={0,1,2,3} and generate checks for those, leading to
+/// out of bounds accessess of array_of_fields..
+/// TODO: could try to handle these cases better..
+///
+/// No warning if the values are within the size of an array or std::array, or if a
+/// Direction index is in [0, NDIM) (GaugeField etc. have NDIM elements). An error if the size of
+/// an array or std::array is known and the values exceed it. Returns false on error.
+bool TopLevelVisitor::check_loop_local_ref_bounds(const field_info &fi) {
+    if (!fi.is_loop_local_ref || fi.ref_idx_set.empty())
+        return true;
+
+    const field_ref *first = nullptr;
+    std::string indices; // the index expressions
+    std::set<std::string> seen;
+    for (const field_ref *ref : fi.ref_list) {
+        if (!ref->is_loop_local_ref)
+            continue;
+        if (first == nullptr)
+            first = ref;
+        const std::string idx = get_stmt_str(ref->ref_index);
+        if (seen.insert(idx).second)
+            indices += (indices.empty() ? "" : ", ") + idx;
+    }
+    if (first == nullptr)
+        return true;
+
+    const int64_t min = *fi.ref_idx_set.begin();
+    const int64_t max = *fi.ref_idx_set.rbegin();
+    const std::optional<uint64_t> size = static_array_size(first->ref_base, *Context);
+
+    if (size.has_value() && min >= 0 && static_cast<uint64_t>(max) < *size)
+        return true;
+    if (!size.has_value() && fi.ref_index_type == "Direction" && min >= 0 &&
+        max < number_of_directions() / 2)
+        return true;
+
+    std::string msg = "The index analysis gives a range `" + indices + "` = [" + std::to_string(min) +
+                      " ... " + std::to_string(max) + "] for Field '" + fi.old_name + "'";
+    if (size.has_value()) {
+        // the generated code is certain to access out of bounds: an error
+        msg += ", but '" + fi.ref_base_str + "' has " + std::to_string(*size) +
+               " elements. The generated code accesses the fields of all these index values "
+               "before the loop, which would be out of bounds (the values can be an "
+               "over-approximation of the values used at run time).";
+        reportDiag(DiagnosticsEngine::Level::Error, first->ref_index->getSourceRange().getBegin(),
+                   "%0", msg.c_str());
+        return false;
+    } else {
+        msg += ". The generated code accesses the fields of all these index values before the "
+               "loop: make sure '" +
+               fi.ref_base_str + "' has ";
+        msg += (min >= 0) ? "at least " + std::to_string(max + 1) + " elements"
+                          : "elements for all these index values";
+        msg += ", otherwise the program may crash";
+    }
+    reportDiag(DiagnosticsEngine::Level::Warning, first->ref_index->getSourceRange().getBegin(),
+               "%0", msg.c_str());
+    return true;
+}
+
+
+/// The number of directions NDIRS = 2 * NDIM, TODO: is this the best way to do this...
+int TopLevelVisitor::number_of_directions() {
+    static int ndirs = -1;
+    if (ndirs < 0) {
+        ndirs = 0;
+        std::string arg;
+        if (is_macro_defined("NDIM", &arg)) {
+            const int ndim = std::atoi(arg.c_str());
+            if (ndim >= 1)
+                ndirs = 2 * ndim;
+        } else {
+            assert(false &&
+                   "The macro NDIM is not defined. Dont know what to do regarding directions..");
+        }
+    }
+    return ndirs;
+}
+
+
+/// The directions to gather before the loop for the Field variable `name` of
+/// field l (one of l.outside_loop_names()), as Direction expressions.
+/// std::nullopt: gather all directions, because a direction depends on a loop
+/// local variable whose values are not known.
+std::optional<std::vector<std::string>>
+TopLevelVisitor::gather_directions(const field_info &l, const std::string &name) {
+
+    if (l.is_loop_local_dir && !l.loop_local_dirs_known)
+        return std::nullopt;
+
+    // the index value of the Field variable, 0 if the field does not have a loop local index
+    int64_t idx = 0;
+    if (l.is_loop_local_ref) {
+        auto value = l.ref_idx_set.begin();
+        for (const std::string &n : l.outside_loop_names()) {
+            if (n == name) {
+                idx = *value;
+                break;
+            }
+            ++value;
+        }
+    }
+
+    const int ndirs = number_of_directions();
+    std::vector<std::string> dirs;
+    std::set<int64_t> numbers; // to gather each direction once
+    for (const dir_ptr &d : l.dir_list) {
+        if (d.count == 0 || d.is_loop_local_dir)
+            continue;
+        if (d.is_constant_direction && ndirs > 0) {
+            // constant_value is the direction, + NEG_DIR_CONST_OFFSET for X - dir
+            const int64_t n = (d.constant_value >= NEG_DIR_CONST_OFFSET)
+                                  ? ndirs - 1 - (d.constant_value - NEG_DIR_CONST_OFFSET)
+                                  : d.constant_value;
+            if (!numbers.insert(n).second)
+                continue;
+        }
+        dirs.push_back(d.direxpr_s);
+    }
+    if (l.is_loop_local_dir) {
+        const auto it = l.loop_local_gather_dirs.find(idx);
+        if (it != l.loop_local_gather_dirs.end())
+            for (int64_t n : it->second)
+                if (numbers.insert(n).second)
+                    dirs.push_back("static_cast<Direction>(" + std::to_string(n) + ")");
+    }
+    return dirs;
+}
+
+/////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::check_field_ref_list() {
 
@@ -1658,11 +1993,23 @@ bool TopLevelVisitor::check_field_ref_list() {
 
     field_info_list.clear();
 
-    // find the field_info of field expression nameExpr, add new if not found
-    auto find_field_info = [&](Expr *nameExpr) -> field_info * {
+    // find the field_info of field expression nameExpr, add new if not found.
+    // For a field with a loop local index give also the reference p: these with the same base,
+    // e.g. U[mu] in two foralldir(mu) loops or U[mu] and U[nu], are the same field. They have the
+    // same set of fields they can be, and in the loop body each reference uses its own expression.
+    auto find_field_info = [&](Expr *nameExpr, const field_ref *p = nullptr) -> field_info * {
+        const bool loop_local_ref = (p != nullptr && p->is_loop_local_ref);
+        std::string ref_index_type;
+        if (loop_local_ref)
+            ref_index_type =
+                p->ref_index->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+
         // search for duplicates
         for (field_info &li : field_info_list) {
-            if (is_duplicate_expr(li.nameExpr, nameExpr)) {
+            if (loop_local_ref
+                    ? (li.is_loop_local_ref && li.ref_base_str == get_stmt_str(p->ref_base) &&
+                       li.ref_index_type == ref_index_type)
+                    : (!li.is_loop_local_ref && is_duplicate_expr(li.nameExpr, nameExpr))) {
                 return &li;
             }
         }
@@ -1686,17 +2033,26 @@ bool TopLevelVisitor::check_field_ref_list() {
 
         lfv.nameExpr = nameExpr; // store the first nameExpr to this field
 
+        if (loop_local_ref) {
+            lfv.is_loop_local_ref = true;
+            lfv.ref_base_str = get_stmt_str(p->ref_base);
+            lfv.ref_index_type = ref_index_type;
+        }
+
         field_info_list.push_back(lfv);
         return &field_info_list.back();
     };
 
     for (field_ref &p : field_ref_list) {
 
-        field_info *fip = find_field_info(p.nameExpr);
+        field_info *fip = find_field_info(p.nameExpr, &p);
 
         // now fip points to the right info element
         // copy that to lf reference
         p.info = fip;
+
+        // a field with a loop local index may be any of the fields with the possible values
+        fip->ref_idx_set.insert(p.ref_idx_set.begin(), p.ref_idx_set.end());
 
         if (p.is_written && !fip->is_written) {
             // first write to this field var
@@ -1722,8 +2078,18 @@ bool TopLevelVisitor::check_field_ref_list() {
 
         if (p.is_direction) {
 
-            if (p.is_loop_local_dir)
+            if (p.is_loop_local_dir) {
                 fip->is_loop_local_dir = true;
+
+                // the directions to gather for the loop local direction, see
+                // analyse_loop_local_field_refs()
+                if (!p.is_offset && p.deep_k == 0) {
+                    if (!p.loop_local_dirs_known)
+                        fip->loop_local_dirs_known = false;
+                    for (const auto &[idx, dir] : p.loop_local_dirs)
+                        fip->loop_local_gather_dirs[idx].insert(dir);
+                }
+            }
 
             // does this dir with this field name exist before?
             // Use is_duplicate_expr() to resolve the ptr, it has (some) intelligence to
@@ -1806,6 +2172,8 @@ bool TopLevelVisitor::check_field_ref_list() {
             if (fc.ffi->read_nb[i]) {
                 fip->is_read_nb = true;
                 fip->is_loop_local_dir = true;
+                // the directions are not known: all are gathered, see gather_directions()
+                fip->loop_local_dirs_known = false;
             }
             if (fc.ffi->read_atX[i])
                 fip->is_read_atX_in_func = true;
@@ -1848,6 +2216,34 @@ bool TopLevelVisitor::check_field_ref_list() {
                 }
             }
         }
+    }
+
+    // A field with a loop local index, e.g. U[mu], may be the same Field as a field written in
+    // the loop, e.g. U[e_x]. That is not supported..
+    for (field_info &l : field_info_list) {
+        if (!l.is_loop_local_ref)
+            continue;
+        for (field_info &w : field_info_list) {
+            if (!w.is_written)
+                continue;
+            std::string w_base = w.old_name;
+            Expr *wn = w.nameExpr->IgnoreParenImpCasts();
+            if (auto *OC = dyn_cast<CXXOperatorCallExpr>(wn);
+                OC && OC->getOperator() == OO_Subscript && OC->getNumArgs() == 2)
+                w_base = get_stmt_str(OC->getArg(0));
+            else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(wn))
+                w_base = get_stmt_str(ASE->getBase());
+
+            if (w_base == l.ref_base_str || w.old_name == l.ref_base_str) {
+                reportDiag(DiagnosticsEngine::Level::Error, l.nameExpr->getSourceRange().getBegin(),
+                           "Field '%0' may be the same Field as '%1', which is assigned to in "
+                           "the onsites-loop. This is not supported.",
+                           l.old_name.c_str(), w.old_name.c_str());
+                no_errors = false;
+            }
+        }
+        if (!check_loop_local_ref_bounds(l))
+            no_errors = false;
     }
 
     for (field_info &l : field_info_list) {
@@ -2859,11 +3255,9 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
             // Normal case, just add the declared return type.
             // fully qualified: the specialization may be outside the namespace where the
             // type names are visible
-            funcBuf.insert(0,
-                           TypeName::getFullyQualifiedName(f->getDeclaredReturnType(), *Context,
-                                                           PP) +
-                               " ",
-                           true, true);
+            funcBuf.insert(
+                0, TypeName::getFullyQualifiedName(f->getDeclaredReturnType(), *Context, PP) + " ",
+                true, true);
         }
     }
 
@@ -2909,7 +3303,8 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // insert after the current toplevedecl
     std::stringstream sb;
     sb << "\n\n// ++++++++ hilapp generated function/method specialization\n"
-       << funcBuf.dump() << "\n// ++++++++\n\n" << spec_post;
+       << funcBuf.dump() << "\n// ++++++++\n\n"
+       << spec_post;
 
     // buffer is not necessarily in toplevelBuf, so:
 
@@ -3063,8 +3458,7 @@ bool TopLevelVisitor::handle_global_var_decl(Decl *D) {
                 // with a macro expanding to nothing (e.g. HILA_GPU_EXTERN), so look from the
                 // first non-blank character of the line
                 SourceLocation line_start = srcMgr.getExpansionLoc(D->getBeginLoc());
-                while (line_start.isValid() &&
-                       srcMgr.getFileOffset(line_start) > 0 &&
+                while (line_start.isValid() && srcMgr.getFileOffset(line_start) > 0 &&
                        getChar(line_start.getLocWithOffset(-1)) != '\n')
                     line_start = line_start.getLocWithOffset(-1);
                 while (line_start.isValid() && std::isspace(getChar(line_start)) &&
@@ -3552,8 +3946,7 @@ bool TopLevelVisitor::collect_axis_offset_terms(Expr *e, int sign, bool &has_X,
 
 /// Parse X + k*dir, where all Direction expressions are identical.  dirE gets the
 /// Direction expr, k the multiplier (can be negative), atoms all Direction subexpressions
-bool TopLevelVisitor::parse_axis_offset(Expr *e, Expr *&dirE, int &k,
-                                        std::vector<Expr *> &atoms) {
+bool TopLevelVisitor::parse_axis_offset(Expr *e, Expr *&dirE, int &k, std::vector<Expr *> &atoms) {
     bool has_X = false;
     std::vector<std::pair<int, Expr *>> terms;
     if (!collect_axis_offset_terms(e, 1, has_X, terms) || !has_X || terms.size() == 0)
@@ -3591,8 +3984,10 @@ void TopLevelVisitor::generate_deep_gathers(std::stringstream &code) {
     for (field_info &l : field_info_list)
         for (dir_ptr &d : l.dir_list)
             if (d.deep_k > 0)
-                code << l.new_name << ".gather_depth(" << deep_dir_string(d, dummy, false)
-                     << ", " << d.deep_k << ");\n";
+                // a field with a loop local index has a Field variable for each field it can be
+                for (const std::string &name : l.outside_loop_names())
+                    code << name << ".gather_depth(" << deep_dir_string(d, dummy, false) << ", "
+                         << d.deep_k << ");\n";
 }
 
 bool TopLevelVisitor::has_deep_refs() {

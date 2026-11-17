@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <set>
+#include <map>
+#include <optional>
+#include <cstdlib>
 #include <iostream>
 
 #include "clang/AST/AST.h"
@@ -71,6 +75,7 @@ extern llvm::cl::opt<bool> funcinfo;
 extern llvm::cl::opt<bool> no_output;
 extern llvm::cl::opt<bool> syntax_only;
 extern llvm::cl::opt<bool> check_initialization;
+extern llvm::cl::opt<bool> idx_eval_diags;
 extern llvm::cl::opt<std::string> output_filename;
 extern llvm::cl::opt<std::string> static_compiler;
 extern llvm::cl::opt<bool> vanilla;
@@ -162,6 +167,22 @@ struct field_ref {
     std::string replacement;
     std::string deep_dir_str; // deep halo direction if no deep_dirExpr (constant)
 
+    // field accessed with index that depends on a loop local variable, eg U[mu] inside
+    // foralldir(mu). Only the form base[index] is supported, ref_base is "U" and ref_index "mu".
+    // ref_idx_set holds the values the index can have, obtained from
+    // analyse_loop_local_field_refs()
+    bool is_loop_local_ref;
+    Expr *ref_base;
+    Expr *ref_index;
+    std::set<int64_t> ref_idx_set;
+
+    // A nearest neighbour reference X + dir or X - dir (dirE, dir_negate above) with a loop local
+    // direction: loop_local_dirs holds the (index value, direction) pairs the reference uses,
+    // obtained in analyse_loop_local_field_refs(). The index value is that of ref_index for a field
+    // with a loop local index, otherwise 0. If idx/dir are unknown all directions are gathered
+    std::set<std::pair<int64_t, int64_t>> loop_local_dirs;
+    bool loop_local_dirs_known;
+
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
         direxpr_s.clear();
@@ -176,6 +197,9 @@ struct field_ref {
         dirE = nullptr;
         dir_negate = false;
         ff_call = nullptr;
+        is_loop_local_ref = false;
+        ref_base = ref_index = nullptr;
+        loop_local_dirs_known = false;
     }
 
     ~field_ref() {
@@ -294,13 +318,46 @@ struct field_info {
     bool is_read_atX_in_func; // read at X in a field function, see field_function.cpp
     int first_assign_seq;   // the sequence of the first assignment
 
+    // A field accessed with a loop local index, e.g. U[mu] inside foralldir(mu)
+    // fields in arrays (like GaugeField) can not be referred to outside the loop with old_name.
+    // Instead there is one Field variable for each possible index value, generate names with
+    // outside_loop_names()
+    bool is_loop_local_ref;
+    std::string ref_base_str;      // eg. "U" in U[mu]
+    std::string ref_index_type;    // type of the index, eg "Direction"
+    std::set<int64_t> ref_idx_set; // all possible values the index takes
+
+    // The directions to gather for the loop local directions of the references, for each index
+    // value (0 for a field without a loop local index). If loop_local_dirs_known is false, all
+    // directions are gathered. See TopLevelVisitor::gather_directions().
+    bool loop_local_dirs_known;
+    std::map<int64_t, std::set<int64_t>> loop_local_gather_dirs;
+
     field_info() {
         type_template = old_name = new_name = loop_ref_name = "";
         is_written = is_read_nb = is_read_atX = is_read_offset = is_loop_local_dir = false;
         is_read_atX_in_func = false;
+        is_loop_local_ref = false;
+        loop_local_dirs_known = true;
         first_assign_seq = 0;
         dir_list = {};
         ref_list = {};
+    }
+
+    /// The expression of the field for the index value `idx`, e.g. "U[static_cast<Direction>(0)]"
+    std::string loop_local_ref_expr(int64_t idx) const {
+        return ref_base_str + "[static_cast<" + ref_index_type + ">(" + std::to_string(idx) + ")]";
+    }
+
+    /// The Field variables to use before and after the loop, e.g. for gathers: new_name, or for a
+    /// field with a loop local index, need a variable for each possible index value..
+    std::vector<std::string> outside_loop_names() const {
+        if (!is_loop_local_ref)
+            return {new_name};
+        std::vector<std::string> names;
+        for (int64_t idx : ref_idx_set)
+            names.push_back(new_name + "_" + (idx < 0 ? "m" : "") + std::to_string(std::abs(idx)));
+        return names;
     }
 
     ~field_info() {
