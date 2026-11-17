@@ -8,15 +8,41 @@
  * expressions obtain during evaluation.
  * @details
  * @note Should be tested if there are major changes to llvm. Unit tests for Idx_expr_evaluator
- * are in ../unit_tests/test_idx_expr_evaluator. Tested with llvm 18, 20.1.8, 22.1.3
+ * are in ../unit_tests/test_idx_expr_evaluator. Tested with llvm 18, 23.1.4
  *
  */
 
 // Limitations:
-
-// ###### Things to NOTE / TODO ######
-
-// TODO: check llvm version requirement...
+//
+//  - Only integer, enum and bool values are tracked (as int64_t) 
+//  - Values that do not fit in int64_t are unknown
+//
+// Function calls:
+//  - Only constexpr functions with found body are evaluated (nested calls at most MAX_CALL_DEPTH)
+//  - NOT IMPLEMENTED: lambda functions: evaluation fails
+//
+// Pointers:
+//  - NOT IMPLEMENTED: Taking the address of an integer variable (stops the evaluation)
+//                   : and writes through pointers are not followed
+//
+// Control flow:
+//  - Statements that are not handled make the evaluation fail (most things are implemented):
+//      - NOT IMPLEMENTED: range based for loop TODO
+//
+//  Over-approximation:
+//  - A condition with an unknown value follows both branches, and the values are not narrowed
+//    by the condition (inside `if (i < 3)` with i unknown, i is still unknown). The results are
+//    an over-approximation: the set of possible values contains all the values that
+//    occur, but can still contain values that never occur at run time... TODO: distinquish between certain and uncertain values?
+//
+//  - The paths are enumerated with concrete values (no intervals or widening): each distinct
+//    state entering a CFG block is evaluated separately. More than max_block_states in
+//    a block (a loop with an unknown bound, or very many combinations of values) stops
+//    the evaluation and it fails
+//
+// Tuples (add_tuple_to_tracking_list()):
+//  - The child_exprs have to be evaluated before the main_expr in the same CFG block,
+//    otherwise an unknown value is recorded for them...
 
 
 #include <map>
