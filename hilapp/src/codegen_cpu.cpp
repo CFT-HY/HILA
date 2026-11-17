@@ -33,53 +33,54 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // deep halo gathers (X + k*dir) are completed before the loop
     generate_deep_gathers(code);
 
+    // A field with a loop local index, e.g. U[mu], has a Field variable for each field it can be,
+    // see field_info::outside_loop_names(). Gathers are done for each of them.
     for (field_info &l : field_info_list) {
-        // If neighbour references exist, communicate them
-        if (!l.is_loop_local_dir) {
-            // "normal" dir references only here
-            for (dir_ptr &d : l.dir_list)
-                if (d.count > 0) {
+        for (const std::string &name : l.outside_loop_names()) {
+            // If neighbour references exist, communicate them
+            if (const auto dirs = gather_directions(l, name)) {
+                // the directions to gather, see gather_directions()
+                for (const std::string &dir : *dirs) {
                     if (!generate_wait_loops) {
-                        code << l.new_name << ".gather(" << d.direxpr_s << ", "
-                             << loop_info.parity_str << ");\n";
+                        code << name << ".gather(" << dir << ", " << loop_info.parity_str << ");\n";
                     } else {
                         if (first)
                             code << "dir_mask_t  _dir_mask_ = 0;\n";
                         first = false;
 
-                        code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
-                             << ", " << loop_info.parity_str << ");\n";
+                        code << "_dir_mask_ |= " << name << ".start_gather(" << dir << ", "
+                             << loop_info.parity_str << ");\n";
                     }
                 }
-        } else {
-            // now loop local dirs - gather all neighbours!
-            // TODO: restrict dirs
-            if (!generate_wait_loops) {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << l.new_name << ".start_gather(HILA_dir_," << loop_info.parity_str
-                     << ");\n}\n";
             } else {
-                if (first)
-                    code << "dir_mask_t  _dir_mask_ = 0;\n";
-                first = false;
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << "_dir_mask_ |= " << l.new_name << ".start_gather(HILA_dir_,"
-                     << loop_info.parity_str << ");\n}\n";
+                // loop local direction whose values are not known: gather all directions
+                if (!generate_wait_loops) {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                         << name << ".start_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+                } else {
+                    if (first)
+                        code << "dir_mask_t  _dir_mask_ = 0;\n";
+                    first = false;
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                         << "_dir_mask_ |= " << name << ".start_gather(HILA_dir_,"
+                         << loop_info.parity_str << ");\n}\n";
+                }
             }
         }
     }
 
-    // write wait gathers here also
+    // write wait gathers here also, for the fields whose all directions are gathered (the known
+    // directions were gathered with blocking gather() above)
     if (!generate_wait_loops)
         for (field_info &l : field_info_list)
-            if (l.is_loop_local_dir) {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << l.new_name << ".wait_gather(HILA_dir_," << loop_info.parity_str
-                     << ");\n}\n";
-            }
+            for (const std::string &name : l.outside_loop_names())
+                if (!gather_directions(l, name)) {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                         << name << ".wait_gather(HILA_dir_," << loop_info.parity_str << ");\n}\n";
+                }
 
     if (first)
         generate_wait_loops = false; // no communication needed in the 1st place
@@ -105,7 +106,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         code << "const int _hila_loop_end   = hila_loop_lattice.loop_end(" << paritystr << ");\n";
 
         if (rows_loop) {
-            code << "const hila::site_layout_struct & HILA_lay_ = hila_loop_lattice.mynode.layout;\n";
+            code << "const hila::site_layout_struct & HILA_lay_ = "
+                    "hila_loop_lattice.mynode.layout;\n";
             code << "const int HILA_nx_ = HILA_lay_.size[0];\n";
             code << "const int HILA_rows_ = HILA_lay_.volume / HILA_nx_;\n";
         }
@@ -245,16 +247,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                deep_dir_string(d, loopBuf, true) + ", " + std::to_string(d.deep_k) + ")";
     };
 
-    // expression for the index of the neighbour of field l to direction dirname
-    auto nb_index = [&](const field_info &l, const std::string &dirname) -> std::string {
-        const std::string &fieldname = l.new_name;
+    // expression for the index of the neighbour of fieldname to direction dirname
+    auto nb_index = [&](const std::string &fieldname, const std::string &dirname) -> std::string {
         if (rows_loop) {
             // b.c. are applied to the values, all fields use the lattice neighbours
             return "HILA_nb_[" + dirname + "]";
         }
         if (layout_on_the_fly)
-            return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" +
-                   dirname + "], HILA_site_, " + looping_var + ", " + dirname + ")";
+            return "hila_loop_lattice.neighbour_index(" + fieldname + ".fs->neighbours[" + dirname +
+                   "], HILA_site_, " + looping_var + ", " + dirname + ")";
         else
             return fieldname + ".fs->neighbours[" + dirname + "][" + looping_var + "]";
     };
@@ -313,6 +314,65 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
 
+        if (l.is_loop_local_ref && l.ref_idx_set.empty()) {
+            // the index has no possible values, the references are never executed 
+            for (field_ref *ref : l.ref_list)
+                loopBuf.replace(ref->fullExpr, l.element_type + "()");
+            continue;
+        }
+
+        if (l.is_loop_local_ref) {
+            // The field depends on a loop local variable, e.g. U[mu]: there are no temporaries,
+            // the field expression of each reference is used in the loop body directly. Not
+            // written to.
+            auto field_of = [&](const field_ref *ref) {
+                return "(" + loopBuf.get(ref->nameExpr->getSourceRange()) + ")";
+            };
+
+            // the references read into arrays at the start of the loop body, see
+            // preload_loop_local_refs(). Faster if the loops over the index are unrolled
+            std::set<const field_ref *> preloaded;
+#ifdef FETCH_FIELD_REFS_LOOP_LOCAL
+            preloaded = preload_loop_local_refs(
+                l, code, loopBuf, looping_var,
+                [](const std::string &name, const std::string &index) {
+                    return name + ".get_value_at(" + index + ")";
+                },
+                nb_index, need_site);
+#endif
+
+            for (dir_ptr &d : l.dir_list) {
+                std::string dirname;
+                if (d.deep_k == 0) {
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = mapped_dir_name(loopBuf, d);
+                }
+                for (field_ref *ref : d.ref_list) {
+                    if (preloaded.count(ref) > 0)
+                        continue;
+                    const std::string field = field_of(ref);
+                    std::string val;
+                    if (d.deep_k > 0)
+                        val = bc_nb_value(l, field + ".get_value_at(" + deep_index(d) + ")",
+                                          deep_dir_string(d, loopBuf, true), d.deep_k,
+                                          need_site);
+                    else
+                        val = bc_nb_value(l,
+                                          field + ".get_value_at(" + nb_index(field, dirname) +
+                                              ")",
+                                          dirname, 1, need_site);
+                    loopBuf.replace(ref->fullExpr, val);
+                }
+            }
+            for (field_ref *ref : l.ref_list)
+                if (!ref->is_direction && preloaded.count(ref) == 0)
+                    loopBuf.replace(ref->fullExpr,
+                                    field_of(ref) + ".get_value_at(" + looping_var + ")");
+            continue;
+        }
+
         // First check for Direction references. If any found, create list of temp
         // variables
         if (l.is_read_nb) {
@@ -346,7 +406,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                               looping_var + ")";
                     } else {
                         // std neighbour accessor for scalars
-                        val = l.new_name + ".get_value_at(" + nb_index(l, dirname) + ")";
+                        val = l.new_name + ".get_value_at(" + nb_index(l.new_name, dirname) + ")";
                     }
                     code << "const " << l.element_type << " " << d.name_with_dir << " = "
                          << bc_nb_value(l, val, dirname, 1, need_site) << ";\n";
@@ -383,7 +443,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                             val = l.new_name + ".get_value_at_nb_site(" + dirname + ", " +
                                   looping_var + ")";
                         } else {
-                            val = l.new_name + ".get_value_at(" + nb_index(l, dirname) + ")";
+                            val = l.new_name + ".get_value_at(" + nb_index(l.new_name, dirname) + ")";
                         }
                         replace_field_ref(loopBuf, ref,
                                           bc_nb_value(l, val, dirname, 1, need_site));
@@ -518,18 +578,19 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             ending_braces++;
         }
         for (field_info &l : field_info_list) {
-            // If neighbour references exist, communicate them
-            if (!l.is_loop_local_dir) {
-                for (dir_ptr &d : l.dir_list)
-                    if (d.count > 0) {
-                        code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
-                             << loop_info.parity_str << ");\n";
+            for (const std::string &name : l.outside_loop_names()) {
+                // If neighbour references exist, communicate them
+                if (const auto dirs = gather_directions(l, name)) {
+                    for (const std::string &dir : *dirs) {
+                        code << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
+                             << ");\n";
                     }
-            } else {
-                code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
-                        "++HILA_dir_) {\n"
-                     << "  " << l.new_name << ".wait_gather(HILA_dir_, " << loop_info.parity_str
-                     << ");\n}\n";
+                } else {
+                    code << "for (Direction HILA_dir_ = (Direction)0; HILA_dir_ < NDIRS; "
+                            "++HILA_dir_) {\n"
+                         << "  " << name << ".wait_gather(HILA_dir_, " << loop_info.parity_str
+                         << ");\n}\n";
+                }
             }
         }
         // if (boundary_layer) code << "}\n";

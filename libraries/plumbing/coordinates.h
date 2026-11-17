@@ -60,14 +60,14 @@ constexpr unsigned NDIRS = NDIRECTIONS;
 // dir-- not defined, should we?
 
 #pragma hila loop_function
-inline Direction next_direction(Direction dir) {
+inline constexpr Direction next_direction(Direction dir) {
     return static_cast<Direction>(static_cast<unsigned>(dir) + 1);
 }
 #pragma hila loop_function
-inline Direction &operator++(Direction &dir) {
+inline constexpr Direction &operator++(Direction &dir) {
     return dir = next_direction(dir);
 }
-inline Direction operator++(Direction &dir, int) {
+inline constexpr Direction operator++(Direction &dir, int) {
     Direction d = dir;
     ++dir;
     return d;
@@ -79,39 +79,39 @@ inline Direction operator++(Direction &dir, int) {
  */
 #define foralldir(d) for (Direction d = e_x; d < NDIM; d = next_direction(d))
 
-inline Direction opp_dir(const Direction d) {
+inline constexpr Direction opp_dir(const Direction d) {
     return static_cast<Direction>(NDIRS - 1 - static_cast<int>(d));
 }
 
-inline Direction opp_dir(const int d) {
+inline constexpr Direction opp_dir(const int d) {
     return static_cast<Direction>(NDIRS - 1 - d);
 }
 
 /// unary + and -
-inline Direction operator-(const Direction d) {
+inline constexpr Direction operator-(const Direction d) {
     return opp_dir(d);
 }
 
-static inline Direction operator+(const Direction d) {
+static inline constexpr Direction operator+(const Direction d) {
     return d;
 }
 
 /// is_up_dir is true if the dir is "up" to coord Direction
-static inline bool is_up_dir(const Direction d) {
+static inline constexpr bool is_up_dir(const Direction d) {
     return d < NDIM;
 }
-static inline bool is_up_dir(const int d) {
+static inline constexpr bool is_up_dir(const int d) {
     return d < NDIM;
 }
 
-static inline Direction abs(Direction dir) {
+static inline constexpr Direction abs(Direction dir) {
     if (is_up_dir(dir))
         return dir;
     else
         return -dir;
 }
 
-inline int dir_dot_product(Direction d1, Direction d2) {
+inline int constexpr dir_dot_product(Direction d1, Direction d2) {
     if (d1 == d2)
         return 1;
     else if (d1 == -d2)
@@ -124,7 +124,7 @@ inline int dir_dot_product(Direction d1, Direction d2) {
 /// unsigned char is ok up to 4 dim (2*4 bits)
 using dir_mask_t = unsigned char;
 
-inline dir_mask_t get_dir_mask(const Direction d) {
+inline constexpr dir_mask_t get_dir_mask(const Direction d) {
     return (dir_mask_t)(1 << d);
 }
 

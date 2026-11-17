@@ -2,6 +2,7 @@
 #define TOPLEVELVISITOR_H
 
 #include <string>
+#include <functional>
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -44,6 +45,7 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
         int stmt_sequence;        // sequence number of full statements in loops.  Full stmts
                                   // separated by ;
         bool in_loop_body;        // true if in site loop
+        Stmt *current_loop_body;  // ptr to the site loop body or null if not in_loop_body
         bool accept_field_parity; // if parity of loop not resolved yet
         bool loop_function_next;
     } parsing_state;
@@ -60,6 +62,7 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
         parsing_state.ast_depth = 1;
         parsing_state.stmt_sequence = 0;
         parsing_state.in_loop_body = false;
+        parsing_state.current_loop_body = nullptr;
         parsing_state.accept_field_parity = false;
         parsing_state.loop_function_next = false;
     }
@@ -131,6 +134,11 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     // void check_allowed_assignment(Stmt *s);
 
+    bool analyse_loop_local_field_refs(Stmt *loop_body);
+    int number_of_directions();
+    bool check_loop_local_ref_bounds(const field_info &l);
+    std::optional<std::vector<std::string>> gather_directions(const field_info &l,
+                                                              const std::string &name);
     bool check_field_ref_list();
     bool is_assignment_value_unused(Stmt *s);
     bool field_direct_write(const field_info &l);
@@ -248,6 +256,13 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par,
                                    std::string &tail);
+
+    std::set<const field_ref *> preload_loop_local_refs(
+        const field_info &l, std::stringstream &code, srcBuf &loopBuf,
+        const std::string &looping_var,
+        const std::function<std::string(const std::string &, const std::string &)> &get,
+        const std::function<std::string(const std::string &, const std::string &)> &nb_index,
+        bool have_site);
 
     void generate_field_code(std::stringstream &code, bool &generate_wait_loops);
 
