@@ -21,9 +21,16 @@
 //  - Only constexpr functions with found body are evaluated (nested calls at most MAX_CALL_DEPTH)
 //  - NOT IMPLEMENTED: lambda functions: evaluation fails
 //
-// Pointers:
-//  - NOT IMPLEMENTED: Taking the address of an integer variable (stops the evaluation)
-//                   : and writes through pointers are not followed
+// Pointers and references:
+//  - Writes are followed through the variable itself, through local reference variables
+//    (`int &r = x;`) and through reference arguments at the call.
+//  - A variable whose address or non-const reference is stored, so that it can be changed later
+//    in a way the evaluation does not follow, "escapes", e.g. `int *p = &x;`, `Holder h(x);`
+//    with a reference member, `std::tie(x, y) = ...` or `pick(x) = 1` with `int &pick(int &)`.
+//    These are found before the evaluation (find_escaped_vars()), and the values of escaped
+//    variables are always unknown.
+//  - ASSUMPTION: a function does not store the address of its reference argument in a global
+//    variable, or in an object passed to it by value
 //
 // Control flow:
 //  - Statements that are not handled make the evaluation fail (most things are implemented):
@@ -50,6 +57,7 @@
 #include <set>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "clang/Analysis/CFG.h"
 
@@ -69,10 +77,24 @@ struct Eval_result {
     std::optional<int64_t> val = std::nullopt;
 };
 
+// Variables that may be changed through a stored reference or pointer, see find_escaped_vars().
+// Their values are always unknown.
+struct Escaped_vars {
+    std::unordered_set<const VarDecl *> vars;
+    // a reference to a variable that could not be determined escapes: any variable may change
+    bool all = false;
+
+    bool contains(const VarDecl *VD) const {
+        return all || vars.find(VD) != vars.end();
+    }
+};
+
 // exec(): results reused between calls to the same constexpr function. Owned by
 // Idx_expr_evaluator, as the cached pointers are only valid for one ASTContext.
 struct Function_eval_cache {
     std::unordered_map<const FunctionDecl *, std::unique_ptr<CFG>> cfgs;
+    // the escaped variables (parameters and locals) of each function
+    std::unordered_map<const FunctionDecl *, Escaped_vars> escaped;
     // (function, argument values) -> return value
     std::map<std::pair<const FunctionDecl *, std::vector<std::optional<int64_t>>>,
              std::optional<int64_t>>
@@ -91,6 +113,9 @@ struct Eval_state {
 
     // Depth of nested constexpr function calls
     uint64_t call_depth = 0;
+
+    // The escaped variables of the evaluated code, their values are unknown. May be nullptr.
+    const Escaped_vars *escaped = nullptr;
 
     ////////////////////////////////////////////
     // The state during evaluation:
@@ -190,6 +215,8 @@ struct Idx_expr_evaluator {
     std::unique_ptr<CFG> cfg;
     ASTContext *ASTctx;
     Function_eval_cache func_cache;
+    // the escaped variables of the function given to init()
+    Escaped_vars escaped;
     CFGBlock *main_entry_block = nullptr;
     CFGBlock *main_exit_block = nullptr;
 };

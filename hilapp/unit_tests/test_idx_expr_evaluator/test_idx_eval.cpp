@@ -2488,23 +2488,251 @@ int y = 0;
 ////////////////////////////////////////////////////////
 // test things that should fail exec: limits
 
-bool test_should_fail_address_of_variable() {
+////////////////////////////////////////////////////////
+// escape analysis: variables that may be changed through a stored reference or pointer have
+// unknown values, see find_escaped_vars()
+
+bool test_escape_address_of_variable() {
     TEST_CASE_BEGIN;
     /////////////////////////////////////////////
-    // `x` could be changed through the pointer, which is not followed
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
+    // `k` could be changed through the pointer: unknown. `x` is not affected
     TEST_EVAL_STRING_CSTMT(R"(
-    int x = 0;
-    int *p = &x;
+    int k = 0;
+    int *p = &k;
     *p = 5;
     int y = 0;
-    y = x;
+    y = k;
+    int x = 2;
+    x++;
     )")
-#pragma clang diagnostic pop
     /////////////////////////////////////////////
-    if (test_analyzer.exec_ret || test_state.eval_succeeded)
+    // clang-format off
+    TrackedVar<int> x = 2;
+    x++;
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
         test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(k);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+    COMPARE_AND_SET_TEST_PASS(x);
+
+    TEST_CASE_END;
+}
+
+bool test_escape_constructor_reference_member() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // The object keeps a reference to `x`, and changes it later
+    TEST_EVAL_STRING_TOPLVL(R"(
+struct Holder {
+    int &d;
+    Holder(int &a) : d(a) {}
+    void set(int v) { d = v; }
+};
+void test(){
+    int x = 0;
+    Holder h(x);
+    x = 1;
+    h.set(2);
+    int y = 0;
+    y = x;
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(x);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+
+    TEST_CASE_END;
+}
+
+bool test_escape_aggregate_reference_member() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    TEST_EVAL_STRING_TOPLVL(R"(
+struct Ref {
+    int &d;
+};
+void test(){
+    int x = 0;
+    Ref r{x};
+    x = 1;
+    r.d = 2;
+    int y = 0;
+    y = x;
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(x);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+
+    TEST_CASE_END;
+}
+
+bool test_escape_returned_reference_written() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // A write through the reference returned by a constexpr function
+    TEST_EVAL_STRING_TOPLVL(R"(
+constexpr int &pick(int &a) { return a; }
+void test(){
+    int x = 0;
+    pick(x) = 5;
+    int y = 0;
+    y = x;
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(x);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+
+    TEST_CASE_END;
+}
+
+bool test_escape_tie() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // Like std::tie(x, y) = ...: the returned object holds references to x and y
+    TEST_EVAL_STRING_TOPLVL(R"(
+struct Pair {
+    int a;
+    int b;
+};
+struct Tie {
+    int &a;
+    int &b;
+    constexpr Tie &operator=(const Pair &p) {
+        a = p.a;
+        b = p.b;
+        return *this;
+    }
+};
+constexpr Tie tie(int &a, int &b) { return Tie{a, b}; }
+void test(){
+    int x = 0;
+    int y = 0;
+    tie(x, y) = Pair{1, 2};
+    int z = 0;
+    z = x + y;
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(x);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(z);
+
+    TEST_CASE_END;
+}
+
+bool test_escape_member_function_stores_pointer() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // A member function may store the address of its reference argument in the object
+    TEST_EVAL_STRING_TOPLVL(R"(
+struct Binder {
+    int *p = nullptr;
+    void bind(int &a) { p = &a; }
+    void set(int v) { *p = v; }
+};
+void test(){
+    int x = 0;
+    Binder b;
+    b.bind(x);
+    x = 1;
+    b.set(2);
+    int y = 0;
+    y = x;
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(x);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+
+    TEST_CASE_END;
+}
+
+bool test_escape_assignment_to_conditional() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // The assignment to `c ? x : y` is not followed: both escape
+    TEST_EVAL_STRING_TOPLVL(R"(
+void test(bool c){
+    int x = 0;
+    int y = 0;
+    (c ? x : y) = 5;
+    int z = 0;
+    z = x;
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(x);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(y);
+    EXPECT_UNKNOWN_AND_SET_TEST_PASS(z);
+
+    TEST_CASE_END;
+}
+
+bool test_no_escape() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // Uses that do not let the variables escape: a const reference member, a constexpr member
+    // function with a reference parameter of an object that can not hold a reference to an
+    // integer, and a returned reference that is only read
+    TEST_EVAL_STRING_TOPLVL(R"(
+struct CRef {
+    const int &r;
+};
+struct Acc {
+    int s = 0;
+    constexpr void inc(int &v) { v += 1; }
+};
+constexpr int &pick(int &a) { return a; }
+void test(){
+    int x = 0;
+    CRef c{x};
+    x = 3;
+    int y = 0;
+    y = x;
+    int w = 0;
+    Acc a;
+    a.inc(w);
+    int v = 4;
+    int u = 0;
+    u = pick(v);
+}
+    )")
+    /////////////////////////////////////////////
+    // clang-format off
+    TrackedVar<int> x = 0;
+    x = 3;
+    TrackedVar<int> y = 0;
+    y = x;
+    TrackedVar<int> w = 0;
+    w = w + 1;
+    TrackedVar<int> v = 4;
+    TrackedVar<int> u = 0;
+    u = v;
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_AND_SET_TEST_PASS(x);
+    COMPARE_AND_SET_TEST_PASS(y);
+    COMPARE_AND_SET_TEST_PASS(w);
+    COMPARE_AND_SET_TEST_PASS(v);
+    COMPARE_AND_SET_TEST_PASS(u);
 
     TEST_CASE_END;
 }
@@ -2619,6 +2847,16 @@ static std::vector<test_func> test_cases = {
     test_ref_variable_chains,
     test_ref_variable_unknown_target,
 
+    // escape analysis
+    test_escape_address_of_variable,
+    test_escape_constructor_reference_member,
+    test_escape_aggregate_reference_member,
+    test_escape_returned_reference_written,
+    test_escape_tie,
+    test_escape_member_function_stores_pointer,
+    test_escape_assignment_to_conditional,
+    test_no_escape,
+
     // implicit conversions
     test_int_to_bool_conversion,
 
@@ -2663,7 +2901,6 @@ static std::vector<test_func> test_cases = {
     // should fail
     test_should_fail_1,
     test_should_fail_max_block_states,
-    test_should_fail_address_of_variable,
 
     // weird stuff
     // test_Lor_in_switch,

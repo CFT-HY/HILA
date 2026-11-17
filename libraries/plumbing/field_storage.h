@@ -3,6 +3,9 @@
 #ifndef FIELD_STORAGEH
 #define FIELD_STORAGEH
 
+#include <cstdio>
+#include <cstdlib>
+
 #include "plumbing/defs.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/field.h"
@@ -112,6 +115,30 @@ class field_storage {
 namespace hila {
 
 /**
+ * @brief Called if the value of a loop local index, e.g. mu in U[mu][X], is not one of the values
+ * found by the analysis of hilapp. Only with -DHILA_CHECK_LOOP_LOCAL_INDEX, see select_storage().
+ * This means a bug in hilapp: report it.
+ */
+#define HILA_LOOP_LOCAL_INDEX_ERROR_MSG                                                            \
+    "hila: internal error, the value %lld of the index of a Field selected with a loop local "    \
+    "index (e.g. mu in U[mu][X]) is not one of the values found by hilapp\n"
+
+DEVICE inline void loop_local_index_error(const int64_t idx) {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+    printf(HILA_LOOP_LOCAL_INDEX_ERROR_MSG, static_cast<long long>(idx));
+#if defined(__CUDA_ARCH__)
+    __trap();
+#else
+    __builtin_trap();
+#endif
+#else
+    fflush(stdout);
+    fprintf(stderr, HILA_LOOP_LOCAL_INDEX_ERROR_MSG, static_cast<long long>(idx));
+    std::abort();
+#endif
+}
+
+/**
  * @brief Select the storage of a field by an index value. Used by hilapp in GPU kernels for
  * a field selected with an index that depends on a variable defined inside the site loop, e.g.
  * U[mu] inside foralldir(mu).
@@ -120,12 +147,18 @@ namespace hila {
  * s0, ss... are the storages for the possible index values V0, Vs... found by its analysis,
  * e.g. select_storage<0, 1, 2, 3>(mu, U0, U1, U2, U3). The index is the same for all
  * threads. The last storage is returned without a check, the analysis guarantees that the index
- * has one of the values.
+ * has one of the values. Compile with -DHILA_CHECK_LOOP_LOCAL_INDEX to check this (also in
+ * value_position() and pair_position()), not on by default because asserts in GPU kernels can
+ * be slow.
  */
 template <int64_t V0, int64_t... Vs, typename S, typename... Ss>
 DEVICE inline const S &select_storage(const int64_t idx, const S &s0, const Ss &...ss) {
     static_assert(sizeof...(Vs) == sizeof...(Ss), "a storage for each index value needed");
     if constexpr (sizeof...(Vs) == 0) {
+#ifdef HILA_CHECK_LOOP_LOCAL_INDEX
+        if (idx != V0)
+            loop_local_index_error(idx);
+#endif
         (void)idx;
         return s0;
     } else {
@@ -144,6 +177,10 @@ DEVICE inline const S &select_storage(const int64_t idx, const S &s0, const Ss &
 template <int64_t V0, int64_t... Vs>
 DEVICE constexpr inline int value_position(const int64_t v) {
     if constexpr (sizeof...(Vs) == 0) {
+#ifdef HILA_CHECK_LOOP_LOCAL_INDEX
+        if (v != V0)
+            loop_local_index_error(v);
+#endif
         (void)v;
         return 0;
     } else {
@@ -161,6 +198,10 @@ template <int64_t I0, int64_t D0, int64_t... Rest>
 DEVICE constexpr inline int pair_position(const int64_t i, const int64_t d) {
     static_assert(sizeof...(Rest) % 2 == 0, "pairs of (index value, direction) needed");
     if constexpr (sizeof...(Rest) == 0) {
+#ifdef HILA_CHECK_LOOP_LOCAL_INDEX
+        if (i != I0 || d != D0)
+            loop_local_index_error(i);
+#endif
         (void)i;
         (void)d;
         return 0;

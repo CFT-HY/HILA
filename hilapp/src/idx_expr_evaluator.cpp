@@ -310,14 +310,339 @@ static const VarDecl *referenced_var(const Expr *arg, ASTContext &ASTctx) {
 //  - For a call that is not evaluated, `value` is unknown (std::nullopt).
 // If we can not determine which variable `arg` refers to, the call may have changed any of
 // them, so all variables become unknown
+static bool is_escaped(const Eval_state &state, const VarDecl *VD) {
+    return state.escaped != nullptr && state.escaped->contains(VD);
+}
+
+// Set the value of the variable VD: converted to its type, unknown if VD has escaped.
+static void set_var(Eval_state &state, const VarDecl *VD, std::optional<int64_t> value,
+                    ASTContext &ASTctx) {
+    value = is_escaped(state, VD) ? std::nullopt : to_int_type(value, VD->getType(), ASTctx);
+    state.vars[VD] = value;
+    state.all_possible_vals[VD].insert(value);
+}
+
 static void write_reference_arg(const Expr *arg, std::optional<int64_t> value, Eval_state &state,
                                 ASTContext &ASTctx) {
     if (const VarDecl *VD = referenced_var(arg, ASTctx)) {
-        state.vars[VD] = to_int_type(value, VD->getType(), ASTctx);
-        state.all_possible_vals[VD].insert(state.vars[VD]);
+        set_var(state, VD, value, ASTctx);
     } else {
         write_through_unknown_reference(state);
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Escape analysis
+//
+// The evaluation follows the writes to an integer variable `x` through `x` itself (assignment,
+// ++, --), through local reference variables `int &r = x;`, and through reference arguments of
+// calls, at the call. If a non-const reference or a pointer to `x` is stored somewhere else, `x`
+// can change later in a way that is not followed, e.g.
+//      struct Holder { int &d; void set(int v) { d = v; } };
+//      Holder h(x); x = 0; h.set(1);                     // x is 1
+//      std::tie(x, y) = std::make_pair(1, 2);
+//      constexpr int &pick(int &a) { return a; }   pick(x) = 1;
+//      int *p = &x; *p = 1;
+//      auto f = [&x]() { x = 1; }; x = 0; f();
+// find_escaped_vars() finds these variables before the evaluation, and their values are always
+// unknown. It goes through every use of a non-const glvalue (an expression that refers to an
+// object) in the code: a use that reads the value, or writes it in a way the evaluation follows,
+// is fine. Any other use lets the variables the glvalue may refer to escape.
+//
+// ASSUMPTION: a function does not store the address of its reference argument in a global
+// variable, or in an object passed to it by value.
+
+// The variables the glvalue E may refer to are added to `out`. These are integer variables, also
+// through reference variables, `?:`, assignments, casts and calls returning a reference.
+static void lvalue_targets(const Expr *E, ASTContext &ASTctx, Escaped_vars &out, int depth = 0) {
+    if (E == nullptr || out.all)
+        return;
+    if (depth > REFERENCE_CHAIN_MAX_DEPTH) {
+        out.all = true;
+        return;
+    }
+    E = E->IgnoreParens();
+    const auto targets = [&](const Expr *sub) { lvalue_targets(sub, ASTctx, out, depth + 1); };
+
+    if (const auto *full = dyn_cast<FullExpr>(E)) {
+        targets(full->getSubExpr());
+    } else if (const auto *cast = dyn_cast<CastExpr>(E)) {
+        // e.g. static_cast<int &>(x), a glvalue cast refers to the same object
+        if (cast->isGLValue())
+            targets(cast->getSubExpr());
+    } else if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+        const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+        if (VD == nullptr)
+            return;
+        if (is_alias_reference(VD)) {
+            // `int &r = x;` refers to x. An extern reference does not refer to a local variable
+            if (VD->getInit())
+                targets(VD->getInit());
+        } else if (VD->getType().getNonReferenceType()->isIntegralOrEnumerationType()) {
+            out.vars.insert(VD);
+        }
+    } else if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+        if (BO->isAssignmentOp())
+            targets(BO->getLHS());
+        else if (BO->getOpcode() == BO_Comma)
+            targets(BO->getRHS());
+        // .* and ->* refer to members of objects
+    } else if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+        if (UO->getOpcode() == UO_PreInc || UO->getOpcode() == UO_PreDec)
+            targets(UO->getSubExpr());
+        else if (UO->getOpcode() != UO_Deref)
+            out.all = true;
+        // *p: the address of an integer variable escapes when it is taken
+    } else if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
+        targets(CO->getTrueExpr());
+        targets(CO->getFalseExpr());
+    } else if (const auto *CE = dyn_cast<CallExpr>(E);
+               CE && E->getType()->isIntegralOrEnumerationType()) {
+        // A function returning a non-const reference to an integer may return a non-const
+        // reference argument
+        for (const Expr *arg : CE->arguments())
+            if (arg->isGLValue() && !arg->getType().isConstQualified())
+                targets(arg);
+    } else if (isa<CallExpr>(E)) {
+        // a reference to an object of another type, see may_hold_int_alias()
+    } else if (isa<MaterializeTemporaryExpr, ArraySubscriptExpr, MemberExpr, CompoundLiteralExpr,
+                   clang::StringLiteral, PredefinedExpr, CXXDefaultArgExpr, CXXDefaultInitExpr,
+                   CXXTypeidExpr, MSPropertyRefExpr>(E)) {
+        // a temporary, or an element or member of an object, not a variable. A reference member
+        // refers to a variable that has escaped when the object was made.
+    } else if (E->getType()->isIntegralOrEnumerationType()) {
+        // some other kind of integer glvalue, e.g. GNU `a ?: b`: could be any variable
+        out.all = true;
+    }
+    // other types: an object of another type can not be an integer variable (that would need
+    // a cast)
+}
+
+// True if an object of type T may hold a non-const reference or pointer to an integer, through
+// which an integer variable stored there could be changed later. T itself may be a pointer or a
+// reference: then can something stored to what it points to hold one.
+static bool may_hold_int_alias(QualType T, ASTContext &ASTctx,
+                               std::set<const RecordDecl *> &visited) {
+    T = T.getCanonicalType();
+    while (const clang::ArrayType *AT = ASTctx.getAsArrayType(T))
+        T = AT->getElementType().getCanonicalType();
+
+    if (T->isReferenceType() || T->isPointerType()) {
+        const QualType P = T->getPointeeType();
+        if (P->isFunctionType() || P.isConstQualified())
+            return false;
+        if (P->isIntegralOrEnumerationType() || P->isVoidType())
+            return true;
+        return may_hold_int_alias(P, ASTctx, visited);
+    }
+    if (const RecordDecl *RD = T->getAsRecordDecl()) {
+        RD = RD->getDefinition();
+        if (RD == nullptr)
+            return true; // incomplete type, could be anything
+        if (!visited.insert(RD).second)
+            return false;
+        for (const FieldDecl *field : RD->fields())
+            if (may_hold_int_alias(field->getType(), ASTctx, visited))
+                return true;
+        if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD))
+            for (const CXXBaseSpecifier &base : CRD->bases())
+                if (may_hold_int_alias(base.getType(), ASTctx, visited))
+                    return true;
+    }
+    return false;
+}
+
+static bool may_hold_int_alias(QualType T, ASTContext &ASTctx) {
+    std::set<const RecordDecl *> visited;
+    return may_hold_int_alias(T, ASTctx, visited);
+}
+
+struct Escape_finder {
+    ASTContext &ASTctx;
+    Escaped_vars &escaped;
+
+    // The variables the glvalue E may refer to escape
+    void escape(const Expr *E, const char *how) {
+        Escaped_vars targets;
+        lvalue_targets(E, ASTctx, targets);
+        if (!targets.all && targets.vars.empty())
+            return;
+        INTERNAL_NOTE_IF(E) << " `" << get_expr_str(E) << "` " << how
+                            << ": the value of the variable(s) it refers to may change later in a "
+                               "way that is not followed, their values are unknown "
+                            << loc_str(E) << "\n";
+        if (targets.all)
+            escaped.all = true;
+        escaped.vars.insert(targets.vars.begin(), targets.vars.end());
+    }
+
+    std::string get_expr_str(const Expr *E) {
+        std::string s;
+        llvm::raw_string_ostream os(s);
+        E->printPretty(os, nullptr, PrintingPolicy(ASTctx.getLangOpts()));
+        return s;
+    }
+
+    // C is a non-const reference argument of a call (or a constructor) to `callee`
+    // (nullptr if not known), and the reference is to parameter `param_index`. Can the reference
+    // be stored somewhere: in the object being constructed or the object of a member function
+    // call, in the return value, or through another reference or pointer argument
+    void reference_arg(const Expr *C, const FunctionDecl *callee, unsigned param_index,
+                       QualType constructed) {
+        if (!constructed.isNull() && may_hold_int_alias(constructed, ASTctx))
+            return escape(C, "is passed by reference to a constructor of an object that may "
+                             "store it");
+        if (callee == nullptr)
+            return escape(C, "is passed by reference to an unknown function");
+
+        if (const auto *method = dyn_cast<CXXMethodDecl>(callee);
+            method && !method->isStatic() && !method->isConst() &&
+            !isa<CXXConstructorDecl>(method) &&
+            may_hold_int_alias(ASTctx.getRecordType(method->getParent()), ASTctx))
+            return escape(C, "is passed by reference to a member function of an object that may "
+                             "store it");
+
+        const QualType ret = callee->getReturnType().getCanonicalType();
+        // a call returning a non-const reference to an integer is followed as a glvalue at its use
+        const bool returns_int_ref = ret->isReferenceType() &&
+                                     !ret->getPointeeType().isConstQualified() &&
+                                     ret->getPointeeType()->isIntegralOrEnumerationType();
+        if (!returns_int_ref && may_hold_int_alias(ret, ASTctx))
+            return escape(C, "is passed by reference to a function whose return value may hold "
+                             "it");
+
+        for (unsigned i = 0; i < callee->getNumParams(); i++) {
+            if (i == param_index)
+                continue;
+            const QualType T = callee->getParamDecl(i)->getType();
+            if ((T->isReferenceType() || T->isPointerType()) && may_hold_int_alias(T, ASTctx))
+                return escape(C, "is passed by reference to a function that may store it in "
+                                 "another argument");
+        }
+    }
+
+    void call_args(const Expr *P, const Expr *C) {
+        if (const auto *CE = dyn_cast<CallExpr>(P)) {
+            const FunctionDecl *callee = CE->getDirectCallee();
+            // a member operator call has the object as its first argument
+            const auto *method = dyn_cast_or_null<CXXMethodDecl>(callee);
+            const unsigned first_param_arg =
+                (isa<CXXOperatorCallExpr>(CE) && method && !method->isStatic()) ? 1 : 0;
+            for (unsigned i = 0; i < CE->getNumArgs(); i++) {
+                if (CE->getArg(i) != C)
+                    continue;
+                if (i < first_param_arg) {
+                    // the object of a member operator, e.g. `h = x`: like a member call
+                    if (!method->isConst() &&
+                        may_hold_int_alias(ASTctx.getRecordType(method->getParent()), ASTctx))
+                        escape(C, "is the object of a member operator call");
+                    return;
+                }
+                reference_arg(C, callee, i - first_param_arg, QualType());
+                return;
+            }
+            // not an argument: the callee or the object of a member call, e.g. `h.set(1)`.
+            // Objects are not integer variables
+            escape(C, "is used in a call");
+        } else if (const auto *CCE = dyn_cast<CXXConstructExpr>(P)) {
+            for (unsigned i = 0; i < CCE->getNumArgs(); i++)
+                if (CCE->getArg(i) == C)
+                    return reference_arg(C, CCE->getConstructor(), i, CCE->getType());
+        }
+    }
+
+    // Is the use of the non-const glvalue C as a child of P followed by the evaluation, or
+    // is C a glvalue itself (e.g. `(x)`, `x = 1` or `++x`), whose uses are then checked.
+    // Returns false if C escapes here
+    bool is_followed_use(const Stmt *P, const Expr *C) {
+        if (const auto *cast = dyn_cast<CastExpr>(P)) {
+            const CastKind kind = cast->getCastKind();
+            return kind == CK_LValueToRValue || kind == CK_LValueToRValueBitCast ||
+                   kind == CK_ToVoid || cast->isGLValue();
+        }
+        if (isa<ParenExpr, FullExpr, UnaryExprOrTypeTraitExpr, CXXTypeidExpr, CXXNoexceptExpr>(
+                P))
+            return true;
+        if (const auto *BO = dyn_cast<BinaryOperator>(P)) {
+            if (BO->isAssignmentOp() && BO->getLHS() == C)
+                // the evaluation follows assignments to variables, not e.g. to `(c ? x : y)`
+                return isa<DeclRefExpr>(C->IgnoreParenImpCasts());
+            return BO->getOpcode() == BO_Comma;
+        }
+        if (const auto *UO = dyn_cast<UnaryOperator>(P)) {
+            switch (UO->getOpcode()) {
+            case UO_PreInc:
+            case UO_PreDec:
+            case UO_PostInc:
+            case UO_PostDec:
+                return isa<DeclRefExpr>(C->IgnoreParenImpCasts());
+            default:
+                return false; // e.g. &x
+            }
+        }
+        if (const auto *CO = dyn_cast<ConditionalOperator>(P))
+            return CO->getCond() != C; // a glvalue `c ? x : y`
+        if (isa<Expr>(P))
+            return false; // e.g. a reference member in an aggregate init, `S s{x};`
+        if (const auto *DS = dyn_cast<DeclStmt>(P)) {
+            // `int &r = x;` is followed. Nothing else should bind a glvalue directly
+            for (const Decl *D : DS->decls())
+                if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->getInit() == C)
+                    return is_alias_reference(VD) || !VD->getType()->isReferenceType();
+            return false;
+        }
+        // Otherwise a statement: the value is discarded or returned. A reference returned
+        // from a function is followed at the call, see lvalue_targets(). asm outputs write to
+        // the variable
+        return !isa<AsmStmt>(P);
+    }
+
+    void visit(const Stmt *S) {
+        if (S == nullptr)
+            return;
+
+        // [&x] captures `x` by reference in the closure object
+        if (const auto *LE = dyn_cast<LambdaExpr>(S)) {
+            Escaped_vars targets;
+            for (const LambdaCapture &capture : LE->captures()) {
+                if (!capture.capturesVariable() || capture.getCaptureKind() != LCK_ByRef)
+                    continue;
+                if (const auto *VD = dyn_cast<VarDecl>(capture.getCapturedVar())) {
+                    if (is_alias_reference(VD))
+                        lvalue_targets(VD->getInit(), ASTctx, targets);
+                    else if (VD->getType().getNonReferenceType()->isIntegralOrEnumerationType())
+                        targets.vars.insert(VD);
+                }
+            }
+            if (targets.all || !targets.vars.empty()) {
+                INTERNAL_NOTE_IF(LE) << " lambda captures integer variables by reference, their "
+                                        "values are unknown "
+                                     << loc_str(LE) << "\n";
+                if (targets.all)
+                    escaped.all = true;
+                escaped.vars.insert(targets.vars.begin(), targets.vars.end());
+            }
+        }
+
+        for (const Stmt *child : S->children()) {
+            const auto *C = dyn_cast_or_null<Expr>(child);
+            if (C && C->isGLValue() && !C->getType().isConstQualified() &&
+                !is_followed_use(S, C)) {
+                if (isa<CallExpr, CXXConstructExpr>(S))
+                    call_args(cast<Expr>(S), C);
+                else
+                    escape(C, "is used in a way that is not followed (e.g. its address is taken, "
+                              "it is bound to a reference member or written through)");
+            }
+            visit(child);
+        }
+    }
+};
+
+// Find the escaped variables in the code S, see above
+static void find_escaped_vars(const Stmt *S, ASTContext &ASTctx, Escaped_vars &escaped) {
+    Escape_finder finder{ASTctx, escaped};
+    finder.visit(S);
 }
 
 // recursively eval
@@ -419,6 +744,13 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
             }
         }
 
+        if (is_escaped(state, VD)) {
+            INTERNAL_NOTE_IF(E) << " the variable may be changed through a stored reference or "
+                                   "pointer, its value is unknown "
+                                << loc_str(DRE) << "\n";
+            goto successful_return;
+        }
+
         if (state.vars.find(VD) == state.vars.end()) {
             // A constant declared outside the evaluated code, e.g. `constexpr int N = 4;`
             if (VD->isUsableInConstantExpressions(ASTctx)) {
@@ -489,10 +821,9 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
                 return false;
             // if rhs has no value should set and return nullopt in all cases
             if (!rhs_res.val.has_value()) {
-                state.vars[VD] = std::nullopt;
-                result.val = std::nullopt;
                 // var changes, record that it may be unknown
-                state.all_possible_vals[VD].insert(state.vars[VD]);
+                set_var(state, VD, std::nullopt, ASTctx);
+                result.val = std::nullopt;
                 goto successful_return;
             }
 
@@ -501,10 +832,8 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
                 //// [C99 6.5.16] Assignment operators.
                 // BO_Assign // "="
             case BO_Assign: {
-                state.vars[VD] = to_int_type(rhs_res.val, VD->getType(), ASTctx);
+                set_var(state, VD, rhs_res.val, ASTctx);
                 result = rhs_res;
-                // var changes
-                state.all_possible_vals[VD].insert(state.vars[VD]);
                 goto successful_return;
             }
             case BO_MulAssign:
@@ -518,12 +847,12 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
             case BO_XorAssign:
             case BO_OrAssign: {
                 // the result is converted to the type of the variable, eg unsigned wraps
+                std::optional<int64_t> value;
                 if (state.vars[VD].has_value())
-                    state.vars[VD] = to_int_type(eval_int_binary_op(op, state.vars[VD].value(),
-                                                                    rhs_res.val.value(), E, ASTctx),
-                                                 VD->getType(), ASTctx);
+                    value = eval_int_binary_op(op, state.vars[VD].value(), rhs_res.val.value(), E,
+                                               ASTctx);
+                set_var(state, VD, value, ASTctx);
                 result.val = state.vars[VD];
-                state.all_possible_vals[VD].insert(state.vars[VD]);
                 goto successful_return;
             }
             default:
@@ -615,15 +944,13 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
                 const std::optional<int64_t> before = state.vars[VD];
                 std::optional<int64_t> after;
                 if (before.has_value()) {
-                    after = to_int_type(
+                    after =
                         eval_int_binary_op((op == UO_PostInc || op == UO_PreInc) ? BO_Add : BO_Sub,
-                                           before.value(), 1, E, ASTctx),
-                        VD->getType(), ASTctx);
+                                           before.value(), 1, E, ASTctx);
                 }
-                state.vars[VD] = after;
+                set_var(state, VD, after, ASTctx);
                 // postfix gives the value before, prefix the value after
-                result.val = (op == UO_PostInc || op == UO_PostDec) ? before : after;
-                state.all_possible_vals[VD].insert(after);
+                result.val = (op == UO_PostInc || op == UO_PostDec) ? before : state.vars[VD];
                 goto successful_return;
             }
 
@@ -632,8 +959,10 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
             if (op == UO_AddrOf) {
                 // var we track could be changed through pointer, we do not follow these for now..
                 // needs to be checked also when the value of the variable is unknown
-                if (const VarDecl *VD = lvalue_var(operand, ASTctx);
-                    VD && VD->getType().getNonReferenceType()->isIntegralOrEnumerationType()) {
+                // The escape analysis makes such variables unknown, see find_escaped_vars()
+                if (const VarDecl *VD = referenced_var(operand, ASTctx);
+                    VD && VD->getType().getNonReferenceType()->isIntegralOrEnumerationType() &&
+                    !is_escaped(state, VD)) {
                     INTERNAL_ERROR << " Taking the address of an integer variable is not "
                                       "supported "
                                    << loc_str(UO) << "\n";
@@ -954,15 +1283,11 @@ bool eval_stmt(const Stmt *S, Eval_state &state, ASTContext &ASTctx) {
                     Eval_result res{};
                     if (!eval_expr(res, init, state, ASTctx))
                         return false;
-                    state.vars[VD] = to_int_type(res.val, VD->getType(), ASTctx);
-                    // var changes
-                    state.all_possible_vals[VD].insert(state.vars[VD]);
+                    set_var(state, VD, res.val, ASTctx);
                     return true;
                 } else {
                     // if no init it is std::nullopt
-                    state.vars[VD] = std::nullopt;
-                    // var changes
-                    state.all_possible_vals[VD].insert(state.vars[VD]);
+                    set_var(state, VD, std::nullopt, ASTctx);
                     return true;
                 }
             }
@@ -1189,6 +1514,15 @@ bool Idx_expr_evaluator::init(const FunctionDecl *func, Stmt *statement_in_the_f
 
     diags.enable_colors(true);
     reported_diag.clear();
+
+    // The variables that may be changed through stored references or pointers: in the whole
+    // function, as such a reference can be made before the statement, and in the statement, in
+    // case it is not in the body of func (e.g. a template pattern)
+    escaped = {};
+    func_cache.escaped.clear();
+    if (func->getBody())
+        find_escaped_vars(func->getBody(), *ctx, escaped);
+    find_escaped_vars(statement_in_the_func, *ctx, escaped);
 
     return true;
 }
@@ -1695,6 +2029,22 @@ static bool eval_constexpr_function(const FunctionDecl *func, Eval_state &state,
         }
     }
 
+    // The escaped variables of the function: escaped parameters are unknown
+    Escaped_vars uncached_escaped;
+    Escaped_vars *escaped = &uncached_escaped;
+    if (state.func_cache) {
+        const auto [it, is_new] = state.func_cache->escaped.try_emplace(func);
+        escaped = &it->second;
+        if (is_new)
+            find_escaped_vars(func->getBody(), ASTctx, *escaped);
+    } else {
+        find_escaped_vars(func->getBody(), ASTctx, *escaped);
+    }
+    state.escaped = escaped;
+    for (const ParmVarDecl *param : func->parameters())
+        if (const auto it = state.vars.find(param); it != state.vars.end() && is_escaped(state, param))
+            it->second = std::nullopt;
+
     std::unique_ptr<CFG> uncached_cfg;
     std::unique_ptr<CFG> &func_cfg = cache ? cache->cfgs[func] : uncached_cfg;
     if (!func_cfg) {
@@ -1728,6 +2078,7 @@ bool Idx_expr_evaluator::exec() {
         tuples.clear();
 
     main_state.func_cache = &func_cache;
+    main_state.escaped = &escaped;
     main_state.eval_succeeded = eval_CFG_worklist(*cfg, main_state, *ASTctx);
     return main_state.eval_succeeded;
 }
