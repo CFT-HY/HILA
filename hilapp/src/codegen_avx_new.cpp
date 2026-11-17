@@ -273,6 +273,11 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size_, std::s
             reason.push_back("it contains site selection variable");
         }
 
+        if (field_function_call_list.size() > 0) {
+            is_vectorizable = false;
+            reason.push_back("it calls field functions");
+        }
+
         // check if the fields are vectorizable in a compatible manner
         for (field_info &fi : field_info_list) {
             if (!fi.vecinfo.is_vectorizable) {
@@ -554,9 +559,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                         if (d.is_constant_direction)
                             dirname = d.direxpr_s; // orig. string
                         else
-                            dirname = remove_X(
-                                loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
-                                                                              // get_stmt_str(d.e);
+                            dirname = mapped_dir_name(loopBuf, d);
 
                         code << "const " << l.vecinfo.vectorized_type << " " << d.name_with_dir
                              << " = " << l.new_name << ".get_vector_at<"
@@ -565,7 +568,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
 
                         // and replace references in loop body
                         for (field_ref *ref : d.ref_list) {
-                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                            replace_field_ref(loopBuf, ref, d.name_with_dir);
                         }
                     }
             } else {
@@ -593,7 +596,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                 //             d.parityExpr->getSourceRange())); // mapped name was
 
                 //     for (field_ref *ref : d.ref_list) {
-                //         loopBuf.replace(ref->fullExpr,
+                //         replace_field_ref(loopBuf, ref,
                 //                         loop_array_name + "[" + dirname + "]");
                 //     }
                 // }
@@ -604,11 +607,10 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, l.new_name + ".get_vector_at<" +
+                        replace_field_ref(loopBuf, ref, l.new_name + ".get_vector_at<" +
                                                            l.vecinfo.vectorized_type +
                                                            ">(hila_loop_lattice.neighbours[" + dirname +
                                                            "][" + looping_var + "])");
@@ -637,7 +639,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
         // and finally replace these references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
-                loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                replace_field_ref(loopBuf, ref, l.loop_ref_name);
             }
 
     } // FIeld handling ends here

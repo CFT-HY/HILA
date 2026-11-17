@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # get_hilapp.sh - download a prebuilt, statically linked hilapp binary matching this
-# hila source tree, and install it to hilapp/bin/hilapp.
+# hila source tree, and install it to hilapp/bin/hilapp, and the clang builtin headers it
+# needs to hilapp/include.
 #
 # Binaries are built by the GitHub workflow .github/workflows/hilapp-binaries.yml for
 # Linux x86_64 and aarch64, for each change of hilapp/ on the main branch, and kept in the
@@ -20,7 +21,8 @@
 # https://github.com/<repo>/releases/download/hilapp-binaries).
 #
 # Needs git, curl or wget, tar and sha256sum (or shasum).  After "git pull" run this again;
-# it does nothing if the binary is up to date.
+# it does nothing if the binary is up to date.  The installed files get the same group
+# access rights as the user has (chmod g=u), for directories shared by a group.
 
 set -euo pipefail
 
@@ -164,7 +166,18 @@ if [ -e "${bin_dir}/hilapp" ]; then
     mv -f "${bin_dir}/hilapp" "${bin_dir}/hilapp.previous"
 fi
 mv "${tmp}/x/hilapp" "${bin_dir}/hilapp"
+
+# clang builtin headers (stddef.h etc.) of the binary, hilapp finds them in hilapp/include
+if [ -d "${tmp}/x/include" ]; then
+    rm -rf "${hilapp_dir}/include"
+    mv "${tmp}/x/include" "${hilapp_dir}/include"
+fi
 echo "${version}" > "${release_file}"
+
+# on shared (e.g. project) directories the whole group maintains hila: give the group the
+# same access rights as the user, so that others in the group can update hilapp too
+chmod g=u "${bin_dir}/hilapp" "${release_file}"
+[ -d "${hilapp_dir}/include" ] && chmod -R g=u "${hilapp_dir}/include"
 
 echo "Installed ${bin_dir}/hilapp (${version})"
 sed 's/^/    /' "${tmp}/x/BUILD_INFO"

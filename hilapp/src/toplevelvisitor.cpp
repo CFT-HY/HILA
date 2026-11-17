@@ -1,10 +1,12 @@
 #include "stringops.h"
 #include "hilapp.h"
 #include "toplevelvisitor.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/QualTypeNames.h"
 
 #include "idx_expr_evaluator.h"
 
+#include <algorithm>
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -270,6 +272,8 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             }
 
             Expr *dirE = Op->getArg(1)->IgnoreImplicit();
+            lfe.dirE = dirE;
+            lfe.dir_negate = (strcmp(getOperatorSpelling(Op->getOperator()), "-") == 0);
             if (dirE->isIntegerConstantExpr(*Context)) {
                 llvm::APSInt result;
 
@@ -308,11 +312,6 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             } else {
                 lfe.is_constant_direction = false;
                 // llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
-
-                // the direction expression and the sign, for finding the values of a loop
-                // local direction in analyse_loop_local_field_refs()
-                lfe.dirExpr = dirE;
-                lfe.dir_negate = (strcmp(getOperatorSpelling(Op->getOperator()), "-") == 0);
 
                 // If the Direction is a variable, add it to the list
                 // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
@@ -1088,6 +1087,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     loop_const_expr_ref_list.clear();
     loop_function_calls.clear();
     selection_info_list.clear();
+    field_function_call_list.clear();
 
     global.location.loop = ls->getSourceRange().getBegin();
     loop_info.clear_except_external();
@@ -1153,6 +1153,42 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
 ///  from VisitStmt() if the status state::in_loop_body is true
 ////////////////////////////////////////////////////////////////////////////////
 
+bool TopLevelVisitor::is_assignment_value_unused(Stmt *s) {
+
+    if (s->getBeginLoc().isMacroID() || s->getEndLoc().isMacroID())
+        return false;
+
+    // go up through possible ExprWithCleanups
+    const Stmt *cur = s;
+    while (true) {
+        auto parents = Context->getParents(*cur);
+        if (parents.size() != 1)
+            return false;
+        if (const ExprWithCleanups *EWC = parents[0].get<ExprWithCleanups>()) {
+            cur = EWC;
+            continue;
+        }
+        const Stmt *P = parents[0].get<Stmt>();
+        if (P == nullptr)
+            return false;
+        if (isa<CompoundStmt>(P))
+            return true;
+        if (const IfStmt *IS = dyn_cast<IfStmt>(P))
+            return cur == IS->getThen() || cur == IS->getElse();
+        if (const ForStmt *FS = dyn_cast<ForStmt>(P))
+            return cur == FS->getBody() || cur == FS->getInc();
+        if (const WhileStmt *WS = dyn_cast<WhileStmt>(P))
+            return cur == WS->getBody();
+        if (const DoStmt *DS = dyn_cast<DoStmt>(P))
+            return cur == DS->getBody();
+        if (const CXXForRangeStmt *RS = dyn_cast<CXXForRangeStmt>(P))
+            return cur == RS->getBody();
+        if (const SwitchCase *SC = dyn_cast<SwitchCase>(P))
+            return cur == SC->getSubStmt();
+        return false;
+    }
+}
+
 bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // This keeps track of the assignment to field
@@ -1200,6 +1236,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
         TraverseStmt(assignee);
         is_assignment = false;
+
+        // Mark plain f[X] = ... -assignments, these can be written directly to the field
+        if (is_field_assign && !is_compound && !field_ref_list.empty() &&
+            field_ref_list.back().fullExpr == assignee->IgnoreParens()->IgnoreImplicit() &&
+            is_assignment_value_unused(s)) {
+            field_ref_list.back().assignExpr = cast<Expr>(s);
+        }
 
         TraverseStmt(assigned_expr);
         parsing_state.skip_children = 1;
@@ -1261,6 +1304,15 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // Check for function calls parameters. We need to determine if the
     // function can assign to the a field parameter (is not const).
+    // field functions access fields - handle these separately, see field_function.cpp
+    if (CallExpr *CE = dyn_cast<CallExpr>(s)) {
+        if (handle_field_function_call(CE)) {
+            parsing_state.skip_children = 1;
+            is_assignment = false;
+            return true;
+        }
+    }
+
     if (is_function_call_stmt(s)) {
 
         // remove loop const functions from loop body
@@ -1450,30 +1502,32 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         TraverseStmt(s);
 
         // check also the conditionals - are these site dependent?
-        if (!loop_info.has_site_dependent_cond_or_index) {
-            Expr *condexpr = nullptr;
-            if (IfStmt *IS = dyn_cast<IfStmt>(s))
-                condexpr = IS->getCond();
-            else if (ForStmt *FS = dyn_cast<ForStmt>(s))
-                condexpr = FS->getCond();
-            else if (WhileStmt *WS = dyn_cast<WhileStmt>(s))
-                condexpr = WS->getCond();
-            else if (DoStmt *DS = dyn_cast<DoStmt>(s))
-                condexpr = DS->getCond();
-            else if (SwitchStmt *SS = dyn_cast<SwitchStmt>(s))
-                condexpr = SS->getCond();
-            else if (ConditionalOperator *CO = dyn_cast<ConditionalOperator>(s))
-                condexpr = CO->getCond();
+        Expr *condexpr = nullptr;
+        if (IfStmt *IS = dyn_cast<IfStmt>(s))
+            condexpr = IS->getCond();
+        else if (ForStmt *FS = dyn_cast<ForStmt>(s))
+            condexpr = FS->getCond();
+        else if (WhileStmt *WS = dyn_cast<WhileStmt>(s))
+            condexpr = WS->getCond();
+        else if (DoStmt *DS = dyn_cast<DoStmt>(s))
+            condexpr = DS->getCond();
+        else if (SwitchStmt *SS = dyn_cast<SwitchStmt>(s))
+            condexpr = SS->getCond();
+        else if (ConditionalOperator *CO = dyn_cast<ConditionalOperator>(s))
+            condexpr = CO->getCond();
 
-            if (condexpr != nullptr) {
+        if (condexpr != nullptr) {
+            if (!loop_info.has_site_dependent_cond_or_index) {
                 loop_info.has_site_dependent_cond_or_index =
                     is_site_dependent(condexpr, &loop_info.conditional_vars);
                 if (loop_info.has_site_dependent_cond_or_index)
                     loop_info.condExpr = condexpr;
-
-                // Flag general cond expression
-                loop_info.has_conditional = true;
             }
+
+            // Flag general cond expression.  This must be done even if site dependence
+            // was already found (eg. site dependent array index in the loop body),
+            // otherwise conditionally assigned fields are not read in first
+            loop_info.has_conditional = true;
         }
 
         parsing_state.ast_depth = 0;
@@ -1664,10 +1718,11 @@ bool TopLevelVisitor::TraverseDecl(Decl *D) {
 /// can not be determined, all directions are gathered.
 bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
 
-    // helper: nearest neighbour reference with a loop local direction
+    // helper: nearest neighbour reference with a loop local direction. Not the refs synthesized
+    // for field functions (no fullExpr), their directions are not tracked: all are gathered
     auto has_loop_local_nb_dir = [](const field_ref &r) {
         return r.is_direction && r.is_loop_local_dir && !r.is_offset && r.deep_k == 0 &&
-               r.dirExpr != nullptr;
+               r.dirE != nullptr && r.fullExpr != nullptr;
     };
 
     bool any = false;
@@ -1689,7 +1744,7 @@ bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
                 std::vector<const Expr *> child_exprs;
                 if (r.is_loop_local_ref)
                     child_exprs.push_back(r.ref_index);
-                child_exprs.push_back(r.dirExpr);
+                child_exprs.push_back(r.dirE);
                 evaluator.add_tuple_to_tracking_list(r.fullExpr, child_exprs);
             }
         }
@@ -1938,61 +1993,60 @@ bool TopLevelVisitor::check_field_ref_list() {
 
     field_info_list.clear();
 
+    // find the field_info of field expression nameExpr, add new if not found.
+    // For a field with a loop local index give also the reference p: these with the same base,
+    // e.g. U[mu] in two foralldir(mu) loops or U[mu] and U[nu], are the same field. They have the
+    // same set of fields they can be, and in the loop body each reference uses its own expression.
+    auto find_field_info = [&](Expr *nameExpr, const field_ref *p = nullptr) -> field_info * {
+        const bool loop_local_ref = (p != nullptr && p->is_loop_local_ref);
+        std::string ref_index_type;
+        if (loop_local_ref)
+            ref_index_type =
+                p->ref_index->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+
+        // search for duplicates
+        for (field_info &li : field_info_list) {
+            if (loop_local_ref
+                    ? (li.is_loop_local_ref && li.ref_base_str == get_stmt_str(p->ref_base) &&
+                       li.ref_index_type == ref_index_type)
+                    : (!li.is_loop_local_ref && is_duplicate_expr(li.nameExpr, nameExpr))) {
+                return &li;
+            }
+        }
+
+        field_info lfv;
+        lfv.old_name = get_stmt_str(nameExpr);
+        lfv.type_template = get_expr_type(nameExpr);
+        if (lfv.type_template.find("Field", 0) != 0) {
+            reportDiag(DiagnosticsEngine::Level::Error, nameExpr->getSourceRange().getBegin(),
+                       "confused: type of Field expression?");
+            no_errors = false;
+        }
+        lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T>
+
+        // get also the fully canonical Field<T>  type.
+        lfv.element_type =
+            nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+        int a = lfv.element_type.find('<') + 1;
+        int b = lfv.element_type.rfind('>') - a;
+        lfv.element_type = lfv.element_type.substr(a, b);
+
+        lfv.nameExpr = nameExpr; // store the first nameExpr to this field
+
+        if (loop_local_ref) {
+            lfv.is_loop_local_ref = true;
+            lfv.ref_base_str = get_stmt_str(p->ref_base);
+            lfv.ref_index_type = ref_index_type;
+        }
+
+        field_info_list.push_back(lfv);
+        return &field_info_list.back();
+    };
+
     for (field_ref &p : field_ref_list) {
 
-        std::string name = get_stmt_str(p.nameExpr);
+        field_info *fip = find_field_info(p.nameExpr, &p);
 
-        field_info *fip = nullptr;
-
-        // search for duplicates: if found, lfip is non-null
-        // Fields with a loop local index and the same base, e.g. U[mu] in two foralldir(mu)
-        // loops or U[mu] and U[nu], are the same: they have the same set of fields they can be,
-        // and in the loop body each reference uses its own expression.
-        std::string ref_index_type;
-        if (p.is_loop_local_ref)
-            ref_index_type =
-                p.ref_index->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
-
-        for (field_info &li : field_info_list) {
-            if (p.is_loop_local_ref
-                    ? (li.is_loop_local_ref && li.ref_base_str == get_stmt_str(p.ref_base) &&
-                       li.ref_index_type == ref_index_type)
-                    : (!li.is_loop_local_ref && is_duplicate_expr(li.nameExpr, p.nameExpr))) {
-                //  if (name.compare(li.old_name) == 0) {
-                fip = &li;
-                break;
-            }
-        }
-
-        if (fip == nullptr) {
-            field_info lfv;
-            lfv.old_name = name;
-            lfv.type_template = get_expr_type(p.nameExpr);
-            if (lfv.type_template.find("Field", 0) != 0) {
-                reportDiag(DiagnosticsEngine::Level::Error, p.nameExpr->getSourceRange().getBegin(),
-                           "confused: type of Field expression?");
-                no_errors = false;
-            }
-            lfv.type_template.erase(0, 5); // Remove "Field"  from Field<T>
-
-            // get also the fully canonical Field<T>  type.
-            lfv.element_type =
-                p.nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
-            int a = lfv.element_type.find('<') + 1;
-            int b = lfv.element_type.rfind('>') - a;
-            lfv.element_type = lfv.element_type.substr(a, b);
-
-            lfv.nameExpr = p.nameExpr; // store the first nameExpr to this field
-
-            if (p.is_loop_local_ref) {
-                lfv.is_loop_local_ref = true;
-                lfv.ref_base_str = get_stmt_str(p.ref_base);
-                lfv.ref_index_type = ref_index_type;
-            }
-
-            field_info_list.push_back(lfv);
-            fip = &field_info_list.back();
-        }
         // now fip points to the right info element
         // copy that to lf reference
         p.info = fip;
@@ -2047,8 +2101,30 @@ bool TopLevelVisitor::check_field_ref_list() {
                     found = false; // deep halo refs only with equal depth
                 } else if (p.is_constant_direction) {
                     found = (dp.is_constant_direction && dp.constant_value == p.constant_value);
-                } else {
+                } else if (dp.parityExpr != nullptr && p.parityExpr != nullptr) {
                     found = is_duplicate_expr(dp.parityExpr, p.parityExpr);
+                } else if (dp.dirE != nullptr && p.dirE != nullptr) {
+                    // field function refs have only the direction expression
+                    found = !dp.is_constant_direction && dp.dir_negate == p.dir_negate &&
+                            is_duplicate_expr(dp.dirE, p.dirE);
+                } else if (dp.deep_k > 0) {
+                    // field function deep halo refs: direction expression or constant
+                    found = dp.deep_negate == p.deep_negate &&
+                            ((dp.deep_dirExpr && p.deep_dirExpr &&
+                              is_duplicate_expr(dp.deep_dirExpr, p.deep_dirExpr)) ||
+                             (!dp.deep_dirExpr && !p.deep_dirExpr &&
+                              dp.deep_dir_str == p.deep_dir_str));
+                } else if (dp.is_offset && p.is_offset) {
+                    // field function offsets: the offset as text, without whitespace
+                    auto strip = [](std::string s) {
+                        s.erase(std::remove_if(s.begin(), s.end(),
+                                               [](unsigned char c) { return std::isspace(c); }),
+                                s.end());
+                        return s;
+                    };
+                    found = strip(dp.direxpr_s) == strip(p.direxpr_s);
+                } else {
+                    found = false;
                 }
 
                 if (found) {
@@ -2061,11 +2137,14 @@ bool TopLevelVisitor::check_field_ref_list() {
             if (!found) {
                 dir_ptr dp;
                 dp.parityExpr = p.parityExpr;
+                dp.dirE = p.dirE;
+                dp.dir_negate = p.dir_negate;
                 dp.count = (p.is_offset == false && p.deep_k == 0);
                 dp.is_offset = p.is_offset;
                 dp.deep_k = p.deep_k;
                 dp.deep_dirExpr = p.deep_dirExpr;
                 dp.deep_negate = p.deep_negate;
+                dp.deep_dir_str = p.deep_dir_str;
                 dp.is_constant_direction = p.is_constant_direction;
                 dp.constant_value = p.constant_value;
                 dp.is_loop_local_dir = p.is_loop_local_dir;
@@ -2077,6 +2156,49 @@ bool TopLevelVisitor::check_field_ref_list() {
             }
         } // Direction
     } // p-loop
+
+    // Fields accessed in field functions (field_function.cpp).  In the value form the
+    // accesses are in field_ref_list.  Otherwise neighbours are accessed with the
+    // direction unknown here, gather all directions as with loop local dirs
+    for (field_function_call &fc : field_function_call_list) {
+        if (fc.ffi->value_form)
+            continue;
+        for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
+            Expr *arg = fc.call->getArg(i);
+            if (fc.ffi->param_kind[i] != ff_param::FIELD || isa<CXXDefaultArgExpr>(arg))
+                continue;
+
+            field_info *fip = find_field_info(arg->IgnoreImplicit());
+            if (fc.ffi->read_nb[i]) {
+                fip->is_read_nb = true;
+                fip->is_loop_local_dir = true;
+                // the directions are not known: all are gathered, see gather_directions()
+                fip->loop_local_dirs_known = false;
+            }
+            if (fc.ffi->read_atX[i])
+                fip->is_read_atX_in_func = true;
+        }
+    }
+
+    // A field written in the loop cannot be read in a field function which accesses the
+    // field: the value at X is written at the end of the loop body.  In the value form the
+    // value is passed as usual
+    for (field_function_call &fc : field_function_call_list) {
+        if (fc.ffi->value_form)
+            continue;
+        for (unsigned i = 0; i < fc.call->getNumArgs() && i < fc.ffi->param_kind.size(); i++) {
+            Expr *arg = fc.call->getArg(i);
+            if (fc.ffi->param_kind[i] != ff_param::FIELD || isa<CXXDefaultArgExpr>(arg))
+                continue;
+            if (find_field_info(arg->IgnoreImplicit())->is_written) {
+                reportDiag(DiagnosticsEngine::Level::Error, arg->getBeginLoc(),
+                           "Field '%0' is assigned to in this loop and cannot be passed to a "
+                           "field function (prototype limitation)",
+                           get_stmt_str(arg).c_str());
+                no_errors = false;
+            }
+        }
+    }
 
     // Deep halo refs cannot be used if the field is written in the loop (the halo would
     // be read while the field changes).  Use the shift-copy method for these.
@@ -2144,11 +2266,13 @@ bool TopLevelVisitor::check_field_ref_list() {
 
                     if (loop_info.parity_value == Parity::all) {
 
+                        // field function refs: point to the call
+                        Expr *where = p->fullExpr ? p->fullExpr : p->ff_call;
                         reportDiag(DiagnosticsEngine::Level::Error,
-                                   p->parityExpr->getSourceRange().getBegin(),
+                                   where->getSourceRange().getBegin(),
                                    "simultaneous access '%0' and assignment '%1' not "
                                    "allowed with parity ALL",
-                                   get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str());
+                                   get_stmt_str(where).c_str(), l.old_name.c_str());
                         no_errors = false;
                         found_error = true;
 
@@ -2839,6 +2963,17 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
     }
 
     // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+
+    // Field functions are rewritten in place, see field_function.cpp.  Templates are
+    // rewritten when called in a loop, non-templates always (the original body
+    // would not link)
+    if (is_field_function(f)) {
+        if (f->isThisDeclarationADefinition() && f->hasBody() &&
+            f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate)
+            get_field_function(f);
+        parsing_state.skip_children = 1;
+        return true;
+    }
 
     if (f->isThisDeclarationADefinition() && f->hasBody()) {
 
@@ -3832,7 +3967,9 @@ bool TopLevelVisitor::parse_axis_offset(Expr *e, Expr *&dirE, int &k, std::vecto
 /// Direction string of a deep halo ref.  in_loop: use names mapped in the loop buffer
 std::string TopLevelVisitor::deep_dir_string(const dir_ptr &d, srcBuf &loopBuf, bool in_loop) {
     std::string s;
-    if (in_loop)
+    if (d.deep_dirExpr == nullptr)
+        s = d.deep_dir_str; // constant direction from a field function
+    else if (in_loop)
         s = loopBuf.get(d.deep_dirExpr->getSourceRange());
     else
         s = get_stmt_str(d.deep_dirExpr);

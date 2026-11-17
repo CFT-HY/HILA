@@ -747,6 +747,46 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
+/// Function or constructor d called from a field function (field_function.cpp):
+/// make it a loop function, together with the functions called from it
+///////////////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::visit_loop_function_decl(Decl *d) {
+
+    call_info_struct ci;
+
+    if (CXXConstructorDecl *cd = dyn_cast<CXXConstructorDecl>(d)) {
+        if (cd->isInheritingConstructor())
+            cd = cd->getInheritedConstructor().getConstructor();
+        ci.ctordecl = cd;
+        for (int i = 0; i < cd->getNumParams(); i++) {
+            argument_info ai;
+            ai.PV = cd->getParamDecl(i);
+            ci.arguments.push_back(ai);
+        }
+    } else if (FunctionDecl *fd = dyn_cast<FunctionDecl>(d)) {
+        ci.funcdecl = fd;
+        for (int i = 0; i < fd->getNumParams(); i++) {
+            argument_info ai;
+            ai.PV = fd->getParamDecl(i);
+            ci.arguments.push_back(ai);
+        }
+        if (isa<CXXMethodDecl>(fd))
+            ci.is_method = true;
+    } else {
+        return;
+    }
+
+    visited_decls.clear();
+    loopFunctionVisitor visitor(TheRewriter, Context);
+    if (!visitor.do_visit(ci)) {
+        // no body visible, mark the declaration only
+        handle_loop_function_if_needed(ci);
+    }
+    visited_decls.clear();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
 /// This is used for "#pragma hila loop function"  -calls
 ///////////////////////////////////////////////////////////////////////////////////////
 

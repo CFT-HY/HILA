@@ -275,6 +275,13 @@
 #define GPU_GLOBAL_ARG_MAX_SIZE 2048
 #endif
 
+#else // not CUDA || HIP
+
+// GPU_OVERLAP_COMM has no effect on non-GPU targets
+#ifdef GPU_OVERLAP_COMM
+#undef GPU_OVERLAP_COMM
+#endif
+
 #endif // CUDA || HIP
 
 ///////////////////////////////////////////////////////////////////////////

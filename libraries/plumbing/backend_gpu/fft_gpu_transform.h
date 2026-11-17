@@ -404,7 +404,7 @@ void hila_fft<cmplx_t>::transform_complex() {
         fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
@@ -430,12 +430,14 @@ void hila_fft<cmplx_t>::transform_complex() {
         fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
     fft_buffer_timer.stop();
 
+    // the scatter kernel still reads these; complete it before the pool reclaims
+    gpuStreamSynchronize(hila::compute_stream());
     d_free(d_size);
     d_free(d_ptr);
     d_free(fft_wrk);
@@ -589,7 +591,7 @@ void hila_fft<cmplx_t>::transform_real() {
         fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<real_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #endif
 
     if (!forward) {
@@ -598,7 +600,7 @@ void hila_fft<cmplx_t>::transform_real() {
             fft_wrk, c_wrk, L, Ls, n_columns);
 #else
         hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_unpack_real<real_t>), dim3(N_blocks_c),
-                           dim3(N_threads), 0, 0, fft_wrk, c_wrk, L, Ls, (size_t)n_columns);
+                           dim3(N_threads), 0, hila::compute_stream(), fft_wrk, c_wrk, L, Ls, (size_t)n_columns);
 #endif
     }
 
@@ -627,7 +629,7 @@ void hila_fft<cmplx_t>::transform_real() {
             fft_wrk, c_wrk, L, Ls, n_columns);
 #else
         hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_pack_real<real_t>), dim3(N_blocks_c),
-                           dim3(N_threads), 0, 0, fft_wrk, c_wrk, L, Ls, (size_t)n_columns);
+                           dim3(N_threads), 0, hila::compute_stream(), fft_wrk, c_wrk, L, Ls, (size_t)n_columns);
 #endif
     }
 
@@ -636,11 +638,13 @@ void hila_fft<cmplx_t>::transform_real() {
         fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<real_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(), Ls, n_columns);
 #endif
 
     fft_buffer_timer.stop();
 
+    // the scatter kernel still reads these; complete it before the pool reclaims
+    gpuStreamSynchronize(hila::compute_stream());
     d_free(d_size);
     d_free(d_ptr);
     d_free(c_wrk);
@@ -929,7 +933,7 @@ void hila_fft<cmplx_t>::reflect() {
         fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
@@ -938,7 +942,7 @@ void hila_fft<cmplx_t>::reflect() {
         <<<N_blocks, N_threads, 0, hila::compute_stream()>>>(fft_wrk, lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_reflect_dir_kernel<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, lattice.size(dir), n_columns);
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, lattice.size(dir), n_columns);
 #endif
 
 
@@ -947,11 +951,13 @@ void hila_fft<cmplx_t>::reflect() {
         fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
+                       dim3(N_threads), 0, hila::compute_stream(), fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice.size(dir), n_columns);
 #endif
 
 
+    // the scatter kernel still reads these; complete it before the pool reclaims
+    gpuStreamSynchronize(hila::compute_stream());
     d_free(d_size);
     d_free(d_ptr);
     d_free(fft_wrk);

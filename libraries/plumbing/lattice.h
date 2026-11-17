@@ -496,7 +496,7 @@ namespace hila {
 
 extern std::vector<lattice_struct *> defined_lattices;
 
-}
+} // namespace hila
 
 /**
  * @brief main interface class to lattices.
@@ -739,6 +739,10 @@ class Lattice {
 
     Lattice switch_to_base() {
         return switch_to(hila::defined_lattices.front());
+    }
+
+    CoordinateVector blocking_factor() const {
+        return (hila::defined_lattices.front()->l_size.asArray() / size().asArray()).asVector();
     }
 };
 

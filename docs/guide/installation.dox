@@ -264,8 +264,14 @@ hilapp/get_hilapp.sh
 
 This downloads the binary corresponding exactly to the checked-out hilapp source (built
 automatically on GitHub for each hilapp change on the main branch) and installs it to
-`hilapp/bin/hilapp`.  Run it again after `git pull`; it does nothing if the binary is up to
-date.  *hilapp* uses the system `g++` to find the C++ standard library headers.
+`hilapp/bin/hilapp`, together with the clang builtin headers (`stddef.h` etc.) it needs to
+`hilapp/include`.  Run it again after `git pull`; it does nothing if the binary is up to
+date.
+
+The statically linked *hilapp* uses the C++ standard library (libstdc++) of the newest
+`g++-N` or `g++` found in `PATH`, including g++ from modules or spack.  Another compiler can
+be chosen with the hilapp option `--get-includes-with=<compiler>` (e.g. in `HILAPP_OPTS` of
+the ARCH file).  `--show-include-paths` shows what *hilapp* uses.
 
 If no binary exists for the exact source version (e.g. on another branch), `hilapp/get_hilapp.sh
 --compatible` installs the newest binary with the same signature number, or build *hilapp* as
@@ -285,7 +291,7 @@ make install
 
 This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the default location for the program.  Build takes 1-2 min. 
 
-> __NOTE__: clang dev libraries are not installed in most supercomputer systems.  There the simplest option is the [prebuilt hilapp](#hila-preprocessor-prebuilt).  Alternatively, `make static` builds a statically linked _hilapp_ which can be copied to `hila/hilapp/bin` on a target machine with the same processor architecture, or use singularity containers.
+> __NOTE__: clang dev libraries are not installed in most supercomputer systems.  There the simplest option is the [prebuilt hilapp](#hila-preprocessor-prebuilt).  Alternatively, `make static` builds a statically linked _hilapp_ which can be copied to `hila/hilapp/bin` on a target machine with the same processor architecture, together with the directory `hila/hilapp/include` (clang builtin headers, copied there by the build), or use singularity containers.
   
 Test that _hilapp_ works:
 

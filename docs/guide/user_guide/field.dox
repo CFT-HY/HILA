@@ -103,6 +103,76 @@ Assignment and manipulation of variables defined outside of onsites loops are il
     }
 ~~~
 
+## Field functions {#field_functions_guide}
+
+Normally `f[X]` and `f[X + dir]` can be written only directly inside onsites loops.  A *field
+function* is a function which reads fields at `X` and its neighbours, and which can be called
+from onsites loops.  A function is a field function if it has a parameter of type
+X_index_type:
+
+~~~cpp
+// derivative of f to direction d
+double gradient(const Field<double> &f, const X_index_type &X, Direction d) {
+    return 0.5 * (f[X + d] - f[X - d]);
+}
+
+// templates are fine
+template <typename T>
+T laplacian(const Field<T> &f, const X_index_type &X) {
+    T r = -2 * NDIM * f[X];
+    foralldir(d) r += f[X + d] + f[X - d];
+    return r;
+}
+
+...
+onsites(ALL) {
+    g[X] = gradient(f, X, e_y) + laplacian(h, X);
+    double s = 0;
+    foralldir(d) s += gradient(f, X, d);
+}
+~~~
+
+Inside a field function:
+
+- Fields given as parameters can be read with `f[X]`, `f[X + dir]` and `f[X + offset]`, where
+  `X` is the X_index_type parameter.
+- `X.coordinates()`, `X.coordinate(dir)`, `X.parity()` and `X.x()` etc. can be used as in onsites loops.
+- Other functions can be called, and hila::global variables used.  On GPUs the functions
+  called are compiled for the device automatically.
+
+At the call the `X` argument must be `X`, and the Field arguments must be field variables (e.g.
+`f`, `U[d]`) which do not depend on variables defined inside the loop.
+
+_hilapp_ rewrites the function in one of two forms:
+
+- **Values passed:** if the directions and offsets of all field accesses are constants or
+  parameters of the function, as in `gradient()` above, the function gets the field values as
+  parameters.  The call `gradient(f, X, e_y)` works as if it were
+  `gradient(f[X + e_y], f[X - e_y], X, e_y)`: only the directions used are communicated, the
+  values are fetched as for field accesses in the loop, and the same neighbour used both in
+  the loop and in the function is fetched only once.  Offsets `f[X + offset]` are handled as in
+  the loop (see [Shift and reflect operators](#shift_and_reflect)): `f[X + 2*d]` is read from the
+  deep halo if the code is compiled with `HALO_DEPTH=2` or more, otherwise the field is shifted
+  before the loop.
+- **Fields accessed:** if a direction is computed inside the function, as with `foralldir(d)`
+  in `laplacian()`, the function reads the fields itself.  Then all neighbour directions of
+  the fields are communicated before the loop, and offsets cannot be used.
+
+The value form is generally more efficient: prefer passing the directions as parameters.
+
+Limitations:
+
+- Field parameters must be `const Field<T> &`, field functions cannot write to fields.
+- The Field and X parameters can be used only as `f[...]` and `X.method()`: e.g. `f.sum()` or
+  passing `f` to another function is not possible.
+- Field functions cannot call other field functions.
+- The function must be a non-member function, and its definition must be in the same
+  compilation unit (e.g. in a header, or in the same source file).
+- On vectorized (AVX) targets onsites loops calling field functions are not vectorized.
+- A non-constant default argument cannot be used as a direction.
+
+See `applications/test_field_functions` for examples.
+
 ## Loop external field access
 
 There are a few ways of accessing Field elements which exclusively are to be used outside of onsites loops.
@@ -132,6 +202,8 @@ For getting a sub volume there are the following methods:
 
 - `Field::get_slice`
 - `Field::get_subvolume` 
+
+For sums over one or more directions see [Projections](#field_projection_guide).
 
 
 
@@ -362,8 +434,12 @@ The type implements the methods (for clarity, using placeholder variable name a)
 - Option setting, called before reduction loop:
     + `a.allreduce(bool on = true)`: set allreduce on/off (default: on)
     + `a.delayed(bool on = true)`: set delayed on/off (default: off)
+    + `a.node_local(bool on = true)`: set node-local reduction on/off (default: off).
+      With node-local reduction there is no MPI communication: on each MPI rank the
+      result contains only the contributions of the rank's own sites, and the initial
+      value is kept on every rank. The size of the vector may differ between ranks.
 
-- Boolean query methods `a.is_allreduce()`, `a.is_delayed()`.
+- Boolean query methods `a.is_allreduce()`, `a.is_delayed()`, `a.is_node_local()`.
 - `a[i]` where i is int : access the element number i.
 - `a.reduce()` : in delayed reduction completes the reduction.  This must be called before the the result is used.
 - Assignment `a = <value>` : fills in a with the value
@@ -401,7 +477,53 @@ N fields G[N], where we know the field values are between 0 and fmax:
 > NOTE: ReductionVector indexing has no protection. Using index past the 
 > ends of the array will cause trouble!
 
-# Shift and reflect operators
+## Projections {#field_projection_guide}
+
+A projection sums the field over one or more directions, giving an array over
+the remaining ("kept") directions:
+~~~cpp
+    Field<double> f;
+    ...
+    // 4 dimensions: sum over z and t, result has lattice.size(e_x)*lattice.size(e_y) elements
+    std::vector<double> p = f.get_projection({e_z, e_t});
+    if (hila::myrank() == 0) {
+        // element (x,y) is p[x + y*lattice.size(e_x)]
+    }
+
+    // write the projection: one element per line, x running fastest
+    f.write_projection("proj_zt.dat", {e_z, e_t});
+    f.write_projection_binary("proj_zt.bin", {e_z, e_t});
+~~~
+
+The methods are
+- `std::vector<T> f.get_projection(dirs, bool broadcast = false)`
+- `std::vector<T> f.get_projection(dirs, cmin, cmax, bool broadcast = false)`
+- `f.write_projection(output, dirs, int precision = 6)`
+- `f.write_projection(output, dirs, cmin, cmax, int precision = 6)`
+- `f.write_projection_binary(output, dirs, bool to_float = false)`
+- `f.write_projection_binary(output, dirs, cmin, cmax, bool to_float = false)`
+
+Here
+- `dirs` is a `std::vector<Direction>` of the projected directions, e.g. `{e_z}` or `{e_y, e_t}`.
+  If all directions are projected, the result is the sum of the field (one element).
+- `cmin`, `cmax` (CoordinateVector, optional) give the corners of a subvolume: the sum runs over
+  `cmin[d] <= c[d] <= cmax[d]` in the projected directions, and the result covers the same range in the
+  kept directions.
+- The result is ordered as in `get_subvolume()`: the lowest kept direction runs fastest.
+  Only rank 0 gets the result of `get_projection()`, unless `broadcast` is true.
+- `output` is a file name (std::string) or an open std::ofstream. The format is the same as
+  in `write_subvolume()` and `write_subvolume_binary()`; `to_float = true` converts double
+  values to float.
+
+The projection does not need a full copy of the result on every rank, unlike
+a `ReductionVector` over the kept coordinates. Each MPI rank sums only its own sites
+(using a node-local ReductionVector), and the ranks sharing the same range of the
+kept coordinates add up their sums with `MPI_Reduce`. Rank 0 collects the
+result in slabs along the highest kept direction; the writers write each slab
+directly, so rank 0 holds only one slab at a time.  `get_projection()` returns the
+whole result on rank 0.
+
+# Shift and reflect operators {#shift_and_reflect}
 
 Field::shift operations allow shifting all elements by a certain displacement vector v. Even and Odd elements cannot be shifted with Field::shift method
 ~~~cpp

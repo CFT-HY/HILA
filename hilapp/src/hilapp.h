@@ -154,6 +154,18 @@ struct field_ref {
     int deep_k;
     Expr *deep_dirExpr; // the Direction expression
     bool deep_negate;   // if true, the direction is -(deep_dirExpr)
+    // the assignment expr if ref is the lhs of plain f[X] = ... whose value is not used,
+    // nullptr otherwise.  Used for writing the field directly at the assignment
+    Expr *assignExpr;
+    // nn Direction expression d of X + d or X - d (dir_negate), nullptr if not nn
+    Expr *dirE;
+    bool dir_negate;
+    // refs synthesized for accesses in field functions (field_function.cpp) have no
+    // fullExpr and parityExpr: ff_call is the call, the code for the access is stored
+    // in replacement
+    Expr *ff_call;
+    std::string replacement;
+    std::string deep_dir_str; // deep halo direction if no deep_dirExpr (constant)
 
     // field accessed with index that depends on a loop local variable, eg U[mu] inside
     // foralldir(mu). Only the form base[index] is supported, ref_base is "U" and ref_index "mu".
@@ -164,12 +176,10 @@ struct field_ref {
     Expr *ref_index;
     std::set<int64_t> ref_idx_set;
 
-    // A nearest neighbour reference X + dir or X - dir with a non-constant direction. For a loop
-    // local direction, loop_local_dirs holds the (index value, direction) pairs the reference uses,
+    // A nearest neighbour reference X + dir or X - dir (dirE, dir_negate above) with a loop local
+    // direction: loop_local_dirs holds the (index value, direction) pairs the reference uses,
     // obtained in analyse_loop_local_field_refs(). The index value is that of ref_index for a field
     // with a loop local index, otherwise 0. If idx/dir are unknown all directions are gathered
-    Expr *dirExpr;
-    bool dir_negate;
     std::set<std::pair<int64_t, int64_t>> loop_local_dirs;
     bool loop_local_dirs_known;
 
@@ -183,10 +193,12 @@ struct field_ref {
         deep_k = 0;
         deep_dirExpr = nullptr;
         deep_negate = false;
+        assignExpr = nullptr;
+        dirE = nullptr;
+        dir_negate = false;
+        ff_call = nullptr;
         is_loop_local_ref = false;
         ref_base = ref_index = nullptr;
-        dirExpr = nullptr;
-        dir_negate = false;
         loop_local_dirs_known = false;
     }
 
@@ -212,10 +224,15 @@ struct dir_ptr {
     int deep_k;                 // > 0 for axis offset X + k*dir from deep halo, see field_ref
     Expr *deep_dirExpr;
     bool deep_negate;
+    Expr *dirE;      // nn Direction expression, see field_ref
+    bool dir_negate;
+    std::string deep_dir_str; // see field_ref
 
     dir_ptr() {
         ref_list = {};
         parityExpr = nullptr;
+        dirE = nullptr;
+        dir_negate = false;
         count = 0;
         deep_k = 0;
         deep_dirExpr = nullptr;
@@ -298,6 +315,7 @@ struct field_info {
     bool is_read_nb;        // read using nn-neighbours
     bool is_read_offset;    // read with an offset (non-nn) index
     bool is_loop_local_dir; // is read with loop local direction?
+    bool is_read_atX_in_func; // read at X in a field function, see field_function.cpp
     int first_assign_seq;   // the sequence of the first assignment
 
     // A field accessed with a loop local index, e.g. U[mu] inside foralldir(mu)
@@ -318,6 +336,7 @@ struct field_info {
     field_info() {
         type_template = old_name = new_name = loop_ref_name = "";
         is_written = is_read_nb = is_read_atX = is_read_offset = is_loop_local_dir = false;
+        is_read_atX_in_func = false;
         is_loop_local_ref = false;
         loop_local_dirs_known = true;
         first_assign_seq = 0;
@@ -498,6 +517,65 @@ struct loop_info_struct {
     }
 };
 
+/// Field functions: functions with an X_index_type parameter, which access the fields given
+/// as parameters with f[X] or f[X + dir].  These can be called from site loops, see
+/// field_function.cpp
+enum class ff_param { OTHER, FIELD, X };
+
+/// A field access f[X] or f[X + dir] in a field function, where dir is a constant or a
+/// parameter of the function.  In the "value" form of the function each access is a
+/// parameter, and the call site passes the field value
+struct ff_access {
+    int param;              // index of the Field parameter
+    bool atX;               // f[X]
+    bool is_const;          // constant direction
+    unsigned const_value;   // its value, negative directions + 50 as in field_ref
+    std::string const_str;  // and the direction as an expression valid anywhere
+    int dir_param;          // index of the Direction parameter if not constant
+    bool negate;            // f[X - dir]
+    // f[X + offset], non-nn.  offset_tmpl is the offset expression where the parameters
+    // are ff_param_marker(i), replaced with the arguments at the call.  Axis offset
+    // X + axis_k * dir (|axis_k| >= 2, dir as above) can be read from the deep halo
+    bool is_offset;
+    std::string offset_tmpl;
+    int axis_k;
+};
+
+/// marker for parameter i in ff_access::offset_tmpl
+inline std::string ff_param_marker(int i) {
+    return "HILA__ffparam" + std::to_string(i) + "_";
+}
+
+struct field_function_info {
+    FunctionDecl *decl;               // the definition of the function (or template pattern)
+    std::vector<ff_param> param_kind; // kind of each parameter
+    std::vector<bool> read_atX;       // field parameter read at X
+    std::vector<bool> read_nb;        // field parameter read at X + dir
+    bool contains_random;
+    bool ok;                              // false if there were errors
+    std::vector<FunctionDecl *> instances; // GPU: instances whose callees are marked
+    // value form: field values are passed as parameters, accesses lists these.
+    // Otherwise the function accesses the fields (directions not known at the call)
+    bool value_form;
+    std::vector<ff_access> accesses;
+};
+
+/// a call to a field function inside a site loop
+struct field_function_call {
+    CallExpr *call;
+    field_function_info *ffi;
+    std::vector<field_ref *> refs; // value form: the refs for ffi->accesses
+};
+
+/// set the code for a field reference: replace the expression in the loop, or store it
+/// for synthesized field function refs
+inline void replace_field_ref(srcBuf &sb, field_ref *ref, const std::string &s) {
+    if (ref->fullExpr != nullptr)
+        sb.replace(ref->fullExpr, s);
+    else
+        ref->replacement = s;
+}
+
 /// Stores information about loop function arguments
 struct argument_info {
     Expr *E;
@@ -622,6 +700,9 @@ void reset_vectorizable_types();
 /// and clear loop function info
 void clear_loop_functions_in_compilation_unit();
 
+/// and field function info
+void clear_field_functions_in_compilation_unit();
+
 /// check if macro "name" is defined (non-function macros only)
 bool is_macro_defined(const char *name, std::string *arg = nullptr);
 
@@ -649,6 +730,7 @@ extern std::list<loop_const_expr_ref> loop_const_expr_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::list<selection_info> selection_info_list;
 extern std::vector<reduction_expr> reduction_list;
+extern std::vector<field_function_call> field_function_call_list;
 
 
 // struct func_prototype_struct {

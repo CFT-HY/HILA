@@ -350,7 +350,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(d.parityExpr->getSourceRange()));
+                        dirname = mapped_dir_name(loopBuf, d);
                 }
                 for (field_ref *ref : d.ref_list) {
                     if (preloaded.count(ref) > 0)
@@ -378,7 +378,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                         code << "const " << l.element_type << " " << d.name_with_dir << " = "
                              << l.new_name << ".get_value_at(" << deep_index(d) << ");\n";
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                            replace_field_ref(loopBuf, ref, d.name_with_dir);
                         continue;
                     }
 
@@ -386,9 +386,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
-                                                                          // get_stmt_str(d.e);
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     // generate access stmt
                     code << "const " << l.element_type << " " << d.name_with_dir << " = "
@@ -406,7 +404,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        replace_field_ref(loopBuf, ref, d.name_with_dir);
                     }
                 }
 
@@ -416,7 +414,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr,
+                            replace_field_ref(loopBuf, ref,
                                             l.new_name + ".get_value_at(" + deep_index(d) + ")");
                         continue;
                     }
@@ -425,16 +423,16 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
                         if (target.vectorize /* && l.vecinfo.is_vectorizable */) {
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at_nb_site(" +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at_nb_site(" +
                                                                dirname + ", " + looping_var + ")");
                         } else {
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at(" +
-                                                               nb_index(l.new_name, dirname) + ")");
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get_value_at(" +
+                                                               nb_index(l.new_name, dirname) +
+                                                               ")");
                         }
                     }
                 }
@@ -442,9 +440,12 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         }
 
 
+        // field written directly at assignments?
+        bool direct_write = field_direct_write(l);
+
         // and then get (possible) local refs
         // TODO:
-        if (l.is_read_atX || (l.is_written && loop_info.has_conditional)) {
+        if (l.is_read_atX || (l.is_written && loop_info.has_conditional && !direct_write)) {
             // now reading var without nb. reference
             // const here may cause problems in loop functions!
             // if (!l.is_written) {
@@ -462,15 +463,27 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         } else if (l.is_written) {
             code << l.element_type << " " << l.loop_ref_name << ";\n";
             code << "// Initial value of variable " << l.loop_ref_name << " not needed\n";
+            if (direct_write)
+                code << "// Variable " << l.loop_ref_name << " written to field at assignments\n";
         }
 
         // and finally replace references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
-                loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                replace_field_ref(loopBuf, ref, l.loop_ref_name);
+                if (direct_write) {
+                    loopBuf.insert_after(
+                        getSourceLocationAtEndOfRange(ref->assignExpr->getSourceRange()),
+                        ", " + l.new_name + ".set_value_at(" + l.loop_ref_name + ", " +
+                            looping_var + ")",
+                        false);
+                }
             }
 
     } // end of field handling
+
+    // Field and X arguments of field function calls
+    replace_field_function_args(loopBuf);
 
     // // Replace field references in loop body
     // for ( field_ref & le : field_ref_list ) {
@@ -495,7 +508,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
 
     // Add calls to setters
     for (field_info &l : field_info_list)
-        if (l.is_written) {
+        if (l.is_written && !field_direct_write(l)) {
             code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " << looping_var
                  << ");\n";
         }

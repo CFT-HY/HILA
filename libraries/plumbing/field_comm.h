@@ -476,34 +476,89 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 }
 
 #if defined(CUDA) || defined(HIP)
+
+#if defined(GPU_SHMEM)
+namespace hila {
+// Parity -> signal-slot sub-index.  Both ends index with the parity resolved
+// from the gather state machine, so put and wait stay paired.
+inline int parity_idx(Parity p) {
+    return (p == EVEN) ? 0 : ((p == ODD) ? 1 : 2);
+}
+} // namespace hila
+
+// Lazy symmetric allocation of this field's signal counters.  Collective-safe
+// for the same reason as receive_buffer[]: every PE allocates on the same code
+// path at the same logical point (first remote halo put of this field).
+template <typename T>
+uint64_t *Field<T>::field_struct::get_signal_buffer() {
+    if (comm_signal == nullptr) {
+        gpuMallocShared(&comm_signal, comm_signal_slots * sizeof(uint64_t));
+        gpuMemset(comm_signal, 0, comm_signal_slots * sizeof(uint64_t));
+        gpuStreamSynchronize(0); // ensure the zero is device-visible ...
+        nvshmem_barrier_all();   // ... on ALL PEs before any signalling put
+    }
+    return comm_signal;
+}
+#endif // GPU_SHMEM
+
 template <typename T>
 dir_mask_t Field<T>::stream_gather(Direction d, Parity p, gpuStream_t &stream) const {
     const auto &ci = lattice->nn_comminfo[d];
-    if (!is_gather_started(d, p))
+
+    // check_communication() can downgrade an ALL gather to EVEN/ODD in place, so
+    // the started parity need not be the loop's literal p.  Transfer what was
+    // actually started; unpack_buffers() resolves identically.
+    if (p == ALL) {
+        if (!is_gather_started(d, ALL) && !is_gather_started(d, EVEN) &&
+            !is_gather_started(d, ODD))
+            return 0;
+    } else if (!is_gather_started(d, p))
         return 0;
 
-    unsigned sites = ci.to_node.n_sites(p);
-    size_t n_bytes = sites * sizeof(T);
-    if (n_bytes == 0)
-        return 0;
+    int n_transfer;
+    Parity par = resolve_started_parity(d, p, n_transfer);
 
-    T *send_ptr = fs->send_buffer[d] + ci.to_node.offset(p);
-    T *recv_ptr = fs->get_receive_buffer(d, p, ci.from_node);
+    dir_mask_t mask = 0;
+    for (int i = 0; i < n_transfer; ++i, par = opp_parity(par)) {
+
+        unsigned sites = ci.to_node.n_sites(par);
+        size_t n_bytes = sites * sizeof(T);
+        if (n_bytes == 0)
+            continue;
+
+        T *send_ptr = fs->send_buffer[d] + ci.to_node.offset(par);
+        T *recv_ptr = fs->get_receive_buffer(d, par, ci.from_node);
 
 #if defined(GPU_SHMEM)
-    nvshmemx_putmem_nbi_on_stream(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
+        // recv_ptr and comm_signal[slot] are both symmetric, so they land at the
+        // same offset on the target, where unpack_buffers() waits on that slot.
+        // The fused put-with-signal is ordering-safe only under a single queue
+        // pair; multi-QP falls back to put -> quiet -> signal.
+        int sig_slot = (int)d * 3 + hila::parity_idx(par);
+        uint64_t *sig_addr = fs->get_signal_buffer() + sig_slot;
+        if (hila::nvshmem_use_fused_putsignal()) {
+            nvshmemx_putmem_signal_nbi_on_stream(recv_ptr, send_ptr, n_bytes, sig_addr, 1,
+                                                 NVSHMEM_SIGNAL_ADD, ci.to_node.rank, stream);
+        } else {
+            nvshmemx_putmem_nbi_on_stream(recv_ptr, send_ptr, n_bytes, ci.to_node.rank, stream);
+            nvshmemx_quiet_on_stream(stream);
+            nvshmemx_signal_op_on_stream(sig_addr, 1, NVSHMEM_SIGNAL_ADD, ci.to_node.rank,
+                                         stream);
+        }
 
 #elif defined(GPU_CCL)
-    using scalar_t = hila::arithmetic_type<T>;
-    size_t n_elems = sites * (sizeof(T) / sizeof(scalar_t));
-    auto g_type = gccl_type<scalar_t>::value;
+        using scalar_t = hila::arithmetic_type<T>;
+        size_t n_elems = sites * (sizeof(T) / sizeof(scalar_t));
+        auto g_type = gccl_type<scalar_t>::value;
 
-    gcclSend(send_ptr, n_elems, g_type, ci.to_node.rank, lattice->gccl_comm_lat, stream);
-    gcclRecv(recv_ptr, n_elems, g_type, ci.from_node.rank, lattice->gccl_comm_lat, stream);
+        gcclSend(send_ptr, n_elems, g_type, ci.to_node.rank, lattice->gccl_comm_lat, stream);
+        gcclRecv(recv_ptr, n_elems, g_type, ci.from_node.rank, lattice->gccl_comm_lat, stream);
 #endif
 
-    hila::n_gather_done += 1;
-    return get_dir_mask(d);
+        hila::n_gather_done += 1;
+        mask = get_dir_mask(d);
+    }
+    return mask;
 }
 #endif
 /// start_gather(): Communicate the field at Parity par from Direction
@@ -1113,6 +1168,16 @@ void Field<T>::unpack_buffers(Direction d, Parity p, gpuStream_t &stream) const 
 
     for (int i = 0; i < n_wait; ++i) {
         if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
+#if defined(GPU_SHMEM)
+            // one signalling put pairs with one wait per slot; the guard mirrors
+            // the sender's n_bytes > 0 condition (a self-copy issues no put)
+            if (from_node.n_sites(par) > 0) {
+                int sig_slot = (int)d * 3 + hila::parity_idx(par);
+                nvshmemx_signal_wait_until_on_stream(fs->get_signal_buffer() + sig_slot,
+                                                     NVSHMEM_CMP_GE,
+                                                     ++fs->signal_expected[sig_slot], stream);
+            }
+#endif
             fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node,
                                     stream);
         }

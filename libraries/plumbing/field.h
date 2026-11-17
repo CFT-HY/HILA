@@ -110,11 +110,20 @@ class Field {
 #endif
         T *send_buffer[NDIRS];
 
+#if defined(GPU_SHMEM)
+        // Halo completion signalling, replacing the global barrier.  One monotonic
+        // counter per (direction, parity) slot = (int)d * 3 + parity_idx(p).
+        static constexpr int comm_signal_slots = NDIRS * 3;
+        uint64_t *comm_signal = nullptr;             // symmetric heap, zeroed
+        uint64_t signal_expected[comm_signal_slots]; // host, monotonic
+        uint64_t *get_signal_buffer();               // lazy symmetric alloc + zero
+#endif
+
 #if HALO_DEPTH > 1
         // deep halo gathers (layers 0..depth-1, always ALL parity), see start_gather_depth()
         gather_status_t deep_status[NDIRS];
-        int deep_depth[NDIRS];       // depth of the started or done gather
-        unsigned deep_n[2][NDIRS];   // number of elements in layer 0 / deeper layers message
+        int deep_depth[NDIRS];     // depth of the started or done gather
+        unsigned deep_n[2][NDIRS]; // number of elements in layer 0 / deeper layers message
         MPI_Request deep_receive_request[2][NDIRS];
         MPI_Request deep_send_request[2][NDIRS];
         T *deep_send_buffer[NDIRS];
@@ -210,6 +219,11 @@ class Field {
 #endif
 #endif
             }
+#if defined(GPU_SHMEM)
+            comm_signal = nullptr;
+            for (int i = 0; i < comm_signal_slots; i++)
+                signal_expected[i] = 0;
+#endif
         }
 
         /**
@@ -242,6 +256,10 @@ class Field {
 #endif
 #endif
             }
+#if defined(GPU_SHMEM)
+            // not freed -- see field_storage<T>::free_mpi_buffer()
+            comm_signal = nullptr;
+#endif
         }
 
         /**
@@ -362,6 +380,11 @@ class Field {
     static_assert(std::is_trivial<T>::value && std::is_standard_layout<T>::value,
                   "Field expects only pod-type elements (plain data): default "
                   "constructor, copy and delete");
+
+    static_assert(hila::is_field_type<T>::value,
+                  "Types used in Field<> must define \"base_type\" and \"argument_type\", usually:\n"
+                  "    using base_type = hila::arithmetic_type<T>;\n"
+                  "    using argument_type = T;\n");
 
   public:
     /**
@@ -885,6 +908,28 @@ class Field {
     }
     inline auto get_value_at_nb_site(Direction d, unsigned i) const {
         return fs->get_element(fs->vector_lattice->site_neighbour(d, i));
+    }
+#endif
+
+#if !defined(CUDA) && !defined(HIP)
+    /**
+     * @brief Get the element at the neighbour of site i to direction d.  Used in
+     * hilapp-generated field functions, f[X+d] inside a function called from a site loop.
+     * Works in all CPU layouts, but is not as fast as the neighbour access in loops.
+     */
+    inline auto get_value_at_nb(Direction d, unsigned i) const {
+#if defined(VECTORIZED)
+        // vectorized types use the neighbours of the vectorized layout
+        if constexpr (hila::is_vectorizable_type<T>::value)
+            return get_value_at_nb_site(d, i);
+        else
+            return fs->get_element(fs->neighbours[d][i]);
+#elif defined(LAYOUT_ON_THE_FLY)
+        const unsigned *nb = fs->neighbours[d];
+        return fs->get_element(nb != nullptr ? nb[i] : lattice.ref().neighbour(i, d));
+#else
+        return fs->get_element(fs->neighbours[d][i]);
+#endif
     }
 #endif
 
@@ -1732,7 +1777,7 @@ class Field {
      * @brief Write subspace (slice) of the original field.
      * @details parameter slice (CoordinateVector) is either
      * a fixed coordinate value >= 0 or negative value, implying that this coordinate is run
-     * through. 
+     * through.
      * For example, slice = {5,2,-1,0}; prints the line along z-axis at (x,y,t) = (5,2,0)
      * @param Outf is either filename (std::string) or output stream of open file
      * (std::ofstream)
@@ -1743,6 +1788,70 @@ class Field {
     template <typename Outf>
     void write_slice_binary(Outf &&output, const CoordinateVector &slice,
                             bool to_float = false) const;
+
+    /**
+     * @brief Projection of the field: sum over the directions in `dirs`.
+     * @details The result is an array over the remaining ("kept") directions, ordered so
+     * that the lowest kept direction runs fastest. If all directions are projected the
+     * result has one element, the sum of the field.
+     * The optional range cmin, cmax restricts both the summation range in the projected
+     * directions and the output range in the kept directions.
+     * Memory use: each MPI rank needs only the projection of its own sites, and
+     * rank 0 collects the result. Only rank 0 gets the result unless broadcast == true.
+     *
+     * Example: in 4 dimensions, `auto p = f.get_projection({e_z, e_t});` gives an
+     * array of lattice.size(e_x)*lattice.size(e_y) elements, element (x,y) is at
+     * index x + y*lattice.size(e_x).
+     */
+    std::vector<T> get_projection(const std::vector<Direction> &dirs,
+                                  bool broadcast = false) const;
+    std::vector<T> get_projection(const std::vector<Direction> &dirs, const CoordinateVector &cmin,
+                                  const CoordinateVector &cmax, bool broadcast = false) const;
+
+    /**
+     * @brief Write out the projection (sum over directions `dirs`) of the field.
+     * @details Each element is on one line, ordered so that the lowest kept direction
+     * runs fastest, as in write_subvolume(). See get_projection() for `dirs`, cmin and cmax.
+     * Rank 0 writes the result in slabs, and never holds the whole projection
+     * (unless the highest kept direction is not divided between MPI ranks).
+     * @param Outf is either filename (std::string) or output stream of open file
+     * (std::ofstream)
+     */
+    template <typename Outf>
+    void write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                          int precision = 6) const;
+    template <typename Outf>
+    void write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                          const CoordinateVector &cmin, const CoordinateVector &cmax,
+                          int precision = 6) const;
+
+    /**
+     * @brief Write the projection as a binary file, see write_projection().
+     * @details to_float = true converts double values to float.
+     */
+    template <typename Outf>
+    void write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
+                                 bool to_float = false) const;
+    template <typename Outf>
+    void write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,
+                                 const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                 bool to_float = false) const;
+
+    /// @internal
+    /// Compute the projection and hand it to `output` on rank 0 in consecutive slabs.
+    /// output is called with (const T *data, size_t n).
+    template <typename Func>
+    void projection_internal(const std::vector<Direction> &dirs, const CoordinateVector &cmin,
+                             const CoordinateVector &cmax, Func &&output) const;
+
+    /// @internal
+    void write_projection_internal(std::ofstream &out, const std::vector<Direction> &dirs,
+                                   const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                   int precision, bool binary, bool to_float) const;
+    /// @internal
+    void write_projection_internal(const std::string &filename, const std::vector<Direction> &dirs,
+                                   const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                   int precision, bool binary, bool to_float) const;
 
     /**
      * @brief Sum reduction of Field

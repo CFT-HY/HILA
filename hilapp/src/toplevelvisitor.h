@@ -140,6 +140,8 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     std::optional<std::vector<std::string>> gather_directions(const field_info &l,
                                                               const std::string &name);
     bool check_field_ref_list();
+    bool is_assignment_value_unused(Stmt *s);
+    bool field_direct_write(const field_info &l);
 
     void check_var_info_list();
 
@@ -189,11 +191,21 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
 
     bool loop_function_check(Decl *fd);
 
+    void visit_loop_function_decl(Decl *d);
+
     void process_loop_functions();
 
     void visit_loop_function_calls(std::vector<call_info_struct> &calls);
 
     bool handle_special_loop_function(CallExpr *Call);
+
+    /// field functions, see field_function.cpp
+    bool is_field_function(const FunctionDecl *D);
+    field_function_info *get_field_function(FunctionDecl *D);
+    bool handle_field_function_call(CallExpr *Call);
+    bool synthesize_offset_ref(CallExpr *Call, const ff_access &a, field_ref &r);
+    void replace_field_function_args(srcBuf &loopBuf);
+    std::string mapped_dir_name(srcBuf &loopBuf, const dir_ptr &d);
 
     bool handle_global_var_decl(Decl *D);
 

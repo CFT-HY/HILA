@@ -262,8 +262,24 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
         code << "int _hila_loop_begin = _hila_ranges.min[0];\n";
         code << "int _hila_loop_end = _hila_ranges.max[0];\n";
 
+        // N_blocks is the max of both ranges: reduction arrays are allocated and
+        // reduced with it, and the first (init) launch uses it so that it initializes
+        // every block slot the second launch accumulates into. Second launch uses
+        // its own block count, which is <= N_blocks. Usually the bulk range is
+        // the larger one and then N_blocks is just the first ranges block count...
+        // TODO: if the boundary range is larger (small node volumes), the first launch
+        // has (N_blocks_1 - N_blocks_0) blocks with no sites, they only initialize their
+        // reduction slot.  This could be avoided by launching both ranges with their own
+        // block counts and passing a block offset instead of HILA_reduction_init_:
+        // allocate N_blocks_0 + N_blocks_1 slots, the second launch writes slots
+        // N_blocks_0 ... without accumulating...
         code << "int N_blocks = (_hila_loop_end - _hila_loop_begin + "
                 "N_threads - 1)/N_threads;\n";
+        code << "if (_hila_loops == 2) {\n"
+             << "    int N_blocks_1 = (_hila_ranges.max[1] - _hila_ranges.min[1] + "
+                "N_threads - 1)/N_threads;\n"
+             << "    if (N_blocks_1 > N_blocks) N_blocks = N_blocks_1;\n"
+             << "}\n";
 
         if (reduction_list.size() != 0) {
             code << "bool HILA_reduction_init_ = true;\n";
@@ -359,7 +375,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     code << "gcclGroupEnd();\n";
                 if (gpu_shmem) {
                     code << "nvshmemx_quiet_on_stream(halo_stream);\n";
-                    code << "nvshmemx_barrier_all_on_stream(halo_stream);\n";
+                    // no barrier_all: the put-with-signal / signal-wait pair in
+                    // field_comm.h gives per-neighbour completion
                 }
             }
             for (field_info &l : field_info_list) {
@@ -1028,7 +1045,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(d.parityExpr->getSourceRange()));
+                        dirname = mapped_dir_name(loopBuf, d);
                 }
                 for (field_ref *ref : d.ref_list) {
                     if (preloaded.count(ref) > 0)
@@ -1057,7 +1074,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                                << l.new_name << ".get(" << deep_index(d)
                                << ", _dev_field_alloc_size);\n";
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                            replace_field_ref(loopBuf, ref, d.name_with_dir);
                         continue;
                     }
 
@@ -1065,9 +1082,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
-                                                                          // get_stmt_str(d.e);
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     // Check if the Direction is a variable. These have been renamed.
                     // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs
@@ -1082,7 +1097,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        replace_field_ref(loopBuf, ref, d.name_with_dir);
                     }
                 }
             } else {
@@ -1107,7 +1122,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get(" + deep_index(d) +
                                                                ", _dev_field_alloc_size)");
                         continue;
                     }
@@ -1115,11 +1130,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, loop_array_name + "[" + dirname + "]");
+                        replace_field_ref(loopBuf, ref, loop_array_name + "[" + dirname + "]");
                     }
                 }
 
@@ -1129,7 +1143,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (dir_ptr &d : l.dir_list) {
                     if (d.deep_k > 0) {
                         for (field_ref *ref : d.ref_list)
-                            loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + deep_index(d) +
+                            replace_field_ref(loopBuf, ref, l.new_name + ".get(" + deep_index(d) +
                                                                ", _dev_field_alloc_size)");
                         continue;
                     }
@@ -1137,11 +1151,10 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(
-                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = mapped_dir_name(loopBuf, d);
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" +
+                        replace_field_ref(loopBuf, ref, l.new_name + ".get(" +
                                                            nb_index(l.new_name, dirname) +
                                                            ", _dev_field_alloc_size)");
                     }
@@ -1150,8 +1163,11 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             }
         }
 
+        // field written directly at assignments?
+        bool direct_write = field_direct_write(l);
+
         // TODO:
-        if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
+        if (l.is_read_atX || (loop_info.has_conditional && l.is_written && !direct_write)) {
             // local read
             // if var is not changed mark const
             // NOTE: const here swaps some methods from non-const
@@ -1173,12 +1189,21 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             // and a var which is not read
             kernel << l.element_type << " " << l.loop_ref_name << ";\n";
             kernel << "// Initial value of var " << l.loop_ref_name << " not needed\n";
+            if (direct_write)
+                kernel << "// Var " << l.loop_ref_name << " written to field at assignments\n";
         }
 
         // and finally replace references in body
         for (field_ref *ref : l.ref_list)
             if (!ref->is_direction) {
-                loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+                replace_field_ref(loopBuf, ref, l.loop_ref_name);
+                if (direct_write) {
+                    loopBuf.insert_after(
+                        getSourceLocationAtEndOfRange(ref->assignExpr->getSourceRange()),
+                        ", " + l.new_name + ".set(" + l.loop_ref_name + ", " + looping_var +
+                            ", _dev_field_alloc_size)",
+                        false);
+                }
             }
 
         // // First create temp variables fields gathered from a Direction
@@ -1207,6 +1232,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     } // ends Field handling
 
+    // Field and X arguments of field function calls
+    replace_field_function_args(loopBuf);
+
     // if there are site selections, reset the selection flag to 0 at all sites
 
     for (selection_info &s : selection_info_list) {
@@ -1226,7 +1254,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
     // Call setters
     for (field_info &l : field_info_list)
-        if (l.is_written) {
+        if (l.is_written && !field_direct_write(l)) {
             std::string type_name = l.type_template;
             type_name.erase(0, 1).erase(type_name.end() - 1, type_name.end());
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
@@ -1495,7 +1523,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     code << "gcclGroupEnd();\n";
                 if (gpu_shmem) {
                     code << "nvshmemx_quiet_on_stream(halo_stream);\n";
-                    code << "nvshmemx_barrier_all_on_stream(halo_stream);\n";
+                    // no barrier_all: the put-with-signal / signal-wait pair in
+                    // field_comm.h gives per-neighbour completion
                 }
             }
             for (field_info &l : field_info_list) {

@@ -310,11 +310,13 @@ void TopLevelVisitor::handle_field_info(std::stringstream &code, bool is_cow, St
     for (field_info &l : field_info_list) {
         std::string init_par{"Parity::none"};
 
-        if (l.is_read_nb || l.is_read_atX) {
-            if (loop_info.parity_value == Parity::all || (l.is_read_nb && l.is_read_atX)) {
+        // reads at X in field functions count as reads at X here
+        bool read_atX = l.is_read_atX || l.is_read_atX_in_func;
+        if (l.is_read_nb || read_atX) {
+            if (loop_info.parity_value == Parity::all || (l.is_read_nb && read_atX)) {
                 init_par = "ALL";
             } else {
-                if (l.is_read_atX)
+                if (read_atX)
                     init_par = loop_info.parity_str;
                 else
                     init_par = "opp_parity(" + loop_info.parity_str + ")";
@@ -423,7 +425,7 @@ std::set<const field_ref *> TopLevelVisitor::preload_loop_local_refs(
         if (d.is_constant_direction)
             dirname = d.direxpr_s; // orig. string
         else
-            dirname = remove_X(loopBuf.get(d.parityExpr->getSourceRange()));
+            dirname = mapped_dir_name(loopBuf, d);
 
         bool loop_local_dir = false;
         for (const field_ref *ref : d.ref_list)
@@ -546,8 +548,12 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
 
                     // and rewrite references to the offset field
                     for (field_ref *fr : new_fi.ref_list) {
-                        loopBuf.replace(fr->nameExpr, offset_field_name);
-                        loopBuf.replace(fr->parityExpr, "X");
+                        // field function refs have no expression in the loop, the code
+                        // is set as for other refs at X
+                        if (fr->parityExpr != nullptr) {
+                            loopBuf.replace(fr->nameExpr, offset_field_name);
+                            loopBuf.replace(fr->parityExpr, "X");
+                        }
                         fr->direxpr_s.clear();
                         fr->is_direction = false;           // no Direction
                         fr->info = &field_info_list.back(); // info points to new field_info
@@ -924,3 +930,35 @@ get_stmt_str(le->dirExpr) + ", "
   }
 }
 */
+
+/////////////////////////////////////////////////////////////////////////////
+/// Check if the Field can be written directly at the assignments f[X] = ...,
+/// instead of writing the loop local variable at the end of the loop body.
+/// This avoids reading in the field (and writing it back) in loops with
+/// conditionals: the field is not read and all refs are plain assignments
+/// whose value is not used.
+/////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::field_direct_write(const field_info &l) {
+    if (!loop_info.has_conditional || !l.is_written || l.is_read_atX || l.is_read_nb ||
+        l.is_read_offset || l.ref_list.empty())
+        return false;
+    for (field_ref *ref : l.ref_list) {
+        if (ref->is_direction || ref->is_read || !ref->is_written || ref->assignExpr == nullptr)
+            return false;
+    }
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// The (non-constant) Direction of d as it is in the loop body, after the variables
+/// have been renamed.  Field function refs (field_function.cpp) have only the
+/// direction expression, not X + dir
+/////////////////////////////////////////////////////////////////////////////
+
+std::string TopLevelVisitor::mapped_dir_name(srcBuf &loopBuf, const dir_ptr &d) {
+    if (d.parityExpr != nullptr)
+        return remove_X(loopBuf.get(d.parityExpr->getSourceRange()));
+    std::string s = "(" + loopBuf.get(d.dirE->getSourceRange()) + ")";
+    return d.dir_negate ? "-" + s : s;
+}

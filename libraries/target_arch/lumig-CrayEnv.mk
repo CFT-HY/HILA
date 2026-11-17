@@ -31,7 +31,7 @@ CXXFLAGS_NOOPT := $(CXX_LD_FLAGS) -std=$(CPPSTD) -fno-rtti -xhip
 
 #
 # HILAPP needs stdlib includes for whatever reason... The following asks the compiler to print them
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=$(CPPSTD) -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=$(CPPSTD) -Wp,-v - 2>&1 | grep "^ "))
 
 # stddef.h again!
 #HILAPP_INCLUDE_LIST += -I/opt/cray/pe/fftw/default/x86_64/include
@@ -52,4 +52,4 @@ LDFLAGS += -lmpi_gtl_hsa
 # These variables must be defined here
 #
 HILAPP_OPTS := -target:HIP -DHIP $(HILAPP_INCLUDES)
-HILA_OPTS := -DHIP -DGPU_RNG_THREAD_BLOCKS=64 $(HILA_INCLUDES)
+HILA_OPTS := -DHIP $(HILA_INCLUDES)

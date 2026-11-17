@@ -84,7 +84,12 @@ int MPI_Comm_split(MPI_Comm comm, int color, int key, MPI_Comm *newcomm);
 
 int MPI_Comm_set_errhandler(MPI_Comm comm, MPI_Errhandler errhandler);
 
+int MPI_Comm_free(MPI_Comm *comm);
+
 int MPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm);
+
+int MPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf,
+               int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
 
 int MPI_Reduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype,
                MPI_Op op, int root, MPI_Comm comm);

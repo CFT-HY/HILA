@@ -34,6 +34,7 @@ std::list<loop_const_expr_ref> loop_const_expr_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::list<selection_info> selection_info_list = {};
 std::vector<reduction_expr> reduction_list = {};
+std::vector<field_function_call> field_function_call_list = {};
 
 // std::vector<func_prototype_struct> prototype_vector = {};
 
@@ -83,7 +84,8 @@ llvm::cl::opt<std::string> cmdline::output_filename(
 llvm::cl::opt<std::string> cmdline::static_compiler(
     GET_INCLUDES_WITH,
     llvm::cl::desc(
-        "compiler to help find std include files (default: latest g++, disable with 'none')"),
+        "(static hilapp) use the C++ standard library of the gcc installation of this "
+        "compiler\n(default: newest g++-N or g++; 'none': let clang search for gcc)"),
     llvm::cl::value_desc("compiler"), llvm::cl::cat(HilappCategory));
 
 // llvm::cl::opt<bool>
@@ -1044,6 +1046,7 @@ class MyFrontendAction : public ASTFrontendAction {
         field_decl = nullptr;
         reset_vectorizable_types();
         clear_loop_functions_in_compilation_unit();
+        clear_field_functions_in_compilation_unit();
 
         return (true);
     }
@@ -1289,6 +1292,13 @@ int main(int argc, const char **argv) {
             if (p && p[0] == '-' && p[1] == 'I')
                 llvm::errs() << "    " << p + 2 << '\n';
         }
+        for (const char *p : av) {
+            if (p && (strncmp(p, "-resource-dir", 13) == 0 ||
+                      strncmp(p, "--gcc-install-dir", 17) == 0 ||
+                      strncmp(p, "--gcc-toolchain", 15) == 0))
+                llvm::errs() << "    " << p << '\n';
+        }
+        llvm::errs() << "    (for the full include search list, add '-- -v')\n";
     }
 
     // ClangTool::run accepts a FrontendActionFactory, which is then used to
