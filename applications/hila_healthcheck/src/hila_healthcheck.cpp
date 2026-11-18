@@ -702,6 +702,119 @@ double bc_loop_local_index_error() {
 }
 #endif
 
+/**
+ * @brief Fields selected with a loop local index, U[mu][X + nu] with mu, nu defined inside the site
+ * loop, and gathers which depend on variables defined outside the loop (conditional gathers, see
+ * the hilapp documentation). Compared with the same computations with loop extern indices.
+ */
+void test_loop_local_index() {
+
+    Field<double> F[NDIM], G[NDIM];
+    foralldir (mu)
+        onsites (ALL)
+            F[mu][X] = hila::random();
+
+#if !defined(VECTORIZED)
+    // hilapp supports a loop local Field index only in non-vectorized targets
+    {
+        // plaquette-like: only the (field, direction) pairs used are gathered
+        Field<double> s = 0, r = 0;
+        onsites (ALL) {
+            foralldir (mu)
+                foralldir (nu)
+                    if (mu < nu)
+                        s[X] += F[mu][X] * F[nu][X + mu] - F[nu][X] * F[mu][X + nu];
+        }
+        foralldir (mu)
+            foralldir (nu)
+                if (mu < nu)
+                    r[ALL] = r[X] + F[mu][X] * F[nu][X + mu] - F[nu][X] * F[mu][X + nu];
+        report_pass("Loop local index, U[mu][X + nu] with mu < nu",
+                    (s - r).squarenorm() / lattice.volume(), 1e-20);
+    }
+
+    {
+        // gathers conditional on d1 defined outside the loop: F[d2] is not gathered in direction
+        // d1 for d2 == d1. The fields change between the loops, a halo left from an earlier
+        // gather would be stale
+        Field<double> s = 0, r = 0;
+        foralldir (mu)
+            G[mu] = F[mu];
+        foralldir (d1) {
+            onsites (ALL) {
+                foralldir (d2)
+                    if (d2 != d1)
+                        s[X] += F[d2][X + d1];
+            }
+            foralldir (mu)
+                F[mu][ALL] = F[mu][X] + 1;
+        }
+        foralldir (d1) {
+            foralldir (d2)
+                if (d2 != d1)
+                    r[ALL] = r[X] + G[d2][X + d1];
+            foralldir (mu)
+                G[mu][ALL] = G[mu][X] + 1;
+        }
+        report_pass("Loop local index, gathers conditional on a loop extern direction",
+                    (s - r).squarenorm() / lattice.volume(), 1e-20);
+    }
+
+#if NDIM > 1
+    {
+        // range based for over a list of directions, next to a loop whose bound is known only
+        // at run time (not related to the field indices)
+        const int n = lattice.size(e_x) / 2;
+        Field<double> s = 0, r = 0;
+        onsites (ALL) {
+            double t = 0;
+            for (int i = 0; i < n; i++)
+                t += i;
+            for (Direction d : {e_x, e_y})
+                s[X] += t * F[d][X - d];
+        }
+        const double t = 0.5 * n * (n - 1);
+        r[ALL] = t * (F[e_x][X - e_x] + F[e_y][X - e_y]);
+        report_pass("Loop local index, range based for over {e_x, e_y}",
+                    (s - r).squarenorm() / lattice.volume(), 1e-20);
+    }
+#endif
+#endif // !VECTORIZED
+
+    {
+        // gathers conditional on variables defined outside the loop, without a loop local index
+        Field<double> f, g, s = 0, r = 0;
+        onsites (ALL) {
+            f[X] = hila::random();
+            g[X] = hila::random();
+        }
+        Field<double> f2 = f, g2 = g;
+        for (int iter = 0; iter < 2; iter++) {
+            const bool odd = (iter == 1);
+            foralldir (d1) {
+                onsites (ALL) {
+                    if (d1 != e_x)
+                        s[X] += f[X + e_x];
+                    if (odd)
+                        s[X] += g[X - d1];
+                }
+                f[ALL] = f[X] + 1;
+                g[ALL] = g[X] + 1;
+            }
+            foralldir (d1) {
+                if (d1 != e_x)
+                    r[ALL] = r[X] + f2[X + e_x];
+                if (odd)
+                    r[ALL] = r[X] + g2[X - d1];
+                f2[ALL] = f2[X] + 1;
+                g2[ALL] = g2[X] + 1;
+            }
+        }
+        report_pass("Gathers conditional on loop extern variables, no loop local index",
+                    (s - r).squarenorm() / lattice.volume(), 1e-20);
+    }
+}
+
 void test_boundary_conditions() {
 
     static_assert(std::is_same<Field<double>, Field<double, hila::periodic>>::value,
@@ -1897,6 +2010,7 @@ int main(int argc, char **argv) {
     test_set_elements_and_select();
     test_shift();
     test_boundary_conditions();
+    test_loop_local_index();
     test_subvolumes();
     test_projection();
     test_matrix_operations();

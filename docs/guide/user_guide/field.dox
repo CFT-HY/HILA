@@ -103,6 +103,77 @@ Assignment and manipulation of variables defined outside of onsites loops are il
     }
 ~~~
 
+## Loop local indices and directions {#loop_local_index_guide}
+
+An array of fields (a C array, `std::array` or e.g. GaugeField) can be indexed with a variable
+defined inside the site loop, and the neighbour direction can be a loop variable too:
+
+~~~cpp
+    Field<double> F[NDIM], s;
+    onsites(ALL) {
+        double p = 0;
+        foralldir(mu) foralldir(nu) if (mu < nu) {
+            p += F[mu][X] * F[nu][X + mu] - F[nu][X] * F[mu][X + nu];
+        }
+        for (Direction d : {e_x, e_y})       // a braced list of constants works too
+            p += F[d][X - d];
+        s[X] = p;
+    }
+~~~
+
+The neighbour values have to be communicated before the loop. _hilapp_ evaluates the loop body
+at compile time to find the values the index (`mu` in `F[mu]`) and the directions can have,
+and only the combinations that occur are communicated. Above (with NDIM = 3) `F[e_x]` is
+gathered from `e_y` and `e_z` for the first loop and from `-e_x` for the second, but not from
+`e_x`.
+
+The evaluation follows integer, enum and bool variables through assignments, `if`, `switch`,
+`?:`, `&&`, `||`, loops with constant bounds (e.g. `foralldir`), range based `for` over a braced
+list of constants, and calls to `constexpr` functions. Variables that the field indices do not
+depend on are ignored, so e.g. a loop with a bound known only at run time is fine if the
+indices do not depend on it. Variables defined outside the loop have unknown values (except
+constants, and see below), as do values read from fields, arrays or non-constexpr functions. A condition with an unknown value is
+taken to be both true and false: the values found may include ones which never occur, and
+then more is communicated than needed.
+
+If the values of an index cannot be determined (e.g. `F[dirs[i]]` with an array `dirs`, or an
+index computed from a value known only at run time), _hilapp_ gives an error. If the values of
+a direction cannot be determined, it gives a warning and all directions are communicated. The
+option `-idx-eval-diags` of _hilapp_ prints internal diagnostics of the evaluation. If the
+values found for an index are outside the bounds of an array, there is an error (array size
+known) or a warning.
+
+Limitations:
+
+- The field has to be of the form `base[index]` with an integer or enum index, and only the
+  index can depend on loop local variables.
+- Fields selected with a loop local index cannot be written to, and cannot be read with an
+  offset (`F[mu][X + e_x + e_y]`); the index cannot have side effects. To write, use a loop
+  outside the site loop: `foralldir(mu) onsites(ALL) E[mu][X] = ...`.
+- An array of fields used with a loop local index cannot also be written to in the same loop,
+  e.g. `F[e_x][X] = F[mu][X]`.
+- Only for the plain CPU and GPU targets, not for vectorized (AVX) targets.
+
+Compile with `-DHILA_CHECK_LOOP_LOCAL_INDEX` to check at run time that each index has one of
+the values found (a failed check means a bug in _hilapp_; the check is off by default since it
+slows down GPU kernels).
+
+### Communication conditional on variables defined outside the loop
+
+Local variables defined outside the loop are evaluated separately for each of their values, if
+they are of type Direction, bool or an enum with values 0, 1, ..., n-1 (at most 16). Then the
+communications needed only for some of the values are done only for those:
+
+~~~cpp
+    foralldir(d1) onsites(ALL) {
+        foralldir(d2) if (d2 != d1) s[d1][X] += F[d2][X + d1];   // F[d1] is not gathered from d1
+        if (d1 != e_x) t[X] += f[X + e_x];                       // f gathered only if d1 != e_x
+    }
+~~~
+
+At most 63 combinations of values are used: variables which do not fit are treated as unknown.
+Not for vectorized (AVX) targets.
+
 ## Field functions {#field_functions_guide}
 
 Normally `f[X]` and `f[X + dir]` can be written only directly inside onsites loops.  A *field
