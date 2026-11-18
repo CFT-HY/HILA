@@ -2628,6 +2628,95 @@ void test(){
     TEST_CASE_END;
 }
 
+// a minimal std::initializer_list for the test inputs, which have no standard headers
+#define TEST_INITIALIZER_LIST                                                                      \
+    "typedef decltype(sizeof(0)) size_t;\n"                                                        \
+    "namespace std {\n"                                                                            \
+    "template <class E> class initializer_list {\n"                                                \
+    "    const E *b; size_t n;\n"                                                                  \
+    "    constexpr initializer_list(const E *b_, size_t n_) : b(b_), n(n_) {}\n"                   \
+    "  public:\n"                                                                                  \
+    "    constexpr initializer_list() : b(nullptr), n(0) {}\n"                                     \
+    "    constexpr const E *begin() const { return b; }\n"                                         \
+    "    constexpr const E *end() const { return b + n; }\n"                                       \
+    "};\n"                                                                                         \
+    "}\n"
+
+bool test_range_for_braced_list() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // A range based for loop over a braced list of constants is evaluated exactly
+    TEST_EVAL_STRING_TOPLVL(TEST_INITIALIZER_LIST R"(
+void track_pair(long a, long b);
+enum Dir : unsigned { e_x = 0, e_y, e_z };
+void test(){
+    for (Dir d : {e_y, e_z}) track_pair(d, 0);
+    for (const int &k : {5, 3}) track_pair(k, 1);
+    int c = 0;
+    for (int k : {7, 8, 9}) { if (k == 9) break; c++; }
+    for (auto d : {e_z}) for (auto d2 : {e_x, e_y}) track_pair(d, d2);
+}
+    )")
+    /////////////////////////////////////////////
+    // clang-format off
+std::set<std::vector<int64_t>> pairs;
+auto track_pair = [&](long a, long b) { pairs.insert({a, b}); };
+enum Dir : unsigned { e_x = 0, e_y, e_z };
+    for (Dir d : {e_y, e_z}) track_pair(d, 0);
+    for (const int &k : {5, 3}) track_pair(k, 1);
+    TrackedVar<int> c = 0;
+    for (int k : {7, 8, 9}) { if (k == 9) break; c++; }
+    for (auto d : {e_z}) for (auto d2 : {e_x, e_y}) track_pair(d, d2);
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_PAIRS_AND_SET_TEST_PASS(pairs);
+    COMPARE_AND_SET_TEST_PASS(c);
+
+    TEST_CASE_END;
+}
+
+bool test_range_for_braced_list_not_constant() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // A list with an element that is not a constant: the loop variable is unknown
+    TEST_EVAL_STRING_TOPLVL(TEST_INITIALIZER_LIST R"(
+void track_pair(long a, long b);
+void test(int n){
+    for (int k : {1, n}) track_pair(k, 0);
+}
+    )")
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret || test_analyzer.pairs_reliable)
+        test_pass = false;
+
+    TEST_CASE_END;
+}
+
+bool test_range_for_braced_list_in_unknown_loop() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // Inside a loop with an unknown bound, with only the relevant variables tracked
+    g_only_relevant_vars = true;
+    TEST_EVAL_STRING_TOPLVL(TEST_INITIALIZER_LIST R"(
+void track_pair(long a, long b);
+enum Dir : unsigned { e_x = 0, e_y, e_z };
+void test(int n){
+    for (int i = 0; i < n; i++)
+        for (Dir d : {e_x, e_z}) track_pair(d, d);
+}
+    )")
+    g_only_relevant_vars = false;
+    /////////////////////////////////////////////
+    std::set<std::vector<int64_t>> pairs = {{0, 0}, {2, 2}};
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_PAIRS_AND_SET_TEST_PASS(pairs);
+
+    TEST_CASE_END;
+}
+
 bool test_gnu_conditional() {
     TEST_CASE_BEGIN;
     /////////////////////////////////////////////
@@ -3079,6 +3168,9 @@ static std::vector<test_func> test_cases = {
 
     // range based for, GNU ?:
     test_range_for,
+    test_range_for_braced_list,
+    test_range_for_braced_list_not_constant,
+    test_range_for_braced_list_in_unknown_loop,
     test_gnu_conditional,
 
     // escape analysis

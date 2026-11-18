@@ -657,6 +657,97 @@ static void find_escaped_vars(const Stmt *S, ASTContext &ASTctx, Escaped_vars &e
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// Range based for loops over braced lists of constants, see Range_fors
+
+// The values of the elements of the braced list FR loops over, nullopt if it is not a list of
+// integer constants or the loop variable is not an integer
+static std::optional<std::vector<int64_t>> braced_list_values(const CXXForRangeStmt *FR,
+                                                              ASTContext &ASTctx) {
+    const VarDecl *loop_var = FR->getLoopVariable();
+    const auto *begin_stmt = dyn_cast_or_null<DeclStmt>(FR->getBeginStmt());
+    if (loop_var == nullptr || begin_stmt == nullptr || !begin_stmt->isSingleDecl() ||
+        FR->getCond() == nullptr || FR->getInc() == nullptr ||
+        !loop_var->getType().getNonReferenceType()->isIntegralOrEnumerationType())
+        return std::nullopt;
+
+    const Expr *init = FR->getRangeInit();
+    if (init == nullptr)
+        return std::nullopt;
+    init = init->IgnoreImplicit();
+    if (const auto *SIL = dyn_cast<CXXStdInitializerListExpr>(init))
+        init = SIL->getSubExpr()->IgnoreImplicit();
+    const auto *ILE = dyn_cast<InitListExpr>(init);
+    if (ILE == nullptr)
+        return std::nullopt;
+
+    std::vector<int64_t> values;
+    for (const Expr *element : ILE->inits()) {
+        Expr::EvalResult res;
+        if (element->isValueDependent() || !element->EvaluateAsInt(res, ASTctx))
+            return std::nullopt;
+        const std::optional<int64_t> v = res.Val.getInt().trySExtValue();
+        if (!v.has_value())
+            return std::nullopt;
+        values.push_back(v.value());
+    }
+    return values;
+}
+
+static void find_range_fors(const Stmt *S, ASTContext &ASTctx, Range_fors &out) {
+    if (S == nullptr)
+        return;
+    if (const auto *FR = dyn_cast<CXXForRangeStmt>(S)) {
+        if (auto values = braced_list_values(FR, ASTctx)) {
+            out.values[FR] = std::move(values.value());
+            const VarDecl *begin =
+                dyn_cast<VarDecl>(cast<DeclStmt>(FR->getBeginStmt())->getSingleDecl());
+            if (begin != nullptr) {
+                out.parts[FR->getCond()] = FR;
+                out.parts[FR->getInc()] = FR;
+                out.parts[begin] = FR;
+                out.parts[FR->getLoopVariable()] = FR;
+                if (FR->getLoopVariable()->getInit())
+                    out.parts[FR->getLoopVariable()->getInit()] = FR;
+            }
+        }
+    }
+    for (const Stmt *child : S->children())
+        find_range_fors(child, ASTctx, out);
+}
+
+// The position of the iterator of the range based for loop FR, see Range_fors
+static std::optional<int64_t> range_for_position(const CXXForRangeStmt *FR,
+                                                 const Eval_state &state) {
+    const auto *begin = cast<VarDecl>(cast<DeclStmt>(FR->getBeginStmt())->getSingleDecl());
+    const auto it = state.vars.find(begin);
+    return it != state.vars.end() ? it->second : std::nullopt;
+}
+
+// The parts of a range based for loop over a braced list, see Range_fors: its condition,
+// increment and the initializer of the loop variable. Returns false if E is not one of them.
+static bool eval_range_for_part(Eval_result &result, const Expr *E, Eval_state &state) {
+    const CXXForRangeStmt *FR = state.range_fors->find(E);
+    if (FR == nullptr)
+        return false;
+    const std::vector<int64_t> &values = state.range_fors->values.at(FR);
+    const std::optional<int64_t> pos = range_for_position(FR, state);
+    const int64_t n = static_cast<int64_t>(values.size());
+
+    result.val = std::nullopt;
+    if (E == FR->getCond()) {
+        if (pos.has_value())
+            result.val = (pos.value() != n);
+    } else if (E == FR->getInc()) {
+        const auto *begin = cast<VarDecl>(cast<DeclStmt>(FR->getBeginStmt())->getSingleDecl());
+        state.vars[begin] = pos.has_value() ? std::optional<int64_t>(pos.value() + 1) : std::nullopt;
+    } else if (pos.has_value() && pos.value() >= 0 && pos.value() < n) {
+        // the initializer of the loop variable, `*__begin`
+        result.val = values[pos.value()];
+    }
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // Relevant variables, see Idx_expr_evaluator::only_relevant_vars
 //
 // Making a variable unknown can only add execution paths (a condition with an unknown value is
@@ -873,6 +964,10 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
         return true;
     }
 
+    // a part of a range based for loop over a braced list
+    if (state.range_fors != nullptr && eval_range_for_part(result, E, state))
+        goto successful_return;
+
     // Every time we 'successfully' evaluate something we possibly need to save the result of this
     // expression to state.possible_vals_for_expr, and return true: `goto successful_return` does
     // this.
@@ -947,6 +1042,16 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
         if (!VD) {
             // e.g. a function name, should be nothing we care about
             INTERNAL_NOTE_IF(E) << " Not a variable, the value is unknown " << loc_str(DRE) << "\n";
+            goto successful_return;
+        }
+
+        if (state.range_fors != nullptr && VD->getType()->isReferenceType() &&
+            state.range_fors->find(VD) != nullptr) {
+            // the loop variable `const T &d` of a range based for loop over a braced list,
+            // refers to the element (constant), its value is in vars
+            const auto it = state.vars.find(VD);
+            if (it != state.vars.end())
+                result.val = it->second;
             goto successful_return;
         }
 
@@ -1505,6 +1610,25 @@ bool eval_stmt(const Stmt *S, Eval_state &state, ASTContext &ASTctx) {
         // DeclStmt may have more than one decl:  int x,y=0,z;
         for (const Decl *decl : DS->decls()) {
             if (const auto *VD = dyn_cast<VarDecl>(decl)) {
+                if (const CXXForRangeStmt *FR =
+                        state.range_fors ? state.range_fors->find(VD) : nullptr) {
+                    if (VD != FR->getLoopVariable()) {
+                        // __begin of a range based for loop over a braced list: the position
+                        state.vars[VD] = 0;
+                        return true;
+                    }
+                    if (VD->getType()->isReferenceType()) {
+                        // `const T &d`: the value of the element it refers to
+                        Eval_result res{};
+                        if (!eval_expr(res, VD->getInit(), state, ASTctx))
+                            return false;
+                        state.vars[VD] =
+                            to_int_type(res.val, VD->getType().getNonReferenceType(), ASTctx);
+                        state.all_possible_vals[VD].insert(state.vars[VD]);
+                        return true;
+                    }
+                    // otherwise as a usual variable, its initializer is the element
+                }
                 if (is_alias_reference(VD)) {
                     // Evaluate the initializer for its side effects, e.g. `int &r = ++x;`. The
                     // reference has no value of its own, accesses to it go to the variable it
@@ -1767,6 +1891,10 @@ bool Idx_expr_evaluator::init(const FunctionDecl *func, Stmt *statement_in_the_f
     if (func->getBody())
         find_escaped_vars(func->getBody(), *ctx, escaped);
     find_escaped_vars(statement_in_the_func, *ctx, escaped);
+
+    range_fors = {};
+    func_cache.range_fors.clear();
+    find_range_fors(statement_in_the_func, *ctx, range_fors);
 
     return true;
 }
@@ -2290,6 +2418,20 @@ static bool eval_constexpr_function(const FunctionDecl *func, Eval_state &state,
         find_escaped_vars(func->getBody(), ASTctx, *escaped);
     }
     state.escaped = escaped;
+
+    // its range based for loops over braced lists
+    Range_fors uncached_range_fors;
+    Range_fors *range_fors = &uncached_range_fors;
+    if (state.func_cache) {
+        const auto [it, is_new] = state.func_cache->range_fors.try_emplace(func);
+        range_fors = &it->second;
+        if (is_new)
+            find_range_fors(func->getBody(), ASTctx, *range_fors);
+    } else {
+        find_range_fors(func->getBody(), ASTctx, *range_fors);
+    }
+    state.range_fors = range_fors;
+
     for (const ParmVarDecl *param : func->parameters())
         if (const auto it = state.vars.find(param); it != state.vars.end() && is_escaped(state, param))
             it->second = std::nullopt;
@@ -2345,6 +2487,8 @@ bool Idx_expr_evaluator::exec() {
         if (!relevant_all)
             main_state.relevant = &relevant;
     }
+
+    main_state.range_fors = &range_fors;
 
     // the starting values, an escaped or not relevant variable stays unknown
     main_state.escaped = &escaped;

@@ -34,7 +34,9 @@
 //
 // Control flow:
 //  - Statements that are not handled make the evaluation fail (most things are implemented)
-//  - Range based for loops run an unknown number of times, the loop variable is unknown
+//  - Range based for loops over a braced list of constants, e.g. `for (Direction d : {e_x, e_y})`,
+//    are evaluated exactly (Range_fors). Others run an unknown number of times, the loop
+//    variable is unknown
 //
 //  Over-approximation:
 //  - A condition with an unknown value follows both branches, and the values are not narrowed
@@ -96,12 +98,32 @@ struct Escaped_vars {
     }
 };
 
+// Range based for loops over a braced list of integer constants, e.g.
+//     for (Direction d : {e_x, e_y}) ...
+// evaluated exactly: the position of the iterator, 0 ... n, is the value of its implicit variable
+// __begin in Eval_state::vars, the condition is position != n and the loop variable gets the
+// element at the position. Other range based for loops run an unknown number of times with an
+// unknown loop variable.
+struct Range_fors {
+    // the element values of each such loop
+    std::unordered_map<const CXXForRangeStmt *, std::vector<int64_t>> values;
+    // the loop of its condition, increment, loop variable init, __begin and loop variable
+    std::unordered_map<const void *, const CXXForRangeStmt *> parts;
+
+    const CXXForRangeStmt *find(const void *part) const {
+        const auto it = parts.find(part);
+        return it != parts.end() ? it->second : nullptr;
+    }
+};
+
 // exec(): results reused between calls to the same constexpr function. Owned by
 // Idx_expr_evaluator, as the cached pointers are only valid for one ASTContext.
 struct Function_eval_cache {
     std::unordered_map<const FunctionDecl *, std::unique_ptr<CFG>> cfgs;
     // the escaped variables (parameters and locals) of each function
     std::unordered_map<const FunctionDecl *, Escaped_vars> escaped;
+    // the range based for loops over braced lists of each function
+    std::unordered_map<const FunctionDecl *, Range_fors> range_fors;
     // (function, argument values) -> return value
     std::map<std::pair<const FunctionDecl *, std::vector<std::optional<int64_t>>>,
              std::optional<int64_t>>
@@ -123,6 +145,9 @@ struct Eval_state {
 
     // The escaped variables of the evaluated code, their values are unknown. May be nullptr.
     const Escaped_vars *escaped = nullptr;
+
+    // The range based for loops over braced lists in the evaluated code. May be nullptr.
+    const Range_fors *range_fors = nullptr;
 
     // If not nullptr, only these variables are tracked, the values of others are unknown. See
     // Idx_expr_evaluator::only_relevant_vars
@@ -243,6 +268,8 @@ struct Idx_expr_evaluator {
     Function_eval_cache func_cache;
     // the escaped variables of the function given to init()
     Escaped_vars escaped;
+    // the range based for loops over braced lists in the statement given to init()
+    Range_fors range_fors;
     // the statement given to init()
     const Stmt *statement = nullptr;
     // the variables tracked with only_relevant_vars, all if relevant_all
