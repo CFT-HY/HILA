@@ -654,6 +654,54 @@ double bc_neighbour_error(const T &unit) {
     return err / lattice.volume();
 }
 
+/**
+ * @brief Neighbour access of a Field selected with a loop-local index, F[mu][X+d] with mu
+ * defined inside the site loop, with b.c. B.  Compared with the same accesses with a loop
+ * extern index.  Constant, loop-local and index-dependent directions use different code.
+ */
+#if !defined(VECTORIZED)
+template <typename B>
+double bc_loop_local_index_error() {
+
+    Field<double, B> F[NDIM];
+    foralldir (mu) {
+        F[mu][ALL] = 1.0 + 1000 * (int)mu;
+        foralldir (d)
+            F[mu][ALL] += (1 + 13 * (int)d) * X.coordinate(d);
+    }
+
+    // reference: the index mu is loop extern
+    Field<double> ref_x = 0, ref_c = 0, ref_mu = 0, ref_d = 0;
+    foralldir (mu) {
+        ref_x[ALL] += F[mu][X];
+        ref_c[ALL] += F[mu][X + e_x] + F[mu][X - e_x];
+        ref_mu[ALL] += F[mu][X + mu] - F[mu][X - mu];
+        for (Direction d = e_x; d < NDIRS; ++d)
+            ref_d[ALL] += (int)mu * F[mu][X + d];
+    }
+
+    Field<double> s_x, s_c, s_mu, s_d;
+    onsites (ALL) {
+        double a = 0, b = 0, c = 0, e = 0;
+        foralldir (mu) {
+            a += F[mu][X];
+            b += F[mu][X + e_x] + F[mu][X - e_x];
+            c += F[mu][X + mu] - F[mu][X - mu];
+            for (Direction d = e_x; d < NDIRS; ++d)
+                e += (int)mu * F[mu][X + d];
+        }
+        s_x[X] = a;
+        s_c[X] = b;
+        s_mu[X] = c;
+        s_d[X] = e;
+    }
+
+    return ((s_x - ref_x).squarenorm() + (s_c - ref_c).squarenorm() +
+            (s_mu - ref_mu).squarenorm() + (s_d - ref_d).squarenorm()) /
+           lattice.volume();
+}
+#endif
+
 void test_boundary_conditions() {
 
     static_assert(std::is_same<Field<double>, Field<double, hila::periodic>>::value,
@@ -668,6 +716,11 @@ void test_boundary_conditions() {
         "T::default_boundary_condition not found");
 
     report_pass("Periodic b.c., double", bc_neighbour_error<double, hila::periodic>(1.0), 1e-20);
+#if !defined(VECTORIZED)
+    // hilapp supports a loop-local Field index only in non-vectorized targets
+    report_pass("Periodic b.c., loop-local Field index F[mu][X+d]",
+                bc_loop_local_index_error<hila::periodic>(), 1e-20);
+#endif
 
 #ifdef HC_TEST_ANTIPERIODIC
 
@@ -703,6 +756,8 @@ void test_boundary_conditions() {
                 bc_neighbour_error<double, ap_xz>(1.0), 1e-20);
     report_pass("Antiperiodic b.c. " + ap_xz::name() + ", Complex<double>",
                 bc_neighbour_error<Complex<double>, ap_xz>(Complex<double>(1, 2)), 1e-20);
+    report_pass("Antiperiodic b.c. " + ap_xz::name() + ", loop-local Field index F[mu][X+d]",
+                bc_loop_local_index_error<ap_xz>(), 1e-20);
 
 #if NDIM > 1
     // default b.c. of Vector<5,double> is set at the top of this file
