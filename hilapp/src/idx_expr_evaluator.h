@@ -33,8 +33,8 @@
 //    variable, or in an object passed to it by value
 //
 // Control flow:
-//  - Statements that are not handled make the evaluation fail (most things are implemented):
-//      - NOT IMPLEMENTED: range based for loop TODO
+//  - Statements that are not handled make the evaluation fail (most things are implemented)
+//  - Range based for loops run an unknown number of times, the loop variable is unknown
 //
 //  Over-approximation:
 //  - A condition with an unknown value follows both branches, and the values are not narrowed
@@ -46,6 +46,13 @@
 //    state entering a CFG block is evaluated separately. More than max_block_states in
 //    a block (a loop with an unknown bound, or very many combinations of values) stops
 //    the evaluation and it fails
+//
+// Relevant variables (only_relevant_vars):
+//  - Found from the AST of the statement: the variables in the tracked expressions, in the
+//    assignments to relevant variables, and in the conditions of if, switch, ?:, && and || that
+//    decide whether a relevant expression is evaluated. Not the conditions of loops, unless they
+//    contain a relevant variable: an unrelated loop just runs an unknown number of times.
+//    break and continue are relevant if their loop contains a relevant expression.
 //
 // Tuples (add_tuple_to_tracking_list()):
 //  - The child_exprs have to be evaluated before the main_expr in the same CFG block,
@@ -117,6 +124,10 @@ struct Eval_state {
     // The escaped variables of the evaluated code, their values are unknown. May be nullptr.
     const Escaped_vars *escaped = nullptr;
 
+    // If not nullptr, only these variables are tracked, the values of others are unknown. See
+    // Idx_expr_evaluator::only_relevant_vars
+    const std::unordered_set<const VarDecl *> *relevant = nullptr;
+
     ////////////////////////////////////////////
     // The state during evaluation:
 
@@ -177,6 +188,16 @@ struct Idx_expr_evaluator {
      */
     void add_tuple_to_tracking_list(const Expr *main_expr, std::vector<const Expr *> child_exprs);
 
+    // Track only the variables that the values of the tracked expressions, or whether they
+    // are evaluated, depend on (find_relevant_vars()). Others are unknown, so that e.g.
+    //     for (int i = 0; i < n; i++) t += a[i];
+    // with an unknown n does not stop the evaluation. As unknown values are followed both ways,
+    // the results are still an over-approximation. Set before exec().
+    bool only_relevant_vars = false;
+
+    // Is VD tracked in exec(), see only_relevant_vars
+    bool is_relevant(const VarDecl *VD) const;
+
     // Values of variables defined outside the statement given to init() when it starts, e.g.
     // a Direction defined outside a site loop. Variables not here have unknown values.
     std::unordered_map<const VarDecl *, std::optional<int64_t>> initial_vars;
@@ -222,6 +243,13 @@ struct Idx_expr_evaluator {
     Function_eval_cache func_cache;
     // the escaped variables of the function given to init()
     Escaped_vars escaped;
+    // the statement given to init()
+    const Stmt *statement = nullptr;
+    // the variables tracked with only_relevant_vars, all if relevant_all
+    std::unordered_set<const VarDecl *> relevant;
+    bool relevant_all = false;
+    // relevant is up to date with the tracked expressions
+    bool relevant_valid = false;
     CFGBlock *main_entry_block = nullptr;
     CFGBlock *main_exit_block = nullptr;
 };

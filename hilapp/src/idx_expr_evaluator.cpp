@@ -314,10 +314,13 @@ static bool is_escaped(const Eval_state &state, const VarDecl *VD) {
     return state.escaped != nullptr && state.escaped->contains(VD);
 }
 
-// Set the value of the variable VD: converted to its type, unknown if VD has escaped.
+// Set the value of the variable VD: converted to its type, unknown if VD has escaped or is not
+// relevant.
 static void set_var(Eval_state &state, const VarDecl *VD, std::optional<int64_t> value,
                     ASTContext &ASTctx) {
-    value = is_escaped(state, VD) ? std::nullopt : to_int_type(value, VD->getType(), ASTctx);
+    const bool not_tracked =
+        is_escaped(state, VD) || (state.relevant != nullptr && state.relevant->count(VD) == 0);
+    value = not_tracked ? std::nullopt : to_int_type(value, VD->getType(), ASTctx);
     state.vars[VD] = value;
     state.all_possible_vals[VD].insert(value);
 }
@@ -393,9 +396,15 @@ static void lvalue_targets(const Expr *E, ASTContext &ASTctx, Escaped_vars &out,
         else if (UO->getOpcode() != UO_Deref)
             out.all = true;
         // *p: the address of an integer variable escapes when it is taken
-    } else if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
+    } else if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+        // `c ? x : y`, and GNU `x ?: y` whose true expression is x as an OpaqueValueExpr
         targets(CO->getTrueExpr());
         targets(CO->getFalseExpr());
+    } else if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+        if (OVE->getSourceExpr())
+            targets(OVE->getSourceExpr());
+        else
+            out.all = true;
     } else if (const auto *CE = dyn_cast<CallExpr>(E);
                CE && E->getType()->isIntegralOrEnumerationType()) {
         // A function returning a non-const reference to an integer may return a non-const
@@ -411,7 +420,7 @@ static void lvalue_targets(const Expr *E, ASTContext &ASTctx, Escaped_vars &out,
         // a temporary, or an element or member of an object, not a variable. A reference member
         // refers to a variable that has escaped when the object was made.
     } else if (E->getType()->isIntegralOrEnumerationType()) {
-        // some other kind of integer glvalue, e.g. GNU `a ?: b`: could be any variable
+        // some other kind of integer glvalue: could be any variable
         out.all = true;
     }
     // other types: an object of another type can not be an integer variable (that would need
@@ -582,6 +591,8 @@ struct Escape_finder {
         }
         if (const auto *CO = dyn_cast<ConditionalOperator>(P))
             return CO->getCond() != C; // a glvalue `c ? x : y`
+        if (isa<BinaryConditionalOperator, OpaqueValueExpr>(P))
+            return true; // a glvalue GNU `x ?: y`, x is also the condition
         if (isa<Expr>(P))
             return false; // e.g. a reference member in an aggregate init, `S s{x};`
         if (const auto *DS = dyn_cast<DeclStmt>(P)) {
@@ -645,7 +656,213 @@ static void find_escaped_vars(const Stmt *S, ASTContext &ASTctx, Escaped_vars &e
     finder.visit(S);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Relevant variables, see Idx_expr_evaluator::only_relevant_vars
+//
+// Making a variable unknown can only add execution paths (a condition with an unknown value is
+// followed both ways), so the results stay an over-approximation whatever is left out. This only
+// decides what is precise: the values of the tracked expressions, and the conditions of whether
+// they are evaluated.
+
+struct Relevance_finder {
+    ASTContext &ASTctx;
+    std::unordered_set<const VarDecl *> &vars;
+    bool all = false;
+
+    std::unordered_map<const Stmt *, const Stmt *> parent;
+    // assignments, ++, --, declarations and calls with reference arguments, with the variables
+    // they may write
+    std::vector<std::pair<const Stmt *, Escaped_vars>> writes;
+    // the conditions of if, switch, loops, ?:, && and ||, with the variables in them
+    std::vector<std::pair<const Expr *, std::unordered_set<const VarDecl *>>> conditions;
+    // break and continue with their loop or switch, nullptr for other jumps (goto, return)
+    std::vector<std::pair<const Stmt *, const Stmt *>> jumps;
+
+    std::unordered_set<const Stmt *> relevant_nodes;
+    // the nodes containing a relevant node
+    std::unordered_set<const Stmt *> contains_relevant;
+
+    // The variables E may refer to or read, also through reference variables
+    void add_vars(const Stmt *S, std::unordered_set<const VarDecl *> &out) {
+        if (S == nullptr)
+            return;
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+            if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+                out.insert(VD);
+                if (is_alias_reference(VD)) {
+                    Escaped_vars targets;
+                    lvalue_targets(DRE, ASTctx, targets);
+                    all = all || targets.all;
+                    out.insert(targets.vars.begin(), targets.vars.end());
+                }
+            }
+        } else if (const auto *OVE = dyn_cast<OpaqueValueExpr>(S)) {
+            add_vars(OVE->getSourceExpr(), out);
+        }
+        for (const Stmt *child : S->children())
+            add_vars(child, out);
+    }
+
+    void add_write(const Stmt *node, const Expr *lvalue) {
+        Escaped_vars targets;
+        lvalue_targets(lvalue, ASTctx, targets);
+        writes.push_back({node, std::move(targets)});
+    }
+
+    // Collect the parents, writes, conditions and jumps. `loops` are the enclosing loops and
+    // switches, the innermost last
+    void collect(const Stmt *S, std::vector<const Stmt *> &loops) {
+        if (S == nullptr)
+            return;
+        if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
+            if (BO->isAssignmentOp())
+                add_write(BO, BO->getLHS());
+            else if (BO->isLogicalOp())
+                add_condition(BO->getLHS());
+        } else if (const auto *UO = dyn_cast<UnaryOperator>(S); UO && UO->isIncrementDecrementOp()) {
+            add_write(UO, UO->getSubExpr());
+        } else if (const auto *DS = dyn_cast<DeclStmt>(S)) {
+            for (const Decl *D : DS->decls())
+                if (const auto *VD = dyn_cast<VarDecl>(D)) {
+                    Escaped_vars targets;
+                    targets.vars.insert(VD);
+                    writes.push_back({DS, std::move(targets)});
+                }
+        } else if (isa<CallExpr, CXXConstructExpr>(S)) {
+            const auto args = isa<CallExpr>(S) ? cast<CallExpr>(S)->arguments()
+                                               : cast<CXXConstructExpr>(S)->arguments();
+            for (const Expr *arg : args)
+                if (is_writable_int_reference_arg(arg))
+                    add_write(S, arg);
+        } else if (const auto *IS = dyn_cast<IfStmt>(S)) {
+            add_condition(IS->getCond());
+        } else if (const auto *SS = dyn_cast<SwitchStmt>(S)) {
+            add_condition(SS->getCond());
+        } else if (const auto *CO = dyn_cast<AbstractConditionalOperator>(S)) {
+            add_condition(CO->getCond());
+        } else if (const auto *FS = dyn_cast<ForStmt>(S)) {
+            add_condition(FS->getCond());
+        } else if (const auto *WS = dyn_cast<WhileStmt>(S)) {
+            add_condition(WS->getCond());
+        } else if (const auto *DO = dyn_cast<DoStmt>(S)) {
+            add_condition(DO->getCond());
+        } else if (const auto *FR = dyn_cast<CXXForRangeStmt>(S)) {
+            add_condition(FR->getCond());
+        } else if (isa<BreakStmt>(S)) {
+            jumps.push_back({S, loops.empty() ? nullptr : loops.back()});
+        } else if (isa<ContinueStmt>(S)) {
+            const Stmt *loop = nullptr;
+            for (auto it = loops.rbegin(); it != loops.rend(); ++it)
+                if (!isa<SwitchStmt>(*it)) {
+                    loop = *it;
+                    break;
+                }
+            jumps.push_back({S, loop});
+        } else if (isa<GotoStmt, IndirectGotoStmt, ReturnStmt, CXXThrowExpr, CoreturnStmt>(S)) {
+            jumps.push_back({S, nullptr});
+        }
+
+        const bool is_loop = isa<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt, SwitchStmt>(S);
+        if (is_loop)
+            loops.push_back(S);
+        for (const Stmt *child : S->children()) {
+            if (child == nullptr)
+                continue;
+            parent.emplace(child, S);
+            collect(child, loops);
+        }
+        if (is_loop)
+            loops.pop_back();
+    }
+
+    void add_condition(const Expr *cond) {
+        if (cond == nullptr)
+            return;
+        std::unordered_set<const VarDecl *> cond_vars;
+        add_vars(cond, cond_vars);
+        conditions.push_back({cond, std::move(cond_vars)});
+    }
+
+    // The condition deciding whether the child C of S is evaluated, nullptr if none (also for
+    // loops, see the comment in the header)
+    static const Expr *controlling_condition(const Stmt *S, const Stmt *C) {
+        if (const auto *IS = dyn_cast<IfStmt>(S))
+            return (C == IS->getThen() || C == IS->getElse()) ? IS->getCond() : nullptr;
+        if (const auto *SS = dyn_cast<SwitchStmt>(S))
+            return C == SS->getBody() ? SS->getCond() : nullptr;
+        if (const auto *CO = dyn_cast<ConditionalOperator>(S))
+            return (C == CO->getTrueExpr() || C == CO->getFalseExpr()) ? CO->getCond() : nullptr;
+        if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(S))
+            return C == BCO->getFalseExpr() ? BCO->getCond() : nullptr;
+        if (const auto *BO = dyn_cast<BinaryOperator>(S); BO && BO->isLogicalOp())
+            return C == BO->getRHS() ? BO->getLHS() : nullptr;
+        return nullptr;
+    }
+
+    void mark(const Stmt *N) {
+        if (N == nullptr || !relevant_nodes.insert(N).second)
+            return;
+        add_vars(N, vars);
+        // the conditions deciding whether N is evaluated
+        const Stmt *C = N;
+        for (auto it = parent.find(C); it != parent.end(); it = parent.find(C)) {
+            const Stmt *P = it->second;
+            contains_relevant.insert(P);
+            mark(controlling_condition(P, C));
+            C = P;
+        }
+    }
+
+    bool any_relevant(const std::unordered_set<const VarDecl *> &vs) const {
+        for (const VarDecl *VD : vs)
+            if (vars.count(VD))
+                return true;
+        return false;
+    }
+
+    void find(const Stmt *S, const std::vector<const Expr *> &seeds) {
+        std::vector<const Stmt *> loops;
+        collect(S, loops);
+        for (const Expr *E : seeds)
+            mark(E);
+
+        bool changed = true;
+        while (changed && !all) {
+            const size_t n = relevant_nodes.size();
+            for (const auto &[node, targets] : writes)
+                if (!relevant_nodes.count(node) &&
+                    (targets.all ? !vars.empty() : any_relevant(targets.vars)))
+                    mark(node);
+            for (const auto &[cond, cond_vars] : conditions)
+                if (!relevant_nodes.count(cond) && any_relevant(cond_vars))
+                    mark(cond);
+            for (const auto &[jump, loop] : jumps)
+                if (!relevant_nodes.count(jump) &&
+                    (loop == nullptr || contains_relevant.count(loop)))
+                    mark(jump);
+            changed = relevant_nodes.size() != n;
+        }
+    }
+};
+
 // recursively eval
+// The value of an OpaqueValueExpr, the common expression of GNU `a ?: b`. Sets result and returns
+// nullptr if the value of its source expression is known from this block, or if the source has
+// side effects (then evaluating it again would repeat them, the value is unknown). Otherwise
+// returns the source expression, to be evaluated again.
+static const Expr *opaque_source_value(const OpaqueValueExpr *OVE, Eval_result &result,
+                                       const Eval_state &state, ASTContext &ASTctx) {
+    result.val = std::nullopt;
+    const Expr *source = OVE ? OVE->getSourceExpr() : nullptr;
+    if (source == nullptr)
+        return nullptr;
+    if (const auto it = state.block_expr_state.find(source); it != state.block_expr_state.end()) {
+        result.val = it->second;
+        return nullptr;
+    }
+    return source->HasSideEffects(ASTctx) ? nullptr : source;
+}
+
 bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext &ASTctx) {
     result.val = std::nullopt;
 
@@ -1015,6 +1232,29 @@ bool eval_expr(Eval_result &result, const Expr *E, Eval_state &state, ASTContext
         // Similarly as the short circuiting for LAnd/LOr, the result is the last evaluated
         // expression. We can reach this with an unknown last_res.
         result.val = state.last_res.val;
+        goto successful_return;
+
+    } else if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+        // The common expression `a` of GNU `a ?: b`, evaluated once before the branch. Use that
+        // value, or evaluate it again if it has no side effects.
+        if (const Expr *source = opaque_source_value(OVE, result, state, ASTctx); source) {
+            if (!eval_expr(result, source, state, ASTctx))
+                return false;
+        }
+        goto successful_return;
+
+    } else if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {
+        // GNU `a ?: b`, evaluated after the branches: the value is `a` if it is non-zero,
+        // otherwise `b`, which is last_res on that path
+        const std::optional<int64_t> other = state.last_res.val;
+        Eval_result common{};
+        if (const Expr *source = opaque_source_value(BCO->getOpaqueValue(), common, state, ASTctx);
+            source) {
+            if (!eval_expr(common, source, state, ASTctx))
+                return false;
+        }
+        if (common.val.has_value())
+            result.val = (common.val.value() != 0) ? common.val : other;
         goto successful_return;
 
     } else if (const auto *CE = dyn_cast<CallExpr>(E)) {
@@ -1512,12 +1752,16 @@ bool Idx_expr_evaluator::init(const FunctionDecl *func, Stmt *statement_in_the_f
     main_exit_block = &cfg->getExit();
     // main_state.exit_block = main_exit_block; // only used by the old eval_CFG_block()
 
+    // the diagnostics are of this statement only
     diags.enable_colors(true);
+    diag_msg.clear();
     reported_diag.clear();
 
     // The variables that may be changed through stored references or pointers: in the whole
     // function, as such a reference can be made before the statement, and in the statement, in
     // case it is not in the body of func (e.g. a template pattern)
+    statement = statement_in_the_func;
+    relevant_valid = false;
     escaped = {};
     func_cache.escaped.clear();
     if (func->getBody())
@@ -1528,11 +1772,13 @@ bool Idx_expr_evaluator::init(const FunctionDecl *func, Stmt *statement_in_the_f
 }
 
 void Idx_expr_evaluator::add_expr_to_tracking_list(const Expr *E) {
+    relevant_valid = false;
     main_state.possible_vals_for_expr[E] = {}; // init as empty set
 }
 
 void Idx_expr_evaluator::add_tuple_to_tracking_list(const Expr *main_expr,
                                                     std::vector<const Expr *> child_expr) {
+    relevant_valid = false;
     main_state.tracked_tuples[main_expr] = std::move(child_expr);
     main_state.possible_tuples_for_expr[main_expr] = {}; // init as empty set
 }
@@ -1909,8 +2155,11 @@ static bool eval_CFG_worklist(const CFG &cfg, Eval_state &state, ASTContext &AST
             for (const CFGBlock *succ : block->succs())
                 push(succ, next);
 
-        } else if (isa<IfStmt, ForStmt, WhileStmt, DoStmt, BinaryOperator, ConditionalOperator>(
-                       trm_stmt)) {
+        } else if (isa<IfStmt, ForStmt, WhileStmt, DoStmt, CXXForRangeStmt, BinaryOperator,
+                       AbstractConditionalOperator>(trm_stmt)) {
+            // A range based for loop branches on `__begin != __end` of the iterators, which is
+            // unknown: any number of iterations, with the values of the loop variable unknown
+            // too (unless it is not an integer). GNU `a ?: b` branches on `a`.
             if (block->succ_size() != 2) {
                 INTERNAL_ERROR << "Expected block[" << block->getBlockID()
                                << "] to have 2 successors but it has succ_size "
@@ -2077,7 +2326,27 @@ bool Idx_expr_evaluator::exec() {
     for (auto &[main_expr, tuples] : main_state.possible_tuples_for_expr)
         tuples.clear();
 
-    // the starting values, an escaped variable stays unknown
+    main_state.relevant = nullptr;
+    if (only_relevant_vars) {
+        if (!relevant_valid) {
+            std::vector<const Expr *> seeds;
+            for (const auto &[expr, values] : main_state.possible_vals_for_expr)
+                seeds.push_back(expr);
+            for (const auto &[main_expr, children] : main_state.tracked_tuples) {
+                seeds.push_back(main_expr);
+                seeds.insert(seeds.end(), children.begin(), children.end());
+            }
+            relevant.clear();
+            Relevance_finder finder{*ASTctx, relevant};
+            finder.find(statement, seeds);
+            relevant_all = finder.all;
+            relevant_valid = true;
+        }
+        if (!relevant_all)
+            main_state.relevant = &relevant;
+    }
+
+    // the starting values, an escaped or not relevant variable stays unknown
     main_state.escaped = &escaped;
     for (const auto &[VD, value] : initial_vars)
         set_var(main_state, VD, value, *ASTctx);
@@ -2085,4 +2354,8 @@ bool Idx_expr_evaluator::exec() {
     main_state.func_cache = &func_cache;
     main_state.eval_succeeded = eval_CFG_worklist(*cfg, main_state, *ASTctx);
     return main_state.eval_succeeded;
+}
+
+bool Idx_expr_evaluator::is_relevant(const VarDecl *VD) const {
+    return !only_relevant_vars || !relevant_valid || relevant_all || relevant.count(VD) > 0;
 }

@@ -30,6 +30,8 @@ bool g_print_all_possible_vals = false;
 uint64_t g_max_block_states = 0;
 // Starting values of parameters of the test function, by name: Idx_expr_evaluator::initial_vars
 std::map<std::string, int64_t> g_initial_values;
+// Idx_expr_evaluator::only_relevant_vars
+bool g_only_relevant_vars = false;
 
 std::string g_test_output;
 
@@ -149,6 +151,7 @@ class TestFunctionAnalyzer : public MatchFinder::MatchCallback {
         for (const CallExpr *CE : track_pair_calls)
             evaluator.add_tuple_to_tracking_list(CE, {CE->getArg(0), CE->getArg(1)});
 
+        evaluator.only_relevant_vars = g_only_relevant_vars;
         exec_ret = evaluator.exec();
 
         for (const CallExpr *CE : track_pair_calls) {
@@ -2493,6 +2496,183 @@ int y = 0;
 }
 
 ////////////////////////////////////////////////////////
+// only the relevant variables (Idx_expr_evaluator::only_relevant_vars)
+
+bool test_relevant_unrelated_unknown_loop() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // A loop with an unknown bound that the tracked values do not depend on
+    g_only_relevant_vars = true;
+    TEST_EVAL_STRING_TOPLVL(R"(
+void track_pair(long a, long b);
+void test(int n){
+    int t = 0;
+    for (int i = 0; i < n; i++) t += i;
+    for (int d = 0; d < 3; d++)
+        for (int d2 = 0; d2 < 3; d2++)
+            if (d2 != d) track_pair(d, d2);
+}
+    )")
+    g_only_relevant_vars = false;
+    /////////////////////////////////////////////
+    // clang-format off
+std::set<std::vector<int64_t>> pairs;
+auto track_pair = [&](long a, long b) { pairs.insert({a, b}); };
+    for (int d = 0; d < 3; d++)
+        for (int d2 = 0; d2 < 3; d2++)
+            if (d2 != d) track_pair(d, d2);
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_PAIRS_AND_SET_TEST_PASS(pairs);
+
+    TEST_CASE_END;
+}
+
+bool test_relevant_conditions_and_break() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // The conditions deciding whether track_pair is called are relevant: the break and its
+    // condition on k, the assignments to k, and the if on m. The inner loop is not.
+    g_only_relevant_vars = true;
+    TEST_EVAL_STRING_TOPLVL(R"(
+void track_pair(long a, long b);
+void test(int n){
+    int k = 0;
+    int m = 1;
+    for (int d = 0; d < 3; d++) {
+        if (k == 2) break;
+        for (int j = 0; j < n; j++) {}
+        if (m == 0) track_pair(9, 9);
+        track_pair(d, k);
+        k++;
+    }
+}
+    )")
+    g_only_relevant_vars = false;
+    /////////////////////////////////////////////
+    // clang-format off
+std::set<std::vector<int64_t>> pairs;
+auto track_pair = [&](long a, long b) { pairs.insert({a, b}); };
+    int k = 0;
+    int m = 1;
+    for (int d = 0; d < 3; d++) {
+        if (k == 2) break;
+        if (m == 0) track_pair(9, 9);
+        track_pair(d, k);
+        k++;
+    }
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_PAIRS_AND_SET_TEST_PASS(pairs);
+
+    TEST_CASE_END;
+}
+
+bool test_relevant_off_unknown_loop_fails() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // Without only_relevant_vars the loop with an unknown bound stops the evaluation
+    g_max_block_states = 50;
+    TEST_EVAL_STRING_TOPLVL(R"(
+void test(int n){
+    int t = 0;
+    for (int i = 0; i < n; i++) t += i;
+}
+    )")
+    g_max_block_states = 0;
+    /////////////////////////////////////////////
+    if (test_analyzer.exec_ret)
+        test_pass = false;
+
+    TEST_CASE_END;
+}
+
+////////////////////////////////////////////////////////
+// range based for, GNU ?:
+
+bool test_range_for() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // The number of iterations and the values of the loop variable are unknown
+    TEST_EVAL_STRING_TOPLVL(R"(
+struct Range { int v[3]; const int *begin() const { return v; } const int *end() const { return v + 3; } };
+void test(){
+    int arr[3] = {1, 2, 3};
+    Range r{{4, 5, 6}};
+    int s = 0;
+    for (int x : arr) s = x;
+    for (const int &x : r) s = x;
+    int y = 0;
+    for (int i = 0; i < 2; i++) y = i;
+}
+    )")
+    /////////////////////////////////////////////
+    // clang-format off
+    TrackedVar<int> y = 0;
+    for (int i = 0; i < 2; i++) y = i;
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_AND_SET_TEST_PASS(y);
+    const auto *s_vals = get_possible_values_for_var("s", test_state, test_names);
+    if (s_vals == nullptr || s_vals->count(std::nullopt) == 0) {
+        test_out() << "Expected an unknown value for s\n";
+        test_pass = false;
+    }
+
+    TEST_CASE_END;
+}
+
+bool test_gnu_conditional() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // GNU a ?: b
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-conditional-omitted-operand"
+    TEST_EVAL_STRING_TOPLVL(R"(
+void test(int n){
+    int a = 0;
+    int b = a ?: 5;
+    int c = 3;
+    int d = c ?: 7;
+    int e = n ?: 1;
+    int f = (c++) ?: 2;
+    int g = c;
+}
+    )")
+    /////////////////////////////////////////////
+    // clang-format off
+    TrackedVar<int> a = 0;
+    TrackedVar<int> b = static_cast<int>(a) ?: 5;
+    TrackedVar<int> c = 3;
+    TrackedVar<int> d = static_cast<int>(c) ?: 7;
+    c++;
+    TrackedVar<int> g = static_cast<int>(c);
+    // clang-format on
+#pragma clang diagnostic pop
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_AND_SET_TEST_PASS(b);
+    COMPARE_AND_SET_TEST_PASS(d);
+    COMPARE_AND_SET_TEST_PASS(g);
+    for (const char *name : {"e", "f"}) {
+        const auto *vals = get_possible_values_for_var(name, test_state, test_names);
+        if (vals == nullptr || vals->count(std::nullopt) == 0) {
+            test_out() << "Expected an unknown value for " << name << "\n";
+            test_pass = false;
+        }
+    }
+
+    TEST_CASE_END;
+}
+
+////////////////////////////////////////////////////////
 // test things that should fail exec: limits
 
 bool test_initial_values() {
@@ -2891,6 +3071,15 @@ static std::vector<test_func> test_cases = {
 
     // starting values of variables
     test_initial_values,
+
+    // only the relevant variables
+    test_relevant_unrelated_unknown_loop,
+    test_relevant_conditions_and_break,
+    test_relevant_off_unknown_loop_fails,
+
+    // range based for, GNU ?:
+    test_range_for,
+    test_gnu_conditional,
 
     // escape analysis
     test_escape_address_of_variable,

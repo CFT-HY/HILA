@@ -1749,6 +1749,8 @@ bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
         return true;
 
     Idx_expr_evaluator evaluator{};
+    // unrelated variables are not tracked, e.g. loops with a run time bound
+    evaluator.only_relevant_vars = true;
     bool ok = evaluator.init(global.currentFunctionDecl, loop_body, getASTContext());
     if (ok) {
         for (field_ref &r : field_ref_list) {
@@ -1886,7 +1888,8 @@ TopLevelVisitor::find_loop_params(Stmt *loop_body, const Idx_expr_evaluator &eva
             continue;
         const QualType T = VD->getType();
         if (T->isReferenceType() || T.isVolatileQualified() ||
-            VD->isUsableInConstantExpressions(*Context) || evaluator.escaped.contains(VD))
+            VD->isUsableInConstantExpressions(*Context) || evaluator.escaped.contains(VD) ||
+            !evaluator.is_relevant(VD))
             continue;
 
         int64_t size = 0;
