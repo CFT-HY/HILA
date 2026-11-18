@@ -1741,14 +1741,24 @@ static bool has_nb_dir(const field_ref &r) {
 
 bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
 
-    bool any = false;
-    for (field_ref &r : field_ref_list)
+    bool any = false;    // loop local indices or directions: their values are needed
+    bool any_nb = false; // nearest neighbour refs, for conditional gathers
+    for (field_ref &r : field_ref_list) {
         if (r.is_loop_local_ref || has_loop_local_nb_dir(r))
             any = true;
-    if (!any)
-        return true;
+        if (has_nb_dir(r))
+            any_nb = true;
+    }
 
     Idx_expr_evaluator evaluator{};
+    if (!any) {
+        // Only for conditional gathers, e.g. f[X + e_x] inside `if (d != e_x)` with d defined
+        // outside the loop (see evaluate_loop_params()): if there are variables defined outside
+        // the loop that can be loop parameters. A failed evaluation is not an error then, the
+        // gathers are just done unconditionally. The vectorized code does not use these.
+        if (!any_nb || target.vectorize || find_loop_params(loop_body, evaluator).empty())
+            return true;
+    }
     // unrelated variables are not tracked, e.g. loops with a run time bound
     evaluator.only_relevant_vars = true;
     bool ok = evaluator.init(global.currentFunctionDecl, loop_body, getASTContext());
@@ -1772,7 +1782,7 @@ bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
         ok = evaluator.exec();
     }
 
-    bool all_found = ok;
+    bool all_found = ok || !any;
     for (field_ref &r : field_ref_list) {
         if (!r.is_loop_local_ref)
             continue;
