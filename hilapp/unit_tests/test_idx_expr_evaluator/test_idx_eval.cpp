@@ -28,6 +28,8 @@ bool g_make_dot_graph = false;
 bool g_print_all_possible_vals = false;
 // If non zero, overrides Eval_state::max_block_states
 uint64_t g_max_block_states = 0;
+// Starting values of parameters of the test function, by name: Idx_expr_evaluator::initial_vars
+std::map<std::string, int64_t> g_initial_values;
 
 std::string g_test_output;
 
@@ -124,6 +126,11 @@ class TestFunctionAnalyzer : public MatchFinder::MatchCallback {
 
         if (g_max_block_states != 0)
             evaluator.main_state.max_block_states = g_max_block_states;
+
+        for (const ParmVarDecl *param : func->parameters())
+            if (const auto it = g_initial_values.find(param->getNameAsString());
+                it != g_initial_values.end())
+                evaluator.initial_vars[param] = it->second;
 
         // track the arguments of track_pair(a, b) calls together
         std::vector<const CallExpr *> track_pair_calls;
@@ -2488,6 +2495,41 @@ int y = 0;
 ////////////////////////////////////////////////////////
 // test things that should fail exec: limits
 
+bool test_initial_values() {
+    TEST_CASE_BEGIN;
+    /////////////////////////////////////////////
+    // A parameter with a known starting value (Idx_expr_evaluator::initial_vars), like a
+    // Direction defined outside a site loop: the branch `d2 != d` is known
+    g_initial_values = {{"d", 1}};
+    TEST_EVAL_STRING_TOPLVL(R"(
+void test(int d){
+    int y = 0;
+    for (int d2 = 0; d2 < 3; d2++)
+        if (d2 != d)
+            y = d2;
+    int z = 0;
+    z = d;
+}
+    )")
+    g_initial_values.clear();
+    /////////////////////////////////////////////
+    // clang-format off
+    TrackedVar<int> y = 0;
+    for (int d2 = 0; d2 < 3; d2++)
+        if (d2 != 1)
+            y = d2;
+    TrackedVar<int> z = 0;
+    z = 1;
+    // clang-format on
+    /////////////////////////////////////////////
+    if (!test_analyzer.exec_ret)
+        test_pass = false;
+    COMPARE_AND_SET_TEST_PASS(y);
+    COMPARE_AND_SET_TEST_PASS(z);
+
+    TEST_CASE_END;
+}
+
 ////////////////////////////////////////////////////////
 // escape analysis: variables that may be changed through a stored reference or pointer have
 // unknown values, see find_escaped_vars()
@@ -2846,6 +2888,9 @@ static std::vector<test_func> test_cases = {
     test_ref_variable,
     test_ref_variable_chains,
     test_ref_variable_unknown_target,
+
+    // starting values of variables
+    test_initial_values,
 
     // escape analysis
     test_escape_address_of_variable,

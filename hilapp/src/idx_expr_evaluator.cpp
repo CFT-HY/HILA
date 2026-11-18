@@ -2077,8 +2077,12 @@ bool Idx_expr_evaluator::exec() {
     for (auto &[main_expr, tuples] : main_state.possible_tuples_for_expr)
         tuples.clear();
 
-    main_state.func_cache = &func_cache;
+    // the starting values, an escaped variable stays unknown
     main_state.escaped = &escaped;
+    for (const auto &[VD, value] : initial_vars)
+        set_var(main_state, VD, value, *ASTctx);
+
+    main_state.func_cache = &func_cache;
     main_state.eval_succeeded = eval_CFG_worklist(*cfg, main_state, *ASTctx);
     return main_state.eval_succeeded;
 }

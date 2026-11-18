@@ -181,6 +181,15 @@ struct field_ref {
     std::set<std::pair<int64_t, int64_t>> loop_local_dirs;
     bool loop_local_dirs_known;
 
+    // Conditional gathers, see loop_param_info: for each (index value, direction) the reference
+    // uses, the combinations of the loop parameter values with which it is used, as a bit mask.
+    // The index value is as in loop_local_dirs, the direction is that of loop_local_dirs or -1 for
+    // the direction of a reference without a loop local direction (e.g. f[X + e_x]).
+    // param_use_any: the combinations with which any may be used. If !param_use_known, all are.
+    std::map<std::pair<int64_t, int64_t>, uint64_t> param_use;
+    uint64_t param_use_any;
+    bool param_use_known;
+
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
         direxpr_s.clear();
@@ -198,6 +207,8 @@ struct field_ref {
         is_loop_local_ref = false;
         ref_base = ref_index = nullptr;
         loop_local_dirs_known = false;
+        param_use_any = 0;
+        param_use_known = false;
     }
 
     ~field_ref() {
@@ -485,6 +496,35 @@ struct special_function_call {
     int scope;
 };
 
+/// Variables defined outside the site loop, whose values decide which gathers are needed, e.g. d1
+/// in
+///     foralldir(d1) onsites(ALL) foralldir(d2) if (d2 != d1) s[X] += f[d2][X + d1];
+/// where f[d1] is not gathered in direction d1. These are Direction (values 0 ... NDIM-1), bool or
+/// enum (values 0 ... n-1) variables. The loop body is evaluated for each combination of their
+/// values, see TopLevelVisitor::analyse_loop_local_field_refs(). The combination is numbered
+/// c = v_0 + size_0 * (v_1 + size_1 * (...)). Before the loop the variable HILA_param_bit_ is
+/// 1 << c, or 1 << 63 if a value is not one of these, and a gather is done
+/// if (HILA_param_bit_ & mask), where the mask has the bits of the combinations that use it and
+/// bit 63. See TopLevelVisitor::gather_directions().
+struct loop_param_info {
+    std::vector<std::string> names;
+    std::vector<int64_t> sizes;
+    uint64_t n_combos = 0;      // product of the sizes, 0 if there are no parameters
+    uint64_t failed_combos = 0; // the combinations for which the evaluation did not succeed
+
+    static constexpr uint64_t max_combos = 63; // bit 63 is for other values
+    static constexpr uint64_t other_values_bit = uint64_t(1) << 63;
+
+    uint64_t all_combos() const {
+        return n_combos == 0 ? 0 : (uint64_t(1) << n_combos) - 1;
+    }
+    void clear() {
+        names.clear();
+        sizes.clear();
+        n_combos = failed_combos = 0;
+    }
+};
+
 /// Stores the parity of the current loop: Expr, value (if known), Expr as string
 struct loop_info_struct {
     const Expr *parity_expr;
@@ -504,6 +544,7 @@ struct loop_info_struct {
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
     bool need_loop_coordinate; // this is used for typewriter order
+    loop_param_info params;    // see loop_param_info
 
     SourceRange range;
 
@@ -512,6 +553,7 @@ struct loop_info_struct {
             need_loop_coordinate = false;
         conditional_vars.clear();
         condExpr = nullptr;
+        params.clear();
     }
 };
 

@@ -167,6 +167,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     // then, generate new names for field variables in loop
     handle_field_info(code, is_cow, S);
+    // for the gathers needed only with some values of variables defined outside the loop
+    code << loop_param_bit_decl();
 
     // change the f[X+offset] -references, generate code
     std::string tail;

@@ -228,9 +228,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 // If neighbour references exist, communicate them
                 if (const auto dirs = gather_directions(l, name)) {
                     // the directions to gather, see gather_directions()
-                    for (const std::string &dir : *dirs) {
+                    for (const auto &[dir, guard] : *dirs) {
 
-                        code << "_dir_mask_ |= " << name << ".pack_buffers(" << dir << ", "
+                        code << guard << "_dir_mask_ |= " << name << ".pack_buffers(" << dir << ", "
                              << loop_info.parity_str << ", halo_stream);\n";
                     }
                 } else {
@@ -295,9 +295,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     // If neighbour references exist, communicate them
                     if (const auto dirs = gather_directions(l, name)) {
                         // the directions to gather, see gather_directions()
-                        for (const std::string &dir : *dirs) {
+                        for (const auto &[dir, guard] : *dirs) {
 
-                            code << "_dir_mask_ |= " << name << ".start_communication(" << dir
+                            code << guard << "_dir_mask_ |= " << name << ".start_communication(" << dir
                                  << ", " << loop_info.parity_str << ");\n";
                         }
                     } else {
@@ -314,8 +314,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (const std::string &name : l.outside_loop_names()) {
                     // If neighbour references exist, communicate them
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
-                            code << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
+                        for (const auto &[dir, guard] : *dirs) {
+                            code << guard << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
                                  << ");\n";
                         }
                     } else {
@@ -331,9 +331,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             for (field_info &l : field_info_list) {
                 for (const std::string &name : l.outside_loop_names()) {
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
+                        for (const auto &[dir, guard] : *dirs) {
 
-                            code << "_dir_mask_ |= " << name << ".pack_buffers(" << dir << ", "
+                            code << guard << "_dir_mask_ |= " << name << ".pack_buffers(" << dir << ", "
                                  << loop_info.parity_str << ", halo_stream);\n";
                         }
                     } else {
@@ -347,14 +347,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             for (field_info &l : field_info_list) {
                 for (const std::string &name : l.outside_loop_names()) {
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
+                        for (const auto &[dir, guard] : *dirs) {
                             if (!code_generated) {
                                 code_generated = true;
                                 if (gpu_ccl)
                                     code << "gcclGroupStart();\n";
                             }
 
-                            code << "_dir_mask_ |= " << name << ".stream_gather(" << dir << ", "
+                            code << guard << "_dir_mask_ |= " << name << ".stream_gather(" << dir << ", "
                                  << loop_info.parity_str << ", halo_stream);\n";
                         }
                     } else {
@@ -382,9 +382,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             for (field_info &l : field_info_list) {
                 for (const std::string &name : l.outside_loop_names()) {
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
+                        for (const auto &[dir, guard] : *dirs) {
 
-                            code << name << ".unpack_buffers(" << dir << ", "
+                            code << guard << name << ".unpack_buffers(" << dir << ", "
                                  << loop_info.parity_str << ", halo_stream);\n";
                         }
                     } else {
@@ -1449,8 +1449,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                     // If neighbour references exist, communicate them
                     if (const auto dirs = gather_directions(l, name)) {
                         // the directions to gather, see gather_directions()
-                        for (const std::string &dir : *dirs) {
-                            code << "_dir_mask_ |= " << name << ".start_communication(" << dir
+                        for (const auto &[dir, guard] : *dirs) {
+                            code << guard << "_dir_mask_ |= " << name << ".start_communication(" << dir
                                  << ", " << loop_info.parity_str << ");\n";
                         }
                     } else {
@@ -1467,8 +1467,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (const std::string &name : l.outside_loop_names()) {
                     // If neighbour references exist, communicate them
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
-                            code << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
+                        for (const auto &[dir, guard] : *dirs) {
+                            code << guard << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
                                  << ");\n";
                         }
                     } else {
@@ -1485,8 +1485,8 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
                 for (const std::string &name : l.outside_loop_names()) {
                     // If neighbour references exist, communicate them
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
-                            code << "    " << name << ".unpack_buffers(" << dir << ", "
+                        for (const auto &[dir, guard] : *dirs) {
+                            code << "    " << guard << name << ".unpack_buffers(" << dir << ", "
                                  << loop_info.parity_str << ", halo_stream);\n";
                         }
                     } else {
@@ -1523,14 +1523,14 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             for (field_info &l : field_info_list) {
                 for (const std::string &name : l.outside_loop_names()) {
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
+                        for (const auto &[dir, guard] : *dirs) {
                             if (!code_generated) {
                                 code_generated = true;
                                 if (gpu_ccl)
                                     code << "gcclGroupStart();\n";
                             }
 
-                            code << "_dir_mask_ |= " << name << ".stream_gather(" << dir << ", "
+                            code << guard << "_dir_mask_ |= " << name << ".stream_gather(" << dir << ", "
                                  << loop_info.parity_str << ", halo_stream);\n";
                         }
                     } else {
@@ -1558,9 +1558,9 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             for (field_info &l : field_info_list) {
                 for (const std::string &name : l.outside_loop_names()) {
                     if (const auto dirs = gather_directions(l, name)) {
-                        for (const std::string &dir : *dirs) {
+                        for (const auto &[dir, guard] : *dirs) {
 
-                            code << name << ".unpack_buffers(" << dir << ", "
+                            code << guard << name << ".unpack_buffers(" << dir << ", "
                                  << loop_info.parity_str << ", halo_stream);\n";
                         }
                     } else {

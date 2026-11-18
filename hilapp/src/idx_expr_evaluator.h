@@ -177,8 +177,13 @@ struct Idx_expr_evaluator {
      */
     void add_tuple_to_tracking_list(const Expr *main_expr, std::vector<const Expr *> child_exprs);
 
+    // Values of variables defined outside the statement given to init() when it starts, e.g.
+    // a Direction defined outside a site loop. Variables not here have unknown values.
+    std::unordered_map<const VarDecl *, std::optional<int64_t>> initial_vars;
+
     // Evaluate all execution paths through the statement given to init() with a worklist: a
     // condition with an unknown value follows both branches. Sets main_state.eval_succeeded.
+    // Can be called again, e.g. with different initial_vars.
     // Returns false if we encountered something we dont handle or more than
     // main_state.max_block_states distinct states reach a CFG block, the results are not reliable
     bool exec();

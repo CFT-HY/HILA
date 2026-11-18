@@ -1722,14 +1722,24 @@ bool TopLevelVisitor::TraverseDecl(Decl *D) {
 ///    pairs, so that only these directions need to be gathered.
 /// Returns false if the index values can not be determined. If the directions
 /// can not be determined, all directions are gathered.
-bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
+/// Then the gathers that are needed only for some values of variables defined outside the loop
+/// are found, see evaluate_loop_params().
 
-    // helper: nearest neighbour reference with a loop local direction. Not the refs synthesized
-    // for field functions (no fullExpr), their directions are not tracked: all are gathered
-    auto has_loop_local_nb_dir = [](const field_ref &r) {
-        return r.is_direction && r.is_loop_local_dir && !r.is_offset && r.deep_k == 0 &&
-               r.dirE != nullptr && r.fullExpr != nullptr;
-    };
+// helper: nearest neighbour reference with a loop local direction. Not the refs synthesized
+// for field functions (no fullExpr), their directions are not tracked: all are gathered
+static bool has_loop_local_nb_dir(const field_ref &r) {
+    return r.is_direction && r.is_loop_local_dir && !r.is_offset && r.deep_k == 0 &&
+           r.dirE != nullptr && r.fullExpr != nullptr;
+}
+
+// helper: nearest neighbour reference whose direction is not loop local, e.g. f[X + e_x] or
+// f[mu][X + d] with d defined outside the loop
+static bool has_nb_dir(const field_ref &r) {
+    return r.is_direction && !r.is_loop_local_dir && !r.is_offset && r.deep_k == 0 &&
+           r.fullExpr != nullptr;
+}
+
+bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
 
     bool any = false;
     for (field_ref &r : field_ref_list)
@@ -1753,6 +1763,9 @@ bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
                 child_exprs.push_back(r.dirE);
                 evaluator.add_tuple_to_tracking_list(r.fullExpr, child_exprs);
             }
+            // is the reference evaluated, see evaluate_loop_params()
+            if (has_nb_dir(r) && !r.is_loop_local_ref)
+                evaluator.add_expr_to_tracking_list(r.fullExpr);
         }
         ok = evaluator.exec();
     }
@@ -1832,7 +1845,176 @@ bool TopLevelVisitor::analyse_loop_local_field_refs(Stmt *loop_body) {
             llvm::errs() << "--------------------------------------------------------------\n";
         }
     }
+
+    if (ok)
+        evaluate_loop_params(loop_body, evaluator);
+
     return all_found;
+}
+
+/// The variables defined outside the site loop `loop_body` which can be loop parameters, see
+/// loop_param_info, with the number of their values. In the order of their first use.
+std::vector<std::pair<const VarDecl *, int64_t>>
+TopLevelVisitor::find_loop_params(Stmt *loop_body, const Idx_expr_evaluator &evaluator) {
+
+    std::set<const VarDecl *> loop_vars; // defined in the loop
+    std::vector<const VarDecl *> used;   // used in the loop, not defined there
+    std::function<void(const Stmt *)> walk = [&](const Stmt *S) {
+        if (S == nullptr)
+            return;
+        if (const auto *DS = dyn_cast<DeclStmt>(S)) {
+            for (const Decl *D : DS->decls())
+                if (const auto *VD = dyn_cast<VarDecl>(D))
+                    loop_vars.insert(VD);
+        } else if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+            if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+                VD && std::find(used.begin(), used.end(), VD) == used.end())
+                used.push_back(VD);
+        }
+        for (const Stmt *child : S->children())
+            walk(child);
+    };
+    walk(loop_body);
+
+    const int ndim = number_of_directions() / 2;
+    std::vector<std::pair<const VarDecl *, int64_t>> params;
+    for (const VarDecl *VD : used) {
+        // a local variable of the function, readable before the loop with its name. Not
+        // e.g. a parameter of a lambda in the loop
+        if (loop_vars.count(VD) || !isa<FunctionDecl>(VD->getDeclContext()) ||
+            VD->getDeclContext() != global.currentFunctionDecl)
+            continue;
+        const QualType T = VD->getType();
+        if (T->isReferenceType() || T.isVolatileQualified() ||
+            VD->isUsableInConstantExpressions(*Context) || evaluator.escaped.contains(VD))
+            continue;
+
+        int64_t size = 0;
+        if (T->isBooleanType()) {
+            size = 2;
+        } else if (const auto *ET = T->getAs<EnumType>()) {
+            const EnumDecl *ED = ET->getDecl();
+            if (ED->getName() == "Direction") {
+                // a Direction from foralldir(), negative directions are other values
+                size = ndim;
+            } else {
+                // an enum with values 0 ... n-1
+                std::set<int64_t> values;
+                for (const EnumConstantDecl *EC : ED->enumerators())
+                    values.insert(EC->getInitVal().getExtValue());
+                if (!values.empty() && *values.begin() == 0 &&
+                    *values.rbegin() == static_cast<int64_t>(values.size()) - 1 &&
+                    values.size() <= 16)
+                    size = values.size();
+            }
+        }
+        if (size > 0)
+            params.push_back({VD, size});
+    }
+    return params;
+}
+
+/// Gathers needed only for some values of the variables defined outside the loop, e.g. d1 in
+///     foralldir(d1) onsites(ALL) foralldir(d2) if (d2 != d1) s[X] += f[d2][X + d1];
+/// where f[d1] is not gathered in direction d1: evaluate the loop body for each combination of
+/// the values of these loop parameters, and record in field_ref::param_use with which
+/// combinations each (index value, direction) of the nearest neighbour references is used.
+/// The evaluator has been run with unknown values of the parameters, this is used for the
+/// other values. See loop_param_info.
+void TopLevelVisitor::evaluate_loop_params(Stmt *loop_body, Idx_expr_evaluator &evaluator) {
+
+    loop_param_info &params = loop_info.params;
+    params.clear();
+
+    // The references whose uses are recorded. Only the ones that were evaluated with the
+    // unknown values: then the evaluation finds them (an expression it does not go into could
+    // hide a reference, which then would look unused)
+    std::vector<field_ref *> refs;
+    for (field_ref &r : field_ref_list) {
+        bool seen = false;
+        if (has_loop_local_nb_dir(r)) {
+            const auto [tuples, reliable] = evaluator.get_tuples_for_expr(r.fullExpr);
+            seen = tuples && !tuples->empty();
+        } else if (has_nb_dir(r)) {
+            const auto [vals, reliable] =
+                evaluator.get_vals_for_expr(r.is_loop_local_ref ? r.ref_index : r.fullExpr);
+            seen = vals && !vals->empty();
+        }
+        if (seen)
+            refs.push_back(&r);
+    }
+    if (refs.empty())
+        return;
+
+    // the parameters, as many as fit
+    std::vector<const VarDecl *> vars;
+    for (const auto &[VD, size] : find_loop_params(loop_body, evaluator)) {
+        const uint64_t n = (params.n_combos == 0 ? 1 : params.n_combos) * size;
+        if (n > loop_param_info::max_combos)
+            continue;
+        vars.push_back(VD);
+        params.names.push_back(VD->getNameAsString());
+        params.sizes.push_back(size);
+        params.n_combos = n;
+    }
+    if (vars.empty())
+        return;
+
+    const int ndirs = number_of_directions();
+    for (uint64_t c = 0; c < params.n_combos; c++) {
+        const uint64_t bit = uint64_t(1) << c;
+        evaluator.initial_vars.clear();
+        uint64_t rest = c;
+        for (size_t j = 0; j < vars.size(); j++) {
+            evaluator.initial_vars[vars[j]] = rest % params.sizes[j];
+            rest /= params.sizes[j];
+        }
+        if (!evaluator.exec()) {
+            params.failed_combos |= bit;
+            continue;
+        }
+
+        for (field_ref *r : refs) {
+            if (has_loop_local_nb_dir(*r)) {
+                const auto [tuples, reliable] = evaluator.get_tuples_for_expr(r->fullExpr);
+                if (tuples == nullptr || !reliable) {
+                    r->param_use_any |= bit;
+                    continue;
+                }
+                for (const Value_tuple &t : *tuples) {
+                    const int64_t idx = r->is_loop_local_ref ? t.front().value() : 0;
+                    int64_t dir = t.back().value();
+                    if (dir < 0 || dir >= ndirs) {
+                        r->param_use_any |= bit;
+                        break;
+                    }
+                    if (r->dir_negate)
+                        dir = ndirs - 1 - dir;
+                    r->param_use[{idx, dir}] |= bit;
+                }
+            } else if (r->is_loop_local_ref) {
+                // the index values with which the reference is evaluated
+                const auto [vals, reliable] = evaluator.get_vals_for_expr(r->ref_index);
+                if (vals == nullptr || !reliable) {
+                    r->param_use_any |= bit;
+                    continue;
+                }
+                for (const std::optional<int64_t> &v : *vals)
+                    r->param_use[{v.value(), -1}] |= bit;
+            } else {
+                // is the reference evaluated (its value is not an integer, it is unknown)
+                const auto [vals, reliable] = evaluator.get_vals_for_expr(r->fullExpr);
+                if (vals == nullptr)
+                    r->param_use_any |= bit;
+                else if (!vals->empty())
+                    r->param_use[{0, -1}] |= bit;
+            }
+        }
+    }
+    evaluator.initial_vars.clear();
+
+    for (field_ref *r : refs)
+        r->param_use_known = true;
 }
 
 
@@ -1941,10 +2123,11 @@ int TopLevelVisitor::number_of_directions() {
 
 
 /// The directions to gather before the loop for the Field variable `name` of
-/// field l (one of l.outside_loop_names()), as Direction expressions.
+/// field l (one of l.outside_loop_names()), as Direction expressions, each with a guard if the
+/// gather is needed only for some values of the loop parameters (see loop_param_info).
 /// std::nullopt: gather all directions, because a direction depends on a loop
 /// local variable whose values are not known.
-std::optional<std::vector<std::string>>
+std::optional<std::vector<gather_dir>>
 TopLevelVisitor::gather_directions(const field_info &l, const std::string &name) {
 
     if (l.is_loop_local_dir && !l.loop_local_dirs_known)
@@ -1964,29 +2147,110 @@ TopLevelVisitor::gather_directions(const field_info &l, const std::string &name)
     }
 
     const int ndirs = number_of_directions();
-    std::vector<std::string> dirs;
-    std::set<int64_t> numbers; // to gather each direction once
+    const loop_param_info &params = loop_info.params;
+
+    // the combinations of the loop parameter values with which the references use the index
+    // value idx and direction dir (-1 for the direction of the reference), see field_ref
+    auto combos = [&](const std::vector<field_ref *> &refs, int64_t dir) -> uint64_t {
+        uint64_t mask = 0;
+        for (const field_ref *r : refs) {
+            if (!r->param_use_known)
+                return params.all_combos();
+            mask |= r->param_use_any;
+            if (const auto it = r->param_use.find({idx, dir}); it != r->param_use.end())
+                mask |= it->second;
+        }
+        return mask;
+    };
+
+    // the directions, a direction number (-1 if not known) is gathered once
+    struct entry {
+        std::string dir;
+        int64_t number;
+        uint64_t mask;
+    };
+    std::vector<entry> entries;
+    auto add = [&](const std::string &dir, int64_t number, uint64_t mask) {
+        if (number >= 0) {
+            for (entry &e : entries) {
+                if (e.number == number) {
+                    e.mask |= mask;
+                    return;
+                }
+            }
+        }
+        entries.push_back({dir, number, mask});
+    };
+
     for (const dir_ptr &d : l.dir_list) {
         if (d.count == 0 || d.is_loop_local_dir)
             continue;
+        int64_t number = -1;
         if (d.is_constant_direction && ndirs > 0) {
             // constant_value is the direction, + NEG_DIR_CONST_OFFSET for X - dir
-            const int64_t n = (d.constant_value >= NEG_DIR_CONST_OFFSET)
-                                  ? ndirs - 1 - (d.constant_value - NEG_DIR_CONST_OFFSET)
-                                  : d.constant_value;
-            if (!numbers.insert(n).second)
-                continue;
+            number = (d.constant_value >= NEG_DIR_CONST_OFFSET)
+                         ? ndirs - 1 - (d.constant_value - NEG_DIR_CONST_OFFSET)
+                         : d.constant_value;
         }
-        dirs.push_back(d.direxpr_s);
+        add(d.direxpr_s, number, combos(d.ref_list, -1));
     }
     if (l.is_loop_local_dir) {
         const auto it = l.loop_local_gather_dirs.find(idx);
-        if (it != l.loop_local_gather_dirs.end())
+        if (it != l.loop_local_gather_dirs.end()) {
+            std::vector<field_ref *> refs;
+            for (field_ref *r : l.ref_list)
+                if (r->is_loop_local_dir && !r->is_offset && r->deep_k == 0)
+                    refs.push_back(r);
             for (int64_t n : it->second)
-                if (numbers.insert(n).second)
-                    dirs.push_back("static_cast<Direction>(" + std::to_string(n) + ")");
+                add("static_cast<Direction>(" + std::to_string(n) + ")", n, combos(refs, n));
+        }
+    }
+
+    std::vector<gather_dir> dirs;
+    for (const entry &e : entries) {
+        std::string guard;
+        const uint64_t mask = e.mask | params.failed_combos;
+        if (params.n_combos > 0 && (mask & params.all_combos()) != params.all_combos()) {
+            std::stringstream ss;
+            ss << "if (HILA_param_bit_ & 0x" << std::hex
+               << (mask | loop_param_info::other_values_bit) << "ull) ";
+            guard = ss.str();
+        }
+        dirs.push_back({e.dir, guard});
     }
     return dirs;
+}
+
+/// The declaration of HILA_param_bit_ used in the guards of the gathers, see loop_param_info.
+/// Empty if there are no guards
+std::string TopLevelVisitor::loop_param_bit_decl() {
+    const loop_param_info &params = loop_info.params;
+    // the vectorized code does not use gather_directions()
+    if (params.n_combos == 0 || target.vectorize)
+        return "";
+
+    bool guards = false;
+    for (const field_info &l : field_info_list)
+        for (const std::string &name : l.outside_loop_names())
+            if (const auto dirs = gather_directions(l, name))
+                for (const gather_dir &d : *dirs)
+                    guards = guards || !d.guard.empty();
+    if (!guards)
+        return "";
+
+    std::string in_range, combo, names;
+    int64_t stride = 1;
+    for (size_t j = 0; j < params.names.size(); j++) {
+        names += (j > 0 ? ", " : "") + params.names[j];
+        const std::string v = "static_cast<uint64_t>(" + params.names[j] + ")";
+        in_range += (j > 0 ? " && " : "") + v + " < " + std::to_string(params.sizes[j]);
+        combo += (j > 0 ? " + " : "") + (stride > 1 ? std::to_string(stride) + " * " : "") + v;
+        stride *= params.sizes[j];
+    }
+    return "// the combination of the values of " + names +
+           " for the gathers, see loop_param_info in hilapp\n"
+           "const uint64_t HILA_param_bit_ = (" +
+           in_range + ") ? uint64_t(1) << (" + combo + ") : uint64_t(1) << 63;\n";
 }
 
 /////////////////////////////////////////////////////////////////////////////

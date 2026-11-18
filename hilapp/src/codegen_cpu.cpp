@@ -40,15 +40,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             // If neighbour references exist, communicate them
             if (const auto dirs = gather_directions(l, name)) {
                 // the directions to gather, see gather_directions()
-                for (const std::string &dir : *dirs) {
+                for (const auto &[dir, guard] : *dirs) {
                     if (!generate_wait_loops) {
-                        code << name << ".gather(" << dir << ", " << loop_info.parity_str << ");\n";
+                        code << guard << name << ".gather(" << dir << ", " << loop_info.parity_str << ");\n";
                     } else {
                         if (first)
                             code << "dir_mask_t  _dir_mask_ = 0;\n";
                         first = false;
 
-                        code << "_dir_mask_ |= " << name << ".start_gather(" << dir << ", "
+                        code << guard << "_dir_mask_ |= " << name << ".start_gather(" << dir << ", "
                              << loop_info.parity_str << ");\n";
                     }
                 }
@@ -581,8 +581,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             for (const std::string &name : l.outside_loop_names()) {
                 // If neighbour references exist, communicate them
                 if (const auto dirs = gather_directions(l, name)) {
-                    for (const std::string &dir : *dirs) {
-                        code << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
+                    for (const auto &[dir, guard] : *dirs) {
+                        code << guard << name << ".wait_gather(" << dir << ", " << loop_info.parity_str
                              << ");\n";
                     }
                 } else {

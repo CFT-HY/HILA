@@ -29,6 +29,13 @@
 
 class TopLevelVisitor;
 extern TopLevelVisitor *g_TopLevelVisitor;
+struct Idx_expr_evaluator;
+
+/// A direction to gather before a site loop, see TopLevelVisitor::gather_directions()
+struct gather_dir {
+    std::string dir;   // the Direction expression
+    std::string guard; // "if (...) " to put before the gather statement, or empty
+};
 
 class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLevelVisitor> {
 
@@ -135,10 +142,14 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     // void check_allowed_assignment(Stmt *s);
 
     bool analyse_loop_local_field_refs(Stmt *loop_body);
+    std::vector<std::pair<const VarDecl *, int64_t>>
+    find_loop_params(Stmt *loop_body, const Idx_expr_evaluator &evaluator);
+    void evaluate_loop_params(Stmt *loop_body, Idx_expr_evaluator &evaluator);
     int number_of_directions();
     bool check_loop_local_ref_bounds(const field_info &l);
-    std::optional<std::vector<std::string>> gather_directions(const field_info &l,
-                                                              const std::string &name);
+    std::optional<std::vector<gather_dir>> gather_directions(const field_info &l,
+                                                             const std::string &name);
+    std::string loop_param_bit_decl();
     bool check_field_ref_list();
     bool is_assignment_value_unused(Stmt *s);
     bool field_direct_write(const field_info &l);
