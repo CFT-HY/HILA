@@ -1731,6 +1731,24 @@ class Field {
     void read(std::ifstream &inputfile, const CoordinateVector &insize);
     void read(const std::string &filename);
 
+    /**
+     * @brief Collective MPI-IO write of the Field to an open MPI file, starting at byte
+     * offset `offset`.  Data is in global lexicographic order (x fastest), identical to
+     * write(std::ofstream &) binary output.  All ranks must call.
+     * @return offset after the written data
+     */
+    MPI_Offset write_mpi(MPI_File fh, MPI_Offset offset,
+                         const std::string &filename = "") const;
+    /**
+     * @brief Collective MPI-IO read from byte offset `offset`.  If insize is given and
+     * differs from the lattice size, the file holds a smaller lattice of size insize, which
+     * is replicated periodically to fill the Field (as in read(std::ifstream &, insize)).
+     * @return offset after the read data
+     */
+    MPI_Offset read_mpi(MPI_File fh, MPI_Offset offset, const std::string &filename = "");
+    MPI_Offset read_mpi(MPI_File fh, MPI_Offset offset, const CoordinateVector &insize,
+                        const std::string &filename = "");
+
     /// @internal
     void write_subvolume_internal(std::ofstream &out, const CoordinateVector &cmin,
                                   const CoordinateVector &cmax, int precision, bool binary,

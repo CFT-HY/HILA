@@ -166,10 +166,19 @@ class GaugeField {
     }
 
     void write(const std::string &filename) const {
-        std::ofstream outputfile;
-        hila::open_output_file(filename, outputfile);
-        write(outputfile);
-        hila::close_file(filename, outputfile);
+        if (hila::parallel_io) {
+            MPI_File fh = hila::io::open_mpi_file(filename, true);
+            MPI_Offset offset = 0;
+            foralldir (d) {
+                offset = fdir[d].write_mpi(fh, offset, filename);
+            }
+            hila::io::close_mpi_file(fh, filename);
+        } else {
+            std::ofstream outputfile;
+            hila::open_output_file(filename, outputfile);
+            write(outputfile);
+            hila::close_file(filename, outputfile);
+        }
     }
 
     void read(std::ifstream &inputfile) {
@@ -185,79 +194,120 @@ class GaugeField {
     }
 
     void read(const std::string &filename) {
-        std::ifstream inputfile;
-        hila::open_input_file(filename, inputfile);
-        read(inputfile);
-        hila::close_file(filename, inputfile);
+        if (hila::parallel_io) {
+            MPI_File fh = hila::io::open_mpi_file(filename, false);
+            MPI_Offset offset = 0;
+            foralldir (d) {
+                offset = fdir[d].read_mpi(fh, offset, filename);
+            }
+            hila::io::close_mpi_file(fh, filename);
+        } else {
+            std::ifstream inputfile;
+            hila::open_input_file(filename, inputfile);
+            read(inputfile);
+            hila::close_file(filename, inputfile);
+        }
     }
 
-    /// config_write writes the gauge field to file, with additional "verifying" header
+    /// config_write writes the gauge field to file, with additional "verifying" header:
+    /// int64 values config_flag, NDIM, sizeof(T), lattice size (NDIM values),
+    /// followed by the NDIM direction fields in binary.
 
     void config_write(const std::string &filename) const {
-        std::ofstream outputfile;
-        hila::open_output_file(filename, outputfile);
 
-        // write header
-        if_rank0() {
-            int64_t f = config_flag;
-            outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            f = NDIM;
-            outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            f = sizeof(T);
-            outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
-
-            foralldir (d) {
-                f = lattice.size(d);
-                outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            }
+        int64_t header[3 + NDIM];
+        header[0] = config_flag;
+        header[1] = NDIM;
+        header[2] = sizeof(T);
+        foralldir (d) {
+            header[3 + d] = lattice.size(d);
         }
 
-        write(outputfile);
-        hila::close_file(filename, outputfile);
+        if (hila::parallel_io) {
+            MPI_File fh = hila::io::open_mpi_file(filename, true);
+            int err = MPI_SUCCESS;
+            if_rank0() {
+                err = MPI_File_write_at(fh, 0, header, (int)sizeof(header), MPI_BYTE,
+                                        MPI_STATUS_IGNORE);
+            }
+            hila::io::check_mpi_io(err, "writing header of", filename);
+
+            MPI_Offset offset = sizeof(header);
+            foralldir (d) {
+                offset = fdir[d].write_mpi(fh, offset, filename);
+            }
+            hila::io::close_mpi_file(fh, filename);
+
+        } else {
+            std::ofstream outputfile;
+            hila::open_output_file(filename, outputfile);
+            if_rank0() {
+                outputfile.write(reinterpret_cast<char *>(header), sizeof(header));
+            }
+            write(outputfile);
+            hila::close_file(filename, outputfile);
+        }
     }
 
     void config_read(const std::string &filename) {
-        std::ifstream inputfile;
-        hila::open_input_file(filename, inputfile);
         std::string conferr("CONFIG ERROR in file " + filename + ": ");
 
-        // read header
+        int64_t header[3 + NDIM];
         bool ok = true;
-        int64_t f;
-        if_rank0() {
-            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            ok = (f == config_flag);
-            if (!ok)
-                hila::out0 << conferr << "wrong id, should be " << config_flag << " is " << f
-                           << '\n';
-        }
 
-        if (ok && hila::myrank() == 0) {
-            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            ok = (f == NDIM);
-            if (!ok)
-                hila::out0 << conferr << "wrong dimensionality, should be " << NDIM << " is " << f
-                           << '\n';
-        }
+        std::ifstream inputfile;
+        MPI_File fh = MPI_FILE_NULL;
 
-        if (ok && hila::myrank() == 0) {
-            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            ok = (f == sizeof(T));
-            if (!ok)
-                hila::out0 << conferr << "wrong size of field element, should be " << sizeof(T)
-                           << " is " << f << '\n';
+        if (hila::parallel_io) {
+            fh = hila::io::open_mpi_file(filename, false);
+            int err = MPI_SUCCESS;
+            if_rank0() {
+                MPI_Status status;
+                int count = 0;
+                err = MPI_File_read_at(fh, 0, header, (int)sizeof(header), MPI_BYTE, &status);
+                if (err == MPI_SUCCESS)
+                    MPI_Get_count(&status, MPI_BYTE, &count);
+                ok = (count == (int)sizeof(header));
+            }
+            hila::io::check_mpi_io(err, "reading header of", filename);
+        } else {
+            hila::open_input_file(filename, inputfile);
+            if_rank0() {
+                inputfile.read(reinterpret_cast<char *>(header), sizeof(header));
+                ok = !inputfile.fail();
+            }
         }
 
         CoordinateVector insize = lattice.size();
-        if (ok && hila::myrank() == 0) {
-            foralldir (d) {
-                inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-                insize[d] = f;
-                ok = ok && (lattice.size(d) % insize[d] == 0);
-                if (!ok)
-                    hila::out0 << conferr << "incorrect lattice dimension " << hila::prettyprint(d)
-                               << " is " << f << " should be (or divide)" << lattice.size(d)
-                               << '\n';
+        if_rank0() {
+            if (!ok)
+                hila::out0 << conferr << "could not read header\n";
+
+            if (ok && header[0] != config_flag) {
+                ok = false;
+                hila::out0 << conferr << "wrong id, should be " << config_flag << " is "
+                           << header[0] << '\n';
+            }
+            if (ok && header[1] != NDIM) {
+                ok = false;
+                hila::out0 << conferr << "wrong dimensionality, should be " << NDIM << " is "
+                           << header[1] << '\n';
+            }
+            if (ok && header[2] != (int64_t)sizeof(T)) {
+                ok = false;
+                hila::out0 << conferr << "wrong size of field element, should be " << sizeof(T)
+                           << " is " << header[2] << '\n';
+            }
+            if (ok) {
+                foralldir (d) {
+                    int64_t f = header[3 + d];
+                    insize[d] = f;
+                    ok = ok && f > 0 && (lattice.size(d) % f == 0);
+                    if (!ok)
+                        hila::out0 << conferr << "incorrect lattice dimension "
+                                   << hila::prettyprint(d) << " is " << f
+                                   << " should be (or divide)" << lattice.size(d) << '\n';
+                }
             }
         }
 
@@ -267,8 +317,16 @@ class GaugeField {
             hila::broadcast_array(insize.c, NDIM);
         }
 
-        read(inputfile, insize);
-        hila::close_file(filename, inputfile);
+        if (hila::parallel_io) {
+            MPI_Offset offset = sizeof(header);
+            foralldir (d) {
+                offset = fdir[d].read_mpi(fh, offset, insize, filename);
+            }
+            hila::io::close_mpi_file(fh, filename);
+        } else {
+            read(inputfile, insize);
+            hila::close_file(filename, inputfile);
+        }
     }
 
     /**

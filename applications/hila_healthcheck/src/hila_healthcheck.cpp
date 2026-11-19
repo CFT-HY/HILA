@@ -1978,6 +1978,141 @@ void test_blocking() {
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+/// Compare two files byte by byte on rank 0
+bool files_identical(const std::string &a, const std::string &b) {
+    bool same = false;
+    if_rank0 () {
+        std::ifstream fa(a, std::ios::binary), fb(b, std::ios::binary);
+        std::vector<char> va((std::istreambuf_iterator<char>(fa)), std::istreambuf_iterator<char>());
+        std::vector<char> vb((std::istreambuf_iterator<char>(fb)), std::istreambuf_iterator<char>());
+        same = fa.good() || fa.eof();
+        same = same && (fb.good() || fb.eof()) && va.size() > 0 && va == vb;
+    }
+    hila::broadcast(same);
+    return same;
+}
+
+/**
+ * @brief Test parallel (MPI-IO) binary Field I/O against the rank 0 serial path.
+ * @details Files written by the two paths must be byte identical, and reading with either
+ * path must reproduce the data exactly.  Also tests write_fields/read_fields, GaugeField
+ * config_write/config_read, writing a Field of another lattice, and reading a smaller
+ * (blocked) lattice configuration replicated to the full lattice.
+ */
+void test_field_io() {
+
+    const bool saved_parallel_io = hila::parallel_io;
+    const std::string fa = "hila_io_test_a.dat", fb = "hila_io_test_b.dat",
+                      fc = "hila_io_test_c.dat";
+
+    Field<Matrix<3, 3, Complex<double>>> f, g, h;
+    Field<Vector<5, float>> v, w;
+    f.gaussian_random();
+    v.gaussian_random();
+
+    // Field::write / read
+    hila::parallel_io = true;
+    f.write(fa);
+    hila::parallel_io = false;
+    f.write(fb);
+    report_pass("Parallel Field::write == serial write", files_identical(fa, fb) ? 0 : 1, 0.5);
+
+    hila::parallel_io = true;
+    g.read(fb);
+    hila::parallel_io = false;
+    h.read(fa);
+    double diff = 0;
+    onsites (ALL) {
+        diff += (g[X] - f[X]).squarenorm() + (h[X] - f[X]).squarenorm();
+    }
+    report_pass("Parallel/serial Field::read", diff, 1e-20);
+
+    // write_fields / read_fields
+    hila::parallel_io = true;
+    write_fields(fa, f, v);
+    hila::parallel_io = false;
+    write_fields(fb, f, v);
+    report_pass("Parallel write_fields == serial", files_identical(fa, fb) ? 0 : 1, 0.5);
+
+    hila::parallel_io = true;
+    g = 0;
+    read_fields(fb, g, w);
+    diff = 0;
+    onsites (ALL) {
+        diff += (g[X] - f[X]).squarenorm() + (w[X] - v[X]).squarenorm();
+    }
+    report_pass("Parallel read_fields", diff, 1e-20);
+
+    // GaugeField config_write / config_read
+    GaugeField<SU<3, double>> U, V, W;
+    foralldir (d)
+        U[d].gaussian_random();
+
+    hila::parallel_io = true;
+    U.config_write(fa);
+    hila::parallel_io = false;
+    U.config_write(fb);
+    report_pass("Parallel GaugeField::config_write == serial", files_identical(fa, fb) ? 0 : 1,
+                0.5);
+
+    hila::parallel_io = true;
+    V.config_read(fb);
+    diff = 0;
+    foralldir (d) {
+        onsites (ALL) {
+            diff += (V[d][X] - U[d][X]).squarenorm();
+        }
+    }
+    report_pass("Parallel GaugeField::config_read", diff, 1e-20);
+
+    CoordinateVector blocking;
+    blocking.fill(2);
+    if (lattice.can_block(blocking)) {
+        // serial reference of f, written on the full lattice
+        hila::parallel_io = false;
+        f.write(fc);
+
+        lattice.block(blocking);
+        {
+            // write a Field of the (non-current) full lattice
+            hila::parallel_io = true;
+            f.write(fb);
+            report_pass("Parallel write of Field on non-current lattice",
+                        files_identical(fb, fc) ? 0 : 1, 0.5);
+
+            // config of the blocked lattice
+            GaugeField<SU<3, double>> Ub;
+            foralldir (d)
+                Ub[d].gaussian_random();
+            Ub.config_write(fa);
+        }
+        lattice.unblock();
+
+        // read blocked config to full lattice: replicates the blocked lattice periodically
+        hila::parallel_io = true;
+        V.config_read(fa);
+        hila::parallel_io = false;
+        W.config_read(fa);
+        diff = 0;
+        foralldir (d) {
+            onsites (ALL) {
+                diff += (V[d][X] - W[d][X]).squarenorm();
+            }
+        }
+        report_pass("Parallel config_read of smaller lattice", diff, 1e-20);
+    }
+
+    hila::parallel_io = saved_parallel_io;
+
+    if_rank0 () {
+        std::remove(fa.c_str());
+        std::remove(fb.c_str());
+        std::remove(fc.c_str());
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
@@ -2022,6 +2157,7 @@ int main(int argc, char **argv) {
     test_matrix_algebra();
     test_extended();
     test_clusters();
+    test_field_io();
     test_blocking();
     test_spectraldensity_blocking();
 

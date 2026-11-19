@@ -1438,7 +1438,7 @@ void Field<T, BC>::set_local_data(const std::vector<T> &buffer) {
     T *data = (T *)d_malloc(sizeof(T) * lattice->mynode.volume);
     gpuMemcpy(data, buffer.data(), sizeof(T) * lattice->mynode.volume, gpuMemcpyHostToDevice);
 #else
-    T *data = buffer.data();
+    const T *data = buffer.data();
 #endif
 
     #pragma hila novector direct_access(data)
