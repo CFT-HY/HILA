@@ -1,0 +1,4 @@
+lattice size     32, 32, 32, 32
+repeats          3
+serial           yes
+file name        iobench.cfg
