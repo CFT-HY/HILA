@@ -2111,28 +2111,10 @@ void test_field_io() {
     }
 }
 
-/**
- * @brief Basic test of HDF5 output (hila::hdf5_file) without the HDF5 library.
- * @details Checks the file signature, that the end-of-file address in the superblock matches
- * the file size, and that the raw data of the first dataset (at the first aligned address,
- * 4096) equals the binary Field::write output.  Full validation of the file with h5py:
- * applications/test_hdf5.
- */
-void test_hdf5_output() {
-
-    const std::string fh5 = "hila_hdf5_test.h5", fbin = "hila_hdf5_test.bin";
-
-    Field<Complex<double>> f;
-    f.gaussian_random();
-    f.write(fbin);
-
-    {
-        hila::hdf5_file h5(fh5);
-        h5.attribute("lattice size", lattice.size()).attribute("program", "hila_healthcheck");
-        h5.write("f", f);
-        h5.write("group/f_float", f, hila::io::to_float).attribute("note", "single precision");
-    }
-
+/// @internal Check an HDF5 file holding one dataset: signature, end-of-file address equal to
+/// the file size, and dataset raw data (at the first aligned address, 4096) equal to the
+/// contents of binary file fbin.
+bool hdf5_dataset_matches(const std::string &fh5, const std::string &fbin) {
     bool ok = false;
     if_rank0 () {
         std::ifstream a(fh5, std::ios::binary), b(fbin, std::ios::binary);
@@ -2149,7 +2131,59 @@ void test_hdf5_output() {
              std::memcmp(h5.data(), "\x89HDF\r\n\x1a\n", 8) == 0 && eof == h5.size() &&
              std::equal(raw.begin(), raw.end(), h5.begin() + data_start);
     }
-    report_pass("HDF5 file structure and dataset data", hila::broadcast(ok) ? 0 : 1, 0.5);
+    return hila::broadcast(ok);
+}
+
+/**
+ * @brief Basic test of HDF5 output (hila::hdf5_file) without the HDF5 library.
+ * @details For full Field, subvolume, slice and projection datasets, compares the raw data in
+ * the HDF5 file with the binary output of Field::write, write_subvolume_binary,
+ * write_slice_binary and write_projection_binary, and checks the file signature and
+ * end-of-file address.  Full validation of the files with h5py: applications/test_hdf5.
+ */
+void test_hdf5_output() {
+
+    const std::string fh5 = "hila_hdf5_test.h5", fbin = "hila_hdf5_test.bin";
+
+    Field<Complex<double>> f;
+    f.gaussian_random();
+
+    f.write(fbin);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.attribute("lattice size", lattice.size()).attribute("program", "hila_healthcheck");
+        h5.write("f", f);
+        h5.write("group/f_float", f, hila::io::to_float).attribute("note", "single precision");
+    }
+    report_pass("HDF5 Field dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    // subvolume: from 1/4 to 3/4 of the lattice, not on all ranks
+    CoordinateVector cmin, cmax, slice;
+    foralldir (d) {
+        cmin[d] = lattice.size(d) / 4;
+        cmax[d] = (3 * lattice.size(d)) / 4;
+        slice[d] = (d == e_x || d == e_y) ? -1 : lattice.size(d) / 3;
+    }
+    f.write_subvolume_binary(fbin, cmin, cmax, true);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.write_subvolume("f", f, cmin, cmax, hila::io::to_float);
+    }
+    report_pass("HDF5 subvolume dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    f.write_slice_binary(fbin, slice);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.write_slice("f", f, slice);
+    }
+    report_pass("HDF5 slice dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    f.write_projection_binary(fbin, {e_y}, cmin, cmax);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.write_projection("f", f, {e_y}, cmin, cmax);
+    }
+    report_pass("HDF5 projection dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
 
     if_rank0 () {
         std::remove(fh5.c_str());

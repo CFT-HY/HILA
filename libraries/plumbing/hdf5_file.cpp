@@ -302,16 +302,23 @@ int hdf5_file::add_dataset(const std::string &path, number_type nt,
     return idx;
 }
 
+/// Write bytes at addr from this rank only (not collective); returns MPI error code
+int hdf5_file::write_at(uint64_t addr, const void *buf, uint64_t bytes) {
+    int err = MPI_SUCCESS;
+    constexpr uint64_t chunk = 1ULL << 30;
+    const char *p = static_cast<const char *>(buf);
+    for (uint64_t done = 0; done < bytes && err == MPI_SUCCESS; done += chunk) {
+        int n = (int)std::min(chunk, bytes - done);
+        err = MPI_File_write_at(fh, addr + done, p + done, n, MPI_BYTE, MPI_STATUS_IGNORE);
+    }
+    return err;
+}
+
+/// Write data from rank 0.  Collective
 void hdf5_file::write_rank0(uint64_t addr, const void *buf, uint64_t bytes) {
     int err = MPI_SUCCESS;
-    if (hila::myrank() == 0) {
-        constexpr uint64_t chunk = 1ULL << 30;
-        const char *p = static_cast<const char *>(buf);
-        for (uint64_t done = 0; done < bytes && err == MPI_SUCCESS; done += chunk) {
-            int n = (int)std::min(chunk, bytes - done);
-            err = MPI_File_write_at(fh, addr + done, p + done, n, MPI_BYTE, MPI_STATUS_IGNORE);
-        }
-    }
+    if (hila::myrank() == 0)
+        err = write_at(addr, buf, bytes);
     hila::io::check_mpi_io(err, "writing", filename);
 }
 

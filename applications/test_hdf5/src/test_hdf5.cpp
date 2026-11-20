@@ -3,8 +3,8 @@
  * @brief Test of HDF5 output (hila::hdf5_file).
  *
  * Writes test.h5 with datasets of several types (scalar, complex, SU(3), single precision,
- * integer, CoordinateVector, rank 0 arrays), groups and attributes, together with raw binary
- * reference files (*.bin) of the same fields.  Validate with h5py:
+ * integer, CoordinateVector, rank 0 arrays), subvolumes, slices and projections, groups and
+ * attributes, together with raw binary reference files (*.bin) of the same fields.  Validate with h5py:
  *
  *     mpirun -np 4 ./build/test_hdf5
  *     python3 check_hdf5.py
@@ -67,6 +67,22 @@ int main(int argc, char **argv) {
         h5.group("empty/sub").attribute("note", "empty group");
         h5.group("gauge").attribute("group attr", 3.25f);
         h5.write("arrays/" + std::string(300, 'L'), v, {15}, hila::io::to_float);
+
+        // subvolumes: k_small lies on few ranks only
+        h5.write_subvolume("sub/s", s, {2, 1, 3}, {13, 6, 9});
+        h5.write_subvolume("sub/k_small", k, {1, 1, 1}, {5, 2, 3});
+        h5.write_subvolume("sub/u_float", u, {0, 0, 0}, {15, 7, 11}, hila::io::to_float);
+
+        // slices
+        h5.write_slice("slice/k_xz", k, {-1, 3, -1});
+        h5.write_slice("slice/c_y", c, {5, -1, 7});
+        h5.write_slice("slice/k_point", k, {4, 5, 6});
+
+        // projections
+        h5.write_projection("proj/k_y", k, {e_y});
+        h5.write_projection("proj/s_xz", s, {e_x, e_z}, {2, 1, 0}, {9, 6, 10});
+        h5.write_projection("proj/c_all", c, {e_x, e_y, e_z});
+        h5.write_projection("proj/u_z_float", u, {e_z}, hila::io::to_float);
         // closed at end of scope
     }
 

@@ -199,15 +199,26 @@ inline void reset_file_view(MPI_File fh, const std::string &filename) {
 /// @internal Collective write of this rank's block [bmin, bmin+bsize) of a lattice-shaped
 /// array of size gsize, starting at file offset `offset`.  buf holds the block in
 /// lexicographic order (x fastest), elements of elem_size bytes.
+/// If empty == true, this rank writes nothing (bsize, bmin and buf are ignored), but takes
+/// part in the collective write.
 inline void write_block_mpi(MPI_File fh, MPI_Offset offset, const void *buf, size_t elem_size,
                             const CoordinateVector &gsize, const CoordinateVector &bsize,
-                            const CoordinateVector &bmin, const std::string &filename) {
-    size_t nelem = 1;
-    foralldir (d)
-        nelem *= bsize[d];
+                            const CoordinateVector &bmin, const std::string &filename,
+                            bool empty = false) {
+    size_t nelem = 0;
+    if (!empty) {
+        nelem = 1;
+        foralldir (d)
+            nelem *= bsize[d];
+    }
     assert(nelem <= (size_t)std::numeric_limits<int>::max());
 
-    block_filetype bt(elem_size, gsize, bsize, bmin);
+    // MPI subarrays must be non-empty: use a 1-element block and write 0 elements
+    CoordinateVector one, zero;
+    one.fill(1);
+    zero.fill(0);
+
+    block_filetype bt(elem_size, gsize, empty ? one : bsize, empty ? zero : bmin);
     int err = MPI_File_set_view(fh, offset, bt.etype, bt.ftype, "native", MPI_INFO_NULL);
     check_mpi_io(err, "setting view of", filename);
     err = MPI_File_write_all(fh, buf, (int)nelem, bt.etype, MPI_STATUS_IGNORE);
