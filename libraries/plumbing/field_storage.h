@@ -34,7 +34,7 @@ class field_storage {
     // The actual data content of the class: a pointer to the field and a
     // list of neighbour pointers.
     T *RESTRICT fieldbuf = nullptr;
-    
+
     const unsigned *RESTRICT neighbours[NDIRS];
 
     void allocate_field(const Lattice lattice);
@@ -119,8 +119,10 @@ namespace hila {
  * found by the analysis of hilapp. Only with -DHILA_CHECK_LOOP_LOCAL_INDEX, see select_storage().
  * This means a bug in hilapp: report it.
  */
+#ifdef HILA_CHECK_LOOP_LOCAL_INDEX
+
 #define HILA_LOOP_LOCAL_INDEX_ERROR_MSG                                                            \
-    "hila: internal error, the value %lld of the index of a Field selected with a loop local "    \
+    "hila: internal error, the value %lld of the index of a Field selected with a loop local "     \
     "index (e.g. mu in U[mu][X]) is not one of the values found by hilapp\n"
 
 DEVICE inline void loop_local_index_error(const int64_t idx) {
@@ -137,6 +139,9 @@ DEVICE inline void loop_local_index_error(const int64_t idx) {
     std::abort();
 #endif
 }
+
+#endif
+
 
 /**
  * @brief Select the storage of a field by an index value. Used by hilapp in GPU kernels for
