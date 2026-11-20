@@ -179,6 +179,7 @@ typedef long long MPI_Offset;
 
 int MPI_File_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info, MPI_File *fh);
 int MPI_File_close(MPI_File *fh);
+int MPI_File_delete(const char *filename, MPI_Info info);
 int MPI_File_set_size(MPI_File fh, MPI_Offset size);
 int MPI_File_get_size(MPI_File fh, MPI_Offset *size);
 int MPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype, MPI_Datatype filetype,

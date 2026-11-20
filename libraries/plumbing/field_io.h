@@ -114,19 +114,33 @@ inline void check_mpi_io(int err, const char *what, const std::string &filename,
     }
 }
 
-/// @internal Open file for collective MPI-IO.  Writing truncates an existing file.
+/**
+ * @internal Open file for collective MPI-IO.
+ * @details For writing, an existing file is replaced: rank 0 deletes it and the file is
+ * created anew.  On Lustre this is much faster than truncating a large file, and the new file
+ * gets the striping of the directory (or of MPI-IO hints, e.g. MPICH_MPIIO_HINTS), which is
+ * fixed at file creation.  If the file cannot be deleted it is truncated instead.
+ * Note: if filename is a symbolic link, the link is replaced, not its target.
+ */
 inline MPI_File open_mpi_file(const std::string &filename, bool for_writing) {
     MPI_Comm comm = lattice->mpi_comm_lat;
     MPI_File fh = MPI_FILE_NULL;
     int amode = for_writing ? (MPI_MODE_WRONLY | MPI_MODE_CREATE) : MPI_MODE_RDONLY;
 
-    // make sure rank-0-only file operations preceding this (e.g. rename) are done
-    if (for_writing)
-        MPI_Barrier(comm);
+    bool truncate = false;
+    if (for_writing) {
+        // delete old file; fails harmlessly if it does not exist.  If it fails for some
+        // other reason (e.g. no write permission to the directory), truncate after opening.
+        if_rank0 () {
+            truncate = (MPI_File_delete(filename.c_str(), MPI_INFO_NULL) != MPI_SUCCESS);
+        }
+        // this also guarantees that preceding rank-0-only file operations are done
+        hila::broadcast(truncate);
+    }
 
     int err = MPI_File_open(comm, filename.c_str(), amode, MPI_INFO_NULL, &fh);
     check_mpi_io(err, "opening", filename, for_writing ? 4 : 5);
-    if (for_writing) {
+    if (truncate) {
         err = MPI_File_set_size(fh, 0);
         check_mpi_io(err, "truncating", filename, 4);
     }

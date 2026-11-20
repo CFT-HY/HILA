@@ -13,8 +13,18 @@
  *     serial           yes               # also time the serial path (yes/no)
  *     file name        iobench.cfg       # put this on the file system to be tested
  *
- * Run e.g. "mpirun -np 8 ./build/iobench".  On parallel file systems (Lustre etc.)
- * the file striping of the target directory affects the parallel I/O performance.
+ * Run e.g. "mpirun -np 8 ./build/iobench".
+ *
+ * On Lustre the striping of the file is the main factor for parallel write performance.
+ * Files get the striping of the directory when created ("lfs getstripe <dir>").  E.g. on
+ * LUMI-g, 64^4 lattice on 8 nodes: the default progressive layout (1 -> 4 -> 8 stripes)
+ * gave 2.4 GB/s write, "lfs setstripe -c 16 -S 4M <dir>" 6.2 GB/s.  With Cray MPICH,
+ * striping can also be set with MPI-IO hints, e.g.
+ *     export MPICH_MPIIO_HINTS="*:striping_factor=16:striping_unit=4194304"
+ *     export MPICH_MPIIO_HINTS_DISPLAY=1     # show hints in use
+ *     export MPICH_MPIIO_STATS=1             # I/O statistics
+ * Note: the read rate measured here can be inflated by caching, because the file was
+ * just written by the same job.
  */
 
 #include "hila.h"
