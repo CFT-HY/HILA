@@ -29,6 +29,7 @@
 #include "plumbing/reduction.h"
 #include "plumbing/reductionvector.h"
 #include "plumbing/field_projection.h"
+#include "plumbing/field_output.h"
 #include "plumbing/site_select.h"
 
 #if __has_include("hila_signatures.h")

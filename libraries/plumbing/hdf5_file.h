@@ -34,6 +34,10 @@
  *   h5.close();                                           // or at destruction
  * @endcode
  * All ranks must call all methods.  Attribute values and std::vector data are taken from rank 0.
+ *
+ * For a single dataset (named "data") the Field output functions are simpler:
+ * f.write("phi.h5"), f.write_subvolume("box.h5", cmin, cmax), f.write_slice(...),
+ * f.write_projection(...), or with flags, e.g. f.write(name, hila::io::hdf5 | hila::io::to_float).
  */
 
 #include "plumbing/field_io.h"
@@ -110,7 +114,7 @@ class hdf5_file {
      * @param flags hila::io::to_float: write floating point numbers in single precision
      */
     template <typename T, typename BC>
-    object_ref write(const std::string &path, const Field<T, BC> &f, unsigned flags = 0);
+    object_ref write(const std::string &path, const Field<T, BC> &f, hila::io::output_flags flags = hila::io::none);
 
     /**
      * @brief Write data held on rank 0 as a dataset.  Collective.
@@ -120,7 +124,7 @@ class hdf5_file {
      */
     template <typename T>
     object_ref write(const std::string &path, const std::vector<T> &data,
-                     const std::vector<size_t> &dims, unsigned flags = 0);
+                     const std::vector<size_t> &dims, hila::io::output_flags flags = hila::io::none);
 
     /**
      * @brief Write the subvolume [cmin, cmax] (corners included) of a Field.  Collective,
@@ -131,7 +135,7 @@ class hdf5_file {
     template <typename T, typename BC>
     object_ref write_subvolume(const std::string &path, const Field<T, BC> &f,
                                const CoordinateVector &cmin, const CoordinateVector &cmax,
-                               unsigned flags = 0);
+                               hila::io::output_flags flags = hila::io::none);
 
     /**
      * @brief Write a slice of a Field: slice[d] >= 0 fixes the coordinate, < 0 runs through
@@ -141,7 +145,7 @@ class hdf5_file {
      */
     template <typename T, typename BC>
     object_ref write_slice(const std::string &path, const Field<T, BC> &f,
-                           const CoordinateVector &slice, unsigned flags = 0);
+                           const CoordinateVector &slice, hila::io::output_flags flags = hila::io::none);
 
     /**
      * @brief Write the projection (sum over directions dirs) of a Field, see
@@ -152,11 +156,11 @@ class hdf5_file {
      */
     template <typename T, typename BC>
     object_ref write_projection(const std::string &path, const Field<T, BC> &f,
-                                const std::vector<Direction> &dirs, unsigned flags = 0);
+                                const std::vector<Direction> &dirs, hila::io::output_flags flags = hila::io::none);
     template <typename T, typename BC>
     object_ref write_projection(const std::string &path, const Field<T, BC> &f,
                                 const std::vector<Direction> &dirs, const CoordinateVector &cmin,
-                                const CoordinateVector &cmax, unsigned flags = 0);
+                                const CoordinateVector &cmax, hila::io::output_flags flags = hila::io::none);
 
   private:
     struct attribute_t {
@@ -188,7 +192,7 @@ class hdf5_file {
 
     /// number type of T in the file, with to_float flag
     template <typename T>
-    static number_type file_number_type(unsigned flags) {
+    static number_type file_number_type(hila::io::output_flags flags) {
         using A = std::conditional_t<std::is_arithmetic<T>::value, T, hila::arithmetic_type<T>>;
         static_assert(std::is_arithmetic<A>::value,
                       "HDF5 output: element must consist of arithmetic numbers");
@@ -236,7 +240,7 @@ class hdf5_file {
 
     template <typename T, typename BC>
     int write_box(const std::string &path, const Field<T, BC> &f, const CoordinateVector &cmin,
-                  const CoordinateVector &cmax, const CoordinateVector &keep, unsigned flags);
+                  const CoordinateVector &cmax, const CoordinateVector &keep, hila::io::output_flags flags);
 
     void add_attribute_raw(int obj, const std::string &name, number_type nt, const void *data,
                            const std::vector<uint64_t> &dims, bool scalar);
@@ -275,7 +279,7 @@ class hdf5_file {
 
 template <typename T, typename BC>
 hdf5_file::object_ref hdf5_file::write(const std::string &path, const Field<T, BC> &f,
-                                       unsigned flags) {
+                                       hila::io::output_flags flags) {
     using A = hila::arithmetic_type<T>;
     static_assert(std::is_arithmetic<A>::value,
                   "HDF5 output: Field element must consist of arithmetic numbers");
@@ -325,7 +329,7 @@ hdf5_file::object_ref hdf5_file::write(const std::string &path, const Field<T, B
 
 template <typename T>
 hdf5_file::object_ref hdf5_file::write(const std::string &path, const std::vector<T> &data,
-                                       const std::vector<size_t> &dims, unsigned flags) {
+                                       const std::vector<size_t> &dims, hila::io::output_flags flags) {
     using A = std::conditional_t<std::is_arithmetic<T>::value, T, hila::arithmetic_type<T>>;
     static_assert(std::is_arithmetic<A>::value,
                   "HDF5 output: element must consist of arithmetic numbers");
@@ -374,7 +378,7 @@ hdf5_file::object_ref hdf5_file::write(const std::string &path, const std::vecto
 template <typename T, typename BC>
 int hdf5_file::write_box(const std::string &path, const Field<T, BC> &f,
                          const CoordinateVector &cmin, const CoordinateVector &cmax,
-                         const CoordinateVector &keep, unsigned flags) {
+                         const CoordinateVector &keep, hila::io::output_flags flags) {
 
     constexpr size_t ncomp = n_components<T>();
     const number_type nt = file_number_type<T>(flags);
@@ -382,73 +386,28 @@ int hdf5_file::write_box(const std::string &path, const Field<T, BC> &f,
     if (!f.is_allocated())
         hila::error("hdf5_file::write: Field for dataset " + path + " is not allocated");
 
-    // copy_local_data() loops over the current lattice
-    Lattice saved_lattice = lattice;
-    Lattice flat = f.mylattice();
-    lattice.switch_to(flat);
-    const auto &node = lattice->mynode;
-
-    // box size, and the part of it on this rank: [lo, hi]
-    CoordinateVector bsize, lo, hi, isize, rel;
     std::vector<uint64_t> sizes;
     uint64_t nelem = 1;
-    bool empty = false;
     foralldir (d) {
-        if (cmin[d] < 0 || cmax[d] < cmin[d] || cmax[d] >= lattice.size(d))
+        if (cmin[d] < 0 || cmax[d] < cmin[d] || cmax[d] >= f.mylattice().size(d))
             hila::error("hdf5_file " + filename + ": range error for dataset " + path);
-        bsize[d] = cmax[d] - cmin[d] + 1;
-        nelem *= bsize[d];
+        nelem *= cmax[d] - cmin[d] + 1;
         if (keep[d])
-            sizes.push_back(bsize[d]);
-        lo[d] = std::max(cmin[d], node.min[d]);
-        hi[d] = std::min(cmax[d], node.min[d] + node.size[d] - 1);
-        if (hi[d] < lo[d])
-            empty = true;
-        isize[d] = hi[d] - lo[d] + 1;
-        rel[d] = lo[d] - cmin[d];
+            sizes.push_back(cmax[d] - cmin[d] + 1);
     }
 
     const uint64_t bytes = nelem * ncomp * nt.size;
     const uint64_t addr = reserve(bytes);
     int obj = add_dataset(path, nt, file_dims(sizes, ncomp), addr, bytes);
 
-    std::vector<T> buf;
-    f.copy_local_data(buf);
-
-    // collect this rank's part in lexicographic order, x-rows are contiguous in buf
-    std::vector<uint8_t> out;
-    if (!empty) {
-        size_t rows = 1;
-        foralldir (d)
-            if (d > e_x)
-                rows *= isize[d];
-        CoordinateVector c = lo;
-        for (size_t r = 0; r < rows; r++) {
-            size_t idx = 0;
-            foralldir (d)
-                idx += (size_t)(c[d] - node.min[d]) * node.size_factor[d];
-            append_numbers(out, buf.data() + idx, isize[e_x], nt);
-            foralldir (d) {
-                if (d == e_x)
-                    continue;
-                if (++c[d] <= hi[d])
-                    break;
-                c[d] = lo[d];
-            }
-        }
-    }
-
-    hila::io::write_block_mpi(fh, addr, out.data(), ncomp * nt.size, bsize, isize, rel, filename,
-                              empty);
-
-    lattice.switch_to(saved_lattice);
+    hila::io::write_box_mpi(fh, addr, f, cmin, cmax, flags & hila::io::to_float, filename);
     return obj;
 }
 
 template <typename T, typename BC>
 hdf5_file::object_ref hdf5_file::write_subvolume(const std::string &path, const Field<T, BC> &f,
                                                  const CoordinateVector &cmin,
-                                                 const CoordinateVector &cmax, unsigned flags) {
+                                                 const CoordinateVector &cmax, hila::io::output_flags flags) {
     CoordinateVector keep;
     keep.fill(1);
     object_ref r(this, write_box(path, f, cmin, cmax, keep, flags));
@@ -458,7 +417,7 @@ hdf5_file::object_ref hdf5_file::write_subvolume(const std::string &path, const 
 
 template <typename T, typename BC>
 hdf5_file::object_ref hdf5_file::write_slice(const std::string &path, const Field<T, BC> &f,
-                                             const CoordinateVector &slice, unsigned flags) {
+                                             const CoordinateVector &slice, hila::io::output_flags flags) {
     if (!f.is_allocated())
         hila::error("hdf5_file::write_slice: Field for dataset " + path + " is not allocated");
     CoordinateVector cmin, cmax, keep;
@@ -481,7 +440,7 @@ template <typename T, typename BC>
 hdf5_file::object_ref hdf5_file::write_projection(const std::string &path, const Field<T, BC> &f,
                                                   const std::vector<Direction> &dirs,
                                                   const CoordinateVector &cmin,
-                                                  const CoordinateVector &cmax, unsigned flags) {
+                                                  const CoordinateVector &cmax, hila::io::output_flags flags) {
 
     constexpr size_t ncomp = n_components<T>();
     const number_type nt = file_number_type<T>(flags);
@@ -532,7 +491,7 @@ hdf5_file::object_ref hdf5_file::write_projection(const std::string &path, const
 template <typename T, typename BC>
 hdf5_file::object_ref hdf5_file::write_projection(const std::string &path, const Field<T, BC> &f,
                                                   const std::vector<Direction> &dirs,
-                                                  unsigned flags) {
+                                                  hila::io::output_flags flags) {
     CoordinateVector cmin, cmax;
     foralldir (d) {
         cmin[d] = 0;

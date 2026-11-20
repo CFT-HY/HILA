@@ -2191,6 +2191,83 @@ void test_hdf5_output() {
     }
 }
 
+/**
+ * @brief Test the Field output functions with format flags (hila::io::output_flags) against
+ * the established writers, with parallel_io on and off.
+ */
+void test_output_flags() {
+
+    const std::string fa = "hila_flags_a.dat", fb = "hila_flags_b.dat", fh5 = "hila_flags.h5";
+    const bool saved_parallel_io = hila::parallel_io;
+
+    Field<Complex<double>> f;
+    f.gaussian_random();
+
+    CoordinateVector cmin, cmax, lmin, lmax, slice;
+    foralldir (d) {
+        cmin[d] = lattice.size(d) / 4;
+        cmax[d] = (3 * lattice.size(d)) / 4;
+        lmin[d] = 0;
+        lmax[d] = lattice.size(d) - 1;
+        slice[d] = (d == e_x || d == e_y) ? -1 : lattice.size(d) / 3;
+    }
+
+    // check that flag version (run with parallel_io on and off) gives file identical to fb
+    auto check = [&](const std::string &msg, auto &&write_a) {
+        bool ok = true;
+        for (bool par : {true, false}) {
+            hila::parallel_io = par;
+            write_a();
+            ok = ok && files_identical(fa, fb);
+        }
+        hila::parallel_io = saved_parallel_io;
+        report_pass("Output flags: " + msg, ok ? 0 : 1, 0.5);
+    };
+
+    f.write(fb, true);
+    check("write binary", [&]() { f.write(fa, hila::io::binary); });
+
+    f.write_subvolume_binary(fb, lmin, lmax, true);
+    check("write binary to_float", [&]() { f.write(fa, hila::io::binary | hila::io::to_float); });
+
+    f.write_subvolume_binary(fb, cmin, cmax, true);
+    check("write_subvolume binary to_float",
+          [&]() { f.write_subvolume(fa, cmin, cmax, hila::io::binary | hila::io::to_float); });
+
+    f.write_subvolume(fb, cmin, cmax, 7);
+    check("write_subvolume ascii", [&]() { f.write_subvolume(fa, cmin, cmax, hila::io::ascii, 7); });
+
+    f.write_slice_binary(fb, slice);
+    check("write_slice default format", [&]() { f.write_slice(fa, slice, hila::io::none); });
+
+    f.write_projection_binary(fb, {e_y}, cmin, cmax, true);
+    check("write_projection binary to_float", [&]() {
+        f.write_projection(fa, {e_y}, cmin, cmax, hila::io::binary | hila::io::to_float);
+    });
+
+    // HDF5 from file name with the old signatures, and with flags
+    f.write(fb, true);
+    f.write(fh5);
+    report_pass("Output flags: write(\"*.h5\") gives HDF5", hdf5_dataset_matches(fh5, fb) ? 0 : 1,
+                0.5);
+
+    f.write_slice_binary(fb, slice);
+    f.write_slice(fh5, slice);
+    report_pass("Output flags: write_slice(\"*.h5\") gives HDF5",
+                hdf5_dataset_matches(fh5, fb) ? 0 : 1, 0.5);
+
+    f.write_projection_binary(fb, {e_y}, cmin, cmax, true);
+    f.write_projection(fh5, {e_y}, cmin, cmax, hila::io::hdf5 | hila::io::to_float);
+    report_pass("Output flags: write_projection hdf5 to_float",
+                hdf5_dataset_matches(fh5, fb) ? 0 : 1, 0.5);
+
+    if_rank0 () {
+        std::remove(fa.c_str());
+        std::remove(fb.c_str());
+        std::remove(fh5.c_str());
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv) {
@@ -2239,6 +2316,7 @@ int main(int argc, char **argv) {
     test_clusters();
     test_field_io();
     test_hdf5_output();
+    test_output_flags();
     test_blocking();
     test_spectraldensity_blocking();
 

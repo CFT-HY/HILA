@@ -98,16 +98,6 @@ inline bool parallel_io = (HILA_PARALLEL_IO != 0);
 
 namespace io {
 
-/**
- * @brief Flags for Field output, combine with |, e.g. hila::io::hdf5 | hila::io::to_float
- */
-enum output_flags : unsigned {
-    ascii = 1,    ///< text output
-    binary = 2,   ///< raw binary output
-    hdf5 = 4,     ///< HDF5 file
-    to_float = 8, ///< convert floating point numbers to single precision
-};
-
 /// @internal Collective error check for MPI-IO calls: if any rank failed, report and terminate
 inline void check_mpi_io(int err, const char *what, const std::string &filename,
                          int exitcode = 1) {
@@ -353,6 +343,100 @@ MPI_Offset Field<T, BC>::read_mpi(MPI_File fh, MPI_Offset offset, const Coordina
     return end;
 }
 
+namespace hila {
+namespace io {
+
+/**
+ * @internal Collective MPI-IO write of the box [cmin, cmax] of Field f to file offset
+ * `offset`, in lexicographic order (x fastest).  Each rank writes its own part of the box.
+ * If to_float, double precision numbers are written as float.
+ * @return number of bytes written
+ */
+template <typename T, typename BC>
+uint64_t write_box_mpi(MPI_File fh, uint64_t offset, const Field<T, BC> &f,
+                       const CoordinateVector &cmin, const CoordinateVector &cmax, bool to_float,
+                       const std::string &filename) {
+
+    using A = hila::arithmetic_type<T>;
+    static_assert(std::is_arithmetic<A>::value && sizeof(T) % sizeof(A) == 0,
+                  "write_box_mpi: Field element must consist of arithmetic numbers");
+    constexpr size_t ncomp = sizeof(T) / sizeof(A);
+    const bool tof = to_float && std::is_floating_point<A>::value && sizeof(A) > sizeof(float);
+    const size_t nsize = tof ? sizeof(float) : sizeof(A);
+
+    if (!f.is_allocated())
+        hila::error("Writing unallocated Field to " + filename);
+
+    // copy_local_data() loops over the current lattice
+    Lattice saved_lattice = lattice;
+    Lattice flat = f.mylattice();
+    lattice.switch_to(flat);
+    const auto &node = lattice->mynode;
+
+    // box size, and the part of it on this rank: [lo, hi]
+    CoordinateVector bsize, lo, hi, isize, rel;
+    uint64_t nelem = 1;
+    bool empty = false;
+    foralldir (d) {
+        if (cmin[d] < 0 || cmax[d] < cmin[d] || cmax[d] >= lattice.size(d))
+            hila::error("Range error in writing a subvolume to " + filename);
+        bsize[d] = cmax[d] - cmin[d] + 1;
+        nelem *= bsize[d];
+        lo[d] = std::max(cmin[d], node.min[d]);
+        hi[d] = std::min(cmax[d], node.min[d] + node.size[d] - 1);
+        if (hi[d] < lo[d])
+            empty = true;
+        isize[d] = hi[d] - lo[d] + 1;
+        rel[d] = lo[d] - cmin[d];
+    }
+
+    std::vector<T> buf;
+    f.copy_local_data(buf);
+
+    // collect this rank's part in lexicographic order, x-rows are contiguous in buf
+    std::vector<uint8_t> out;
+    if (!empty) {
+        size_t rows = 1;
+        foralldir (d)
+            if (d > e_x)
+                rows *= isize[d];
+        const size_t rowbytes = isize[e_x] * ncomp * nsize;
+        out.resize(rows * rowbytes);
+        uint8_t *dst = out.data();
+        CoordinateVector c = lo;
+        for (size_t r = 0; r < rows; r++) {
+            size_t idx = 0;
+            foralldir (d)
+                idx += (size_t)(c[d] - node.min[d]) * node.size_factor[d];
+            if (!tof) {
+                std::memcpy(dst, buf.data() + idx, rowbytes);
+            } else {
+                const A *p = reinterpret_cast<const A *>(buf.data() + idx);
+                for (size_t i = 0; i < isize[e_x] * ncomp; i++) {
+                    float v = (float)p[i];
+                    std::memcpy(dst + i * sizeof(float), &v, sizeof(float));
+                }
+            }
+            dst += rowbytes;
+            foralldir (d) {
+                if (d == e_x)
+                    continue;
+                if (++c[d] <= hi[d])
+                    break;
+                c[d] = lo[d];
+            }
+        }
+    }
+
+    write_block_mpi(fh, offset, out.data(), ncomp * nsize, bsize, isize, rel, filename, empty);
+
+    lattice.switch_to(saved_lattice);
+    return nelem * ncomp * nsize;
+}
+
+} // namespace io
+} // namespace hila
+
 //////////////////////////////////////////////////////////////////////////////////
 
 #if defined(USE_FMT)
@@ -444,6 +528,11 @@ void Field<T, BC>::write(std::ofstream &outputfile, bool binary, int precision) 
 /// Write the Field to a named file replacing the file
 template <typename T, typename BC>
 void Field<T, BC>::write(const std::string &filename, bool binary, int precision) const {
+
+    if (hila::io::is_hdf5_filename(filename)) {
+        write(filename, hila::io::hdf5);
+        return;
+    }
 
     if (binary && hila::parallel_io) {
         MPI_File fh = hila::io::open_mpi_file(filename, true);
@@ -773,7 +862,10 @@ template <typename T, typename BC>
 template <typename Outf>
 void Field<T, BC>::write_subvolume(Outf &&output, const CoordinateVector &cmin,
                                    const CoordinateVector &cmax, int precision) const {
-    write_subvolume_internal(output, cmin, cmax, precision, false, false);
+    if (hila::io::is_hdf5_filename(hila::io::output_name(output)))
+        write_subvolume(output, cmin, cmax, hila::io::hdf5);
+    else
+        write_subvolume_internal(output, cmin, cmax, precision, false, false);
 }
 
 
@@ -781,7 +873,11 @@ template <typename T, typename BC>
 template <typename Outf>
 void Field<T, BC>::write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
                                           const CoordinateVector &cmax, bool to_float) const {
-    write_subvolume_internal(output, cmin, cmax, 0, true, to_float);
+    if (hila::io::is_hdf5_filename(hila::io::output_name(output)))
+        write_subvolume(output, cmin, cmax,
+                        hila::io::hdf5 | (to_float ? hila::io::to_float : hila::io::none));
+    else
+        write_subvolume_internal(output, cmin, cmax, 0, true, to_float);
 }
 
 
@@ -789,6 +885,10 @@ template <typename T, typename BC>
 template <typename Outf>
 void Field<T, BC>::write_slice(Outf &&outf, const CoordinateVector &slice, int precision) const {
 
+    if (hila::io::is_hdf5_filename(hila::io::output_name(outf))) {
+        write_slice(outf, slice, hila::io::hdf5);
+        return;
+    }
     auto [cmin, cmax] = get_range_from_slice(slice);
     write_subvolume(outf, cmin, cmax, precision);
 }
@@ -798,6 +898,10 @@ template <typename outf_type>
 void Field<T, BC>::write_slice_binary(outf_type &&outf, const CoordinateVector &slice,
                                       bool to_float) const {
 
+    if (hila::io::is_hdf5_filename(hila::io::output_name(outf))) {
+        write_slice(outf, slice, hila::io::hdf5 | (to_float ? hila::io::to_float : hila::io::none));
+        return;
+    }
     auto [cmin, cmax] = get_range_from_slice(slice);
     write_subvolume_binary(outf, cmin, cmax, to_float);
 }
