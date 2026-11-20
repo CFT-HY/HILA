@@ -2111,6 +2111,52 @@ void test_field_io() {
     }
 }
 
+/**
+ * @brief Basic test of HDF5 output (hila::hdf5_file) without the HDF5 library.
+ * @details Checks the file signature, that the end-of-file address in the superblock matches
+ * the file size, and that the raw data of the first dataset (at the first aligned address,
+ * 4096) equals the binary Field::write output.  Full validation of the file with h5py:
+ * applications/test_hdf5.
+ */
+void test_hdf5_output() {
+
+    const std::string fh5 = "hila_hdf5_test.h5", fbin = "hila_hdf5_test.bin";
+
+    Field<Complex<double>> f;
+    f.gaussian_random();
+    f.write(fbin);
+
+    {
+        hila::hdf5_file h5(fh5);
+        h5.attribute("lattice size", lattice.size()).attribute("program", "hila_healthcheck");
+        h5.write("f", f);
+        h5.write("group/f_float", f, hila::io::to_float).attribute("note", "single precision");
+    }
+
+    bool ok = false;
+    if_rank0 () {
+        std::ifstream a(fh5, std::ios::binary), b(fbin, std::ios::binary);
+        std::vector<char> h5((std::istreambuf_iterator<char>(a)), std::istreambuf_iterator<char>());
+        std::vector<char> raw((std::istreambuf_iterator<char>(b)), std::istreambuf_iterator<char>());
+
+        const uint64_t data_start = 4096;
+        uint64_t eof = 0;
+        if (h5.size() >= 48)
+            for (int i = 0; i < 8; i++)
+                eof |= (uint64_t)(uint8_t)h5[28 + i] << (8 * i);
+
+        ok = h5.size() >= data_start + raw.size() && raw.size() > 0 &&
+             std::memcmp(h5.data(), "\x89HDF\r\n\x1a\n", 8) == 0 && eof == h5.size() &&
+             std::equal(raw.begin(), raw.end(), h5.begin() + data_start);
+    }
+    report_pass("HDF5 file structure and dataset data", hila::broadcast(ok) ? 0 : 1, 0.5);
+
+    if_rank0 () {
+        std::remove(fh5.c_str());
+        std::remove(fbin.c_str());
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv) {
@@ -2158,6 +2204,7 @@ int main(int argc, char **argv) {
     test_extended();
     test_clusters();
     test_field_io();
+    test_hdf5_output();
     test_blocking();
     test_spectraldensity_blocking();
 

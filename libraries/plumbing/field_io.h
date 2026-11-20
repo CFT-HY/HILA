@@ -98,6 +98,16 @@ inline bool parallel_io = (HILA_PARALLEL_IO != 0);
 
 namespace io {
 
+/**
+ * @brief Flags for Field output, combine with |, e.g. hila::io::hdf5 | hila::io::to_float
+ */
+enum output_flags : unsigned {
+    ascii = 1,    ///< text output
+    binary = 2,   ///< raw binary output
+    hdf5 = 4,     ///< HDF5 file
+    to_float = 8, ///< convert floating point numbers to single precision
+};
+
 /// @internal Collective error check for MPI-IO calls: if any rank failed, report and terminate
 inline void check_mpi_io(int err, const char *what, const std::string &filename,
                          int exitcode = 1) {
@@ -178,6 +188,33 @@ struct block_filetype {
     }
 };
 
+/// @internal Reset the file view to the default (bytes from offset 0), so that explicit
+/// offsets of MPI_File_write_at / read_at are byte offsets.  Collective.  All hila functions
+/// which set a file view restore the default view afterwards.
+inline void reset_file_view(MPI_File fh, const std::string &filename) {
+    int err = MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+    check_mpi_io(err, "resetting view of", filename);
+}
+
+/// @internal Collective write of this rank's block [bmin, bmin+bsize) of a lattice-shaped
+/// array of size gsize, starting at file offset `offset`.  buf holds the block in
+/// lexicographic order (x fastest), elements of elem_size bytes.
+inline void write_block_mpi(MPI_File fh, MPI_Offset offset, const void *buf, size_t elem_size,
+                            const CoordinateVector &gsize, const CoordinateVector &bsize,
+                            const CoordinateVector &bmin, const std::string &filename) {
+    size_t nelem = 1;
+    foralldir (d)
+        nelem *= bsize[d];
+    assert(nelem <= (size_t)std::numeric_limits<int>::max());
+
+    block_filetype bt(elem_size, gsize, bsize, bmin);
+    int err = MPI_File_set_view(fh, offset, bt.etype, bt.ftype, "native", MPI_INFO_NULL);
+    check_mpi_io(err, "setting view of", filename);
+    err = MPI_File_write_all(fh, buf, (int)nelem, bt.etype, MPI_STATUS_IGNORE);
+    check_mpi_io(err, "writing", filename);
+    reset_file_view(fh, filename);
+}
+
 } // namespace io
 
 } // namespace hila
@@ -196,16 +233,12 @@ MPI_Offset Field<T, BC>::write_mpi(MPI_File fh, MPI_Offset offset,
     lattice.switch_to(fs->mylattice);
 
     const auto &node = lattice->mynode;
-    assert(node.volume <= (size_t)std::numeric_limits<int>::max());
 
     std::vector<T> buffer;
     copy_local_data(buffer);
 
-    hila::io::block_filetype bt(sizeof(T), lattice.size(), node.size, node.min);
-    int err = MPI_File_set_view(fh, offset, bt.etype, bt.ftype, "native", MPI_INFO_NULL);
-    hila::io::check_mpi_io(err, "setting view of", filename);
-    err = MPI_File_write_all(fh, buffer.data(), (int)node.volume, bt.etype, MPI_STATUS_IGNORE);
-    hila::io::check_mpi_io(err, "writing", filename);
+    hila::io::write_block_mpi(fh, offset, buffer.data(), sizeof(T), lattice.size(), node.size,
+                              node.min, filename);
 
     MPI_Offset end = offset + (MPI_Offset)lattice.volume() * (MPI_Offset)sizeof(T);
 
@@ -280,6 +313,7 @@ MPI_Offset Field<T, BC>::read_mpi(MPI_File fh, MPI_Offset offset, const Coordina
     hila::io::check_mpi_io(err, "setting view of", filename);
     err = MPI_File_read_all(fh, rbuf.data(), (int)rvol, bt.etype, MPI_STATUS_IGNORE);
     hila::io::check_mpi_io(err, "reading", filename);
+    hila::io::reset_file_view(fh, filename);
 
     if (direct) {
         set_local_data(rbuf);

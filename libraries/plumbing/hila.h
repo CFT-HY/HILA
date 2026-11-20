@@ -25,6 +25,7 @@
 #include "plumbing/site_index.h"
 #include "plumbing/field.h"
 #include "plumbing/field_io.h"
+#include "plumbing/hdf5_file.h"
 #include "plumbing/reduction.h"
 #include "plumbing/reductionvector.h"
 #include "plumbing/field_projection.h"
