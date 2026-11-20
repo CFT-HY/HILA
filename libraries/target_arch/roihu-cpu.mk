@@ -51,7 +51,5 @@ LDFLAGS :=
 # These variables must be defined here
 #
 HILAPP_OPTS := $(HILAPP_INCLUDES)
-HILA_OPTS := -DNODE_LAYOUT_BLOCK=128
-
-
-
+# Roihu has 192 cores/cpu, 3*64
+HILA_OPTS := -DNODE_LAYOUT_BLOCK=64   
