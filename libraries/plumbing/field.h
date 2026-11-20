@@ -19,6 +19,7 @@
 #include "plumbing/lattice.h"
 #include "plumbing/boundary_condition.h"
 #include "plumbing/field_storage.h"
+#include "plumbing/io_flags.h"
 
 #include "plumbing/backend_vector/vector_types.h"
 
@@ -1727,9 +1728,44 @@ class Field {
     void write(std::FILE *outputfile, int precision = 8) const;
     void write(const std::string &filename, bool binary = true, int precision = 8) const;
 
+    /**
+     * @brief Write the Field to a file, format given by flags.
+     * @details Flags (combine with |):
+     *  - hila::io::ascii: one site per line, x running fastest; `precision` digits
+     *  - hila::io::binary: raw binary in lexicographic order (x fastest), as write(filename)
+     *  - hila::io::hdf5: HDF5 file with dataset "data", see hila::hdf5_file
+     *  - hila::io::to_float: floating point numbers in single precision (binary, hdf5)
+     *
+     * If no format flag is given, files ending with .h5 or .hdf5 are written in HDF5,
+     * others in binary.  For several datasets or attributes in one HDF5 file use
+     * hila::hdf5_file directly.  Example: `f.write("phi.h5", hila::io::to_float);`
+     */
+    void write(const std::string &filename, hila::io::output_flags flags,
+               int precision = 8) const;
+    /// Write to an open stream, flags as above (hila::io::ascii or hila::io::binary)
+    void write(std::ofstream &outputfile, hila::io::output_flags flags, int precision = 8) const;
+
     void read(std::ifstream &inputfile);
     void read(std::ifstream &inputfile, const CoordinateVector &insize);
     void read(const std::string &filename);
+
+    /**
+     * @brief Collective MPI-IO write of the Field to an open MPI file, starting at byte
+     * offset `offset`.  Data is in global lexicographic order (x fastest), identical to
+     * write(std::ofstream &) binary output.  All ranks must call.
+     * @return offset after the written data
+     */
+    MPI_Offset write_mpi(MPI_File fh, MPI_Offset offset,
+                         const std::string &filename = "") const;
+    /**
+     * @brief Collective MPI-IO read from byte offset `offset`.  If insize is given and
+     * differs from the lattice size, the file holds a smaller lattice of size insize, which
+     * is replicated periodically to fill the Field (as in read(std::ifstream &, insize)).
+     * @return offset after the read data
+     */
+    MPI_Offset read_mpi(MPI_File fh, MPI_Offset offset, const std::string &filename = "");
+    MPI_Offset read_mpi(MPI_File fh, MPI_Offset offset, const CoordinateVector &insize,
+                        const std::string &filename = "");
 
     /// @internal
     void write_subvolume_internal(std::ofstream &out, const CoordinateVector &cmin,
@@ -1751,9 +1787,23 @@ class Field {
                          int precision = 6) const;
 
     /**
+     * @brief Write subvolume [cmin, cmax], format given by flags, see write(filename, flags).
+     * @details Binary: numbers of the element fastest, followed by x, y, ... coordinates.
+     * HDF5: dataset "data" with attributes "cmin", "cmax", written in parallel.
+     * Example: `f.write_subvolume("box.h5", cmin, cmax);`
+     * @param Outf is either filename (std::string) or output stream of open file
+     * (std::ofstream; not for HDF5)
+     */
+    template <typename Outf>
+    void write_subvolume(Outf &&output, const CoordinateVector &cmin, const CoordinateVector &cmax,
+                         hila::io::output_flags flags, int precision = 6) const;
+
+    /**
      * @brief write subvolume as a binary file.
      * @details Numbers are ordered so that the internal values are fastest, followed by
      * x,y,etc. coordinates.  Param to_float = true converts double values to float, saving space.
+     * Equivalent to write_subvolume(output, cmin, cmax, hila::io::binary [| hila::io::to_float]),
+     * kept for compatibility.
      */
     template <typename Outf>
     void write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
@@ -1771,6 +1821,16 @@ class Field {
     template <typename Outf>
     void write_slice(Outf &&output, const CoordinateVector &slice, int precision = 6) const;
 
+    /**
+     * @brief Write slice, format given by flags, see write(filename, flags).
+     * @details HDF5: dataset "data" has only the running directions, attribute "slice".
+     * Otherwise the same as write_subvolume() of the slice.
+     */
+    template <typename Outf>
+    void write_slice(Outf &&output, const CoordinateVector &slice, hila::io::output_flags flags,
+                     int precision = 6) const;
+
+    /// Binary slice, kept for compatibility: write_slice(output, slice, hila::io::binary)
     template <typename Outf>
     void write_slice_binary(Outf &&output, const CoordinateVector &slice,
                             bool to_float = false) const;
@@ -1812,8 +1872,24 @@ class Field {
                           int precision = 6) const;
 
     /**
+     * @brief Write the projection, format given by flags, see write(filename, flags).
+     * @details HDF5: dataset "data" over the kept directions, attributes
+     * "projected directions", "cmin", "cmax".
+     * Example: `f.write_projection("pz.h5", {e_x, e_y});`
+     */
+    template <typename Outf>
+    void write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                          hila::io::output_flags flags, int precision = 6) const;
+    template <typename Outf>
+    void write_projection(Outf &&output, const std::vector<Direction> &dirs,
+                          const CoordinateVector &cmin, const CoordinateVector &cmax,
+                          hila::io::output_flags flags, int precision = 6) const;
+
+    /**
      * @brief Write the projection as a binary file, see write_projection().
-     * @details to_float = true converts double values to float.
+     * @details to_float = true converts double values to float.  Equivalent to
+     * write_projection(output, dirs, [cmin, cmax,] hila::io::binary [| hila::io::to_float]),
+     * kept for compatibility.
      */
     template <typename Outf>
     void write_projection_binary(Outf &&output, const std::vector<Direction> &dirs,

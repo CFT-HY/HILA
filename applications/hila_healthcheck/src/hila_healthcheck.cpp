@@ -1978,6 +1978,298 @@ void test_blocking() {
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
+/// Compare two files byte by byte on rank 0
+bool files_identical(const std::string &a, const std::string &b) {
+    bool same = false;
+    if_rank0 () {
+        std::ifstream fa(a, std::ios::binary), fb(b, std::ios::binary);
+        std::vector<char> va((std::istreambuf_iterator<char>(fa)), std::istreambuf_iterator<char>());
+        std::vector<char> vb((std::istreambuf_iterator<char>(fb)), std::istreambuf_iterator<char>());
+        same = fa.good() || fa.eof();
+        same = same && (fb.good() || fb.eof()) && va.size() > 0 && va == vb;
+    }
+    hila::broadcast(same);
+    return same;
+}
+
+/**
+ * @brief Test parallel (MPI-IO) binary Field I/O against the rank 0 serial path.
+ * @details Files written by the two paths must be byte identical, and reading with either
+ * path must reproduce the data exactly.  Also tests write_fields/read_fields, GaugeField
+ * config_write/config_read, writing a Field of another lattice, and reading a smaller
+ * (blocked) lattice configuration replicated to the full lattice.
+ */
+void test_field_io() {
+
+    const bool saved_parallel_io = hila::parallel_io;
+    const std::string fa = "hila_io_test_a.dat", fb = "hila_io_test_b.dat",
+                      fc = "hila_io_test_c.dat";
+
+    Field<Matrix<3, 3, Complex<double>>> f, g, h;
+    Field<Vector<5, float>> v, w;
+    f.gaussian_random();
+    v.gaussian_random();
+
+    // Field::write / read
+    hila::parallel_io = true;
+    f.write(fa);
+    hila::parallel_io = false;
+    f.write(fb);
+    report_pass("Parallel Field::write == serial write", files_identical(fa, fb) ? 0 : 1, 0.5);
+
+    hila::parallel_io = true;
+    g.read(fb);
+    hila::parallel_io = false;
+    h.read(fa);
+    double diff = 0;
+    onsites (ALL) {
+        diff += (g[X] - f[X]).squarenorm() + (h[X] - f[X]).squarenorm();
+    }
+    report_pass("Parallel/serial Field::read", diff, 1e-20);
+
+    // write_fields / read_fields
+    hila::parallel_io = true;
+    write_fields(fa, f, v);
+    hila::parallel_io = false;
+    write_fields(fb, f, v);
+    report_pass("Parallel write_fields == serial", files_identical(fa, fb) ? 0 : 1, 0.5);
+
+    hila::parallel_io = true;
+    g = 0;
+    read_fields(fb, g, w);
+    diff = 0;
+    onsites (ALL) {
+        diff += (g[X] - f[X]).squarenorm() + (w[X] - v[X]).squarenorm();
+    }
+    report_pass("Parallel read_fields", diff, 1e-20);
+
+    // GaugeField config_write / config_read
+    GaugeField<SU<3, double>> U, V, W;
+    foralldir (d)
+        U[d].gaussian_random();
+
+    hila::parallel_io = true;
+    U.config_write(fa);
+    hila::parallel_io = false;
+    U.config_write(fb);
+    report_pass("Parallel GaugeField::config_write == serial", files_identical(fa, fb) ? 0 : 1,
+                0.5);
+
+    hila::parallel_io = true;
+    V.config_read(fb);
+    diff = 0;
+    foralldir (d) {
+        onsites (ALL) {
+            diff += (V[d][X] - U[d][X]).squarenorm();
+        }
+    }
+    report_pass("Parallel GaugeField::config_read", diff, 1e-20);
+
+    CoordinateVector blocking;
+    blocking.fill(2);
+    if (lattice.can_block(blocking)) {
+        // serial reference of f, written on the full lattice
+        hila::parallel_io = false;
+        f.write(fc);
+
+        lattice.block(blocking);
+        {
+            // write a Field of the (non-current) full lattice
+            hila::parallel_io = true;
+            f.write(fb);
+            report_pass("Parallel write of Field on non-current lattice",
+                        files_identical(fb, fc) ? 0 : 1, 0.5);
+
+            // config of the blocked lattice
+            GaugeField<SU<3, double>> Ub;
+            foralldir (d)
+                Ub[d].gaussian_random();
+            Ub.config_write(fa);
+        }
+        lattice.unblock();
+
+        // read blocked config to full lattice: replicates the blocked lattice periodically
+        hila::parallel_io = true;
+        V.config_read(fa);
+        hila::parallel_io = false;
+        W.config_read(fa);
+        diff = 0;
+        foralldir (d) {
+            onsites (ALL) {
+                diff += (V[d][X] - W[d][X]).squarenorm();
+            }
+        }
+        report_pass("Parallel config_read of smaller lattice", diff, 1e-20);
+    }
+
+    hila::parallel_io = saved_parallel_io;
+
+    if_rank0 () {
+        std::remove(fa.c_str());
+        std::remove(fb.c_str());
+        std::remove(fc.c_str());
+    }
+}
+
+/// @internal Check an HDF5 file holding one dataset: signature, end-of-file address equal to
+/// the file size, and dataset raw data (at the first aligned address, 4096) equal to the
+/// contents of binary file fbin.
+bool hdf5_dataset_matches(const std::string &fh5, const std::string &fbin) {
+    bool ok = false;
+    if_rank0 () {
+        std::ifstream a(fh5, std::ios::binary), b(fbin, std::ios::binary);
+        std::vector<char> h5((std::istreambuf_iterator<char>(a)), std::istreambuf_iterator<char>());
+        std::vector<char> raw((std::istreambuf_iterator<char>(b)), std::istreambuf_iterator<char>());
+
+        const uint64_t data_start = 4096;
+        uint64_t eof = 0;
+        if (h5.size() >= 48)
+            for (int i = 0; i < 8; i++)
+                eof |= (uint64_t)(uint8_t)h5[28 + i] << (8 * i);
+
+        ok = h5.size() >= data_start + raw.size() && raw.size() > 0 &&
+             std::memcmp(h5.data(), "\x89HDF\r\n\x1a\n", 8) == 0 && eof == h5.size() &&
+             std::equal(raw.begin(), raw.end(), h5.begin() + data_start);
+    }
+    return hila::broadcast(ok);
+}
+
+/**
+ * @brief Basic test of HDF5 output (hila::hdf5_file) without the HDF5 library.
+ * @details For full Field, subvolume, slice and projection datasets, compares the raw data in
+ * the HDF5 file with the binary output of Field::write, write_subvolume_binary,
+ * write_slice_binary and write_projection_binary, and checks the file signature and
+ * end-of-file address.  Full validation of the files with h5py: applications/test_hdf5.
+ */
+void test_hdf5_output() {
+
+    const std::string fh5 = "hila_hdf5_test.h5", fbin = "hila_hdf5_test.bin";
+
+    Field<Complex<double>> f;
+    f.gaussian_random();
+
+    f.write(fbin);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.attribute("lattice size", lattice.size()).attribute("program", "hila_healthcheck");
+        h5.write("f", f);
+        h5.write("group/f_float", f, hila::io::to_float).attribute("note", "single precision");
+    }
+    report_pass("HDF5 Field dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    // subvolume: from 1/4 to 3/4 of the lattice, not on all ranks
+    CoordinateVector cmin, cmax, slice;
+    foralldir (d) {
+        cmin[d] = lattice.size(d) / 4;
+        cmax[d] = (3 * lattice.size(d)) / 4;
+        slice[d] = (d == e_x || d == e_y) ? -1 : lattice.size(d) / 3;
+    }
+    f.write_subvolume_binary(fbin, cmin, cmax, true);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.write_subvolume("f", f, cmin, cmax, hila::io::to_float);
+    }
+    report_pass("HDF5 subvolume dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    f.write_slice_binary(fbin, slice);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.write_slice("f", f, slice);
+    }
+    report_pass("HDF5 slice dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    f.write_projection_binary(fbin, {e_y}, cmin, cmax);
+    {
+        hila::hdf5_file h5(fh5);
+        h5.write_projection("f", f, {e_y}, cmin, cmax);
+    }
+    report_pass("HDF5 projection dataset", hdf5_dataset_matches(fh5, fbin) ? 0 : 1, 0.5);
+
+    if_rank0 () {
+        std::remove(fh5.c_str());
+        std::remove(fbin.c_str());
+    }
+}
+
+/**
+ * @brief Test the Field output functions with format flags (hila::io::output_flags) against
+ * the established writers, with parallel_io on and off.
+ */
+void test_output_flags() {
+
+    const std::string fa = "hila_flags_a.dat", fb = "hila_flags_b.dat", fh5 = "hila_flags.h5";
+    const bool saved_parallel_io = hila::parallel_io;
+
+    Field<Complex<double>> f;
+    f.gaussian_random();
+
+    CoordinateVector cmin, cmax, lmin, lmax, slice;
+    foralldir (d) {
+        cmin[d] = lattice.size(d) / 4;
+        cmax[d] = (3 * lattice.size(d)) / 4;
+        lmin[d] = 0;
+        lmax[d] = lattice.size(d) - 1;
+        slice[d] = (d == e_x || d == e_y) ? -1 : lattice.size(d) / 3;
+    }
+
+    // check that flag version (run with parallel_io on and off) gives file identical to fb
+    auto check = [&](const std::string &msg, auto &&write_a) {
+        bool ok = true;
+        for (bool par : {true, false}) {
+            hila::parallel_io = par;
+            write_a();
+            ok = ok && files_identical(fa, fb);
+        }
+        hila::parallel_io = saved_parallel_io;
+        report_pass("Output flags: " + msg, ok ? 0 : 1, 0.5);
+    };
+
+    f.write(fb, true);
+    check("write binary", [&]() { f.write(fa, hila::io::binary); });
+
+    f.write_subvolume_binary(fb, lmin, lmax, true);
+    check("write binary to_float", [&]() { f.write(fa, hila::io::binary | hila::io::to_float); });
+
+    f.write_subvolume_binary(fb, cmin, cmax, true);
+    check("write_subvolume binary to_float",
+          [&]() { f.write_subvolume(fa, cmin, cmax, hila::io::binary | hila::io::to_float); });
+
+    f.write_subvolume(fb, cmin, cmax, 7);
+    check("write_subvolume ascii", [&]() { f.write_subvolume(fa, cmin, cmax, hila::io::ascii, 7); });
+
+    f.write_slice_binary(fb, slice);
+    check("write_slice default format", [&]() { f.write_slice(fa, slice, hila::io::none); });
+
+    f.write_projection_binary(fb, {e_y}, cmin, cmax, true);
+    check("write_projection binary to_float", [&]() {
+        f.write_projection(fa, {e_y}, cmin, cmax, hila::io::binary | hila::io::to_float);
+    });
+
+    // HDF5 from file name with the old signatures, and with flags
+    f.write(fb, true);
+    f.write(fh5);
+    report_pass("Output flags: write(\"*.h5\") gives HDF5", hdf5_dataset_matches(fh5, fb) ? 0 : 1,
+                0.5);
+
+    f.write_slice_binary(fb, slice);
+    f.write_slice(fh5, slice);
+    report_pass("Output flags: write_slice(\"*.h5\") gives HDF5",
+                hdf5_dataset_matches(fh5, fb) ? 0 : 1, 0.5);
+
+    f.write_projection_binary(fb, {e_y}, cmin, cmax, true);
+    f.write_projection(fh5, {e_y}, cmin, cmax, hila::io::hdf5 | hila::io::to_float);
+    report_pass("Output flags: write_projection hdf5 to_float",
+                hdf5_dataset_matches(fh5, fb) ? 0 : 1, 0.5);
+
+    if_rank0 () {
+        std::remove(fa.c_str());
+        std::remove(fb.c_str());
+        std::remove(fh5.c_str());
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
@@ -2022,6 +2314,9 @@ int main(int argc, char **argv) {
     test_matrix_algebra();
     test_extended();
     test_clusters();
+    test_field_io();
+    test_hdf5_output();
+    test_output_flags();
     test_blocking();
     test_spectraldensity_blocking();
 

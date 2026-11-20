@@ -118,7 +118,8 @@ HILA_OBJECTS = \
 	build/com_mpi.o \
 	build/memory_pool.o \
 	build/extended.o \
-	build/fft.o
+	build/fft.o \
+	build/hdf5_file.o
 
 # Remvoved com_simple.o, require MPI
 

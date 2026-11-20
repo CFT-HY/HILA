@@ -5,6 +5,7 @@
 // This file collects Field<> I/O routines
 
 #include "plumbing/field.h"
+#include <limits>
 
 #if defined(USE_FMT)
 #define FMT_HEADER_ONLY
@@ -77,6 +78,363 @@ bool close_file(const std::string &filename, S &fstream) {
     return !error;
 }
 
+//////////////////////////////////////////////////////////////////////////////////
+// Parallel (MPI-IO) binary I/O
+
+#ifndef HILA_PARALLEL_IO
+#define HILA_PARALLEL_IO 1
+#endif
+
+/**
+ * @brief Select parallel binary Field I/O.
+ * @details If true, binary Field I/O to named files (Field::write(filename),
+ * Field::read(filename), write_fields(), read_fields(), GaugeField::write/read/config_write/
+ * config_read) uses collective MPI-IO, each rank reading/writing its own part of the file.
+ * If false, all data is routed through rank 0.  The file format is identical in both cases.
+ * Default is set by HILA_PARALLEL_IO (default 1).  ASCII I/O and I/O to std::ofstream /
+ * std::ifstream streams always go through rank 0.
+ */
+inline bool parallel_io = (HILA_PARALLEL_IO != 0);
+
+namespace io {
+
+/// @internal Collective error check for MPI-IO calls: if any rank failed, report and terminate
+inline void check_mpi_io(int err, const char *what, const std::string &filename,
+                         int exitcode = 1) {
+    int code = (err == MPI_SUCCESS) ? 0 : err;
+    int anycode = 0;
+    MPI_Allreduce(&code, &anycode, 1, MPI_INT, MPI_MAX, lattice->mpi_comm_lat);
+    if (anycode != 0) {
+        char msg[MPI_MAX_ERROR_STRING];
+        int len = 0;
+        MPI_Error_string(anycode, msg, &len);
+        hila::out0 << "MPI-IO ERROR " << what << " file " << filename << ": "
+                   << std::string(msg, len) << '\n';
+        hila::terminate(exitcode);
+    }
+}
+
+/**
+ * @internal Open file for collective MPI-IO.
+ * @details For writing, an existing file is replaced: rank 0 deletes it and the file is
+ * created anew.  On Lustre this is much faster than truncating a large file, and the new file
+ * gets the striping of the directory (or of MPI-IO hints, e.g. MPICH_MPIIO_HINTS), which is
+ * fixed at file creation.  If the file cannot be deleted it is truncated instead.
+ * Note: if filename is a symbolic link, the link is replaced, not its target.
+ */
+inline MPI_File open_mpi_file(const std::string &filename, bool for_writing) {
+    MPI_Comm comm = lattice->mpi_comm_lat;
+    MPI_File fh = MPI_FILE_NULL;
+    int amode = for_writing ? (MPI_MODE_WRONLY | MPI_MODE_CREATE) : MPI_MODE_RDONLY;
+
+    bool truncate = false;
+    if (for_writing) {
+        // delete old file; fails harmlessly if it does not exist.  If it fails for some
+        // other reason (e.g. no write permission to the directory), truncate after opening.
+        if_rank0 () {
+            truncate = (MPI_File_delete(filename.c_str(), MPI_INFO_NULL) != MPI_SUCCESS);
+        }
+        // this also guarantees that preceding rank-0-only file operations are done
+        hila::broadcast(truncate);
+    }
+
+    int err = MPI_File_open(comm, filename.c_str(), amode, MPI_INFO_NULL, &fh);
+    check_mpi_io(err, "opening", filename, for_writing ? 4 : 5);
+    if (truncate) {
+        err = MPI_File_set_size(fh, 0);
+        check_mpi_io(err, "truncating", filename, 4);
+    }
+    return fh;
+}
+
+/// @internal Close MPI-IO file
+inline void close_mpi_file(MPI_File &fh, const std::string &filename) {
+    int err = MPI_File_close(&fh);
+    check_mpi_io(err, "closing", filename, 3);
+}
+
+/// @internal MPI datatypes describing the rectangular block [start, start+subsize) of a
+/// lattice of size `size`, element = elem_size bytes, x-direction running fastest.
+struct block_filetype {
+    MPI_Datatype etype, ftype;
+
+    block_filetype(size_t elem_size, const CoordinateVector &size,
+                   const CoordinateVector &subsize, const CoordinateVector &start) {
+        int gs[NDIM], ss[NDIM], st[NDIM];
+        foralldir (d) {
+            gs[d] = size[d];
+            ss[d] = subsize[d];
+            st[d] = start[d];
+        }
+        MPI_Type_contiguous((int)elem_size, MPI_BYTE, &etype);
+        MPI_Type_commit(&etype);
+        MPI_Type_create_subarray(NDIM, gs, ss, st, MPI_ORDER_FORTRAN, etype, &ftype);
+        MPI_Type_commit(&ftype);
+    }
+
+    ~block_filetype() {
+        MPI_Type_free(&ftype);
+        MPI_Type_free(&etype);
+    }
+};
+
+/// @internal Reset the file view to the default (bytes from offset 0), so that explicit
+/// offsets of MPI_File_write_at / read_at are byte offsets.  Collective.  All hila functions
+/// which set a file view restore the default view afterwards.
+inline void reset_file_view(MPI_File fh, const std::string &filename) {
+    int err = MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
+    check_mpi_io(err, "resetting view of", filename);
+}
+
+/// @internal Collective write of this rank's block [bmin, bmin+bsize) of a lattice-shaped
+/// array of size gsize, starting at file offset `offset`.  buf holds the block in
+/// lexicographic order (x fastest), elements of elem_size bytes.
+/// If empty == true, this rank writes nothing (bsize, bmin and buf are ignored), but takes
+/// part in the collective write.
+inline void write_block_mpi(MPI_File fh, MPI_Offset offset, const void *buf, size_t elem_size,
+                            const CoordinateVector &gsize, const CoordinateVector &bsize,
+                            const CoordinateVector &bmin, const std::string &filename,
+                            bool empty = false) {
+    size_t nelem = 0;
+    if (!empty) {
+        nelem = 1;
+        foralldir (d)
+            nelem *= bsize[d];
+    }
+    assert(nelem <= (size_t)std::numeric_limits<int>::max());
+
+    // MPI subarrays must be non-empty: use a 1-element block and write 0 elements
+    CoordinateVector one, zero;
+    one.fill(1);
+    zero.fill(0);
+
+    block_filetype bt(elem_size, gsize, empty ? one : bsize, empty ? zero : bmin);
+    int err = MPI_File_set_view(fh, offset, bt.etype, bt.ftype, "native", MPI_INFO_NULL);
+    check_mpi_io(err, "setting view of", filename);
+    err = MPI_File_write_all(fh, buf, (int)nelem, bt.etype, MPI_STATUS_IGNORE);
+    check_mpi_io(err, "writing", filename);
+    reset_file_view(fh, filename);
+}
+
+} // namespace io
+
+} // namespace hila
+
+//////////////////////////////////////////////////////////////////////////////////
+
+template <typename T, typename BC>
+MPI_Offset Field<T, BC>::write_mpi(MPI_File fh, MPI_Offset offset,
+                                   const std::string &filename) const {
+
+    assert_all_ranks_present();
+    assert(is_allocated() && "Field::write_mpi: Field not allocated");
+
+    // copy_local_data() loops over the current lattice
+    Lattice saved_lattice = lattice;
+    lattice.switch_to(fs->mylattice);
+
+    const auto &node = lattice->mynode;
+
+    std::vector<T> buffer;
+    copy_local_data(buffer);
+
+    hila::io::write_block_mpi(fh, offset, buffer.data(), sizeof(T), lattice.size(), node.size,
+                              node.min, filename);
+
+    MPI_Offset end = offset + (MPI_Offset)lattice.volume() * (MPI_Offset)sizeof(T);
+
+    lattice.switch_to(saved_lattice);
+    return end;
+}
+
+template <typename T, typename BC>
+MPI_Offset Field<T, BC>::read_mpi(MPI_File fh, MPI_Offset offset, const std::string &filename) {
+    if (!this->is_allocated())
+        this->allocate();
+    return read_mpi(fh, offset, fs->mylattice.size(), filename);
+}
+
+template <typename T, typename BC>
+MPI_Offset Field<T, BC>::read_mpi(MPI_File fh, MPI_Offset offset, const CoordinateVector &insize,
+                                  const std::string &filename) {
+
+    assert_all_ranks_present();
+    if (!this->is_allocated())
+        this->allocate();
+
+    // set_local_data() loops over the current lattice
+    Lattice saved_lattice = lattice;
+    lattice.switch_to(fs->mylattice);
+
+    const auto &node = lattice->mynode;
+    const CoordinateVector lsize = lattice.size();
+
+    // Region of the input lattice this rank needs.  If insize < lattice size, the input is
+    // replicated: local coordinate c maps to c mod insize.  Read the bounding box of the
+    // needed input coordinates; in directions where the node block wraps around insize
+    // read the full extent.
+    CoordinateVector rmin, rsize;
+    size_t invol = 1, rvol = 1;
+    bool direct = true;
+    foralldir (d) {
+        assert(insize[d] > 0 && insize[d] <= lsize[d]);
+        invol *= insize[d];
+        if (insize[d] == lsize[d]) {
+            rmin[d] = node.min[d];
+            rsize[d] = node.size[d];
+        } else {
+            direct = false;
+            int a = node.min[d] % insize[d];
+            if (a + node.size[d] <= insize[d]) {
+                rmin[d] = a;
+                rsize[d] = node.size[d];
+            } else {
+                rmin[d] = 0;
+                rsize[d] = insize[d];
+            }
+        }
+        rvol *= rsize[d];
+    }
+    assert(rvol <= (size_t)std::numeric_limits<int>::max());
+
+    MPI_Offset end = offset + (MPI_Offset)invol * (MPI_Offset)sizeof(T);
+
+    MPI_Offset fsize;
+    int err = MPI_File_get_size(fh, &fsize);
+    hila::io::check_mpi_io(err, "getting size of", filename);
+    if (fsize < end) {
+        hila::out0 << "ERROR: file " << filename << " too short: size " << fsize
+                   << " bytes, reading Field needs " << end << '\n';
+        hila::terminate(3);
+    }
+
+    std::vector<T> rbuf(rvol);
+    hila::io::block_filetype bt(sizeof(T), insize, rsize, rmin);
+    err = MPI_File_set_view(fh, offset, bt.etype, bt.ftype, "native", MPI_INFO_NULL);
+    hila::io::check_mpi_io(err, "setting view of", filename);
+    err = MPI_File_read_all(fh, rbuf.data(), (int)rvol, bt.etype, MPI_STATUS_IGNORE);
+    hila::io::check_mpi_io(err, "reading", filename);
+    hila::io::reset_file_view(fh, filename);
+
+    if (direct) {
+        set_local_data(rbuf);
+    } else {
+        // replicate: fill local block (lexicographic, x fastest) from rbuf
+        std::vector<T> buffer(node.volume);
+        CoordinateVector lc;
+        lc.fill(0);
+        for (size_t i = 0; i < node.volume; i++) {
+            size_t ri = 0, mul = 1;
+            foralldir (d) {
+                ri += (size_t)((node.min[d] + lc[d]) % insize[d] - rmin[d]) * mul;
+                mul *= rsize[d];
+            }
+            buffer[i] = rbuf[ri];
+            foralldir (d) {
+                if (++lc[d] < node.size[d])
+                    break;
+                lc[d] = 0;
+            }
+        }
+        set_local_data(buffer);
+    }
+
+    lattice.switch_to(saved_lattice);
+    return end;
+}
+
+namespace hila {
+namespace io {
+
+/**
+ * @internal Collective MPI-IO write of the box [cmin, cmax] of Field f to file offset
+ * `offset`, in lexicographic order (x fastest).  Each rank writes its own part of the box.
+ * If to_float, double precision numbers are written as float.
+ * @return number of bytes written
+ */
+template <typename T, typename BC>
+uint64_t write_box_mpi(MPI_File fh, uint64_t offset, const Field<T, BC> &f,
+                       const CoordinateVector &cmin, const CoordinateVector &cmax, bool to_float,
+                       const std::string &filename) {
+
+    using A = hila::arithmetic_type<T>;
+    static_assert(std::is_arithmetic<A>::value && sizeof(T) % sizeof(A) == 0,
+                  "write_box_mpi: Field element must consist of arithmetic numbers");
+    constexpr size_t ncomp = sizeof(T) / sizeof(A);
+    const bool tof = to_float && std::is_floating_point<A>::value && sizeof(A) > sizeof(float);
+    const size_t nsize = tof ? sizeof(float) : sizeof(A);
+
+    if (!f.is_allocated())
+        hila::error("Writing unallocated Field to " + filename);
+
+    // copy_local_data() loops over the current lattice
+    Lattice saved_lattice = lattice;
+    Lattice flat = f.mylattice();
+    lattice.switch_to(flat);
+    const auto &node = lattice->mynode;
+
+    // box size, and the part of it on this rank: [lo, hi]
+    CoordinateVector bsize, lo, hi, isize, rel;
+    uint64_t nelem = 1;
+    bool empty = false;
+    foralldir (d) {
+        if (cmin[d] < 0 || cmax[d] < cmin[d] || cmax[d] >= lattice.size(d))
+            hila::error("Range error in writing a subvolume to " + filename);
+        bsize[d] = cmax[d] - cmin[d] + 1;
+        nelem *= bsize[d];
+        lo[d] = std::max(cmin[d], node.min[d]);
+        hi[d] = std::min(cmax[d], node.min[d] + node.size[d] - 1);
+        if (hi[d] < lo[d])
+            empty = true;
+        isize[d] = hi[d] - lo[d] + 1;
+        rel[d] = lo[d] - cmin[d];
+    }
+
+    std::vector<T> buf;
+    f.copy_local_data(buf);
+
+    // collect this rank's part in lexicographic order, x-rows are contiguous in buf
+    std::vector<uint8_t> out;
+    if (!empty) {
+        size_t rows = 1;
+        foralldir (d)
+            if (d > e_x)
+                rows *= isize[d];
+        const size_t rowbytes = isize[e_x] * ncomp * nsize;
+        out.resize(rows * rowbytes);
+        uint8_t *dst = out.data();
+        CoordinateVector c = lo;
+        for (size_t r = 0; r < rows; r++) {
+            size_t idx = 0;
+            foralldir (d)
+                idx += (size_t)(c[d] - node.min[d]) * node.size_factor[d];
+            if (!tof) {
+                std::memcpy(dst, buf.data() + idx, rowbytes);
+            } else {
+                const A *p = reinterpret_cast<const A *>(buf.data() + idx);
+                for (size_t i = 0; i < isize[e_x] * ncomp; i++) {
+                    float v = (float)p[i];
+                    std::memcpy(dst + i * sizeof(float), &v, sizeof(float));
+                }
+            }
+            dst += rowbytes;
+            foralldir (d) {
+                if (d == e_x)
+                    continue;
+                if (++c[d] <= hi[d])
+                    break;
+                c[d] = lo[d];
+            }
+        }
+    }
+
+    write_block_mpi(fh, offset, out.data(), ncomp * nsize, bsize, isize, rel, filename, empty);
+
+    lattice.switch_to(saved_lattice);
+    return nelem * ncomp * nsize;
+}
+
+} // namespace io
 } // namespace hila
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -171,27 +529,43 @@ void Field<T, BC>::write(std::ofstream &outputfile, bool binary, int precision) 
 template <typename T, typename BC>
 void Field<T, BC>::write(const std::string &filename, bool binary, int precision) const {
 
-#if !defined(USE_FMT)
+    if (hila::io::is_hdf5_filename(filename)) {
+        write(filename, hila::io::hdf5);
+        return;
+    }
+
+    if (binary && hila::parallel_io) {
+        MPI_File fh = hila::io::open_mpi_file(filename, true);
+        write_mpi(fh, 0, filename);
+        hila::io::close_mpi_file(fh, filename);
+        return;
+    }
+
+#if defined(USE_FMT)
+    if (!binary) {
+        // ASCII write through libfmt
+        std::FILE *outputfile = nullptr;
+        if_rank0 () {
+            outputfile = std::fopen(filename.c_str(), "w");
+        }
+        bool ok = (outputfile != nullptr);
+        hila::broadcast(ok);
+        if (!ok) {
+            hila::error("Could not open file " + filename);
+        }
+
+        write(outputfile, precision);
+        if_rank0 () {
+            fclose(outputfile);
+        }
+        return;
+    }
+#endif
+
     std::ofstream outputfile;
     hila::open_output_file(filename, outputfile, binary);
     write(outputfile, binary, precision);
     hila::close_file(filename, outputfile);
-#else
-    std::FILE *outputfile = nullptr;
-    if_rank0 () {
-        outputfile = std::fopen(filename.c_str(), "w");
-    }
-    bool ok = (outputfile != nullptr);
-    hila::broadcast(ok);
-    if (!ok) {
-        hila::error("Could not open file " + filename);
-    }
-
-    write(outputfile, precision);
-    if_rank0 () {
-        fclose(outputfile);
-    }
-#endif
 }
 
 /// Write a list of fields into an output stream
@@ -209,10 +583,17 @@ static void write_fields(std::ofstream &outputfile, Field<T, BC> &next, fieldtyp
 /// Write a list of fields to a file
 template <typename... fieldtypes>
 static void write_fields(const std::string &filename, fieldtypes &...fields) {
-    std::ofstream outputfile;
-    hila::open_output_file(filename, outputfile);
-    write_fields(outputfile, fields...);
-    hila::close_file(filename, outputfile);
+    if (hila::parallel_io) {
+        MPI_File fh = hila::io::open_mpi_file(filename, true);
+        MPI_Offset offset = 0;
+        ((offset = fields.write_mpi(fh, offset, filename)), ...);
+        hila::io::close_mpi_file(fh, filename);
+    } else {
+        std::ofstream outputfile;
+        hila::open_output_file(filename, outputfile);
+        write_fields(outputfile, fields...);
+        hila::close_file(filename, outputfile);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -327,31 +708,44 @@ void Field<T, BC>::read(std::ifstream &inputfile, const CoordinateVector &insize
 // Read Field contents from the beginning of a file
 template <typename T, typename BC>
 void Field<T, BC>::read(const std::string &filename) {
-    std::ifstream inputfile;
-    hila::open_input_file(filename, inputfile);
-    read(inputfile);
-    hila::close_file(filename, inputfile);
+    if (hila::parallel_io) {
+        MPI_File fh = hila::io::open_mpi_file(filename, false);
+        read_mpi(fh, 0, filename);
+        hila::io::close_mpi_file(fh, filename);
+    } else {
+        std::ifstream inputfile;
+        hila::open_input_file(filename, inputfile);
+        read(inputfile);
+        hila::close_file(filename, inputfile);
+    }
 }
 
 // Read a list of fields from an input stream
 template <typename T, typename BC>
 static void read_fields(std::ifstream &inputfile, Field<T, BC> &last) {
-    last.read_from_stream(inputfile);
+    last.read(inputfile);
 }
 
 template <typename T, typename BC, typename... fieldtypes>
 static void read_fields(std::ifstream &inputfile, Field<T, BC> &next, fieldtypes &...fields) {
-    next.read_from_stream(inputfile);
+    next.read(inputfile);
     read_fields(inputfile, fields...);
 }
 
 // Read a list of fields from a file
 template <typename... fieldtypes>
 static void read_fields(const std::string &filename, fieldtypes &...fields) {
-    std::ifstream inputfile;
-    hila::open_input_file(filename, inputfile);
-    read_fields(inputfile, fields...);
-    hila::close_file(filename, inputfile);
+    if (hila::parallel_io) {
+        MPI_File fh = hila::io::open_mpi_file(filename, false);
+        MPI_Offset offset = 0;
+        ((offset = fields.read_mpi(fh, offset, filename)), ...);
+        hila::io::close_mpi_file(fh, filename);
+    } else {
+        std::ifstream inputfile;
+        hila::open_input_file(filename, inputfile);
+        read_fields(inputfile, fields...);
+        hila::close_file(filename, inputfile);
+    }
 }
 
 
@@ -468,7 +862,10 @@ template <typename T, typename BC>
 template <typename Outf>
 void Field<T, BC>::write_subvolume(Outf &&output, const CoordinateVector &cmin,
                                    const CoordinateVector &cmax, int precision) const {
-    write_subvolume_internal(output, cmin, cmax, precision, false, false);
+    if (hila::io::is_hdf5_filename(hila::io::output_name(output)))
+        write_subvolume(output, cmin, cmax, hila::io::hdf5);
+    else
+        write_subvolume_internal(output, cmin, cmax, precision, false, false);
 }
 
 
@@ -476,7 +873,11 @@ template <typename T, typename BC>
 template <typename Outf>
 void Field<T, BC>::write_subvolume_binary(Outf &&output, const CoordinateVector &cmin,
                                           const CoordinateVector &cmax, bool to_float) const {
-    write_subvolume_internal(output, cmin, cmax, 0, true, to_float);
+    if (hila::io::is_hdf5_filename(hila::io::output_name(output)))
+        write_subvolume(output, cmin, cmax,
+                        hila::io::hdf5 | (to_float ? hila::io::to_float : hila::io::none));
+    else
+        write_subvolume_internal(output, cmin, cmax, 0, true, to_float);
 }
 
 
@@ -484,6 +885,10 @@ template <typename T, typename BC>
 template <typename Outf>
 void Field<T, BC>::write_slice(Outf &&outf, const CoordinateVector &slice, int precision) const {
 
+    if (hila::io::is_hdf5_filename(hila::io::output_name(outf))) {
+        write_slice(outf, slice, hila::io::hdf5);
+        return;
+    }
     auto [cmin, cmax] = get_range_from_slice(slice);
     write_subvolume(outf, cmin, cmax, precision);
 }
@@ -493,6 +898,10 @@ template <typename outf_type>
 void Field<T, BC>::write_slice_binary(outf_type &&outf, const CoordinateVector &slice,
                                       bool to_float) const {
 
+    if (hila::io::is_hdf5_filename(hila::io::output_name(outf))) {
+        write_slice(outf, slice, hila::io::hdf5 | (to_float ? hila::io::to_float : hila::io::none));
+        return;
+    }
     auto [cmin, cmax] = get_range_from_slice(slice);
     write_subvolume_binary(outf, cmin, cmax, to_float);
 }

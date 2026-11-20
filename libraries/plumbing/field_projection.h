@@ -302,6 +302,11 @@ void Field<T, BC>::write_projection_internal(const std::string &filename,
                                              const CoordinateVector &cmin,
                                              const CoordinateVector &cmax, int precision,
                                              bool binary, bool to_float) const {
+    if (hila::io::is_hdf5_filename(filename)) {
+        write_projection(filename, dirs, cmin, cmax,
+                         hila::io::hdf5 | (to_float ? hila::io::to_float : hila::io::none));
+        return;
+    }
     std::ofstream out;
     hila::open_output_file(filename, out, binary);
     write_projection_internal(out, dirs, cmin, cmax, precision, binary, to_float);

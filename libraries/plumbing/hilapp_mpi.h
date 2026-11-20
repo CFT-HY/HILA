@@ -152,5 +152,46 @@ typedef void MPI_User_function(void *invec, void *inoutvec, int *len, MPI_Dataty
 
 int MPI_Op_create(MPI_User_function *user_fn, int commute, MPI_Op *op);
 
+int MPI_Type_contiguous(int count, MPI_Datatype oldtype, MPI_Datatype *newtype);
+
+int MPI_Type_create_subarray(int ndims, const int array_of_sizes[], const int array_of_subsizes[],
+                             const int array_of_starts[], int order, MPI_Datatype oldtype,
+                             MPI_Datatype *newtype);
+
+int MPI_Type_free(MPI_Datatype *datatype);
+
+int MPI_Error_string(int errorcode, char *string, int *resultlen);
+
+int MPI_Get_count(const MPI_Status *status, MPI_Datatype datatype, int *count);
+
+// MPI-IO
+typedef void *MPI_File;
+typedef void *MPI_Info;
+typedef long long MPI_Offset;
+#define MPI_FILE_NULL nullptr
+#define MPI_INFO_NULL nullptr
+#define MPI_MODE_CREATE 1
+#define MPI_MODE_RDONLY 2
+#define MPI_MODE_WRONLY 4
+#define MPI_ORDER_C 56
+#define MPI_ORDER_FORTRAN 57
+#define MPI_MAX_ERROR_STRING 256
+
+int MPI_File_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info, MPI_File *fh);
+int MPI_File_close(MPI_File *fh);
+int MPI_File_delete(const char *filename, MPI_Info info);
+int MPI_File_set_size(MPI_File fh, MPI_Offset size);
+int MPI_File_get_size(MPI_File fh, MPI_Offset *size);
+int MPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype, MPI_Datatype filetype,
+                      const char *datarep, MPI_Info info);
+int MPI_File_write_all(MPI_File fh, const void *buf, int count, MPI_Datatype datatype,
+                       MPI_Status *status);
+int MPI_File_read_all(MPI_File fh, void *buf, int count, MPI_Datatype datatype,
+                      MPI_Status *status);
+int MPI_File_write_at(MPI_File fh, MPI_Offset offset, const void *buf, int count,
+                      MPI_Datatype datatype, MPI_Status *status);
+int MPI_File_read_at(MPI_File fh, MPI_Offset offset, void *buf, int count,
+                     MPI_Datatype datatype, MPI_Status *status);
+
 
 #endif
