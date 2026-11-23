@@ -38,6 +38,27 @@
  * For a single dataset (named "data") the Field output functions are simpler:
  * f.write("phi.h5"), f.write_subvolume("box.h5", cmin, cmax), f.write_slice(...),
  * f.write_projection(...), or with flags, e.g. f.write(name, hila::io::hdf5 | hila::io::to_float).
+ *
+ * VTKHDF format for ParaView: a file opened with flag hila::io::vtk (or with a name ending
+ * with .vtkhdf) is written in the VTKHDF ImageData format, which ParaView and VTK read
+ * directly.  The datasets are point data arrays of the grid: lattice site = grid point,
+ * spacing 1, multi-component types (Complex, SU(N), ...) give arrays with ncomp components.
+ * - dataset names must be plain names (no groups); they are stored in /VTKHDF/PointData/
+ * - all datasets in the file must have the same grid, i.e. the same size and origin
+ * - the grid has at most 3 dimensions: write 4-dimensional Fields as slices, projections or
+ *   subvolumes (directions of size 1 are dropped if there are more than 3 directions)
+ * - the origin of the grid is cmin of the subvolume or projection range, so that grid
+ *   coordinates are lattice coordinates; for slices the fixed directions are dropped
+ * - datasets are 3-dimensional [nz, ny, nx(, ncomp)], with size 1 for missing directions
+ * - attributes and other groups can be added as usual, ParaView ignores them
+ * ParaView 5.10 and 5.11 recognize VTKHDF files only with the extension .hdf, later
+ * versions also .vtkhdf.
+ * @code
+ *   hila::hdf5_file h5("phi.hdf", hila::io::vtk);
+ *   h5.write_slice("phi", phi, {-1, -1, -1, 0});          // 3d slice t = 0 of a 4d Field
+ *   h5.write_slice("E", E, {-1, -1, -1, 0}, hila::io::to_float);
+ * @endcode
+ * or f.write_slice("phi.hdf", {-1, -1, -1, 0}, hila::io::vtk), f.write("phi.vtkhdf") etc.
  */
 
 #include "plumbing/field_io.h"
@@ -84,7 +105,8 @@ class hdf5_file {
     };
 
     /// Create (or replace) the file.  Collective.
-    explicit hdf5_file(const std::string &filename);
+    /// @param flags hila::io::vtk: VTKHDF format for ParaView (default for names *.vtkhdf)
+    explicit hdf5_file(const std::string &filename, hila::io::output_flags flags = hila::io::none);
     ~hdf5_file();
 
     hdf5_file(const hdf5_file &) = delete;
@@ -183,10 +205,20 @@ class hdf5_file {
     uint64_t eof; // end of allocated file space
     std::vector<object_t> objects;
 
+    // VTKHDF ImageData format: datasets in /VTKHDF/PointData on a common grid
+    bool vtk_mode = false;
+    bool vtk_grid_set = false;
+    std::vector<int64_t> vtk_extent;
+    std::vector<double> vtk_origin;
+
     uint64_t reserve(uint64_t bytes);
     int find_or_create_group(const std::string &path);
     int add_dataset(const std::string &path, number_type nt, const std::vector<uint64_t> &dims,
                     uint64_t addr, uint64_t bytes);
+    int add_grid_dataset(const std::string &path, number_type nt,
+                         const std::vector<uint64_t> &sizes_x_first,
+                         const std::vector<int64_t> &origin_x_first, size_t ncomp, uint64_t addr,
+                         uint64_t bytes);
     void write_rank0(uint64_t addr, const void *buf, uint64_t bytes);
     int write_at(uint64_t addr, const void *buf, uint64_t bytes);
 
@@ -292,11 +324,9 @@ hdf5_file::object_ref hdf5_file::write(const std::string &path, const Field<T, B
     Lattice flat = f.mylattice();
     const CoordinateVector gsize = flat.size();
 
-    std::vector<uint64_t> dims;
-    for (int d = NDIM - 1; d >= 0; d--)
-        dims.push_back(gsize[d]);
-    if (ncomp > 1)
-        dims.push_back(ncomp);
+    std::vector<uint64_t> sizes;
+    foralldir (d)
+        sizes.push_back(gsize[d]);
 
     const bool tof =
         (flags & hila::io::to_float) && std::is_floating_point<A>::value && sizeof(A) > 4;
@@ -304,7 +334,7 @@ hdf5_file::object_ref hdf5_file::write(const std::string &path, const Field<T, B
 
     const uint64_t bytes = (uint64_t)flat.volume() * ncomp * nt.size;
     const uint64_t addr = reserve(bytes);
-    int obj = add_dataset(path, nt, dims, addr, bytes);
+    int obj = add_grid_dataset(path, nt, sizes, std::vector<int64_t>(NDIM, 0), ncomp, addr, bytes);
 
     if (!tof) {
         f.write_mpi(fh, addr, filename);
@@ -337,13 +367,11 @@ hdf5_file::object_ref hdf5_file::write(const std::string &path, const std::vecto
     static_assert(ncomp * sizeof(A) == sizeof(T), "HDF5 output: element has padding");
 
     size_t nelem = 1;
-    std::vector<uint64_t> hdims;
-    for (auto it = dims.rbegin(); it != dims.rend(); ++it) {
-        hdims.push_back(*it);
-        nelem *= *it;
+    std::vector<uint64_t> sizes;
+    for (auto n : dims) {
+        sizes.push_back(n);
+        nelem *= n;
     }
-    if (ncomp > 1)
-        hdims.push_back(ncomp);
 
     bool ok = true;
     if_rank0 () {
@@ -358,7 +386,8 @@ hdf5_file::object_ref hdf5_file::write(const std::string &path, const std::vecto
 
     const uint64_t bytes = (uint64_t)nelem * ncomp * nt.size;
     const uint64_t addr = reserve(bytes);
-    int obj = add_dataset(path, nt, hdims, addr, bytes);
+    int obj = add_grid_dataset(path, nt, sizes, std::vector<int64_t>(sizes.size(), 0), ncomp,
+                               addr, bytes);
 
     std::vector<float> fbuf;
     const void *buf = data.data();
@@ -387,18 +416,21 @@ int hdf5_file::write_box(const std::string &path, const Field<T, BC> &f,
         hila::error("hdf5_file::write: Field for dataset " + path + " is not allocated");
 
     std::vector<uint64_t> sizes;
+    std::vector<int64_t> origin;
     uint64_t nelem = 1;
     foralldir (d) {
         if (cmin[d] < 0 || cmax[d] < cmin[d] || cmax[d] >= f.mylattice().size(d))
             hila::error("hdf5_file " + filename + ": range error for dataset " + path);
         nelem *= cmax[d] - cmin[d] + 1;
-        if (keep[d])
+        if (keep[d]) {
             sizes.push_back(cmax[d] - cmin[d] + 1);
+            origin.push_back(cmin[d]);
+        }
     }
 
     const uint64_t bytes = nelem * ncomp * nt.size;
     const uint64_t addr = reserve(bytes);
-    int obj = add_dataset(path, nt, file_dims(sizes, ncomp), addr, bytes);
+    int obj = add_grid_dataset(path, nt, sizes, origin, ncomp, addr, bytes);
 
     hila::io::write_box_mpi(fh, addr, f, cmin, cmax, flags & hila::io::to_float, filename);
     return obj;
@@ -456,19 +488,21 @@ hdf5_file::object_ref hdf5_file::write_projection(const std::string &path, const
     }
 
     std::vector<uint64_t> sizes;
+    std::vector<int64_t> origin;
     uint64_t nelem = 1;
     foralldir (d) {
         if (cmin[d] < 0 || cmax[d] < cmin[d] || cmax[d] >= lattice.size(d))
             hila::error("hdf5_file " + filename + ": range error for dataset " + path);
         if (!is_proj[d]) {
             sizes.push_back(cmax[d] - cmin[d] + 1);
+            origin.push_back(cmin[d]);
             nelem *= cmax[d] - cmin[d] + 1;
         }
     }
 
     const uint64_t bytes = nelem * ncomp * nt.size;
     const uint64_t addr = reserve(bytes);
-    int obj = add_dataset(path, nt, file_dims(sizes, ncomp), addr, bytes);
+    int obj = add_grid_dataset(path, nt, sizes, origin, ncomp, addr, bytes);
 
     // projection_internal calls the output function on rank 0 only, slab by slab in order
     uint64_t pos = addr;

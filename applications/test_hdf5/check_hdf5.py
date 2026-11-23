@@ -50,5 +50,26 @@ chk('proj/c_all', np.allclose(f['proj/c_all'][...], ca.sum(axis=(0, 1, 2)), rtol
 chk('proj/u_z_float', f['proj/u_z_float'].dtype == np.float32
     and np.allclose(f['proj/u_z_float'][...], u.sum(axis=0), rtol=1e-5, atol=1e-5))
 
+# VTKHDF files: datasets [nz, ny, nx(, ncomp)] in /VTKHDF/PointData, grid attributes
+def vtk_grid(fn, extent, origin):
+    g = h5py.File(d + '/' + fn, 'r')['VTKHDF']
+    a = g.attrs
+    return (list(a['Version']) == [1, 0] and a['Type'] == b'ImageData'
+            and list(a['WholeExtent']) == extent and list(a['Origin']) == origin
+            and list(a['Spacing']) == [1, 1, 1] and list(a['Direction']) == [1, 0, 0, 0, 1, 0, 0, 0, 1]), g['PointData']
+okg, p = vtk_grid('vtk.hdf', [0, 15, 0, 7, 0, 11], [0, 0, 0])
+chk('vtk.hdf', okg and sorted(p.keys()) == ['c', 'k', 's', 'u'] and np.array_equal(p['s'][...], sa)
+    and np.array_equal(p['c'][...], ca) and np.array_equal(p['u'][...], u.astype('<f4'))
+    and np.array_equal(p['k'][...], ka) and h5py.File(d + '/vtk.hdf', 'r').attrs['beta'] == 6.0)
+okg, p = vtk_grid('vtk_box.vtkhdf', [0, 11, 0, 5, 0, 6], [2, 1, 3])
+chk('vtk_box.vtkhdf', okg and np.array_equal(p['data'][...], box(sa, (2, 1, 3), (13, 6, 9))))
+okg, p = vtk_grid('vtk_slice.hdf', [0, 15, 0, 11, 0, 0], [0, 0, 0])
+chk('vtk_slice.hdf', okg and np.array_equal(p['data'][...], ca[:, 3, :].reshape(1, 12, 16, 2)))
+okg, p = vtk_grid('vtk_proj.hdf', [0, 13, 0, 8, 0, 0], [1, 2, 0])
+chk('vtk_proj.hdf', okg and np.array_equal(p['data'][...],
+                                           box(ka, (1, 0, 2), (14, 7, 10)).sum(axis=1).reshape(1, 9, 14)))
+okg, p = vtk_grid('vtk_k.vtkhdf', [0, 15, 0, 7, 0, 11], [0, 0, 0])
+chk('vtk_k.vtkhdf', okg and np.array_equal(p['data'][...], ka))
+
 print('ALL OK' if ok else 'SOME FAILED')
 sys.exit(0 if ok else 1)

@@ -8,6 +8,7 @@
  *
  *     mpirun -np 4 ./build/test_hdf5
  *     python3 check_hdf5.py
+ *     python3 check_vtk.py      # VTKHDF files with the VTK reader (python3-vtk, VTK >= 9.1)
  *
  * The lattice size 16 x 8 x 12 is hard-coded in check_hdf5.py.
  */
@@ -85,6 +86,20 @@ int main(int argc, char **argv) {
         h5.write_projection("proj/u_z_float", u, {e_z}, hila::io::to_float);
         // closed at end of scope
     }
+
+    // VTKHDF files for ParaView
+    {
+        hila::hdf5_file v("vtk.hdf", hila::io::vtk);
+        v.attribute("beta", 6.0);
+        v.write("s", s);
+        v.write("c", c);
+        v.write("u", u, hila::io::to_float);
+        v.write("k", k);
+    }
+    s.write_subvolume("vtk_box.vtkhdf", {2, 1, 3}, {13, 6, 9});
+    c.write_slice("vtk_slice.hdf", {-1, 3, -1}, hila::io::vtk);
+    k.write_projection("vtk_proj.hdf", {e_y}, {1, 0, 2}, {14, 7, 10}, hila::io::vtk);
+    k.write("vtk_k.vtkhdf");
 
     hila::finishrun();
 }

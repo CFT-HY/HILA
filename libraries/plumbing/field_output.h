@@ -23,7 +23,7 @@ inline output_flags checked_format(output_flags flags, const std::string &filena
     if (f == none)
         hila::error("Field output: conflicting format flags for " +
                     (is_file ? filename : std::string("stream")) +
-                    " (.h5/.hdf5 file names are always HDF5)");
+                    " (.h5, .hdf5, .hdf and .vtkhdf file names are always HDF5)");
     if (!is_file && f == hdf5)
         hila::error("Field output: HDF5 output needs a file name, not a stream");
     return f;
@@ -46,7 +46,7 @@ void Field<T, BC>::write(const std::string &filename, hila::io::output_flags fla
     auto fmt = hila::io::checked_format(flags, filename, true);
 
     if (fmt == hila::io::hdf5) {
-        hila::hdf5_file h5(filename);
+        hila::hdf5_file h5(filename, flags);
         h5.write("data", *this, flags);
     } else if (fmt == hila::io::ascii) {
         write(filename, false, precision);
@@ -95,7 +95,7 @@ void Field<T, BC>::write_subvolume(Outf &&output, const CoordinateVector &cmin,
 
     if constexpr (is_file) {
         if (fmt == hila::io::hdf5) {
-            hila::hdf5_file h5(fname);
+            hila::hdf5_file h5(fname, flags);
             h5.write_subvolume("data", *this, cmin, cmax, flags);
             return;
         }
@@ -120,7 +120,7 @@ void Field<T, BC>::write_slice(Outf &&output, const CoordinateVector &slice,
 
     if constexpr (is_file) {
         if (fmt == hila::io::hdf5) {
-            hila::hdf5_file h5(fname);
+            hila::hdf5_file h5(fname, flags);
             h5.write_slice("data", *this, slice, flags);
             return;
         }
@@ -141,7 +141,7 @@ void Field<T, BC>::write_projection(Outf &&output, const std::vector<Direction> 
 
     if constexpr (is_file) {
         if (fmt == hila::io::hdf5) {
-            hila::hdf5_file h5(fname);
+            hila::hdf5_file h5(fname, flags);
             h5.write_projection("data", *this, dirs, cmin, cmax, flags);
             return;
         }

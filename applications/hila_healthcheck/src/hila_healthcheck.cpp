@@ -2261,10 +2261,28 @@ void test_output_flags() {
     report_pass("Output flags: write_projection hdf5 to_float",
                 hdf5_dataset_matches(fh5, fb) ? 0 : 1, 0.5);
 
+    // VTKHDF: flag vtk implies hdf5, conflicts with ascii/binary, implied by name *.vtkhdf
+    using namespace hila::io;
+    bool vtk_flags_ok = output_format(vtk, "a.dat") == hdf5 &&
+                        output_format(vtk | to_float, "a.h5") == hdf5 &&
+                        output_format(vtk | binary, "a.dat") == none &&
+                        output_format(none, "a.vtkhdf") == hdf5 &&
+                        output_format(none, "a.hdf") == hdf5 && is_vtk_output(none, "a.vtkhdf") &&
+                        is_vtk_output(vtk, "a.h5") && !is_vtk_output(hdf5, "a.h5");
+    report_pass("Output flags: vtk flag and file names", vtk_flags_ok ? 0 : 1, 0.5);
+
+    // 2d slice (x, y) in VTKHDF format, data identical to the binary slice
+    const std::string fvtk = "hila_flags.vtkhdf";
+    f.write_slice_binary(fb, slice, true);
+    f.write_slice(fvtk, slice, to_float);
+    report_pass("Output flags: write_slice(\"*.vtkhdf\") to_float",
+                hdf5_dataset_matches(fvtk, fb) ? 0 : 1, 0.5);
+
     if_rank0 () {
         std::remove(fa.c_str());
         std::remove(fb.c_str());
         std::remove(fh5.c_str());
+        std::remove(fvtk.c_str());
     }
 }
 

@@ -1734,11 +1734,14 @@ class Field {
      *  - hila::io::ascii: one site per line, x running fastest; `precision` digits
      *  - hila::io::binary: raw binary in lexicographic order (x fastest), as write(filename)
      *  - hila::io::hdf5: HDF5 file with dataset "data", see hila::hdf5_file
-     *  - hila::io::to_float: floating point numbers in single precision (binary, hdf5)
+     *  - hila::io::vtk: HDF5 in VTKHDF format for ParaView (point data array "data"), at
+     *    most 3 dimensions: for NDIM = 4 use write_slice(), write_subvolume() or
+     *    write_projection()
+     *  - hila::io::to_float: floating point numbers in single precision (binary, hdf5, vtk)
      *
-     * If no format flag is given, files ending with .h5 or .hdf5 are written in HDF5,
-     * others in binary.  For several datasets or attributes in one HDF5 file use
-     * hila::hdf5_file directly.  Example: `f.write("phi.h5", hila::io::to_float);`
+     * If no format flag is given, files ending with .h5, .hdf5 or .hdf are written in HDF5,
+     * .vtkhdf in VTKHDF, others in binary.  For several datasets or attributes in one HDF5
+     * file use hila::hdf5_file directly.  Example: `f.write("phi.h5", hila::io::to_float);`
      */
     void write(const std::string &filename, hila::io::output_flags flags,
                int precision = 8) const;

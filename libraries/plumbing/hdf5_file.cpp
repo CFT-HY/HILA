@@ -219,7 +219,7 @@ std::vector<std::string> split_path(const std::string &path) {
 
 namespace hila {
 
-hdf5_file::hdf5_file(const std::string &fname) : filename(fname) {
+hdf5_file::hdf5_file(const std::string &fname, hila::io::output_flags flags) : filename(fname) {
 
     uint16_t one = 1;
     if (*reinterpret_cast<uint8_t *>(&one) != 1)
@@ -232,6 +232,8 @@ hdf5_file::hdf5_file(const std::string &fname) : filename(fname) {
     object_t root;
     root.is_group = true;
     objects.push_back(root);
+
+    vtk_mode = hila::io::is_vtk_output(flags, filename);
 }
 
 hdf5_file::~hdf5_file() {
@@ -300,6 +302,69 @@ int hdf5_file::add_dataset(const std::string &path, number_type nt,
     int idx = objects.size() - 1;
     objects[parent].children.push_back(idx);
     return idx;
+}
+
+/// Add a dataset on a grid of size sizes_x_first (x first) and number of components ncomp.
+/// In VTKHDF mode the dataset goes to /VTKHDF/PointData, and the grid (padded to 3
+/// dimensions) must be the same for all datasets.
+int hdf5_file::add_grid_dataset(const std::string &path, number_type nt,
+                                const std::vector<uint64_t> &sizes_x_first,
+                                const std::vector<int64_t> &origin_x_first, size_t ncomp,
+                                uint64_t addr, uint64_t bytes) {
+    if (!vtk_mode)
+        return add_dataset(path, nt, file_dims(sizes_x_first, ncomp), addr, bytes);
+
+    if (path.empty() || path.find('/') != std::string::npos)
+        hila::error("hdf5_file " + filename + ": VTKHDF dataset name '" + path +
+                    "' must be a plain name without groups");
+
+    // more than 3 directions: drop directions of size 1
+    std::vector<uint64_t> sizes;
+    std::vector<int64_t> origin;
+    for (size_t i = 0; i < sizes_x_first.size(); i++) {
+        if (sizes_x_first.size() <= 3 || sizes_x_first[i] > 1) {
+            sizes.push_back(sizes_x_first[i]);
+            origin.push_back(origin_x_first[i]);
+        }
+    }
+    if (sizes.size() > 3)
+        hila::error("hdf5_file " + filename + ": VTKHDF dataset " + path + " has " +
+                    std::to_string(sizes.size()) +
+                    " dimensions, at most 3 allowed (write a slice, subvolume or projection)");
+    while (sizes.size() < 3) {
+        sizes.push_back(1);
+        origin.push_back(0);
+    }
+
+    std::vector<int64_t> extent;
+    std::vector<double> orig;
+    for (int i = 0; i < 3; i++) {
+        extent.push_back(0);
+        extent.push_back((int64_t)sizes[i] - 1);
+        orig.push_back(origin[i]);
+    }
+
+    if (!vtk_grid_set) {
+        vtk_grid_set = true;
+        vtk_extent = extent;
+        vtk_origin = orig;
+        object_ref g = group("VTKHDF");
+        g.attribute("Version", std::vector<int64_t>{1, 0})
+            .attribute("Type", "ImageData")
+            .attribute("WholeExtent", vtk_extent)
+            .attribute("Origin", vtk_origin)
+            .attribute("Spacing", std::vector<double>{1.0, 1.0, 1.0})
+            .attribute("Direction", std::vector<double>{1, 0, 0, 0, 1, 0, 0, 0, 1});
+    } else if (extent != vtk_extent || orig != vtk_origin) {
+        hila::error("hdf5_file " + filename + ": VTKHDF dataset " + path +
+                    " has a different grid (size or origin) than the earlier datasets");
+    }
+
+    // dataset [nz, ny, nx, ncomp], ncomp omitted if 1
+    std::vector<uint64_t> dims = {sizes[2], sizes[1], sizes[0]};
+    if (ncomp > 1)
+        dims.push_back(ncomp);
+    return add_dataset("VTKHDF/PointData/" + path, nt, dims, addr, bytes);
 }
 
 /// Write bytes at addr from this rank only (not collective); returns MPI error code

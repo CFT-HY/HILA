@@ -1,3 +1,5 @@
 build/
 *.bin
 *.h5
+*.hdf
+*.vtkhdf
