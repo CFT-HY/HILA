@@ -52,7 +52,9 @@
  * - datasets are 3-dimensional [nz, ny, nx(, ncomp)], with size 1 for missing directions
  * - attributes and other groups can be added as usual, ParaView ignores them
  * ParaView 5.10 and 5.11 recognize VTKHDF files only with the extension .hdf, later
- * versions also .vtkhdf.
+ * versions also .vtkhdf.  The VTKHDF reader of ParaView 5.11 (and VTK 9.1) crashes on grids
+ * of size 1 in the y or z direction, i.e. on 1- and 2-dimensional data such as 2d slices or
+ * projections to a plane; 3-dimensional grids work.
  * @code
  *   hila::hdf5_file h5("phi.hdf", hila::io::vtk);
  *   h5.write_slice("phi", phi, {-1, -1, -1, 0});          // 3d slice t = 0 of a 4d Field

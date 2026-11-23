@@ -1,7 +1,8 @@
 """Read the VTKHDF files written by test_hdf5 with the VTK reader (vtkHDFReader, as ParaView).
 Usage: python3 check_vtk.py [dir]
-Only the 3-dimensional grids are read: the VTK 9.1 reader crashes on grids with a size-1
-direction (also for files written with h5py), check vtk_slice.hdf and vtk_proj.hdf in ParaView."""
+Only the 3-dimensional grids are read: the VTK 9.1 reader (and ParaView 5.11) crashes on
+grids of size 1 in y or z (also for files written with h5py), so vtk_slice.hdf and
+vtk_proj.hdf need a newer VTK/ParaView."""
 import sys
 try:
     import vtk
