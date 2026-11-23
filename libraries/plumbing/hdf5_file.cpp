@@ -133,11 +133,13 @@ bytes_t encode_datatype(const hila::hdf5_file::number_type &t) {
     return b;
 }
 
-/// Datatype message for a fixed-length, null-terminated ASCII string of `size` bytes
+/// Datatype message for a fixed-length, null-padded ASCII string of `size` bytes (as written
+/// by h5py for numpy byte strings).  The string is stored without a terminating null: VTK's
+/// VTKHDF reader compares all `size` bytes, e.g. of the attribute Type = "ImageData".
 bytes_t encode_string_datatype(uint64_t size) {
     bytes_t b;
     put8(b, 0x13); // class 3 (string), version 1
-    put8(b, 0x00); // null terminated, ASCII
+    put8(b, 0x01); // null padded, ASCII
     put8(b, 0);
     put8(b, 0);
     put32(b, size);
@@ -406,10 +408,12 @@ void hdf5_file::add_attribute_raw(int obj, const std::string &name, number_type 
 void hdf5_file::add_attribute(int obj, const std::string &name, const std::string &value) {
     attribute_t a;
     a.name = name;
-    a.dtype = encode_string_datatype(value.size() + 1);
+    // HDF5 strings have size >= 1: the empty string is a single null (padding) byte
+    a.dtype = encode_string_datatype(std::max<size_t>(value.size(), 1));
     a.dspace = encode_dataspace(std::vector<uint64_t>(), true);
     a.data.assign(value.begin(), value.end());
-    a.data.push_back(0);
+    if (value.empty())
+        a.data.push_back(0);
     objects[obj].attrs.push_back(a);
 }
 
