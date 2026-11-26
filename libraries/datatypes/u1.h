@@ -44,9 +44,8 @@ class U1 {
     }
 
     /// multiply assign
-    template <
-        typename S,
-        std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
+    template <typename S,
+              std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
     U1<T> &operator*=(const U1<S> &rhs) {
         phase += rhs.phase;
         return *this;
@@ -94,7 +93,7 @@ class U1 {
         return *this;
     }
 
-    U1 &gaussian_random(double width=1.0) out_only {
+    U1 &gaussian_random(double width = 1.0) out_only {
         phase = hila::gaussrand() * width;
         return *this;
     }
@@ -119,7 +118,7 @@ inline T imag(const U1<T> arg) {
 /// and U1*U1
 template <typename T>
 inline U1<T> operator*(U1<T> a, const U1<T> b) {
-    a += b;
+    a *= b;
     return a;
 }
 
@@ -144,7 +143,7 @@ inline Complex<hila::type_mul<T, S>> operator*(const Complex<S> &b, const U1<T> 
 /// Stream operator
 template <typename T>
 std::ostream &operator<<(std::ostream &strm, const U1<T> A) {
-    return operator<<(strm, A.phase);
+    return strm << A.phase;
 }
 
 
