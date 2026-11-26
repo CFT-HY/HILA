@@ -9,14 +9,14 @@ extern hila::timer binning_timer;
 /// sd_k_bin_parameters holds the parameters to define binning.
 
 struct sd_k_bin_parameters {
-    double max;      // min and max of k (default: 0 and pi)
+    double max; // min and max of k (default: 0 and pi)
 
-    double binwidth; 
-    int bins;        // how many bins in output (default=max of lattice.size(d)/2)
-    bool round;  // true if bin determined by rounding to int (default: floor)
-    
-    int exact;       // do this many low k-value "bins" exactly NOT IMPLEMENTED YET
-    bool bins_set;   // bool to keep track if number of bins have been set
+    double binwidth;
+    int bins;   // how many bins in output (default=max of lattice.size(d)/2)
+    bool round; // true if bin determined by rounding to int (default: floor)
+
+    int exact;     // do this many low k-value "bins" exactly NOT IMPLEMENTED YET
+    bool bins_set; // bool to keep track if number of bins have been set
 
     Vector<NDIM, double> k_scale; // k_i multiplied by this: 1/blocking factor of lattice
 };
@@ -58,7 +58,7 @@ namespace hila {
 /// The bin_k_field*() -functions bin the given k-space field as is, without rescaling.
 /// Bin is determined by formula
 ///   b = (int) ( (k/k_max) * n_bins )
-/// unless rounding is set with k_round(), when it is 
+/// unless rounding is set with k_round(), when it is
 ///   b = (int) round( (k/k_max) * n_bins )
 ///
 ///   hila::k_binning kb;
@@ -68,7 +68,7 @@ namespace hila {
 /// methods:  (use as kb.xxx)
 ///   hila::k_binning & bins(int n)       set number of bins (k_max const.)
 ///   int bins()                          get number of bins
-///   hila::k_binning & k_max(double m)   set max value of k in binning 
+///   hila::k_binning & k_max(double m)   set max value of k in binning
 ///                  if bins have been modified it is kept constant, otherwise
 ///                  number of bins is changed so that binwidth is const.
 ///   double k_max()                      get max value of k
@@ -76,7 +76,7 @@ namespace hila {
 ///   double binwidth()                   get binwidth
 ///   hila::k_binning & k_round()         set rounding to nearest bin value
 ///   bool get_round()                    get rounding value
-///   
+///
 ///   std::vector<T>      bin_k_field(const Field<T> &f)       bin the k-space field f
 ///   std::vector<double> bin_k_field_squarenorm(const Field<T & f)
 ///                            bin the square norm of k-space field f
@@ -216,18 +216,18 @@ class k_binning {
 
     /// Generic k-space field binner routine - returns field element type vector
 
-    template <typename T>
-    std::vector<T> bin_k_field(const Field<T> &f) {
+    template <typename T, typename R, std::enable_if_t<hila::is_assignable<R &, T>::value, int> = 0>
+    void bin_k_field(const Field<T> &f, std::vector<R> &r) {
 
         binning_timer.start();
 
         check_bin_info();
 
-        ReductionVector<T> s(par.bins);
+        ReductionVector<R> s(par.bins);
         s.allreduce(false);
         s = 0;
 
-        onsites(ALL) {
+        onsites (ALL) {
 
             int b = sd_get_k_bin(X.coordinates(), par);
             if (b >= 0 && b < par.bins) {
@@ -237,7 +237,14 @@ class k_binning {
 
         binning_timer.stop();
 
-        return s.vector();
+        std::swap(r, s.vector_ref());
+    }
+
+    template <typename T>
+    std::vector<T> bin_k_field(const Field<T> &f) {
+        std::vector<T> r;
+        bin_k_field(f,r);
+        return r;
     }
 
     /// sum up the square norm of all elements
@@ -256,7 +263,7 @@ class k_binning {
         s.allreduce(false);
         s = 0;
 
-        onsites(ALL) {
+        onsites (ALL) {
 
             int b = sd_get_k_bin(X.coordinates(), par);
             if (b >= 0 && b < par.bins) {
@@ -319,7 +326,7 @@ class k_binning {
         s.allreduce(false);
         s = 0;
 
-        onsites(ALL) {
+        onsites (ALL) {
 
             int b = sd_get_k_bin(X.coordinates(), par);
             if (b >= 0 && b < par.bins) {
@@ -339,9 +346,9 @@ class k_binning {
     //////////////////////////////////////////////////////////////////////////////////
     /// Cross spectrum of fields f and g:  sum over k in a bin of sum_i Re(F_i^*(k) G_i(k)),
     /// where F, G are the Fourier transforms and i runs over the elements of the field
-    /// type.  Normalized as spectraldensity() (also on blocked lattice), and cross_spectrum(f,f) == spectraldensity(f).
-    /// Real fields use the real Fourier transform (see FFT_real_field()), which gives the
-    /// same binned result as the complex FFT.
+    /// type.  Normalized as spectraldensity() (also on blocked lattice), and cross_spectrum(f,f) ==
+    /// spectraldensity(f). Real fields use the real Fourier transform (see FFT_real_field()), which
+    /// gives the same binned result as the complex FFT.
 
     template <typename T>
     std::vector<double> cross_spectrum(const Field<T> &f, const Field<T> &g) {
@@ -378,7 +385,7 @@ class k_binning {
         s = 0;
         count = 0;
 
-        onsites(ALL) {
+        onsites (ALL) {
 
             double kr = sd_k_norm(X.coordinates(), par);
             int b = sd_get_k_bin(X.coordinates(), par);
@@ -428,7 +435,7 @@ class k_binning {
     double bin_min(int i) {
 
         double a = i;
-        if (par.round && i > 0) 
+        if (par.round && i > 0)
             a -= 0.5;
 
         return (a / par.bins) * par.max;

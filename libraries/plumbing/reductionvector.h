@@ -329,6 +329,10 @@ class ReductionVector {
         return val;
     }
 
+    std::vector<T> & vector_ref() {
+        return val;
+    }
+
     /// methods from std::vector:
 
     size_t size() const {
